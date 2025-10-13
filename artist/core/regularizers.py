@@ -34,8 +34,7 @@ class Regularizer:
 
     def __call__(
         self,
-        current_nurbs_control_points: torch.Tensor,
-        original_nurbs_control_points: torch.Tensor,
+        original_surface_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -46,12 +45,9 @@ class Regularizer:
 
         Parameters
         ----------
-        current_nurbs_control_points : torch.Tensor
-            The predicted nurbs control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_nurbs_control_points : torch.Tensor
-            The original, unchanged control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_surface_points : torch.Tensor
+            The original surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -135,8 +131,7 @@ class TotalVariationRegularizer(Regularizer):
 
     def __call__(
         self,
-        current_nurbs_control_points: torch.Tensor,
-        original_nurbs_control_points: torch.Tensor,
+        original_surface_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -152,12 +147,9 @@ class TotalVariationRegularizer(Regularizer):
 
         Parameters
         ----------
-        current_nurbs_control_points : torch.Tensor
-            The predicted nurbs control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_nurbs_control_points : torch.Tensor
-            The original, unchanged control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_surface_points : torch.Tensor
+            The original surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -291,8 +283,7 @@ class IdealSurfaceRegularizer(Regularizer):
 
     def __call__(
         self,
-        current_nurbs_control_points: torch.Tensor,
-        original_nurbs_control_points: torch.Tensor,
+        original_surface_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -306,12 +297,9 @@ class IdealSurfaceRegularizer(Regularizer):
 
         Parameters
         ----------
-        current_nurbs_control_points : torch.Tensor
-            The predicted nurbs control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_nurbs_control_points : torch.Tensor
-            The original, unchanged control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_surface_points : torch.Tensor
+            The original surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -333,8 +321,8 @@ class IdealSurfaceRegularizer(Regularizer):
         """
         loss_function = torch.nn.MSELoss(reduction="none")
 
-        loss = loss_function(
-            current_nurbs_control_points, original_nurbs_control_points
-        )
+        loss = loss_function(original_surface_points, surface_points)
 
-        return loss.sum(dim=self.reduction_dimensions)
+        reduced_loss = loss.sum(dim=self.reduction_dimensions)
+
+        return reduced_loss

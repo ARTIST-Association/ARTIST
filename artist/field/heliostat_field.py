@@ -175,7 +175,7 @@ class HeliostatField:
                     config_dictionary.heliostat_kinematic_key
                 ][config_dictionary.kinematic_type][()].decode("utf-8")
 
-                kinematic_deviations, number_of_actuators = (
+                translation_deviations, rotation_deviations, number_of_actuators = (
                     h5_scenario_parser.kinematic_deviations(
                         prototype=False,
                         kinematic_type=kinematic_type,
@@ -199,8 +199,11 @@ class HeliostatField:
                 initial_orientation = prototype_kinematic[
                     config_dictionary.kinematic_initial_orientation
                 ]
-                kinematic_deviations = prototype_kinematic[
-                    config_dictionary.kinematic_deviations
+                translation_deviations = prototype_kinematic[
+                    config_dictionary.translation_deviations
+                ]
+                rotation_deviations = prototype_kinematic[
+                    config_dictionary.rotation_deviations
                 ]
 
             if (
@@ -329,8 +332,11 @@ class HeliostatField:
                 config_dictionary.initial_orientations
             ].append(initial_orientation)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.kinematic_deviation_parameters
-            ].append(kinematic_deviations)
+                config_dictionary.translation_deviations
+            ].append(translation_deviations)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.rotation_deviations
+            ].append(rotation_deviations)
             grouped_field_data[heliostat_group_key][
                 config_dictionary.actuator_parameters
             ].append(actuator_parameters)
@@ -378,9 +384,12 @@ class HeliostatField:
                     initial_orientations=grouped_field_data[heliostat_group_name][
                         config_dictionary.initial_orientations
                     ],
-                    kinematic_deviation_parameters=grouped_field_data[
+                    kinematic_translation_deviation_parameters=grouped_field_data[
                         heliostat_group_name
-                    ][config_dictionary.kinematic_deviation_parameters],
+                    ][config_dictionary.translation_deviations],
+                    kinematic_rotation_deviation_parameters=grouped_field_data[
+                        heliostat_group_name
+                    ][config_dictionary.rotation_deviations],
                     actuator_parameters=grouped_field_data[heliostat_group_name][
                         config_dictionary.actuator_parameters
                     ],

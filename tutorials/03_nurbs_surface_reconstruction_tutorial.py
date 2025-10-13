@@ -330,11 +330,7 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    scenario_path=pathlib.Path(
-        "please/insert/the/path/to/the/scenario/here/scenario.h5"
-    )
-)
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]

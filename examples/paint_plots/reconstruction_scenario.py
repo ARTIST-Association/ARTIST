@@ -18,14 +18,14 @@ from artist.util.environment_setup import get_device
 set_logger_config()
 
 
-def generate_calibration_scenario(
+def generate_reconstruction_scenario(
     scenario_path: pathlib.Path,
     tower_file: pathlib.Path,
     heliostat_files_list: list[tuple[str, pathlib.Path]],
     device: torch.device | None = None,
 ) -> None:
     """
-    Generate a scenario for the calibration plots.
+    Generate a scenario for the kinematic reconstruction plots.
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def generate_calibration_scenario(
 
 if __name__ == "__main__":
     """
-    Generate a scenario for the calibration plots.
+    Generate a scenario for the kinematic reconstruction plots.
 
     This script generates a scenario based on the viable heliostats list previously generated.
 
@@ -183,11 +183,11 @@ if __name__ == "__main__":
     viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
-            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``calibration_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
+            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
         )
 
     # Define scenario path.
-    scenario_path = pathlib.Path(args.scenarios_dir) / "calibration.h5"
+    scenario_path = pathlib.Path(args.scenarios_dir) / "reconstruction.h5"
     if not scenario_path.parent.exists():
         scenario_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         )
     else:
         print(f"Scenario not found. Generating a new one at {scenario_path}...")
-        generate_calibration_scenario(
+        generate_reconstruction_scenario(
             scenario_path=scenario_path,
             tower_file=tower_file,
             heliostat_files_list=heliostat_properties_list,

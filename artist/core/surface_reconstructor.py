@@ -212,8 +212,35 @@ class SurfaceReconstructor:
                     dim=0,
                 )
 
-                original_nurbs_control_points = (
-                    heliostat_group.nurbs_control_points.clone().detach()
+                # Create NURBS evaluation points.
+                evaluation_points = (
+                    utils.create_nurbs_evaluation_grid(
+                        number_of_evaluation_points=self.number_of_surface_points,
+                        device=device,
+                    )
+                    .unsqueeze(0)
+                    .unsqueeze(0)
+                    .expand(
+                        heliostat_group.number_of_active_heliostats,
+                        heliostat_group.number_of_facets_per_heliostat,
+                        -1,
+                        -1,
+                    )
+                )
+
+                original_nurbs_surfaces = NURBSSurfaces(
+                    degrees=heliostat_group.nurbs_degrees,
+                    control_points=heliostat_group.nurbs_control_points,
+                    device=device,
+                )
+
+                original_surface_points, _ = (
+                    original_nurbs_surfaces.calculate_surface_points_and_normals(
+                        evaluation_points=evaluation_points[0]
+                        .unsqueeze(0)
+                        .expand(heliostat_group.number_of_heliostats, -1, -1, -1),
+                        device=device,
+                    )
                 )
 
                 # Create NURBS evaluation points.
@@ -378,8 +405,9 @@ class SurfaceReconstructor:
                         config_dictionary.regularizers
                     ]:
                         regularization_term = regularizer(
-                            current_nurbs_control_points=heliostat_group.nurbs_control_points,
-                            original_nurbs_control_points=original_nurbs_control_points,
+                            original_surface_points=original_surface_points[
+                                start_indices_heliostats
+                            ],
                             surface_points=new_surface_points[start_indices_heliostats],
                             surface_normals=new_surface_normals[
                                 start_indices_heliostats
@@ -460,7 +488,7 @@ class SurfaceReconstructor:
                     final_loss_start_indices[
                         heliostat_group_index
                     ] : final_loss_start_indices[heliostat_group_index + 1]
-                ] = flux_loss_per_heliostat
+                ] = loss
 
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 

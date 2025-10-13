@@ -30,7 +30,6 @@ tower_file = pathlib.Path(
 
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
-
 heliostat_files_list = [
     (
         "name",

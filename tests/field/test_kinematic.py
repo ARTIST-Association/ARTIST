@@ -39,7 +39,7 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
     incident_ray_directions = torch.tensor([[0.0, 0.0, -1.0, 0.0]], device=device)
     aim_points = torch.tensor([[0.0, -10.0, 0.0, 1.0]], device=device)
 
-    deviation_parameters = torch.tensor(
+    translation_deviation_parameters = torch.tensor(
         [
             [
                 0.0000,
@@ -47,16 +47,18 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
                 0.0000,
                 0.0000,
                 0.0000,
-                0.0000,
-                0.0000,
-                0.0000,
                 0.3150,
-                0.0000,
-                0.0000,
-                0.0000,
                 0.0000,
                 -0.1776,
                 -0.4045,
+            ]
+        ],
+        device=device,
+    )
+    rotation_deviation_parameters = torch.tensor(
+        [
+            [
+                0.0000,
                 0.0000,
                 0.0000,
                 0.0000,
@@ -72,10 +74,10 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
                 [0.0000e00, 0.0000e00],
                 [60000, 80000],
                 [1.5417e05, 1.5417e05],
-                [7.5000e-02, 7.5000e-02],
                 [3.4061e-01, 3.4790e-01],
                 [3.2040e-01, 3.0900e-01],
                 [-1.5708e00, 9.5993e-01],
+                [7.5000e-02, 7.5000e-02],
             ]
         ],
         device=device,
@@ -85,7 +87,8 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
         number_of_heliostats=1,
         heliostat_positions=torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device),
         initial_orientations=torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device),
-        deviation_parameters=deviation_parameters,
+        translation_deviation_parameters=translation_deviation_parameters,
+        rotation_deviation_parameters=rotation_deviation_parameters,
         actuator_parameters=actuator_parameters,
         device=device,
     )
@@ -101,11 +104,23 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
     kinematic.active_initial_orientations = (
         kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_deviation_parameters = (
-        kinematic.deviation_parameters.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematic.active_translation_deviation_parameters = (
+        kinematic.translation_deviation_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
     )
-    kinematic.actuators.active_actuator_parameters = (
-        kinematic.actuators.actuator_parameters.repeat_interleave(
+    kinematic.active_rotation_deviation_parameters = (
+        kinematic.rotation_deviation_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
+    kinematic.actuators.active_geometry_parameters = (
+        kinematic.actuators.geometry_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
+    kinematic.actuators.active_initial_parameters = (
+        kinematic.actuators.initial_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )

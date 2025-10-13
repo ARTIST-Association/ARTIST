@@ -9,13 +9,18 @@ class IdealActuators(Actuators):
 
     Attributes
     ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
+    geometry_parameters : torch.Tensor
+        Parameters concerning the actuator geometry.
         Tensor of shape [number_of_heliostats, 4, 2].
-    active_actuator_parameters : torch.Tensor
-        The active actuator parameters.
+    initial_parameters : torch.Tensor
+        Parameters concerning the initial actuator configuration.
+        Tensor of shape [number_of_heliostats, 4, 2].
+    active_geometry_parameters : torch.Tensor
+        Active geometry parameters.
         Tensor of shape [number_of_active_heliostats, 4, 2].
-
+    active_geometry_parameters : torch.Tensor
+        Active initial parameters.
+        Tensor of shape [number_of_active_heliostats, 4, 2].
 
     Methods
     -------

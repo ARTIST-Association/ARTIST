@@ -172,20 +172,23 @@ class Scenario:
             config_dictionary.kinematic_prototype_key
         ][config_dictionary.kinematic_type][()].decode("utf-8")
 
-        prototype_kinematic_deviations, number_of_actuators = (
-            h5_scenario_parser.kinematic_deviations(
-                prototype=True,
-                kinematic_type=prototype_kinematic_type,
-                scenario_file=scenario_file,
-                log=log,
-                device=device,
-            )
+        (
+            prototype_translation_deviations,
+            prototype_rotation_deviations,
+            number_of_actuators,
+        ) = h5_scenario_parser.kinematic_deviations(
+            prototype=True,
+            kinematic_type=prototype_kinematic_type,
+            scenario_file=scenario_file,
+            log=log,
+            device=device,
         )
 
         prototype_kinematic = {
             config_dictionary.kinematic_type: prototype_kinematic_type,
             config_dictionary.kinematic_initial_orientation: prototype_initial_orientation,
-            config_dictionary.kinematic_deviations: prototype_kinematic_deviations,
+            config_dictionary.translation_deviations: prototype_translation_deviations,
+            config_dictionary.rotation_deviations: prototype_rotation_deviations,
         }
 
         prototype_actuator_keys = list(

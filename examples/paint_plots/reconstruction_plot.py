@@ -19,18 +19,18 @@ plot_colors = {
 
 
 def plot_error_distribution(
-    calibration_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
+    reconstruction_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
 ) -> None:
     """
-    Plot the distribution of calibration errors.
+    Plot the distribution of reconstruction errors.
 
-    This function plots histograms and kernel density estimations of the mrad losses in calibration when comparing
+    This function plots histograms and kernel density estimations of the mrad losses in reconstruction when comparing
     HeliOS and UTIS as methods for focal spot centroid extraction.
 
     Parameters
     ----------
-    calibration_results : dict[str, dict[str, Any]]
-        A dictionary containing the calibration results.
+    reconstruction_results : dict[str, dict[str, Any]]
+        A dictionary containing the reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
@@ -40,11 +40,10 @@ def plot_error_distribution(
 
     # Convert losses to list.
     helios_losses = [
-        data[paint_mappings.HELIOS_KEY] * 1000.0
-        for data in calibration_results.values()
+        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
     ]
     utis_losses = [
-        data[paint_mappings.UTIS_KEY] * 1000.0 for data in calibration_results.values()
+        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
     ]
     x_max = max(utis_losses + helios_losses)
     x_vals = np.linspace(0, x_max, 100)
@@ -134,44 +133,66 @@ def plot_error_distribution(
         save_dir.mkdir(parents=True, exist_ok=True)
     filename = save_dir / "error_distribution.pdf"
     fig.savefig(filename, dpi=300, bbox_inches="tight")
-    print(f"Saved calibration error distribution plot at: {filename}.")
+    print(f"Saved reconstruction error distribution plot at: {filename}.")
 
 
 def plot_error_against_distance(
-    calibration_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
+    reconstruction_results: dict[str, dict[str, Any]],
+    number_of_points_to_plot: int,
+    save_dir: pathlib.Path,
+    random_seed: int,
 ) -> None:
     """
-    Plot the calibration error against the distance.
+    Plot the reconstruction error against the distance.
 
-    This function plots the calibration error, in mrad, against the distance of that heliostat from the tower.
+    This function plots the reconstruction error, in mrad, against the distance of that heliostat from the tower.
 
     Parameters
     ----------
-    calibration_results : dict[str, dict[str, Any]]
-        A dictionary containing the calibration results.
+    reconstruction_results : dict[str, dict[str, Any]]
+        A dictionary containing the reconstruction results.
+    number_of_points_to_plot : int
+        Number of points to randomly select and plot.
     save_dir : pathlib.Path
         Directory used for saving the plot.
+    random_seed : int
+        Random seed for the selection of points to plot.
     """
     # Set plot style.
     plt.rcParams["text.usetex"] = True
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 
     # Load as lists.
-    positions_list = [data["Position"] for data in calibration_results.values()]
+    positions_list = [data["Position"] for data in reconstruction_results.values()]
     helios_loss_list = [
-        data[paint_mappings.HELIOS_KEY] for data in calibration_results.values()
+        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
     ]
     utis_loss_list = [
-        data[paint_mappings.UTIS_KEY] for data in calibration_results.values()
+        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
     ]
 
     # Convert to arrays for plotting.
     positions = np.array(positions_list, dtype=float)
-    helios_losses = np.array(helios_loss_list, dtype=float) * 1000.0
-    utis_losses = np.array(utis_loss_list, dtype=float) * 1000.0
+    helios_losses = np.array(helios_loss_list, dtype=float)
+    utis_losses = np.array(utis_loss_list, dtype=float)
 
     # Vectorized calculation of distances.
     distances = np.linalg.norm(positions[:, :2], axis=1)
+
+    # Randomly select indices to plot.
+    np.random.seed(42)
+    total_data_points = len(distances)
+    if number_of_points_to_plot >= total_data_points:
+        selected_indices = np.arange(total_data_points)
+    else:
+        selected_indices = np.random.choice(
+            total_data_points, number_of_points_to_plot, replace=False
+        )
+
+    # Select subset of data points to plot.
+    distances = distances[selected_indices]
+    helios_losses = helios_losses[selected_indices]
+    utis_losses = utis_losses[selected_indices]
 
     fig, ax = plt.subplots(figsize=(6, 4))
 
@@ -218,18 +239,18 @@ def plot_error_against_distance(
     ax.grid(True)
     ax.legend(fontsize=8, loc="upper right", ncol=2)
 
-    save_path = save_dir / "calibration_error_distance.pdf"
+    save_path = save_dir / "reconstruction_error_distance.pdf"
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     print(
-        f"Saved plot comparing the calibration error to the distance at: {save_path}."
+        f"Saved plot comparing the reconstruction error to the distance at: {save_path}."
     )
 
 
 if __name__ == "__main__":
     """
-    Generate plots based on the calibration results.
+    Generate plots based on the kinematic reconstruction results.
 
-    This script loads the results from the ``ARTIST`` calibration and generates two plots, one comparing the loss when
+    This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
     using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
 
     Parameters
@@ -242,6 +263,10 @@ if __name__ == "__main__":
         Path to directory where the results are saved.
     plots_dir : str
         Path to the directory where the plots are saved.
+    number_of_points_to_plot : int
+        Number of data points to plot in the distance error plot.
+    random_seed : int
+        Random seed for the selection of points to plot.
     """
 
     # Set default location for configuration file.
@@ -275,6 +300,8 @@ if __name__ == "__main__":
     device_default = config.get("device", "cuda")
     results_dir_default = config.get("results_dir", "./results")
     plots_dir_default = config.get("plots_dir", "./plots")
+    number_of_points_to_plot_default = config.get("number_of_points_to_plot", 100)
+    random_seed_default = config.get("random_seed", 7)
 
     parser.add_argument(
         "--device",
@@ -294,20 +321,34 @@ if __name__ == "__main__":
         help="Path to save the plots.",
         default=plots_dir_default,
     )
+    parser.add_argument(
+        "--number_of_points_to_plot",
+        type=int,
+        help="Number of data points to plot in the distance error plot.",
+        default=number_of_points_to_plot_default,
+    )
+    parser.add_argument(
+        "--random_seed",
+        type=int,
+        help="Random seed for the selection of points to plot.",
+        default=random_seed_default,
+    )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
 
     device = get_device(torch.device(args.device))
 
-    results_path = pathlib.Path(args.results_dir) / "calibration_results.pt"
+    results_path = (
+        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+    )
     if not results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path}. Please run ``calibration_generate_results.py``"
+            f"Results file not found: {results_path}. Please run ``reconstruction_generate_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 
-    calibration_results = torch.load(
+    reconstruction_results = torch.load(
         results_path,
         weights_only=False,
         map_location=device,
@@ -315,8 +356,11 @@ if __name__ == "__main__":
     plots_path = pathlib.Path(args.plots_dir)
 
     plot_error_distribution(
-        calibration_results=calibration_results, save_dir=plots_path
+        reconstruction_results=reconstruction_results, save_dir=plots_path
     )
     plot_error_against_distance(
-        calibration_results=calibration_results, save_dir=plots_path
+        reconstruction_results=reconstruction_results,
+        number_of_points_to_plot=args.number_of_points_to_plot,
+        save_dir=plots_path,
+        random_seed=args.random_seed,
     )

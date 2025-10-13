@@ -133,10 +133,10 @@ def find_viable_heliostats(
 
 if __name__ == "__main__":
     """
-    Generate list of viable heliostats for calibration.
+    Generate list of viable heliostats for kinematic reconstruction.
 
     This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the calibration process.
+    the reconstruction process.
 
     Parameters
     ----------
@@ -150,9 +150,9 @@ if __name__ == "__main__":
         Path to where the results will be saved.
     minimum_number_of_measurements : int
         Minimum number of calibration measurements per heliostat required.
-    maximum_number_of_heliostats : int
+    maximum_number_of_heliostats_for_reconstruction : int
         Maximum number of heliostats to include.
-    excluded_heliostats : list[str]
+    excluded_heliostats_for_reconstruction : list[str]
         List of heliostats to exclude.
     calibration_image_type : str
         Type of calibration image to use, either flux or flux-centered.
@@ -192,10 +192,10 @@ if __name__ == "__main__":
         "minimum_number_of_measurements", 80
     )
     maximum_number_of_heliostats_default = config.get(
-        "maximum_number_of_heliostats_for_calibration", 100
+        "maximum_number_of_heliostats_for_reconstruction", 100
     )
     excluded_heliostats_default = config.get(
-        "excluded_heliostats_for_calibration", ["AA39"]
+        "excluded_heliostats_for_reconstruction", ["AA39"]
     )
     calibration_image_type_default = config.get("calibration_image_type", "flux")
 
@@ -224,13 +224,13 @@ if __name__ == "__main__":
         default=minimum_number_of_measurements_default,
     )
     parser.add_argument(
-        "--maximum_number_of_heliostats",
+        "--maximum_number_of_heliostats_for_reconstruction",
         type=int,
         help="Maximum number of heliostats to include.",
         default=maximum_number_of_heliostats_default,
     )
     parser.add_argument(
-        "--excluded_heliostats",
+        "--excluded_heliostats_for_reconstruction",
         type=str,
         help="Heliostat names to exclude.",
         nargs="+",
@@ -250,12 +250,12 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
 
-    excluded_heliostats: set[str] = set(args.excluded_heliostats)
+    excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
     heliostat_data_list = find_viable_heliostats(
         data_directory=data_dir,
         minimum_number_of_measurements=args.minimum_number_of_measurements,
-        maximum_number_of_heliostats=args.maximum_number_of_heliostats,
+        maximum_number_of_heliostats=args.maximum_number_of_heliostats_for_reconstruction,
         excluded_heliostats=excluded_heliostats,
         calibration_image_type=args.calibration_image_type,
     )

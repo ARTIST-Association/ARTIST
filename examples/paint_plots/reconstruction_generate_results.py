@@ -10,8 +10,8 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.core import KinematicCalibrator
-from artist.core.loss_functions import AngleLoss
+from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario import Scenario
@@ -23,22 +23,22 @@ torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 
-def generate_calibration_results(
+def generate_reconstruction_results(
     scenario_path: pathlib.Path,
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform calibration in ``ARTIST`` and save results.
+    Perform kinematic reconstruction in ``ARTIST`` and save results.
 
-    This function performs the calibration in ``ARTIST`` and saves the results. Calibration is compared when using the
+    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
     focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
     for plotting later.
 
     Parameters
     ----------
     scenario_path : pathlib.Path
-        Path to calibration scenario.
+        Path to reconstruction scenario.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Data mapping for each heliostat, containing a list of tuples with the heliostat name, the path to the calibration
         properties file, and the path to the flux images.
@@ -69,9 +69,9 @@ def generate_calibration_results(
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        # Select calibration via motor positions.
-        kinematic_calibration_method = (
-            config_dictionary.kinematic_calibration_motor_positions
+        # Select calibration via raytracing.
+        kinematic_reconstruction_method = (
+            config_dictionary.kinematic_reconstruction_raytracing
         )
 
         # Configure the learning rate scheduler.
@@ -89,10 +89,10 @@ def generate_calibration_results(
 
         # Set optimization parameters.
         optimization_configuration = {
-            config_dictionary.initial_learning_rate: 0.04,
+            config_dictionary.initial_learning_rate: 0.0001,
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 3000,
-            config_dictionary.log_step: 100,
+            config_dictionary.max_epoch: 1000,
+            config_dictionary.log_step: 50,
             config_dictionary.early_stopping_delta: 1e-6,
             config_dictionary.early_stopping_patience: 4000,
             config_dictionary.scheduler: scheduler,
@@ -102,7 +102,7 @@ def generate_calibration_results(
         for centroid in [paint_mappings.UTIS_KEY, paint_mappings.HELIOS_KEY]:
             # Copy scenario so results are comparable across runs.
             current_scenario = deepcopy(scenario)
-            loss_definition = AngleLoss()
+            loss_definition = FocalSpotLoss(scenario=scenario)
 
             data: dict[
                 str,
@@ -115,15 +115,15 @@ def generate_calibration_results(
                 config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
             }
 
-            kinematic_calibrator = KinematicCalibrator(
+            kinematic_reconstructor = KinematicReconstructor(
                 ddp_setup=ddp_setup,
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
-                calibration_method=kinematic_calibration_method,
+                reconstruction_method=kinematic_reconstruction_method,
             )
 
-            per_heliostat_losses = kinematic_calibrator.calibrate(
+            per_heliostat_losses = kinematic_reconstructor.reconstruct_kinematic(
                 loss_definition=loss_definition, device=device
             )
 
@@ -145,9 +145,9 @@ def generate_calibration_results(
 
 if __name__ == "__main__":
     """
-    Generate calibration results and save them.
+    Generate reconstruction results and save them.
 
-    This script performs calibration in ``ARTIST``, generating the results and saving them to be later loaded for the
+    This script performs kinematic reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
     plots.
 
     Parameters
@@ -222,14 +222,14 @@ if __name__ == "__main__":
     viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
-            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``calibration_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
+            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
         )
 
     # Define scenario path.
-    scenario_path = pathlib.Path(args.scenarios_dir) / "calibration.h5"
+    scenario_path = pathlib.Path(args.scenarios_dir) / "reconstruction.h5"
     if not scenario_path.exists():
         raise FileNotFoundError(
-            f"The calibration scenario located at {scenario_path} could not be found! Please run the ``calibration_scenario.py`` to generate this scenario, or adjust the file path and try again."
+            f"The reconstruction scenario located at {scenario_path} could not be found! Please run the ``reconstruction_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
     # Load viable heliostats data.
@@ -245,15 +245,17 @@ if __name__ == "__main__":
         for item in viable_heliostats
     ]
 
-    calibration_results = generate_calibration_results(
+    reconstruction_results = generate_reconstruction_results(
         scenario_path=scenario_path,
         heliostat_data_mapping=heliostat_data_mapping,
         device=device,
     )
 
-    results_path = pathlib.Path(args.results_dir) / "calibration_results.pt"
+    results_path = (
+        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+    )
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)
 
-    torch.save(calibration_results, results_path)
-    print(f"Calibration results saved to {results_path}")
+    torch.save(reconstruction_results, results_path)
+    print(f"Reconstruction results saved to {results_path}")

@@ -91,10 +91,19 @@ def plot_flux_prediction(
                 ax[i][j].imshow(img, cmap=colormaps[j])
             else:
                 # Surface deviation map.
-                ax[i][j].imshow(
-                    img, cmap=colormaps[j], origin="lower", vmin=-0.003, vmax=0.003
+                ax[i][j].scatter(
+                    surface[0].cpu().numpy(),
+                    surface[1].cpu().numpy(),
+                    c=surface[2].cpu().numpy(),
+                    cmap=colormaps[j],
+                    s=11,
+                    vmin=0.000,
+                    vmax=0.007,
                 )
+                for spine in ax[i][j].spines.values():
+                    spine.set_visible(False)
             # Turn off axis ticks and labels for all subplots.
+            ax[i][j].axis("off")
             ax[i][j].set_xticks([])
             ax[i][j].set_yticks([])
 

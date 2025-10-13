@@ -12,21 +12,21 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, raytracing_utils
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the kinematic optimizer."""
+"""A logger for the kinematic reconstructor."""
 
 
-class KinematicCalibrator:
+class KinematicReconstructor:
     """
-    An optimizer used to find calibrated kinematic parameters.
+    An optimizer used to reconstruct real-world kinematic deviation parameters.
 
-    The kinematic calibrator optimizes kinematic parameters. These parameters are
-    specific to a certain kinematic type and can for example include the 18
-    kinematic deviations parameters as well as five actuator parameters for each
-    actuator of a rigid body kinematic.
+    The kinematic reconstructor learns kinematic parameters. These parameters are
+    specific to a certain kinematic type and can for example include the four
+    kinematic rotation deviation parameters as well as the two initial actuator parameters
+    for each actuator of a rigid body kinematic.
 
     Attributes
     ----------
@@ -38,13 +38,13 @@ class KinematicCalibrator:
         The data parser and the mapping of heliostat name and calibration data.
     optimization_configuration : dict[str, Any]
         The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
-    calibration_method : str
-        The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
+    reconstruction_method : str
+        The reconstruction method. Currently only reconstruction via ray tracing is available.
 
     Methods
     -------
-    calibrate()
-        Calibrate the kinematic parameters.
+    reconstruct_kinematic()
+        Reconstruct the kinematic parameters.
     """
 
     def __init__(
@@ -57,7 +57,7 @@ class KinematicCalibrator:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        calibration_method: str = config_dictionary.kinematic_calibration_raytracing,
+        reconstruction_method: str = config_dictionary.kinematic_reconstruction_raytracing,
     ) -> None:
         """
         Initialize the kinematic optimizer.
@@ -72,26 +72,26 @@ class KinematicCalibrator:
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
-        calibration_method : str
-            The calibration method. Either using ray tracing or motor positions (default is ray_tracing).
+        reconstruction_method : str
+            The reconstruction method. Currently only reconstruction via ray tracing is available (default is ray_tracing).
         """
         rank = ddp_setup[config_dictionary.rank]
         if rank == 0:
-            log.info("Create a kinematic optimizer.")
+            log.info("Create a kinematic reconstructor.")
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
         self.data = data
         self.optimization_configuration = optimization_configuration
-        self.calibration_method = calibration_method
+        self.reconstruction_method = reconstruction_method
 
-    def calibrate(
+    def reconstruct_kinematic(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Optimize the kinematic parameters.
+        Reconstruct the kinematic parameters.
 
         Parameters
         ----------
@@ -105,254 +105,31 @@ class KinematicCalibrator:
         Returns
         -------
         torch.Tensor
-            The final loss of the kinematic calibration for each heliostat in each group.
+            The final loss of the kinematic reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
         """
         device = get_device(device=device)
 
         if (
-            self.calibration_method
-            == config_dictionary.kinematic_calibration_motor_positions
+            self.reconstruction_method
+            == config_dictionary.kinematic_reconstruction_raytracing
         ):
-            loss = self._calibrate_kinematic_parameters_with_motor_positions(
-                loss_definition=loss_definition,
-                device=device,
-            )
-
-        if (
-            self.calibration_method
-            == config_dictionary.kinematic_calibration_raytracing
-        ):
-            loss = self._calibrate_kinematic_parameters_with_raytracing(
+            loss = self._reconstruct_kinematic_parameters_with_raytracing(
                 loss_definition=loss_definition,
                 device=device,
             )
 
         return loss
 
-    def _calibrate_kinematic_parameters_with_motor_positions(
+    def _reconstruct_kinematic_parameters_with_raytracing(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Calibrate the kinematic parameters using the motor positions.
+        Reconstruct the kinematic parameters using ray tracing.
 
-        This optimizer method calibrates the kinematic parameters by extracting the motor positions
-        and incident ray directions from calibration data and using the scene's geometry.
-
-        Parameters
-        ----------
-        loss_definition : Loss
-            The definition of the loss function and pre-processing of the prediction.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The final loss of the kinematic calibration for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
-        """
-        device = get_device(device=device)
-
-        rank = self.ddp_setup[config_dictionary.rank]
-
-        if rank == 0:
-            log.info("Beginning kinematic calibration with motor positions.")
-
-        final_loss_per_heliostat = torch.full(
-            (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
-            torch.inf,
-            device=device,
-        )
-        final_loss_start_indices = torch.cat(
-            [
-                torch.tensor([0], device=device),
-                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0),
-            ]
-        )
-
-        for heliostat_group_index in self.ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
-        ][rank]:
-            heliostat_group: HeliostatGroup = (
-                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-            )
-
-            parser = cast(
-                CalibrationDataParser, self.data[config_dictionary.data_parser]
-            )
-            heliostat_mapping = cast(
-                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-                self.data[config_dictionary.heliostat_data_mapping],
-            )
-            (
-                _,
-                focal_spots_measured,
-                incident_ray_directions,
-                motor_positions,
-                active_heliostats_mask,
-                target_area_mask,
-            ) = parser.parse_data_for_reconstruction(
-                heliostat_data_mapping=heliostat_mapping,
-                heliostat_group=heliostat_group,
-                scenario=self.scenario,
-                device=device,
-            )
-
-            if active_heliostats_mask.sum() > 0:
-                # Calculate the reflection directions of the measured calibration data.
-                preferred_reflection_directions_measured = (
-                    torch.nn.functional.normalize(
-                        (
-                            focal_spots_measured
-                            - heliostat_group.positions.repeat_interleave(
-                                active_heliostats_mask, dim=0
-                            )
-                        ),
-                        p=2,
-                        dim=1,
-                    )
-                )
-
-                # Create the optimizer.
-                optimizer = torch.optim.Adam(
-                    [
-                        heliostat_group.kinematic.deviation_parameters.requires_grad_(),
-                        heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
-                    ],
-                    lr=self.optimization_configuration[
-                        config_dictionary.initial_learning_rate
-                    ],
-                )
-
-                # Create a learning rate scheduler.
-                scheduler_fn = getattr(
-                    learning_rate_schedulers,
-                    self.optimization_configuration[config_dictionary.scheduler],
-                )
-
-                scheduler: LRScheduler = scheduler_fn(
-                    optimizer=optimizer,
-                    parameters=self.optimization_configuration[
-                        config_dictionary.scheduler_parameters
-                    ],
-                )
-
-                # Start the optimization.
-                loss = torch.inf
-                best_loss = torch.inf
-                patience_counter = 0
-                epoch = 0
-                log_step = (
-                    self.optimization_configuration[config_dictionary.max_epoch]
-                    if self.optimization_configuration[config_dictionary.log_step] == 0
-                    else self.optimization_configuration[config_dictionary.log_step]
-                )
-                while (
-                    loss > self.optimization_configuration[config_dictionary.tolerance]
-                    and epoch
-                    <= self.optimization_configuration[config_dictionary.max_epoch]
-                ):
-                    optimizer.zero_grad()
-
-                    # Activate heliostats.
-                    heliostat_group.activate_heliostats(
-                        active_heliostats_mask=active_heliostats_mask, device=device
-                    )
-
-                    # Retrieve the orientation of the heliostats for given motor positions.
-                    orientations = (
-                        heliostat_group.kinematic.motor_positions_to_orientations(
-                            motor_positions=motor_positions,
-                            device=device,
-                        )
-                    )
-
-                    # Determine the preferred reflection directions for each heliostat.
-                    preferred_reflection_directions = raytracing_utils.reflect(
-                        incident_ray_directions=incident_ray_directions,
-                        reflection_surface_normals=orientations[:, 0:4, 2],
-                    )
-
-                    loss_per_sample = loss_definition(
-                        prediction=preferred_reflection_directions,
-                        ground_truth=preferred_reflection_directions_measured,
-                        target_area_mask=target_area_mask,
-                        reduction_dimensions=(1,),
-                        device=device,
-                    )
-
-                    loss_per_heliostat = per_heliostat_reduction(
-                        per_sample_values=loss_per_sample,
-                        active_heliostats_mask=active_heliostats_mask,
-                        device=device,
-                    )
-
-                    loss = loss_per_heliostat[torch.isfinite(loss_per_heliostat)].sum()
-
-                    loss.backward()
-
-                    optimizer.step()
-                    if isinstance(
-                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
-                    ):
-                        scheduler.step(loss.detach())
-                    else:
-                        scheduler.step()
-
-                    if epoch % log_step == 0:
-                        log.info(
-                            f"Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
-                        )
-
-                    # Early stopping when loss has reached a plateau.
-                    if (
-                        loss
-                        < best_loss
-                        - self.optimization_configuration[
-                            config_dictionary.early_stopping_delta
-                        ]
-                    ):
-                        best_loss = loss
-                        patience_counter = 0
-                    else:
-                        patience_counter += 1
-                    if (
-                        patience_counter
-                        >= self.optimization_configuration[
-                            config_dictionary.early_stopping_patience
-                        ]
-                    ):
-                        log.info(
-                            f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
-                        )
-                        break
-
-                    epoch += 1
-
-                final_loss_per_heliostat[
-                    final_loss_start_indices[
-                        heliostat_group_index
-                    ] : final_loss_start_indices[heliostat_group_index + 1]
-                ] = loss_per_heliostat
-
-                log.info("Kinematic parameters optimized.")
-
-        return final_loss_per_heliostat
-
-    def _calibrate_kinematic_parameters_with_raytracing(
-        self,
-        loss_definition: Loss,
-        device: torch.device | None = None,
-    ) -> torch.Tensor:
-        """
-        Calibrate the kinematic parameters using ray tracing.
-
-        This calibration method optimizes the kinematic parameters by extracting the focus points
+        This reconstruction method optimizes the kinematic parameters by extracting the focal points
         of calibration images and using heliostat-tracing.
 
         Parameters
@@ -367,7 +144,7 @@ class KinematicCalibrator:
         Returns
         -------
         torch.Tensor
-            The final loss of the kinematic calibration for each heliostat in each group.
+            The final loss of the kinematic reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
         """
         device = get_device(device=device)
@@ -375,7 +152,7 @@ class KinematicCalibrator:
         rank = self.ddp_setup[config_dictionary.rank]
 
         if rank == 0:
-            log.info("Beginning kinematic optimization with ray tracing.")
+            log.info("Beginning kinematic reconstruction with ray tracing.")
 
         final_loss_per_heliostat = torch.full(
             (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
@@ -420,8 +197,8 @@ class KinematicCalibrator:
                 # Create the optimizer.
                 optimizer = torch.optim.Adam(
                     [
-                        heliostat_group.kinematic.deviation_parameters.requires_grad_(),
-                        heliostat_group.kinematic.actuators.actuator_parameters.requires_grad_(),
+                        heliostat_group.kinematic.rotation_deviation_parameters.requires_grad_(),
+                        heliostat_group.kinematic.actuators.initial_parameters.requires_grad_(),
                     ],
                     lr=self.optimization_configuration[
                         config_dictionary.initial_learning_rate
@@ -586,16 +363,17 @@ class KinematicCalibrator:
                     index
                 ]
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.deviation_parameters, src=source[0]
+                    heliostat_group.kinematic.rotation_deviation_parameters,
+                    src=source[0],
                 )
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.actuators.actuator_parameters,
+                    heliostat_group.kinematic.actuators.initial_parameters,
                     src=source[0],
                 )
             torch.distributed.all_reduce(
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
-            log.info(f"Rank: {rank}, synchronized after kinematic calibration.")
+            log.info(f"Rank: {rank}, synchronized after kinematic reconstruction.")
 
         return final_loss_per_heliostat
