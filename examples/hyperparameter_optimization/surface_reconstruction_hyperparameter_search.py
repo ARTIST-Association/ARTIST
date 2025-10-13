@@ -143,7 +143,7 @@ def surface_reconstructor_for_hpo(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
-        config_dictionary.max_epoch: 5000,
+        config_dictionary.max_epoch: 2,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 5000,
@@ -244,15 +244,15 @@ if __name__ == "__main__":
     reconstruction_parameter_ranges_default = config.get(
         "reconstruction_parameter_ranges",
         {
-            "number_of_surface_points": (30, 110),
-            "number_of_control_points": (4, 20),
-            "number_of_rays": (50, 200),
-            "nurbs_degree": (2, 3),
-            "ideal_surface_loss_weight": (0.0, 2.0),
-            "initial_learning_rate": (1e-7, 1e-3),
-            "reduce_factor": (0.05, 0.5),
-            "patience": (5, 50),
-            "threshold": (1e-6, 1e-3),
+            "number_of_surface_points": [30, 110],
+            "number_of_control_points": [4, 20],
+            "number_of_rays": [50, 200],
+            "nurbs_degree": [2, 3],
+            "ideal_surface_loss_weight": [0.0, 2.0],
+            "initial_learning_rate": [1e-7, 1e-3],
+            "reduce_factor": [0.05, 0.5],
+            "patience": [5, 50],
+            "threshold": [1e-6, 1e-3],
         },
     )
 
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
     propulate_logs_dir = pathlib.Path(args.propulate_logs_dir)
-    results_path = pathlib.Path(args.results_dir) / "hpo_results.json"
+    results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
     ideal_scenario_file = (
@@ -352,12 +352,17 @@ if __name__ == "__main__":
         for item in viable_heliostats
     ]
 
+    reconstruction_parameter_ranges = {}
+    for key, value in args.reconstruction_parameter_ranges.items():
+        tuple_range = tuple(float(x) if isinstance(x, str) else x for x in value)
+        reconstruction_parameter_ranges[key] = tuple_range
+
     # Set up evolutionary operator.
-    num_generations = 300
+    num_generations = 1
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,
-        limits=args.reconstruction_parameter_ranges,
+        limits=reconstruction_parameter_ranges,
         crossover_prob=0.7,
         mutation_prob=0.4,
         random_init_prob=0.1,
@@ -386,13 +391,20 @@ if __name__ == "__main__":
         debug=2,
     )
     propulator.summarize(
-        top_n=10,
+        top_n=1,
         debug=2,
     )
 
+    hpo_result_file = propulate_logs_dir / "island_0_ckpt.pickle"
+    optimized_parameters_file = results_dir / "hpo_results.json"
+
     # Save hpo results in format to be used by plots.
-    hpo_results_path = ""
-    with open(hpo_results_path, "rb") as results:
+    if not hpo_result_file.exists():
+        raise FileNotFoundError(
+            f"The hpo results located at {hpo_result_file} could not be not found! Please run the hpo script again to generate the results."
+        )
+
+    with open(hpo_result_file, "rb") as results:
         data = pickle.load(results)
 
     data_dict = data[-1]
@@ -404,8 +416,8 @@ if __name__ == "__main__":
         else:
             parameters_dict[key] = value
 
-    if not results_path.parent.is_dir():
-        results_path.parent.mkdir(parents=True, exist_ok=True)
+    if not results_dir.parent.is_dir():
+        results_dir.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(results_path, "w") as output_file:
+    with open(optimized_parameters_file, "w") as output_file:
         json.dump(parameters_dict, output_file, indent=2)

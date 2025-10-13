@@ -320,8 +320,8 @@ def reconstruct_and_create_flux_image(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0.00005,
-            config_dictionary.max_epoch: 5000,
-            config_dictionary.log_step: 0,
+            config_dictionary.max_epoch: 10,
+            config_dictionary.log_step: 10,
             config_dictionary.early_stopping_delta: 1e-4,
             config_dictionary.early_stopping_patience: 5000,
             config_dictionary.scheduler: scheduler,
@@ -855,11 +855,8 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
-    results_hpo_path = pathlib.Path(args.results_dir) / "hpo_results.json"
-    results_path = (
-        pathlib.Path(args.results_dir) / "surface_reconstruction_results.json"
-    )
-
+    optimized_parameter_file = pathlib.Path(args.results_dir) / "hpo_results.json"
+    results_path = pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
     deflectometry_scenario_file = (
         pathlib.Path(args.scenarios_dir) / "surface_comparison_deflectometry.h5"
     )
@@ -894,7 +891,7 @@ if __name__ == "__main__":
         )
     ]
 
-    with open(results_hpo_path, "r") as file:
+    with open(optimized_parameter_file, "r") as file:
         reconstruction_parameters = json.load(file)
 
     # Generate and merge flux images and surfaces.
