@@ -9,12 +9,18 @@ class Actuators(torch.nn.Module):
 
     Attributes
     ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
-        Tensor of shape [number_of_heliostats, n, 2], where n=9 for linear actuators or n=4 for ideal actuators.
-    active_actuator_parameters : torch.Tensor
-        The active actuator parameters.
-        Tensor of shape [number_of_active_heliostats, n, 2], where n=9 for linear actuators or n=4 for ideal actuators.
+    geometry_parameters : torch.Tensor
+        Parameters concerning the actuator geometry.
+        Tensor of shape [number_of_heliostats, n, 2], where n=7 for linear actuators or n=4 for ideal actuators.
+    initial_parameters : torch.Tensor
+        Parameters concerning the initial actuator configuration.
+        Tensor of shape [number_of_heliostats, n, 2], where n=2 for linear actuators or n=4 for ideal actuators.
+    active_geometry_parameters : torch.Tensor
+        Active geometry parameters.
+        Tensor of shape [number_of_active_heliostats, n, 2], where n=7 for linear actuators or n=4 for ideal actuators.
+    active_geometry_parameters : torch.Tensor
+        Active initial parameters.
+        Tensor of shape [number_of_active_heliostats, n, 2], where n=2 for linear actuators or n=4 for ideal actuators.
 
     Methods
     -------
@@ -50,12 +56,14 @@ class Actuators(torch.nn.Module):
         """
         super().__init__()
 
-        device = get_device(device=device)
+        self.geometry_parameters = actuator_parameters
+        self.initial_parameters = actuator_parameters
 
-        self.actuator_parameters = actuator_parameters
-
-        self.active_actuator_parameters = torch.empty_like(
-            self.actuator_parameters, device=device
+        self.active_geometry_parameters = torch.empty_like(
+            self.geometry_parameters, device=device
+        )
+        self.active_initial_parameters = torch.empty_like(
+            self.initial_parameters, device=device
         )
 
     def motor_positions_to_angles(

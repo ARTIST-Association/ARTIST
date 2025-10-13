@@ -83,7 +83,7 @@ def kinematic_deviations(
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
-) -> tuple[torch.Tensor, int]:
+) -> tuple[torch.Tensor, torch.Tensor, int]:
     """
     Load kinematic deviations from an HDF5 scenario file.
 
@@ -112,7 +112,9 @@ def kinematic_deviations(
     Returns
     -------
     torch.Tensor
-        The kinematic deviation parameters.
+        Translation deviation parameters for the kinematic.
+    torch.Tensor
+        Rotation deviation parameters for the kinematic.
     int
         The number of actuators needed for this kinematic type.
     """
@@ -126,7 +128,7 @@ def kinematic_deviations(
         kinematic_config = scenario_file[config_dictionary.heliostat_kinematic_key]
 
     if kinematic_type == config_dictionary.rigid_body_key:
-        kinematic_deviations = rigid_body_deviations(
+        translation_deviations, rotation_deviations = rigid_body_deviations(
             kinematic_config=kinematic_config,
             log=log,
             heliostat_name=heliostat_name,
@@ -138,7 +140,7 @@ def kinematic_deviations(
             f"The kinematic type: {kinematic_type} is not yet implemented!"
         )
 
-    return kinematic_deviations, number_of_actuators
+    return translation_deviations, rotation_deviations, number_of_actuators
 
 
 def rigid_body_deviations(
@@ -146,7 +148,7 @@ def rigid_body_deviations(
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Load kinematic deviations for a rigid body kinematic from an HDF5 scenario file.
 
@@ -166,12 +168,22 @@ def rigid_body_deviations(
     Returns
     -------
     torch.Tensor
-        18 deviation parameters for the rigid body kinematic.
+        Translation deviation parameters for the kinematic.
+        Tensor of shape [9].
+    torch.Tensor
+        Rotation deviation parameters for the kinematic.
+        Tensor of shape [4].
     """
     device = get_device(device=device)
 
-    kinematic_deviations = torch.zeros(
-        config_dictionary.rigid_body_number_of_deviation_parameters,
+    translation_deviations = torch.zeros(
+        config_dictionary.rigid_body_number_of_translation_deviation_parameters,
+        dtype=torch.float,
+        device=device,
+    )
+
+    rotation_deviations = torch.zeros(
+        config_dictionary.rigid_body_number_of_rotation_deviation_parameters,
         dtype=torch.float,
         device=device,
     )
@@ -187,10 +199,6 @@ def rigid_body_deviations(
     first_joint_translation_u = kinematic_config.get(
         f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.first_joint_translation_u}"
-    )
-    first_joint_tilt_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
-        f"{config_dictionary.first_joint_tilt_e}"
     )
     first_joint_tilt_n = kinematic_config.get(
         f"{config_dictionary.kinematic_deviations}/"
@@ -220,10 +228,6 @@ def rigid_body_deviations(
         f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.second_joint_tilt_n}"
     )
-    second_joint_tilt_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
-        f"{config_dictionary.second_joint_tilt_u}"
-    )
     concentrator_translation_e = kinematic_config.get(
         f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_translation_e}"
@@ -235,18 +239,6 @@ def rigid_body_deviations(
     concentrator_translation_u = kinematic_config.get(
         f"{config_dictionary.kinematic_deviations}/"
         f"{config_dictionary.concentrator_translation_u}"
-    )
-    concentrator_tilt_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
-        f"{config_dictionary.concentrator_tilt_e}"
-    )
-    concentrator_tilt_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
-        f"{config_dictionary.concentrator_tilt_n}"
-    )
-    concentrator_tilt_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
-        f"{config_dictionary.concentrator_tilt_u}"
     )
 
     rank = (
@@ -268,11 +260,6 @@ def rigid_body_deviations(
     if first_joint_translation_u is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
-            f"Using default values!"
-        )
-    if first_joint_tilt_e is None and rank == 0:
-        log.warning(
-            f"No individual kinematic {config_dictionary.first_joint_tilt_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_tilt_n is None and rank == 0:
@@ -310,11 +297,6 @@ def rigid_body_deviations(
             f"No individual kinematic {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if second_joint_tilt_u is None and rank == 0:
-        log.warning(
-            f"No individual kinematic {config_dictionary.second_joint_tilt_u} for {heliostat_name} set. "
-            f"Using default values!"
-        )
     if concentrator_translation_e is None and rank == 0:
         log.warning(
             f"No individual kinematic {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
@@ -330,113 +312,75 @@ def rigid_body_deviations(
             f"No individual kinematic {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
-    if concentrator_tilt_e is None and rank == 0:
-        log.warning(
-            f"No individual kinematic {config_dictionary.concentrator_tilt_e} for {heliostat_name} set. "
-            f"Using default values!"
-        )
-    if concentrator_tilt_n is None and rank == 0:
-        log.warning(
-            f"No individual kinematic {config_dictionary.concentrator_tilt_n} for {heliostat_name} set. "
-            f"Using default values!"
-        )
-    if concentrator_tilt_u is None and rank == 0:
-        log.warning(
-            f"No individual kinematic {config_dictionary.concentrator_tilt_u} for {heliostat_name} set. "
-            f"Using default values!"
-        )
-    kinematic_deviations[0] = (
+
+    translation_deviations[0] = (
         torch.tensor(first_joint_translation_e[()], dtype=torch.float, device=device)
         if first_joint_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[1] = (
+    translation_deviations[1] = (
         torch.tensor(first_joint_translation_n[()], dtype=torch.float, device=device)
         if first_joint_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[2] = (
+    translation_deviations[2] = (
         torch.tensor(first_joint_translation_u[()], dtype=torch.float, device=device)
         if first_joint_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[3] = (
-        torch.tensor(first_joint_tilt_e[()], dtype=torch.float, device=device)
-        if first_joint_tilt_e
-        else torch.tensor(0.0, dtype=torch.float, device=device)
-    )
-    kinematic_deviations[4] = (
-        torch.tensor(first_joint_tilt_n[()], dtype=torch.float, device=device)
-        if first_joint_tilt_n
-        else torch.tensor(0.0, dtype=torch.float, device=device)
-    )
-    kinematic_deviations[5] = (
-        torch.tensor(first_joint_tilt_u[()], dtype=torch.float, device=device)
-        if first_joint_tilt_u
-        else torch.tensor(0.0, dtype=torch.float, device=device)
-    )
-    kinematic_deviations[6] = (
+    translation_deviations[3] = (
         torch.tensor(second_joint_translation_e[()], dtype=torch.float, device=device)
         if second_joint_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[7] = (
+    translation_deviations[4] = (
         torch.tensor(second_joint_translation_n[()], dtype=torch.float, device=device)
         if second_joint_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[8] = (
+    translation_deviations[5] = (
         torch.tensor(second_joint_translation_u[()], dtype=torch.float, device=device)
         if second_joint_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[9] = (
-        torch.tensor(second_joint_tilt_e[()], dtype=torch.float, device=device)
-        if second_joint_tilt_e
-        else torch.tensor(0.0, dtype=torch.float, device=device)
-    )
-    kinematic_deviations[10] = (
-        torch.tensor(second_joint_tilt_n[()], dtype=torch.float, device=device)
-        if second_joint_tilt_n
-        else torch.tensor(0.0, dtype=torch.float, device=device)
-    )
-    kinematic_deviations[11] = (
-        torch.tensor(second_joint_tilt_u[()], dtype=torch.float, device=device)
-        if second_joint_tilt_u
-        else torch.tensor(0.0, dtype=torch.float, device=device)
-    )
-    kinematic_deviations[12] = (
+    translation_deviations[6] = (
         torch.tensor(concentrator_translation_e[()], dtype=torch.float, device=device)
         if concentrator_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[13] = (
+    translation_deviations[7] = (
         torch.tensor(concentrator_translation_n[()], dtype=torch.float, device=device)
         if concentrator_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[14] = (
+    translation_deviations[8] = (
         torch.tensor(concentrator_translation_u[()], dtype=torch.float, device=device)
         if concentrator_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[15] = (
-        torch.tensor(concentrator_tilt_e[()], dtype=torch.float, device=device)
-        if concentrator_tilt_e
+
+    rotation_deviations[0] = (
+        torch.tensor(first_joint_tilt_n[()], dtype=torch.float, device=device)
+        if first_joint_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[16] = (
-        torch.tensor(concentrator_tilt_n[()], dtype=torch.float, device=device)
-        if concentrator_tilt_n
+    rotation_deviations[1] = (
+        torch.tensor(first_joint_tilt_u[()], dtype=torch.float, device=device)
+        if first_joint_tilt_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    kinematic_deviations[17] = (
-        torch.tensor(concentrator_tilt_u[()], dtype=torch.float, device=device)
-        if concentrator_tilt_u
+    rotation_deviations[2] = (
+        torch.tensor(second_joint_tilt_e[()], dtype=torch.float, device=device)
+        if second_joint_tilt_e
+        else torch.tensor(0.0, dtype=torch.float, device=device)
+    )
+    rotation_deviations[3] = (
+        torch.tensor(second_joint_tilt_n[()], dtype=torch.float, device=device)
+        if second_joint_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
 
-    return kinematic_deviations
+    return translation_deviations, rotation_deviations
 
 
 def actuator_parameters(
@@ -651,23 +595,23 @@ def linear_actuators(
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
         actuator_parameters[5, index] = (
-            torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
-            if initial_stroke_length
-            else torch.tensor(0.0, dtype=torch.float, device=device)
-        )
-        actuator_parameters[6, index] = (
             torch.tensor(offset[()], dtype=torch.float, device=device)
             if offset
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[7, index] = (
+        actuator_parameters[6, index] = (
             torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
             if pivot_radius
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[8, index] = (
+        actuator_parameters[7, index] = (
             torch.tensor(initial_angle[()], dtype=torch.float, device=device)
             if initial_angle
+            else torch.tensor(0.0, dtype=torch.float, device=device)
+        )
+        actuator_parameters[8, index] = (
+            torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
+            if initial_stroke_length
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
 
@@ -677,8 +621,8 @@ def linear_actuators(
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
     # of actuator number one needs to be transformed accordingly.
-    actuator_parameters[8, 0] = utils.transform_initial_angle(
-        initial_angle=actuator_parameters[6, 0].unsqueeze(0),
+    actuator_parameters[7, 0] = utils.transform_initial_angle(
+        initial_angle=actuator_parameters[7, 0].unsqueeze(0),
         initial_orientation=initial_orientation,
         device=device,
     )

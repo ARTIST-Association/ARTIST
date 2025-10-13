@@ -91,8 +91,10 @@ kinematic_type = "type"
 """Key to access the kinematic type."""
 rigid_body_key = "rigid_body"
 """Key to define that the rigid body kinematic is used as a kinematic type."""
-rigid_body_number_of_deviation_parameters = 18
-"""Number of deviation parameters used in the rigid body kinematic."""
+rigid_body_number_of_translation_deviation_parameters = 9
+"""Number of translation deviation parameters used in the rigid body kinematic."""
+rigid_body_number_of_rotation_deviation_parameters = 4
+"""Number of rotation deviation parameters used in the rigid body kinematic."""
 rigid_body_number_of_actuators = 2
 """Number of actuators used in the rigid body kinematic."""
 number_of_linear_actuator_parameters = 9
@@ -103,6 +105,10 @@ kinematic_initial_orientation = "initial_orientation"
 """Key to access the initial orientation."""
 kinematic_deviations = "deviations"
 """Key to access the kinematic deviations."""
+translation_deviations = "translation_deviations"
+"""Key to access the kinematic translation deviations."""
+rotation_deviations = "rotation_deviations"
+"""Key to access the kinematic rotation deviations."""
 
 actuator_clockwise_axis_movement = "clockwise_axis_movement"
 """Key to access the actuator clockwise parameter."""
@@ -168,10 +174,8 @@ fit_nurbs_from_points = "point_cloud"
 fit_nurbs_from_normals = "deflectometry"
 """Defines that the NURBS should be learnt using deflectometry data."""
 
-kinematic_calibration_raytracing = "raytracing"
-"""Defines that the kinematic optimizer uses ray tracing."""
-kinematic_calibration_motor_positions = "motor_positions"
-"""Defines that the kinematic optimizer uses motor positions."""
+kinematic_reconstruction_raytracing = "raytracing"
+"""Defines that the kinematic reconstructor uses ray tracing."""
 
 names = "names"
 """Key to access heliostat names."""

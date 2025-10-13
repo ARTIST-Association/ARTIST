@@ -64,7 +64,7 @@ def test_surface_reconstructor(
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3, 4)
+        weight=0.5, reduction_dimensions=(1, 2, 3)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.5,
@@ -171,9 +171,14 @@ def test_surface_reconstructor(
 
             assert "Must be overridden!" in str(exc_info.value)
     else:
-        _ = surface_reconstructor.reconstruct_surfaces(
-            loss_definition=loss_definition, device=device
-        )
+        old_state = torch.are_deterministic_algorithms_enabled()
+        torch.use_deterministic_algorithms(False)
+        try:
+            _ = surface_reconstructor.reconstruct_surfaces(
+                loss_definition=loss_definition, device=device
+            )
+        finally:
+            torch.use_deterministic_algorithms(old_state)
 
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups

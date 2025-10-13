@@ -7,7 +7,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.kinematic_calibrator import KinematicCalibrator
+from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.loss_functions import FocalSpotLoss, Loss, VectorLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -19,20 +19,11 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "calibration_method, initial_learning_rate, loss_class, data_parser, early_stopping_delta, centroid_extraction_method, scheduler",
+    "reconstruction_method, initial_learning_rate, loss_class, data_parser, early_stopping_delta, centroid_extraction_method, scheduler",
     [
         (
-            config_dictionary.kinematic_calibration_motor_positions,
-            0.001,
-            VectorLoss,
-            PaintCalibrationDataParser(),
-            1e-4,
-            paint_mappings.UTIS_KEY,
-            config_dictionary.exponential,
-        ),
-        (
-            config_dictionary.kinematic_calibration_raytracing,
-            0.0001,
+            config_dictionary.kinematic_reconstruction_raytracing,
+            0.005,
             FocalSpotLoss,
             PaintCalibrationDataParser(),
             1e-4,
@@ -40,35 +31,8 @@ set_logger_config()
             config_dictionary.exponential,
         ),
         (
-            config_dictionary.kinematic_calibration_motor_positions,
-            0.0001,
-            VectorLoss,
-            CalibrationDataParser(),
-            1e-4,
-            paint_mappings.UTIS_KEY,
-            config_dictionary.exponential,
-        ),
-        (
-            config_dictionary.kinematic_calibration_raytracing,
-            0.0001,
-            FocalSpotLoss,
-            CalibrationDataParser(),
-            1e-4,
-            paint_mappings.UTIS_KEY,
-            config_dictionary.exponential,
-        ),
-        (
-            config_dictionary.kinematic_calibration_motor_positions,
-            0.0001,
-            VectorLoss,
-            PaintCalibrationDataParser(),
-            1.0,
-            paint_mappings.UTIS_KEY,
-            config_dictionary.reduce_on_plateau,
-        ),
-        (
-            config_dictionary.kinematic_calibration_raytracing,
-            0.0001,
+            config_dictionary.kinematic_reconstruction_raytracing,
+            0.005,
             FocalSpotLoss,
             PaintCalibrationDataParser(),
             1.0,
@@ -76,8 +40,8 @@ set_logger_config()
             config_dictionary.reduce_on_plateau,
         ),
         (
-            config_dictionary.kinematic_calibration_raytracing,
-            0.0001,
+            config_dictionary.kinematic_reconstruction_raytracing,
+            0.005,
             FocalSpotLoss,
             PaintCalibrationDataParser(),
             1.0,
@@ -86,8 +50,8 @@ set_logger_config()
         ),
     ],
 )
-def test_kinematic_calibrator(
-    calibration_method: str,
+def test_kinematic_reconstructor(
+    reconstruction_method: str,
     initial_learning_rate: float,
     loss_class: Loss,
     data_parser: CalibrationDataParser,
@@ -102,8 +66,8 @@ def test_kinematic_calibrator(
 
     Parameters
     ----------
-    calibration_method : str
-        The name of the calibration method.
+    reconstruction_method : str
+        The name of the reconstruction method.
     initial_learning_rate : float
         The initial learning rate.
     loss_class : Loss
@@ -141,10 +105,10 @@ def test_kinematic_calibrator(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: initial_learning_rate,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 15,
-        config_dictionary.log_step: 0,
+        config_dictionary.max_epoch: 100,
+        config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 13,
+        config_dictionary.early_stopping_patience: 80,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
@@ -164,10 +128,8 @@ def test_kinematic_calibrator(
                 / "tests/data/field_data/AA39-calibration-properties_2.json",
             ],
             [
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-flux-centered_1.png",
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-flux-centered_2.png",
+                pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA39-flux_1.png",
+                pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA39-flux_2.png",
             ],
         ),
         (
@@ -176,10 +138,7 @@ def test_kinematic_calibrator(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA31-calibration-properties_1.json"
             ],
-            [
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-flux-centered_1.png"
-            ],
+            [pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png"],
         ),
     ]
 
@@ -214,12 +173,12 @@ def test_kinematic_calibrator(
         ddp_setup_for_testing[config_dictionary.device] = device
         ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
-        kinematic_calibrator = KinematicCalibrator(
+        kinematic_reconstructor = KinematicReconstructor(
             ddp_setup=ddp_setup_for_testing,
             scenario=scenario,
             data=data,
             optimization_configuration=optimization_configuration,
-            calibration_method=calibration_method,
+            reconstruction_method=reconstruction_method,
         )
 
         loss_definition = (
@@ -228,16 +187,16 @@ def test_kinematic_calibrator(
             else VectorLoss()
         )
 
-        # Calibrate the kinematic.
+        # Reconstruct the kinematic.
         if not isinstance(data_parser, PaintCalibrationDataParser):
             with pytest.raises(NotImplementedError) as exc_info:
-                _ = kinematic_calibrator.calibrate(
+                _ = kinematic_reconstructor.reconstruct_kinematic(
                     loss_definition=loss_definition, device=device
                 )
 
                 assert "Must be overridden!" in str(exc_info.value)
         else:
-            _ = kinematic_calibrator.calibrate(
+            _ = kinematic_reconstructor.reconstruct_kinematic(
                 loss_definition=loss_definition, device=device
             )
 
@@ -246,8 +205,8 @@ def test_kinematic_calibrator(
             ):
                 expected_path = (
                     pathlib.Path(ARTIST_ROOT)
-                    / "tests/data/expected_optimized_kinematic_parameters"
-                    / f"{calibration_method}_group_{index}_{device.type}.pt"
+                    / "tests/data/expected_reconstructed_kinematic_parameters"
+                    / f"{reconstruction_method}_{str(early_stopping_delta).replace('.', '')}_group_{index}_{device.type}.pt"
                 )
 
                 expected = torch.load(
@@ -255,14 +214,14 @@ def test_kinematic_calibrator(
                 )
 
                 torch.testing.assert_close(
-                    heliostat_group.kinematic.deviation_parameters,
-                    expected["kinematic_deviations"],
-                    atol=5e-2,
-                    rtol=5e-2,
+                    heliostat_group.kinematic.rotation_deviation_parameters,
+                    expected["rotation_deviations"],
+                    atol=5e-4,
+                    rtol=5e-4,
                 )
                 torch.testing.assert_close(
-                    heliostat_group.kinematic.actuators.actuator_parameters,
-                    expected["actuator_parameters"],
-                    atol=5e-2,
-                    rtol=5e-2,
+                    heliostat_group.kinematic.actuators.initial_parameters,
+                    expected["initial_parameters"],
+                    atol=5e-4,
+                    rtol=5e-4,
                 )

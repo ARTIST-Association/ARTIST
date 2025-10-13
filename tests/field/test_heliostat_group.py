@@ -38,7 +38,8 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
         ),
         nurbs_control_points=torch.empty((3, 4, 10, 10, 4), device=device),
         nurbs_degrees=torch.tensor([2, 2], device=device),
-        kinematic_deviation_parameters=torch.rand((3, 18), device=device),
+        kinematic_translation_deviation_parameters=torch.rand((3, 9), device=device),
+        kinematic_rotation_deviation_parameters=torch.rand((3, 4), device=device),
         actuator_parameters=actuator_parameters,
         device=device,
     )
@@ -92,7 +93,8 @@ def test_activate_heliostats(
     kinematic_attributes = [
         "active_heliostat_positions",
         "active_initial_orientations",
-        "active_deviation_parameters",
+        "active_translation_deviation_parameters",
+        "active_rotation_deviation_parameters",
     ]
 
     for attribute in group_attributes:
@@ -104,7 +106,7 @@ def test_activate_heliostats(
         assert parameter.shape[0] == expected_size
 
     assert (
-        heliostat_group.kinematic.actuators.active_actuator_parameters.shape[0]
+        heliostat_group.kinematic.actuators.active_geometry_parameters.shape[0]
         == expected_size
     )
 

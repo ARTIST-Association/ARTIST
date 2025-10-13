@@ -264,8 +264,13 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_deviation_parameters = (
-            self.kinematic.deviation_parameters.repeat_interleave(
+        self.kinematic.active_translation_deviation_parameters = (
+            self.kinematic.translation_deviation_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_rotation_deviation_parameters = (
+            self.kinematic.rotation_deviation_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
@@ -274,8 +279,13 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.actuators.active_actuator_parameters = (
-            self.kinematic.actuators.actuator_parameters.repeat_interleave(
+        self.kinematic.actuators.active_geometry_parameters = (
+            self.kinematic.actuators.geometry_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.actuators.active_initial_parameters = (
+            self.kinematic.actuators.initial_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )

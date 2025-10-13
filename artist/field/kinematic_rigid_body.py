@@ -19,9 +19,12 @@ class RigidBody(Kinematic):
     initial_orientations : torch.Tensor
         The initial orientation offsets of all heliostats.
         Tensor of shape [number_of_heliostats, 4].
-    deviation_parameters : torch.Tensor
-        The kinematic deviation parameters of all heliostats.
-        Tensor of shape [number_of_heliostats, 18].
+    translation_deviation_parameters : torch.Tensor
+        Kinematic translation deviation parameter.
+        Tensor of shape [number_of_heliostats, 9].
+    rotation_deviation_parameters : torch.Tensor
+        Kinematic rotation deviation parameter.
+        Tensor of shape [number_of_heliostats, 4].
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostat_positions : torch.Tensor
@@ -30,9 +33,12 @@ class RigidBody(Kinematic):
     active_initial_orientations : torch.Tensor
         The initial orientations of all active heliostats.
         Tensor of shape [number_of_active_heliostats, 4].
-    active_deviation_parameters : torch.Tensor
-        The deviation parameters of all active heliostats.
-        Tensor of shape [number_of_active_heliostats, 18].
+    translation_deviation_parameters : torch.Tensor
+        Kinematic translation deviation parameter of all active heliostats.
+        Tensor of shape [number_of_active_heliostats, 9].
+    rotation_deviation_parameters : torch.Tensor
+        Kinematic rotation deviation parameter of all active heliostats.
+        Tensor of shape [number_of_active_heliostats, 4].
     active_motor_positions : torch.Tensor
         The motor positions of active heliostats.
         Tensor of shape [number_of_active_heliostats, 2].
@@ -59,7 +65,8 @@ class RigidBody(Kinematic):
         number_of_heliostats: int,
         heliostat_positions: torch.Tensor,
         initial_orientations: torch.Tensor,
-        deviation_parameters: torch.Tensor,
+        translation_deviation_parameters: torch.Tensor,
+        rotation_deviation_parameters: torch.Tensor,
         actuator_parameters: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
@@ -71,20 +78,10 @@ class RigidBody(Kinematic):
         kinematic works for heliostats equipped with two actuators that turn the heliostat surfaces.
         Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematic.
 
-        The kinematic deviations for the rigid body kinematic comprise 18 parameters. The first six parameters refer to
-        the first joint, the second six parameters to the second joint, and the final 6 to the concentrator. Within each
-        group of six parameters, the first three parameters are the translations in the east, north, and up direction
-        respectively, whilst the second three parameters are the tilts in the east, north, and up direction. For example,
-        the first six parameters are:
-
-        - ``first_joint_translation_e``
-        - ``first_joint_translation_n``
-        - ``first_joint_translation_u``
-        - ``first_joint_tilt_e``
-        - ``first_joint_tilt_n``
-        - ``first_joint_tilt_u``
-
-        and this is then repeated for the second joint and the concentrator.
+        The kinematic deviations are split into translation and rotation parameters. There are three translation parameters
+        for each joint and for the concentrator. One translation deviation in the east, north and up direction respectively.
+        For joint one and two there are also rotation deviations. For joint one in the north and up direction and for joint
+        two in the east and north direction.
 
         Parameters
         ----------
@@ -95,6 +92,12 @@ class RigidBody(Kinematic):
             Tensor of shape [number_of_heliostats, 4].
         initial_orientations : torch.Tensor
             The initial orientation offsets of all heliostats.
+            Tensor of shape [number_of_heliostats, 4].
+        translation_deviation_parameters : torch.Tensor
+            Kinematic translation deviation parameter.
+            Tensor of shape [number_of_heliostats, 9].
+        rotation_deviation_parameters : torch.Tensor
+            Kinematic rotation deviation parameter.
             Tensor of shape [number_of_heliostats, 4].
         deviation_parameters : torch.Tensor
             The kinematic deviation parameters of all heliostats.
@@ -116,7 +119,8 @@ class RigidBody(Kinematic):
         self.initial_orientations = initial_orientations
         self.motor_positions = torch.zeros((number_of_heliostats, 2), device=device)
 
-        self.deviation_parameters = deviation_parameters
+        self.translation_deviation_parameters = translation_deviation_parameters
+        self.rotation_deviation_parameters = rotation_deviation_parameters
 
         self.number_of_active_heliostats = 0
         self.active_heliostat_positions = torch.empty_like(
@@ -125,8 +129,11 @@ class RigidBody(Kinematic):
         self.active_initial_orientations = torch.empty_like(
             initial_orientations, device=device
         )
-        self.active_deviation_parameters = torch.empty_like(
-            deviation_parameters, device=device
+        self.active_translation_deviation_parameters = torch.empty_like(
+            translation_deviation_parameters, device=device
+        )
+        self.active_rotation_deviation_parameters = torch.empty_like(
+            rotation_deviation_parameters, device=device
         )
         self.active_motor_positions = torch.empty_like(
             self.motor_positions, device=device
@@ -190,23 +197,31 @@ class RigidBody(Kinematic):
         )
 
         joint_rotations[:, 0] = (
-            utils.rotate_n(n=self.active_deviation_parameters[:, 4], device=device)
-            @ utils.rotate_u(u=self.active_deviation_parameters[:, 5], device=device)
+            utils.rotate_n(
+                n=self.active_rotation_deviation_parameters[:, 0], device=device
+            )
+            @ utils.rotate_u(
+                u=self.active_rotation_deviation_parameters[:, 1], device=device
+            )
             @ utils.translate_enu(
-                e=self.active_deviation_parameters[:, 0],
-                n=self.active_deviation_parameters[:, 1],
-                u=self.active_deviation_parameters[:, 2],
+                e=self.active_translation_deviation_parameters[:, 0],
+                n=self.active_translation_deviation_parameters[:, 1],
+                u=self.active_translation_deviation_parameters[:, 2],
                 device=device,
             )
             @ utils.rotate_e(e=joint_angles[:, 0], device=device)
         )
         joint_rotations[:, 1] = (
-            utils.rotate_e(e=self.active_deviation_parameters[:, 9], device=device)
-            @ utils.rotate_n(n=self.active_deviation_parameters[:, 10], device=device)
+            utils.rotate_e(
+                e=self.active_rotation_deviation_parameters[:, 2], device=device
+            )
+            @ utils.rotate_n(
+                n=self.active_rotation_deviation_parameters[:, 3], device=device
+            )
             @ utils.translate_enu(
-                e=self.active_deviation_parameters[:, 6],
-                n=self.active_deviation_parameters[:, 7],
-                u=self.active_deviation_parameters[:, 8],
+                e=self.active_translation_deviation_parameters[:, 3],
+                n=self.active_translation_deviation_parameters[:, 4],
+                u=self.active_translation_deviation_parameters[:, 5],
                 device=device,
             )
             @ utils.rotate_u(u=joint_angles[:, 1], device=device)
@@ -217,9 +232,9 @@ class RigidBody(Kinematic):
             @ joint_rotations[:, 0]
             @ joint_rotations[:, 1]
             @ utils.translate_enu(
-                e=self.active_deviation_parameters[:, 12],
-                n=self.active_deviation_parameters[:, 13],
-                u=self.active_deviation_parameters[:, 14],
+                e=self.active_translation_deviation_parameters[:, 6],
+                n=self.active_translation_deviation_parameters[:, 7],
+                u=self.active_translation_deviation_parameters[:, 8],
                 device=device,
             )
         )
@@ -344,21 +359,25 @@ class RigidBody(Kinematic):
             joint_angles_1 = -torch.arcsin(
                 torch.clamp(
                     -desired_concentrator_normals[:, 0]
-                    / torch.cos(self.active_deviation_parameters[:, 7]),
+                    / torch.cos(self.active_translation_deviation_parameters[:, 4]),
                     min=-1,
                     max=1,
                 )
             )
 
-            a = -torch.cos(self.active_deviation_parameters[:, 6]) * torch.cos(
-                joint_angles_1
-            ) + torch.sin(self.active_deviation_parameters[:, 6]) * torch.sin(
-                self.active_deviation_parameters[:, 7]
+            a = -torch.cos(
+                self.active_translation_deviation_parameters[:, 3]
+            ) * torch.cos(joint_angles_1) + torch.sin(
+                self.active_translation_deviation_parameters[:, 3]
+            ) * torch.sin(
+                self.active_translation_deviation_parameters[:, 4]
             ) * torch.sin(joint_angles_1)
-            b = -torch.sin(self.active_deviation_parameters[:, 6]) * torch.cos(
-                joint_angles_1
-            ) - torch.cos(self.active_deviation_parameters[:, 6]) * torch.sin(
-                self.active_deviation_parameters[:, 7]
+            b = -torch.sin(
+                self.active_translation_deviation_parameters[:, 3]
+            ) * torch.cos(joint_angles_1) - torch.cos(
+                self.active_translation_deviation_parameters[:, 3]
+            ) * torch.sin(
+                self.active_translation_deviation_parameters[:, 4]
             ) * torch.sin(joint_angles_1)
 
             joint_angles_0 = (

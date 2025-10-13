@@ -323,7 +323,7 @@ def generate_flux_images(
         scenario = Scenario.load_scenario_from_hdf5(scenario_file, device=device)
 
     # Hint: Lower the number of rays when running on cuda, to avoid raising "cuda out of memory errors".
-    scenario.set_number_of_rays(number_of_rays=6000)
+    scenario.set_number_of_rays(number_of_rays=1000)
 
     heliostat_properties_tuples: list[tuple[str, pathlib.Path]] = [
         (
@@ -407,15 +407,20 @@ def generate_flux_images(
         # Store flux for the given scenario under the provided key.
         results_dict[heliostat_name][result_key] = flux[i].cpu().detach().numpy()
 
-        # Save the surface points per facet.
+        # Save the surface normals per facet.
         if (
             result_key == "deflectometry"
             and "surface" not in results_dict[heliostat_name]
         ):
-            # Surface points per facet (canted).
+            # Surface points and normals per facet (canted).
             facet_points_canted = (
                 scenario.heliostat_field.heliostat_groups[0]
                 .surface_points[i]
+                .view(4, 2500, 4)
+            )
+            facet_normals_canted = (
+                scenario.heliostat_field.heliostat_groups[0]
+                .surface_normals[i]
                 .view(4, 2500, 4)
             )
 
@@ -425,31 +430,35 @@ def generate_flux_images(
             ]
             facet_points_decanted_tensor = perform_inverse_canting_and_translation(
                 canted_points=facet_points_canted,
-                translation=facet_translations,
+                translation=torch.zeros(4, 4),
                 canting=facet_canting_vectors,
                 device=device,
             )
+            facet_normals_decanted_tensor = perform_inverse_canting_and_translation(
+                canted_points=facet_normals_canted,
+                translation=torch.zeros(4, 4),
+                canting=facet_canting_vectors,
+                device=device,
+            )
+            reference_direction = torch.tensor([0.0, 0.0, 1.0], device=device)
 
-            # Convert to Z grid for plotting.
-            facet_points_decanted_np = (
-                facet_points_decanted_tensor[:, :, 2]
-                .view(4, 50, 50)
-                .cpu()
-                .detach()
-                .numpy()
-            )
-            surface_z_grid = np.block(
-                [
-                    [facet_points_decanted_np[2], facet_points_decanted_np[0]],
-                    [facet_points_decanted_np[3], facet_points_decanted_np[1]],
-                ]
-            )
-            results_dict[heliostat_name]["surface"] = surface_z_grid
+            facet_points_flat = facet_points_decanted_tensor.reshape(-1, 3)
+            facet_normals_flat = facet_normals_decanted_tensor.reshape(-1, 3)
+
+            x = facet_points_flat[:, 0]
+            y = facet_points_flat[:, 1]
+            cos_theta = facet_normals_flat @ reference_direction
+            angles = torch.arccos(torch.clip(cos_theta, -1.0, 1.0))
+            angles = torch.clip(angles, -0.1, 0.1)
+
+            results_dict[heliostat_name]["surface"] = [x, y, angles]
 
     if not results_file.parent.exists():
         results_file.parent.mkdir(parents=True, exist_ok=True)
 
     torch.save(results_dict, results_file)
+
+    print(f"Flux prediction results saved as {results_file}.")
 
 
 if __name__ == "__main__":

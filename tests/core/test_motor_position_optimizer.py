@@ -107,9 +107,9 @@ def test_motor_positions_optimizer(
     }
 
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-4,
+        config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 5,
+        config_dictionary.max_epoch: 30,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 4,
@@ -165,6 +165,6 @@ def test_motor_positions_optimizer(
         torch.testing.assert_close(
             heliostat_group.kinematic.motor_positions,
             expected,
-            atol=5e-3,
-            rtol=5e-3,
+            atol=5e-4,
+            rtol=5e-4,
         )

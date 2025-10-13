@@ -17,10 +17,10 @@ from artist.util import type_mappings
                         [0.0000e00, 0.0000e00],
                         [60000, 80000],
                         [1.5417e05, 1.5417e05],
-                        [7.7413e-02, 7.7522e-02],
                         [3.3531e-01, 3.4077e-01],
                         [3.3810e-01, 3.1910e-01],
                         [-1.5318e00, 9.4392e-01],
+                        [7.7413e-02, 7.7522e-02],
                     ]
                 ]
             ),
@@ -64,7 +64,14 @@ def test_actuators_forward(
     actuators = type_mappings.actuator_type_mapping[
         actuator_parameters[0, 0, 0].item()
     ](actuator_parameters=actuator_parameters.to(device), device=device)
-    actuators.active_actuator_parameters = actuators.actuator_parameters
+
+    actuators.active_geometry_parameters = (
+        actuator_parameters[0, :7].unsqueeze(0).to(device)
+    )
+    actuators.active_initial_parameters = (
+        actuator_parameters[0, -2:].unsqueeze(0).to(device)
+    )
+
     motor_positions = torch.tensor([[28061.0, 47874.0]], device=device)
     angles = actuators(motor_positions, device)
 
