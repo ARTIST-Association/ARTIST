@@ -264,7 +264,7 @@ if __name__ == "__main__":
 
     if not results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path}. Please run ``surface_reconstruction.py``"
+            f"Results file not found: {results_path}. Please run ``surface_reconstruction_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 

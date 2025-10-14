@@ -143,7 +143,7 @@ def surface_reconstructor_for_hpo(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.00005,
-        config_dictionary.max_epoch: 2,
+        config_dictionary.max_epoch: 4500,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 5000,
@@ -314,7 +314,7 @@ if __name__ == "__main__":
     )
     if not ideal_scenario_file.exists():
         raise FileNotFoundError(
-            f"The reconstruction scenario located at {ideal_scenario_file} could not be found! Please run the ``reconstruction_scenario.py`` to generate this scenario, or adjust the file path and try again."
+            f"The reconstruction scenario located at {ideal_scenario_file} could not be found! Please run the ``surface_reconstruction_generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
     # Set up separate logger for Propulate optimization.
@@ -333,10 +333,10 @@ if __name__ == "__main__":
     seed = 7
     rng = random.Random(seed + comm.rank)
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    viable_heliostats_data = pathlib.Path(args.results_dir) / "surface_reconstruction_viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
-            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``viable_heliostat_list.py`` script to generate this list, or adjust the file path and try again."
+            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``surface_reconstruction_viable_heliostat_list.py`` script to generate this list, or adjust the file path and try again."
         )
 
     # Load viable heliostats data.
@@ -358,7 +358,7 @@ if __name__ == "__main__":
         reconstruction_parameter_ranges[key] = tuple_range
 
     # Set up evolutionary operator.
-    num_generations = 1
+    num_generations = 500
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         debug=2,
     )
     propulator.summarize(
-        top_n=1,
+        top_n=10,
         debug=2,
     )
 

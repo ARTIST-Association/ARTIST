@@ -59,30 +59,29 @@ def perform_inverse_canting_and_translation(
 
     east_unit_vector = torch.nn.functional.normalize(
         canting[:, 0, :3], dim=1
-    )  # (F, 3).
+    )
     north_unit_vector = torch.nn.functional.normalize(
         canting[:, 1, :3], dim=1
-    )  # (F, 3).
+    )
     up_unit_vector = torch.nn.functional.normalize(
         torch.linalg.cross(east_unit_vector, north_unit_vector, dim=1), dim=1
-    )  # (F, 3).
+    )
 
     forward_transform[:, :3, 0] = east_unit_vector
     forward_transform[:, :3, 1] = north_unit_vector
     forward_transform[:, :3, 2] = up_unit_vector
-    # Translation column; ensure bottom element is 1.
     forward_transform[:, :3, 3] = translation[:, :3]
     forward_transform[:, 3, 3] = 1.0
 
     # Extract rotation and translation.
-    rotation_matrix = forward_transform[:, :3, :3]  # (F, 3, 3).
-    translation_vector = forward_transform[:, :3, 3]  # (F, 3).
+    rotation_matrix = forward_transform[:, :3, :3]
+    translation_vector = forward_transform[:, :3, 3]
 
     # Compute inverse transform.
-    rotation_matrix_inverse = rotation_matrix.transpose(1, 2)  # (F, 3, 3).
+    rotation_matrix_inverse = rotation_matrix.transpose(1, 2)
     translation_inverse = -torch.bmm(
         rotation_matrix_inverse, translation_vector.unsqueeze(-1)
-    ).squeeze(-1)  # (F, 3).
+    ).squeeze(-1)
 
     inverse_transform = torch.zeros((number_of_facets, 4, 4), device=device)
     inverse_transform[:, :3, :3] = rotation_matrix_inverse

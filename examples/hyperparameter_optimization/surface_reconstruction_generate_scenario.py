@@ -297,10 +297,10 @@ if __name__ == "__main__":
     data_dir = pathlib.Path(args.data_dir)
     tower_file = data_dir / args.tower_file_name
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    viable_heliostats_data = pathlib.Path(args.results_dir) / "surface_reconstruction_viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
-            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
+            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``surface_reconstruction_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
         )
 
     # Load viable heliostats data.
