@@ -90,4 +90,9 @@ def scale_loss(
     """
     epsilon = 1e-12
     scale = (reference * weight) / (loss + epsilon)
-    return loss * scale
+    scaled_loss = loss * scale
+
+    inf_mask = torch.isinf(loss)
+    scaled_loss[inf_mask] = loss[inf_mask]
+
+    return scaled_loss

@@ -543,26 +543,28 @@ def test_normalize_bitmaps(device: torch.device) -> None:
     AssertionError
         If test does not complete as expected.
     """
-    bitmaps_path = (
+    bitmap_path = (
         pathlib.Path(ARTIST_ROOT)
-        / f"tests/data/expected_bitmaps_integration/test_scenario_paint_single_heliostat_{device.type}.pt"
+        / "tests/data/expected_optimized_motor_positions/distribution.pt"
     )
 
-    bitmaps = torch.load(bitmaps_path, map_location=device, weights_only=True)
+    bitmap = torch.load(bitmap_path, map_location=device, weights_only=True).unsqueeze(
+        0
+    )
 
     normalized_bitmaps = utils.normalize_bitmaps(
-        flux_distributions=bitmaps,
+        flux_distributions=bitmap,
         target_area_widths=torch.full(
-            (bitmaps.shape[0],),
+            (bitmap.shape[0],),
             config_dictionary.utis_crop_width,
             device=device,
         ),
         target_area_heights=torch.full(
-            (bitmaps.shape[0],),
+            (bitmap.shape[0],),
             config_dictionary.utis_crop_height,
             device=device,
         ),
-        number_of_rays=bitmaps.sum(dim=[1, 2]),
+        number_of_rays=bitmap.sum(dim=[1, 2]),
     )
 
     expected_path = (

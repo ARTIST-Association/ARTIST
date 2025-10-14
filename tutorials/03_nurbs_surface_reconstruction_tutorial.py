@@ -23,7 +23,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 322 for the tutorial code.
+# Skip to line 324 for the tutorial code.
 #############################################################################################################
 
 
@@ -97,6 +97,7 @@ def plot_surface_points_and_angle_map(
     plt.tight_layout()
     plt.savefig(f"2d_points_and_normals_{name}.png")
     plt.clf()
+    plt.close()
 
 
 def plot_multiple_fluxes(
@@ -130,6 +131,7 @@ def plot_multiple_fluxes(
     plt.tight_layout()
     plt.savefig(f"flux_comparison_{name}.png")
     plt.clf()
+    plt.close()
 
 
 def create_surface_plots(name: str) -> None:
@@ -329,8 +331,11 @@ log = logging.getLogger(__name__)
 # Set the device.
 device = get_device()
 
-# Specify the path to your scenario.h5 file.
+# Specify the path to your scenario.h5 file and specify the configuration.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+base_path_data = "base/path/data"
+heliostat_names_reconstruction = ["heliostat_1"]
+heliostat_names_plots = ["heliostat_1", "..."]
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -363,6 +368,15 @@ heliostat_data_mapping = [
     ),
     # ...
 ]
+
+# Or if you have a directory with downloaded data use this code to create a mapping.
+# heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
+#     base_path=base_path_data,
+#     heliostat_names=heliostat_names_reconstruction,
+#     number_of_measurements=2,
+#     image_variant="flux-centered",
+#     randomize=True,
+# )
 
 # Create dict for the data parser and the heliostat_data_mapping.
 data: dict[
@@ -400,7 +414,7 @@ with setup_distributed_environment(
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.0, reduction_dimensions=(1, 2, 3, 4)
+        weight=0.4, reduction_dimensions=(1, 2, 3)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.3,
@@ -419,32 +433,32 @@ with setup_distributed_environment(
 
     regularizers = [
         ideal_surface_regularizer,
-        total_variation_regularizer_points,
-        total_variation_regularizer_normals,
     ]
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
-    scheduler = config_dictionary.cyclic  # exponential, cyclic or reduce_on_plateau
+    scheduler = (
+        config_dictionary.reduce_on_plateau
+    )  # exponential, cyclic or reduce_on_plateau
     scheduler_parameters = {
-        config_dictionary.gamma: 0.5,
+        config_dictionary.min: 1e-4,
         config_dictionary.min: 5e-6,
         config_dictionary.max: 8e-5,
         config_dictionary.step_size_up: 50,
-        config_dictionary.reduce_factor: 0.5,
-        config_dictionary.patience: 20,
-        config_dictionary.threshold: 1e-4,
-        config_dictionary.cooldown: 5,
+        config_dictionary.reduce_factor: 0.9,
+        config_dictionary.patience: 100,
+        config_dictionary.threshold: 1e-3,
+        config_dictionary.cooldown: 20,
     }
 
     # Set optimizer parameters.
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 2e-4,
+        config_dictionary.initial_learning_rate: 1e-5,
         config_dictionary.tolerance: 1e-5,
-        config_dictionary.max_epoch: 27,
+        config_dictionary.max_epoch: 200,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 5e-5,
-        config_dictionary.early_stopping_patience: 40,
+        config_dictionary.early_stopping_patience: 200,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
         config_dictionary.regularizers: regularizers,
@@ -456,15 +470,15 @@ with setup_distributed_environment(
 
     # Visualize the ideal surfaces and flux distributions from ideal heliostats.
     # Please adapt the heliostat names according to the ones to be plotted.
-    heliostat_names = ["heliostat_name_1, heliostat_name_2"]
     number_of_plots_per_heliostat = 2
-    base_path_data = "/path/to/data"
     create_surface_plots(name="ideal")
     create_flux_plots(
-        heliostat_names=heliostat_names,
+        heliostat_names=heliostat_names_plots,
         number_of_plots_per_heliostat=number_of_plots_per_heliostat,
         base_path_data=base_path_data,
-        data_parser=PaintCalibrationDataParser(sample_limit=2),
+        data_parser=PaintCalibrationDataParser(
+            sample_limit=number_of_plots_per_heliostat
+        ),
         plot_name="ideal",
     )
 
@@ -490,9 +504,9 @@ print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_helio
 # Visualize the results (reconstructed surfaces and flux distributions from reconstructed heliostats).
 create_surface_plots(name="reconstructed")
 create_flux_plots(
-    heliostat_names=heliostat_names,
+    heliostat_names=heliostat_names_plots,
     number_of_plots_per_heliostat=number_of_plots_per_heliostat,
     base_path_data=base_path_data,
-    data_parser=PaintCalibrationDataParser(sample_limit=2),
+    data_parser=PaintCalibrationDataParser(sample_limit=number_of_plots_per_heliostat),
     plot_name="reconstructed",
 )

@@ -203,9 +203,9 @@ heliostat_data_mapping = [
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
 # heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-#     base_path="path/to/data",
-#     heliostat_names=["heliostat_1", "heliostat_2"],
-#     number_of_measurements=10,
+#     base_path="base/path/data",
+#     heliostat_names=["heliostat_1", "..."],
+#     number_of_measurements=5,
 #     image_variant="flux",
 #     randomize=True,
 # )
@@ -245,15 +245,15 @@ with setup_distributed_environment(
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
     scheduler = (
-        config_dictionary.exponential
+        config_dictionary.reduce_on_plateau
     )  # exponential, cyclic or reduce_on_plateau
     scheduler_parameters = {
         config_dictionary.gamma: 0.9,
         config_dictionary.min: 1e-6,
         config_dictionary.max: 1e-3,
         config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.3,
-        config_dictionary.patience: 10,
+        config_dictionary.reduce_factor: 0.0001,
+        config_dictionary.patience: 50,
         config_dictionary.threshold: 1e-3,
         config_dictionary.cooldown: 10,
     }
@@ -262,7 +262,7 @@ with setup_distributed_environment(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: 0.0005,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
+        config_dictionary.max_epoch: 500,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 300,
