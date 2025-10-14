@@ -57,12 +57,8 @@ def perform_inverse_canting_and_translation(
     # Build forward transform per facet (use only ENU 3D coordinates for rotation).
     forward_transform = torch.zeros((number_of_facets, 4, 4), device=device)
 
-    east_unit_vector = torch.nn.functional.normalize(
-        canting[:, 0, :3], dim=1
-    )
-    north_unit_vector = torch.nn.functional.normalize(
-        canting[:, 1, :3], dim=1
-    )
+    east_unit_vector = torch.nn.functional.normalize(canting[:, 0, :3], dim=1)
+    north_unit_vector = torch.nn.functional.normalize(canting[:, 1, :3], dim=1)
     up_unit_vector = torch.nn.functional.normalize(
         torch.linalg.cross(east_unit_vector, north_unit_vector, dim=1), dim=1
     )

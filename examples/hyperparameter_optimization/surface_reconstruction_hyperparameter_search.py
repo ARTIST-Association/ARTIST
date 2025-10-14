@@ -333,7 +333,9 @@ if __name__ == "__main__":
     seed = 7
     rng = random.Random(seed + comm.rank)
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "surface_reconstruction_viable_heliostats.json"
+    viable_heliostats_data = (
+        pathlib.Path(args.results_dir) / "surface_reconstruction_viable_heliostats.json"
+    )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
             f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``surface_reconstruction_viable_heliostat_list.py`` script to generate this list, or adjust the file path and try again."

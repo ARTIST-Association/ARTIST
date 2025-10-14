@@ -239,7 +239,9 @@ if __name__ == "__main__":
         for heliostat_name, calibration_paths, flux_paths, properties_path in heliostat_data_list
     ]
 
-    results_path = pathlib.Path(args.results_dir) / "surface_reconstruction_viable_heliostats.json"
+    results_path = (
+        pathlib.Path(args.results_dir) / "surface_reconstruction_viable_heliostats.json"
+    )
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)
 
