@@ -13,8 +13,8 @@ from scipy.stats import gaussian_kde
 from artist.util.environment_setup import get_device
 
 plot_colors = {
-    paint_mappings.HELIOS_KEY: "#005AA0",
-    paint_mappings.UTIS_KEY: "#D23264",
+    paint_mappings.HELIOS_KEY: "#002864",
+    paint_mappings.UTIS_KEY: "#14c8ff",
 }
 
 
