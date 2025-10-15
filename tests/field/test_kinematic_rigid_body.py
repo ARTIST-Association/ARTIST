@@ -528,7 +528,6 @@ def test_incident_ray_direction_to_orientation(
             [], requires_grad=True
         )
 
-
     orientation_matrix = kinematic.incident_ray_directions_to_orientations(
         incident_ray_directions=incident_ray_directions.to(device),
         aim_points=aim_points.to(device),
@@ -777,7 +776,7 @@ def test_motor_positions_to_orientations(
         kinematic.actuators.active_optimizable_parameters = torch.tensor(
             [], requires_grad=True
         )
-    
+
     orientation_matrix = kinematic.motor_positions_to_orientations(
         motor_positions=motor_positions.to(device),
         device=device,
