@@ -267,7 +267,6 @@ def extract_paint_heliostat_properties(
             ],
             device=device,
         ),
-        first_joint_tilt_e=torch.tensor(0.0, device=device),
         first_joint_tilt_n=torch.tensor(0.0, device=device),
         first_joint_tilt_u=torch.tensor(0.0, device=device),
         second_joint_translation_e=torch.tensor(
@@ -290,7 +289,6 @@ def extract_paint_heliostat_properties(
         ),
         second_joint_tilt_e=torch.tensor(0.0, device=device),
         second_joint_tilt_n=torch.tensor(0.0, device=device),
-        second_joint_tilt_u=torch.tensor(0.0, device=device),
         concentrator_translation_e=torch.tensor(
             heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
                 paint_mappings.CONCENTRATOR_TRANSLATION_E_KEY
@@ -308,10 +306,7 @@ def extract_paint_heliostat_properties(
                 paint_mappings.CONCENTRATOR_TRANSLATION_U_KEY
             ],
             device=device,
-        ),
-        concentrator_tilt_e=torch.tensor(0.0, device=device),
-        concentrator_tilt_n=torch.tensor(0.0, device=device),
-        concentrator_tilt_u=torch.tensor(0.0, device=device),
+        )
     )
 
     # Include the initial orientation for the kinematic.
