@@ -48,6 +48,15 @@ set_logger_config()
             "invalid",
             config_dictionary.reduce_on_plateau,
         ),
+        (
+            "invalid",
+            0.005,
+            FocalSpotLoss,
+            PaintCalibrationDataParser(),
+            1.0,
+            "invalid",
+            config_dictionary.reduce_on_plateau,
+        ),
     ],
 )
 def test_kinematic_reconstructor(
@@ -173,55 +182,69 @@ def test_kinematic_reconstructor(
         ddp_setup_for_testing[config_dictionary.device] = device
         ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
 
-        kinematic_reconstructor = KinematicReconstructor(
-            ddp_setup=ddp_setup_for_testing,
-            scenario=scenario,
-            data=data,
-            optimization_configuration=optimization_configuration,
-            reconstruction_method=reconstruction_method,
-        )
+        if reconstruction_method == "invalid":
+            with pytest.raises(ValueError) as exc_info:
+                _ = KinematicReconstructor(
+                    ddp_setup=ddp_setup_for_testing,
+                    scenario=scenario,
+                    data=data,
+                    optimization_configuration=optimization_configuration,
+                    reconstruction_method=reconstruction_method,
+                )
+                assert (
+                    f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                    in str(exc_info.value)
+                )
+        else:
+            kinematic_reconstructor = KinematicReconstructor(
+                ddp_setup=ddp_setup_for_testing,
+                scenario=scenario,
+                data=data,
+                optimization_configuration=optimization_configuration,
+                reconstruction_method=reconstruction_method,
+            )
 
-        loss_definition = (
-            FocalSpotLoss(scenario=scenario)
-            if loss_class is FocalSpotLoss
-            else VectorLoss()
-        )
+            loss_definition = (
+                FocalSpotLoss(scenario=scenario)
+                if loss_class is FocalSpotLoss
+                else VectorLoss()
+            )
 
-        # Reconstruct the kinematic.
-        if not isinstance(data_parser, PaintCalibrationDataParser):
-            with pytest.raises(NotImplementedError) as exc_info:
+            # Reconstruct the kinematic.
+            if not isinstance(data_parser, PaintCalibrationDataParser):
+                with pytest.raises(NotImplementedError) as exc_info:
+                    _ = kinematic_reconstructor.reconstruct_kinematic(
+                        loss_definition=loss_definition, device=device
+                    )
+
+                    assert "Must be overridden!" in str(exc_info.value)
+            else:
                 _ = kinematic_reconstructor.reconstruct_kinematic(
                     loss_definition=loss_definition, device=device
                 )
 
-                assert "Must be overridden!" in str(exc_info.value)
-        else:
-            _ = kinematic_reconstructor.reconstruct_kinematic(
-                loss_definition=loss_definition, device=device
-            )
+                for index, heliostat_group in enumerate(
+                    scenario.heliostat_field.heliostat_groups
+                ):
+                    expected_path = (
+                        pathlib.Path(ARTIST_ROOT)
+                        / "tests/data/expected_reconstructed_kinematic_parameters"
+                        / f"{reconstruction_method}_{str(early_stopping_delta).replace('.', '')}_group_{index}_{device.type}.pt"
+                    )
 
-            for index, heliostat_group in enumerate(
-                scenario.heliostat_field.heliostat_groups
-            ):
-                expected_path = (
-                    pathlib.Path(ARTIST_ROOT)
-                    / "tests/data/expected_reconstructed_kinematic_parameters"
-                    / f"{reconstruction_method}_{str(early_stopping_delta).replace('.', '')}_group_{index}_{device.type}.pt"
-                )
+                    expected = torch.load(
+                        expected_path, map_location=device, weights_only=True
+                    )
 
-                expected = torch.load(
-                    expected_path, map_location=device, weights_only=True
-                )
-
-                torch.testing.assert_close(
-                    heliostat_group.kinematic.rotation_deviation_parameters,
-                    expected["rotation_deviations"],
-                    atol=5e-4,
-                    rtol=5e-4,
-                )
-                torch.testing.assert_close(
-                    heliostat_group.kinematic.actuators.initial_parameters,
-                    expected["initial_parameters"],
-                    atol=6e-2,
-                    rtol=7e-1,
-                )
+                    torch.testing.assert_close(
+                        heliostat_group.kinematic.rotation_deviation_parameters,
+                        expected["rotation_deviations"],
+                        atol=5e-4,
+                        rtol=5e-4,
+                    )
+                    torch.testing.assert_close(
+                        heliostat_group.kinematic.actuators.initial_parameters,
+                        expected["initial_parameters"],
+                        atol=6e-2,
+                        rtol=7e-1,
+                    )
