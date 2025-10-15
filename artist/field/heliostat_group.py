@@ -284,12 +284,13 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        if (
-            self.kinematic.actuators.active_optimizable_parameters.shape[0]
-            == active_heliostats_mask.shape[0]
-        ):
+        if self.kinematic.actuators.active_optimizable_parameters.numel() > 0:
             self.kinematic.actuators.active_optimizable_parameters = (
                 self.kinematic.actuators.optimizable_parameters.repeat_interleave(
                     active_heliostats_mask, dim=0
                 )
+            )
+        else:
+            self.kinematic.actuators.active_optimizable_parameters = torch.tensor(
+                [], requires_grad=True
             )
