@@ -83,7 +83,15 @@ class KinematicReconstructor:
         self.scenario = scenario
         self.data = data
         self.optimization_configuration = optimization_configuration
-        self.reconstruction_method = reconstruction_method
+        if (
+            reconstruction_method
+            == config_dictionary.kinematic_reconstruction_raytracing
+        ):
+            self.reconstruction_method = reconstruction_method
+        else:
+            raise ValueError(
+                f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+            )
 
     def reconstruct_kinematic(
         self,
