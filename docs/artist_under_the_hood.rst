@@ -47,8 +47,8 @@ tensors. For example, some heliostat properties are:
 * ``surface_points``
 * ``surface_normals``
 * ``initial_orientations``
-* ``kinematic_deviation_parameters``
-* ``actuator_parameters``
+* ``translation_deviation_parameters``
+* ``rotation_deviation_parameters``
 * ...
 
 If we consider a heliostat field with N=2000 heliostats, there won't be 2000 heliostat objects. Instead of these
@@ -74,12 +74,18 @@ heliostat at specific indices. This results in the following important tensors:
    * - ``initial_orientations``
      - ``torch.Size([N, D])``
      - Initial orientations of all heliostats.
-   * - ``kinematic_deviation_parameters``
-     - ``torch.Size([N, K])``
-     - Kinematic deviation parameters for each heliostat.
-   * - ``actuator_parameters``
-     - ``torch.Size([N, A_param, A_num])``
-     - Actuator parameters for each heliostat.
+   * - ``translation_deviation_parameters``
+     - ``torch.Size([N, K_t])``
+     - Kinematic translation deviation parameters for each heliostat.
+   * - ``rotation_deviation_parameters``
+     - ``torch.Size([N, K_r])``
+     - Kinematic rotation deviation parameters for each heliostat.
+   * - ``geometry_parameters``
+     - ``torch.Size([N, A_param_geom, A_num])``
+     - Actuator geometry parameters for each heliostat.
+   * - ``initial_parameters``
+     - ``torch.Size([N, A_param_init, A_num])``
+     - Actuator initial parameters for each heliostat.
    * - ``nurbs_control_points``
      - ``torch.Size([N, F, u, v, 3])``
      - Control points for NURBS surfaces for all heliostats.
@@ -116,16 +122,20 @@ with:
      - The number of dimensions, which is always 4 in ARTIST, representing a 4D coordinate system.
    * - ``P``
      - The number of surface points (or surface normals) per heliostat.
-   * - ``K``
-     - The number of kinematic parameters.
+   * - ``K_t``
+     - The number of kinematic translation parameters.
+   * - ``K_r``
+     - The number of kinematic rotation parameters.
    * - ``F``
      - The number of facets per heliostat.
    * - ``u``
      - The number of control points in the u-direction for NURBS surfaces (see :ref:`our tutorial on NURBS <nurbs>`).
    * - ``v``
      - The number of control points in the v-direction for NURBS surfaces (see :ref:`our tutorial on NURBS <nurbs>`).
-   * - ``A_param``
-     - The number of actuator parameters for this actuator type.
+   * - ``A_param_geom``
+     - The number of actuator geometry parameters for this actuator type.
+   * - ``A_param_init``
+     - The number of actuator initial parameters for this actuator type.
    * - ``A_num``
      - The number of actuators for the selected kinematic type.
    * - ``N_active``
@@ -140,8 +150,7 @@ What may be confusing is the ``N_active`` parameter, which refers to active heli
 because it is possible to only address certain heliostats during operational tasks. It is also possible, that ``N_active``
 is larger than ``N``. This occurs during calibration or optimization tasks, when a single heliostat may be duplicated
 multiple times, to account for multiple training data samples. ``N_active`` sums all duplicates of all activated
-heliostats. To better understand this, we
-need to consider heliostat groups, which we discuss in the next section.
+heliostats. To better understand this, we need to consider heliostat groups, which we discuss in the next section.
 
 Heliostat Groups
 ----------------

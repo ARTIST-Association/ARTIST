@@ -18,7 +18,7 @@ line argument.
 Here is an overview of the configuration parameters contained within the configuration file and what they mean:
 
 - `metadata_root`: The root directory in which the metadata will be saved, i.e., a folder with the name "metadata" will be saved within this directory.
-- `metadata_file_name`: The file name for the metadata downloaded, if you do not change anything the STAC client from ``PAINT`` wil automatically download the metadata and save it to "calibration_metadata_all_heliostats.csv" in the "metadata" folder.
+- `metadata_file_name`: The file name for the metadata downloaded, if you do not change anything the STAC client from ``PAINT`` will automatically download the metadata and save it to "calibration_metadata_all_heliostats.csv" in the "metadata" folder.
 - `data_dir`: The directory in which all ``PAINT`` data will be saved. This data is required for the plots.
 - `tower_file_name`: The name of the file containing the tower measurements. If you do not change anything, the STAC client from ``PAINT`` will automatically download this data to the file "WRI1030197-tower-measurements.json" saved within the data directory.
 - `scenarios_dir`: The name of the directory to save the ``ARTIST`` scenarios required for generating results.

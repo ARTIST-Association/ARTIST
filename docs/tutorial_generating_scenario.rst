@@ -461,7 +461,7 @@ Finally, we can use the configuration to generate a fitted surface:
         device=device,
     )
 
-Alternatively, we can also generate an ideal surface that is not fitted based on defelectometry data. To generate this
+Alternatively, we can also generate an ideal surface that is not fitted based on deflectometry data. To generate this
 surface you don't need to define an optimizer or scheduler, but can simply call:
 
 .. code-block::

@@ -115,7 +115,7 @@ surface. In this tutorial we consider two regularizers:
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3, 4)
+        weight=0.5, reduction_dimensions=(1, 2, 3)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.5,
