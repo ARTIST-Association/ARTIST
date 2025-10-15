@@ -1,5 +1,6 @@
 import torch
 
+import artist.util.index_mapping as index_mappings
 from artist.field.actuators import Actuators
 from artist.util.environment_setup import get_device
 
@@ -44,15 +45,15 @@ class LinearActuators(Actuators):
         """
         Initialize linear actuators.
 
-        A linear actuator describes movement within a 2D plane. One linear actuator has nine parameters.
-        Ordered by index, the first parameter describes the type of the actuator, i.e., linear, the second parameter
-        describes the turning direction of the actuator. The third and fourth parameters are the minimum and
-        maximum motor positions. The next five parameters are the increment, which stores
-        the information about the stroke length change per motor step, the initial stroke length, and an offset
-        that describes the difference between the linear actuator's pivoting point and the point around which the
-        actuator is allowed to pivot. Next, the actuator's pivoting radius is described by the pivot radius and
-        lastly, the initial angle indicates the angle that the actuator introduces to the manipulated coordinate
-        system at the initial stroke length.
+        A linear actuator describes movement within a 2D plane. One linear actuator has seven non optimizable parameters,
+        that describe the geometry. Ordered by index, the first parameter describes the type of the actuator, i.e.,
+        linear, the second parameter describes the turning direction of the actuator. The third and fourth parameters
+        are the minimum and maximum motor positions. The next five parameters are the increment, which stores
+        the information about the stroke length change per motor step, an offset that describes the difference between
+        the linear actuator's pivoting point and the point around which the actuator is allowed to pivot, and the
+        actuator's pivot radius. A linear actuator also has two optimizable parameters, namely the initial angle which
+        indicates the angle that the actuator introduces to the manipulated coordinate system at the initial stroke
+        length, which is the second parameter.
 
         Parameters
         ----------
@@ -113,30 +114,67 @@ class LinearActuators(Actuators):
             self.active_optimizable_parameters, device=device
         )
 
-        physics_informed_non_optimizable_parameters[:, [0, 1, 2, 3]] = (
-            non_optimizable_parameters[:, [0, 1, 2, 3]]
-        )
-        physics_informed_optimizable_parameters[:, 0] = optimizable_parameters[:, 0]
+        physics_informed_non_optimizable_parameters[
+            :,
+            [
+                index_mappings.actuator_type,
+                index_mappings.actuator_clockwise_movement,
+                index_mappings.actuator_min_motor_position,
+                index_mappings.actuator_max_motor_position,
+            ],
+        ] = non_optimizable_parameters[
+            :,
+            [
+                index_mappings.actuator_type,
+                index_mappings.actuator_clockwise_movement,
+                index_mappings.actuator_min_motor_position,
+                index_mappings.actuator_max_motor_position,
+            ],
+        ]
+        physics_informed_optimizable_parameters[
+            :, index_mappings.actuator_initial_angle
+        ] = optimizable_parameters[:, index_mappings.actuator_initial_angle]
 
         # Strictly positive parameters.
         # Increment.
-        physics_informed_non_optimizable_parameters[:, 4] = (
-            torch.nn.functional.softplus(non_optimizable_parameters[:, 4], beta=100)
+        physics_informed_non_optimizable_parameters[
+            :, index_mappings.actuator_increment
+        ] = (
+            torch.nn.functional.softplus(
+                non_optimizable_parameters[:, index_mappings.actuator_increment],
+                beta=100,
+            )
             + self.epsilon
         )
         # Offset.
-        physics_informed_non_optimizable_parameters[:, 5] = (
-            torch.nn.functional.softplus(non_optimizable_parameters[:, 5], beta=100)
+        physics_informed_non_optimizable_parameters[
+            :, index_mappings.actuator_offset
+        ] = (
+            torch.nn.functional.softplus(
+                non_optimizable_parameters[:, index_mappings.actuator_offset], beta=100
+            )
             + self.epsilon
         )
         # Pivot radius.
-        physics_informed_non_optimizable_parameters[:, 6] = (
-            torch.nn.functional.softplus(non_optimizable_parameters[:, 6], beta=100)
+        physics_informed_non_optimizable_parameters[
+            :, index_mappings.actuator_pivot_radius
+        ] = (
+            torch.nn.functional.softplus(
+                non_optimizable_parameters[:, index_mappings.actuator_pivot_radius],
+                beta=100,
+            )
             + self.epsilon
         )
         # Initial stroke length.
-        physics_informed_optimizable_parameters[:, 1] = (
-            torch.nn.functional.softplus(optimizable_parameters[:, 1], beta=100)
+        physics_informed_optimizable_parameters[
+            :, index_mappings.actuator_initial_stroke_length
+        ] = (
+            torch.nn.functional.softplus(
+                optimizable_parameters[
+                    :, index_mappings.actuator_initial_stroke_length
+                ],
+                beta=100,
+            )
             + self.epsilon
         )
 
@@ -177,10 +215,10 @@ class LinearActuators(Actuators):
             self._physics_informed_parameters(device=device)
         )
         increment, offsets, pivot_radii, initial_stroke_lengths = (
-            non_optimizable_parameters[:, 4],
-            non_optimizable_parameters[:, 5],
-            non_optimizable_parameters[:, 6],
-            optimizable_parameters[:, 1],
+            non_optimizable_parameters[:, index_mappings.actuator_increment],
+            non_optimizable_parameters[:, index_mappings.actuator_offset],
+            non_optimizable_parameters[:, index_mappings.actuator_pivot_radius],
+            optimizable_parameters[:, index_mappings.actuator_initial_stroke_length],
         )
 
         stroke_lengths = motor_positions / increment + initial_stroke_lengths
@@ -228,7 +266,9 @@ class LinearActuators(Actuators):
         device = get_device(device=device)
 
         _, optimizable_parameters = self._physics_informed_parameters(device=device)
-        initial_angles = optimizable_parameters[:, 0]
+        initial_angles = optimizable_parameters[
+            :, index_mappings.actuator_initial_angle
+        ]
 
         absolute_angles = self._motor_positions_to_absolute_angles(
             motor_positions=motor_positions, device=device
@@ -241,8 +281,20 @@ class LinearActuators(Actuators):
 
         relative_angles = (
             initial_angles
-            + delta_angles * (self.active_non_optimizable_parameters[:, 1] == 1)
-            - delta_angles * (self.active_non_optimizable_parameters[:, 1] == 0)
+            + delta_angles
+            * (
+                self.active_non_optimizable_parameters[
+                    :, index_mappings.actuator_clockwise_movement
+                ]
+                == 1
+            )
+            - delta_angles
+            * (
+                self.active_non_optimizable_parameters[
+                    :, index_mappings.actuator_clockwise_movement
+                ]
+                == 0
+            )
         )
         return relative_angles
 
@@ -284,15 +336,18 @@ class LinearActuators(Actuators):
             initial_delta_angles,
             initial_stroke_lengths,
         ) = (
-            non_optimizable_parameters[:, 4],
-            non_optimizable_parameters[:, 5],
-            non_optimizable_parameters[:, 6],
-            optimizable_parameters[:, 0],
-            optimizable_parameters[:, 1],
+            non_optimizable_parameters[:, index_mappings.actuator_increment],
+            non_optimizable_parameters[:, index_mappings.actuator_offset],
+            non_optimizable_parameters[:, index_mappings.actuator_pivot_radius],
+            optimizable_parameters[:, index_mappings.actuator_initial_angle],
+            optimizable_parameters[:, index_mappings.actuator_initial_stroke_length],
         )
 
         delta_angles = torch.where(
-            self.active_non_optimizable_parameters[:, 1] == 1,
+            self.active_non_optimizable_parameters[
+                :, index_mappings.actuator_clockwise_movement
+            ]
+            == 1,
             angles - initial_delta_angles,
             initial_delta_angles - angles,
         )

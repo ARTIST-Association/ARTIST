@@ -314,3 +314,8 @@ heliostat_group_world_size = "heliostat_group_world_size"
 """Key to access the world size within a process subgroups."""
 ranks_to_groups_mapping = "ranks_to_groups_mapping"
 """Key to access the mapping from ranks to heliostat groups."""
+
+bitmap_normalizer = 255.0
+"""Constant to normalize bitmaps."""
+bitmap_resolution = 256
+"""Constant for the bitmap resolution."""

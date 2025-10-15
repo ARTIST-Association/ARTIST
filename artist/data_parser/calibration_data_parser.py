@@ -8,6 +8,7 @@ from PIL import Image
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -52,7 +53,9 @@ class CalibrationDataParser:
         ],
         heliostat_group: HeliostatGroup,
         scenario: Scenario,
-        bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
+        bitmap_resolution: torch.Tensor = torch.tensor(
+            [config_dictionary.bitmap_resolution, config_dictionary.bitmap_resolution]
+        ),
         device: torch.device | None = None,
     ) -> tuple[
         torch.Tensor,
@@ -107,7 +110,9 @@ class CalibrationDataParser:
         self,
         heliostat_flux_path_mapping: list[tuple[str, list[pathlib.Path]]],
         heliostat_names: list[str],
-        resolution: torch.Tensor = torch.tensor([256, 256]),
+        resolution: torch.Tensor = torch.tensor(
+            [config_dictionary.bitmap_resolution, config_dictionary.bitmap_resolution]
+        ),
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -169,7 +174,7 @@ class CalibrationDataParser:
                     torch.tensor(bitmap_data.getdata(), device=device).view(
                         height, width
                     )
-                    / 255.0
+                    / config_dictionary.bitmap_normalizer
                 )
                 bitmaps[bitmap_index] = bitmap_tensor
                 total_number_of_measurements = total_number_of_measurements + 1

@@ -2,12 +2,13 @@ import json
 import logging
 import pathlib
 import random
-from typing import Any, Callable
+from typing import Any, Callable, List, cast
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 
+import artist.util.index_mapping as index_mappings
 from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -229,13 +230,13 @@ def extract_paint_heliostat_properties(
             ][facet][paint_mappings.TRANSLATION_VECTOR],
             device=device,
         )
-        canting[facet, 0] = torch.tensor(
+        canting[facet, index_mappings.facet_canting_e] = torch.tensor(
             heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
                 paint_mappings.FACETS_LIST
             ][facet][paint_mappings.CANTING_E],
             device=device,
         )
-        canting[facet, 1] = torch.tensor(
+        canting[facet, index_mappings.facet_canting_n] = torch.tensor(
             heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
                 paint_mappings.FACETS_LIST
             ][facet][paint_mappings.CANTING_N],
@@ -653,10 +654,22 @@ def _process_heliostats_from_paths(
         ):
             actuator = ActuatorConfig(
                 key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
-                type=actuator_parameters_tuple[0],
-                clockwise_axis_movement=actuator_parameters_tuple[1],
-                min_max_motor_positions=actuator_parameters_tuple[2],
-                parameters=actuator_parameters_tuple[3],
+                type=str(actuator_parameters_tuple[index_mappings.paint_actuator_type]),
+                clockwise_axis_movement=bool(
+                    actuator_parameters_tuple[
+                        index_mappings.paint_actuator_clockwise_axis_movement
+                    ]
+                ),
+                min_max_motor_positions=cast(
+                    List[float],
+                    actuator_parameters_tuple[
+                        index_mappings.paint_actuator_min_max_motor_positions
+                    ],
+                ),
+                parameters=cast(
+                    ActuatorParameters,
+                    actuator_parameters_tuple[index_mappings.paint_actuator_parameters],
+                ),
             )
             actuator_list.append(actuator)
         actuators_list_config = ActuatorListConfig(actuator_list=actuator_list)

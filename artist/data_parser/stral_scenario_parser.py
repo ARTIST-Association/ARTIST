@@ -4,6 +4,7 @@ import struct
 
 import torch
 
+import artist.util.index_mapping as index_mappings
 from artist.util import utils
 from artist.util.environment_setup import get_device
 
@@ -55,8 +56,12 @@ def extract_stral_deflectometry_data(
         )
 
         # Calculate the number of facets.
-        n_xy = surface_header_data[5:7]
-        number_of_facets = n_xy[0] * n_xy[1]
+        n_xy = surface_header_data[
+            index_mappings.stral_surface_header_start : index_mappings.stral_surface_header_end
+        ]
+        number_of_facets = (
+            n_xy[index_mappings.stral_n_xy_start] * n_xy[index_mappings.stral_n_xy_end]
+        )
 
         # Create empty tensors for storing data.
         facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
@@ -68,15 +73,27 @@ def extract_stral_deflectometry_data(
                 file.read(facet_header_struct.size)
             )
             facet_translation_vectors[facet] = torch.tensor(
-                facet_header_data[1:4], dtype=torch.float, device=device
+                facet_header_data[
+                    index_mappings.stral_facet_start : index_mappings.stral_facet_end
+                ],
+                dtype=torch.float,
+                device=device,
             )
-            canting[facet, 0] = torch.tensor(
-                facet_header_data[4:7], dtype=torch.float, device=device
+            canting[facet, index_mappings.stral_canting_1] = torch.tensor(
+                facet_header_data[
+                    index_mappings.stral_canting_1_start : index_mappings.stral_canting_1_end
+                ],
+                dtype=torch.float,
+                device=device,
             )
-            canting[facet, 1] = torch.tensor(
-                facet_header_data[7:10], dtype=torch.float, device=device
+            canting[facet, index_mappings.stral_canting_2] = torch.tensor(
+                facet_header_data[
+                    index_mappings.stral_canting_2_start : index_mappings.stral_canting_2_end
+                ],
+                dtype=torch.float,
+                device=device,
             )
-            number_of_points = facet_header_data[10]
+            number_of_points = facet_header_data[index_mappings.stral_number_of_points]
             single_facet_surface_points = torch.empty(
                 number_of_points, 3, device=device
             )
@@ -89,10 +106,16 @@ def extract_stral_deflectometry_data(
             )
             for i, point_data in enumerate(points_data):
                 single_facet_surface_points[i, :] = torch.tensor(
-                    point_data[:3], dtype=torch.float, device=device
+                    point_data[: index_mappings.stral_surface_points_end],
+                    dtype=torch.float,
+                    device=device,
                 )
                 single_facet_surface_normals[i, :] = torch.tensor(
-                    point_data[3:6], dtype=torch.float, device=device
+                    point_data[
+                        index_mappings.stral_surface_normals_start : index_mappings.stral_surface_normals_end
+                    ],
+                    dtype=torch.float,
+                    device=device,
                 )
             surface_points_with_facets_list.append(single_facet_surface_points)
             surface_normals_with_facets_list.append(single_facet_surface_normals)
