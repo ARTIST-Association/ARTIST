@@ -517,15 +517,17 @@ def test_incident_ray_direction_to_orientation(
             active_heliostats_mask, dim=0
         )
     )
-    if (
-        kinematic.actuators.active_optimizable_parameters.shape[0]
-        == active_heliostats_mask.shape[0]
-    ):
+    if kinematic.actuators.active_optimizable_parameters.numel() > 0:
         kinematic.actuators.active_optimizable_parameters = (
             kinematic.actuators.optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
+    else:
+        kinematic.actuators.active_optimizable_parameters = torch.tensor(
+            [], requires_grad=True
+        )
+
 
     orientation_matrix = kinematic.incident_ray_directions_to_orientations(
         incident_ray_directions=incident_ray_directions.to(device),
@@ -765,16 +767,17 @@ def test_motor_positions_to_orientations(
             active_heliostats_mask, dim=0
         )
     )
-    if (
-        kinematic.actuators.active_optimizable_parameters.shape[0]
-        == active_heliostats_mask.shape[0]
-    ):
+    if kinematic.actuators.active_optimizable_parameters.numel() > 0:
         kinematic.actuators.active_optimizable_parameters = (
             kinematic.actuators.optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-
+    else:
+        kinematic.actuators.active_optimizable_parameters = torch.tensor(
+            [], requires_grad=True
+        )
+    
     orientation_matrix = kinematic.motor_positions_to_orientations(
         motor_positions=motor_positions.to(device),
         device=device,

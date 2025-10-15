@@ -59,7 +59,7 @@ Actuators
 ^^^^^^^^^
 Heliostat actuators are the motors responsible for adjusting the heliostat's surface orientation to direct sunlight onto
 a defined aim point. The actuators are described by the actuator parameters, which may contain information on motor
-turning direction, step size, or offsets. The actuators are split into ``geometry_parameters`` and ``initial_parameters``
+turning direction, step size, or offsets. The actuator parameters are split into ``non_optimizable_parameters`` and ``optimizable_parameters``
 when initializing the actuators. The abstract class ``Actuators`` contains one method to map motor steps to angles and another
 to map angles to motor steps. All derived actuator types override these methods.
 
@@ -75,7 +75,7 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
    :width: 100%
    :align: center
 
-.. list-table:: Actuator Geometry Parameters
+.. list-table:: Linear Actuator Non-Optimizable Parameters
    :header-rows: 1
    :widths: 20 80
 
@@ -97,7 +97,7 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
      - The radius from the pivot center to the actuator anchor. (1) in the image above.
 
 
-.. list-table:: Actuator Initial Parameters
+.. list-table:: Linear Actuator Optimizable Parameters
    :header-rows: 1
    :widths: 20 80
 
@@ -123,3 +123,7 @@ radius) of the triangle must satisfy the triangle inequality:
 
 This ensures that a valid triangle can always be formed. With this physics-informed backbone, the linear actuator can
 accurately model real actuator behavior in an efficient manner.
+
+
+The ``IdealActuator`` has no optimizable parameters. The non-optimizable parameters only include the ``type``, ``clockwise_axis_movement``,
+``min_motor_pos`` and ``max_motor_pos``.
