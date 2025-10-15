@@ -12,12 +12,15 @@ authors:
   - name: Kaleb Phipps
     orcid: 0000-0002-9197-1739
     affiliation: 2, 3
-  - name: Marie Weiel
-    orcid: 0000-0001-9648-4385
-    affiliation: 2, 3
   - name: Daniel Maldonado Quinto
     orcid: 0000-0003-2929-8667
     affiliation: 1
+  - name: Marie Weiel
+    orcid: 0000-0001-9648-4385
+    affiliation: 2, 3
+  - name: Robert Pitz-Paal
+    orcid: 0000-0002-3542-3391
+    affiliation: 1, 4
   - name: Markus Götz
     orcid: 0000-0002-2233-1041
     affiliation: 2, 3
@@ -31,13 +34,16 @@ affiliations:
    index: 2
  - name: Helmholtz AI, Karlsruhe, Germany
    index: 3
-date: 01 August 2025
+ - name: RWTH Aachen University, Chair of Solar Technology
+   index: 4
+date: 15 October 2025
 bibliography: paper.bib
 ---
 
 # Summary
 
-`artist` is a software package for concentrating solar power (CSP) digital twins, featuring native GPU acceleration, data-parallel processing, and support for distributed computation to ensure scalability. Solar tower power plants use mirrors (heliostats) to reflect and concentrate sunlight onto a small area, called the receiver, located at the top of the solar tower. This Python package offers a high-performance, memory-efficient interface for various optimization tasks and for parameter learning of the power plant components. The ray tracer module within `artist` simulates how light rays interact with the three-dimensional scene and computes flux distributions based on environmental conditions to ultimately optimize the distribution of the thermal power on the receiver by finding optimal alignments for each heliostat. All within a single tool, `artist` combines its ray tracing capabilities with additional functionality to create and optimize physics-informed digital twins of CSP plants. `artist` enhances the accuracy of its ray tracing results by reconstructing real-world parameters of deformed heliostat surfaces and kinematic deviations. Multiple heliostat surfaces, represented through differentiable Non-Uniform Rational B-Splines (NURBS), can be reconstructed in parallel from easily accessible calibration data. Additionally, `artist` provides reconstruction algorithms for the kinematic system to account for heliostat alignment errors in the digital twin, caused by actuator inaccuracies of the real power plant.
+`artist`is a software package for concentrating solar power (CSP) plant digital twins. Solar tower power plants use an array of mirrors (heliostats), to reflect and concentrate sunlight onto a small area called the receiver. This process generates heat energy which is either used directly in industrial processes or to produce electricity. Efficient power plant operation is complex and differentiable digital twins can play an important role in enabling data-driven optimization and control. This Python package, `artist`, implements a fully differentiable digital twin for solar tower power plants, allowing for high-performance, memory-efficient optimization and parameter learning of the plant's components. At its core, a differentiable ray tracer simulates how light interacts with the three-dimensional scene, including environmental conditions, enabling gradient-based optimization from predicted flux distributions. By including differentiable models of all power plant components - including Non-Uniform Rational B-Splines (NURBS)surface models `artist` can be used for highly accurate surface reconstruction, kinematic reconstruction, and aim point optimization. To ensure scalability, `artist` features native GPU acceleration, data-parallel processing, support for distributed computation, and is designed for portability across multiple hardware stacks.
+
 
 # Statement of Need
 
