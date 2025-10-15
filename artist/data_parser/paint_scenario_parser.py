@@ -306,7 +306,7 @@ def extract_paint_heliostat_properties(
                 paint_mappings.CONCENTRATOR_TRANSLATION_U_KEY
             ],
             device=device,
-        )
+        ),
     )
 
     # Include the initial orientation for the kinematic.
