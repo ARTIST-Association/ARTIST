@@ -80,12 +80,12 @@ heliostat at specific indices. This results in the following important tensors:
    * - ``rotation_deviation_parameters``
      - ``torch.Size([N, K_r])``
      - Kinematic rotation deviation parameters for each heliostat.
-   * - ``geometry_parameters``
-     - ``torch.Size([N, A_param_geom, A_num])``
-     - Actuator geometry parameters for each heliostat.
-   * - ``initial_parameters``
-     - ``torch.Size([N, A_param_init, A_num])``
-     - Actuator initial parameters for each heliostat.
+   * - ``non_optimizable_parameters``
+     - ``torch.Size([N, A_param_non_optimizable, A_num])``
+     - Non-optimizable actuator parameters for each heliostat.
+   * - ``optimizable_parameters``
+     - ``torch.Size([N, A_param_optimizable, A_num])``
+     - Optimizable actuator parameters for each heliostat.
    * - ``nurbs_control_points``
      - ``torch.Size([N, F, u, v, 3])``
      - Control points for NURBS surfaces for all heliostats.
@@ -132,10 +132,10 @@ with:
      - The number of control points in the u-direction for NURBS surfaces (see :ref:`our tutorial on NURBS <nurbs>`).
    * - ``v``
      - The number of control points in the v-direction for NURBS surfaces (see :ref:`our tutorial on NURBS <nurbs>`).
-   * - ``A_param_geom``
-     - The number of actuator geometry parameters for this actuator type.
-   * - ``A_param_init``
-     - The number of actuator initial parameters for this actuator type.
+   * - ``A_param_non_optimizable``
+     - The number of non-optimizable actuator parameters for this actuator type.
+   * - ``A_param_optimizable``
+     - The number of optimizable actuator parameters for this actuator type.
    * - ``A_num``
      - The number of actuators for the selected kinematic type.
    * - ``N_active``

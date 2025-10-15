@@ -220,8 +220,8 @@ def test_kinematic_reconstructor(
                     rtol=5e-4,
                 )
                 torch.testing.assert_close(
-                    heliostat_group.kinematic.actuators.initial_parameters,
-                    expected["initial_parameters"],
+                    heliostat_group.kinematic.actuators.optimizable_parameters,
+                    expected["optimizable_parameters"],
                     atol=6e-2,
                     rtol=7e-1,
                 )

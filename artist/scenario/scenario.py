@@ -215,7 +215,10 @@ class Scenario:
             else:
                 prototype_actuator_type = prototype_actuator_type_list[0]
 
-        prototype_actuator_parameters = h5_scenario_parser.actuator_parameters(
+        (
+            prototype_actuator_parameters_non_optimizable,
+            prototype_actuator_parameters_optimizable,
+        ) = h5_scenario_parser.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,
@@ -227,7 +230,8 @@ class Scenario:
 
         prototype_actuators = {
             config_dictionary.actuator_type_key: prototype_actuator_type,
-            config_dictionary.actuator_parameters_key: prototype_actuator_parameters,
+            config_dictionary.actuator_parameters_non_optimizable: prototype_actuator_parameters_non_optimizable,
+            config_dictionary.actuator_parameters_optimizable: prototype_actuator_parameters_optimizable,
         }
 
         heliostat_field = HeliostatField.from_hdf5(

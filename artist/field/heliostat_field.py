@@ -234,15 +234,17 @@ class HeliostatField:
                     else:
                         actuator_type = actuator_type_list[0]
 
-                actuator_parameters = h5_scenario_parser.actuator_parameters(
-                    prototype=False,
-                    scenario_file=single_heliostat_config,
-                    actuator_type=actuator_type,
-                    number_of_actuators=number_of_actuators,
-                    initial_orientation=initial_orientation,
-                    log=log,
-                    heliostat_name=heliostat_name,
-                    device=device,
+                actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
+                    h5_scenario_parser.actuator_parameters(
+                        prototype=False,
+                        scenario_file=single_heliostat_config,
+                        actuator_type=actuator_type,
+                        number_of_actuators=number_of_actuators,
+                        initial_orientation=initial_orientation,
+                        log=log,
+                        heliostat_name=heliostat_name,
+                        device=device,
+                    )
                 )
             else:
                 if prototype_actuators is None:
@@ -254,8 +256,11 @@ class HeliostatField:
                         "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                     )
                 actuator_type = prototype_actuators[config_dictionary.actuator_type_key]
-                actuator_parameters = prototype_actuators[
-                    config_dictionary.actuator_parameters_key
+                actuator_parameters_non_optimizable = prototype_actuators[
+                    config_dictionary.actuator_parameters_non_optimizable
+                ]
+                actuator_parameters_optimizable = prototype_actuators[
+                    config_dictionary.actuator_parameters_optimizable
                 ]
 
             surface = Surface(surface_config, device=device)
@@ -338,8 +343,11 @@ class HeliostatField:
                 config_dictionary.rotation_deviations
             ].append(rotation_deviations)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.actuator_parameters
-            ].append(actuator_parameters)
+                config_dictionary.actuator_parameters_non_optimizable
+            ].append(actuator_parameters_non_optimizable)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.actuator_parameters_optimizable
+            ].append(actuator_parameters_optimizable)
 
         for group in grouped_field_data:
             for key in grouped_field_data[group]:
@@ -390,9 +398,12 @@ class HeliostatField:
                     kinematic_rotation_deviation_parameters=grouped_field_data[
                         heliostat_group_name
                     ][config_dictionary.rotation_deviations],
-                    actuator_parameters=grouped_field_data[heliostat_group_name][
-                        config_dictionary.actuator_parameters
-                    ],
+                    actuator_parameters_non_optimizable=grouped_field_data[
+                        heliostat_group_name
+                    ][config_dictionary.actuator_parameters_non_optimizable],
+                    actuator_parameters_optimizable=grouped_field_data[
+                        heliostat_group_name
+                    ][config_dictionary.actuator_parameters_optimizable],
                     device=device,
                 )
             )

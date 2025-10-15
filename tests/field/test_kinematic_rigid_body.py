@@ -67,17 +67,19 @@ def kinematic_model_linear(
     )
     initial_orientation = torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device)
 
-    linear_actuator_parameters = torch.zeros((6, 9, 2), device=device)
-    linear_actuator_parameters[:, 1, 1] = 1
-    linear_actuator_parameters[:, 4, 0] = 154166.666
-    linear_actuator_parameters[:, 4, 1] = 154166.666
-    linear_actuator_parameters[:, 5, 0] = 0.34061
-    linear_actuator_parameters[:, 5, 1] = 0.3479
-    linear_actuator_parameters[:, 6, 0] = 0.3204
-    linear_actuator_parameters[:, 6, 1] = 0.309
-    linear_actuator_parameters[:, 7, 0] = -1.570796
-    linear_actuator_parameters[:, 7, 1] = 0.959931
-    linear_actuator_parameters[:, 8, :] = 0.075
+    actuator_parameters_non_optimizable = torch.zeros((6, 7, 2), device=device)
+    actuator_parameters_non_optimizable[:, 1, 1] = 1
+    actuator_parameters_non_optimizable[:, 4, 0] = 154166.666
+    actuator_parameters_non_optimizable[:, 4, 1] = 154166.666
+    actuator_parameters_non_optimizable[:, 5, 0] = 0.34061
+    actuator_parameters_non_optimizable[:, 5, 1] = 0.3479
+    actuator_parameters_non_optimizable[:, 6, 0] = 0.3204
+    actuator_parameters_non_optimizable[:, 6, 1] = 0.309
+
+    actuator_parameters_optimizable = torch.zeros((6, 2, 2), device=device)
+    actuator_parameters_optimizable[:, 0, 0] = -1.570796
+    actuator_parameters_optimizable[:, 0, 1] = 0.959931
+    actuator_parameters_optimizable[:, 1, :] = 0.075
 
     return RigidBody(
         number_of_heliostats=6,
@@ -85,7 +87,8 @@ def kinematic_model_linear(
         initial_orientations=initial_orientation.expand(6, 4),
         translation_deviation_parameters=kinematic_parameters[0],
         rotation_deviation_parameters=kinematic_parameters[1],
-        actuator_parameters=linear_actuator_parameters,
+        actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
+        actuator_parameters_optimizable=actuator_parameters_optimizable,
         device=device,
     )
 
@@ -138,14 +141,13 @@ def kinematic_model_ideal_1(
         device=device,
     )
 
-    actuator_parameters = torch.zeros((10, 4, 2), device=device)
-    actuator_parameters[:, 0, :] = 1
-    actuator_parameters[:, 1, 1] = 1
+    actuator_parameters_non_optimizable = torch.zeros((10, 4, 2), device=device)
+    actuator_parameters_non_optimizable[:, 0, :] = 1
+    actuator_parameters_non_optimizable[:, 1, 1] = 1
 
     return RigidBody(
         number_of_heliostats=10,
         heliostat_positions=positions,
-        actuator_parameters=actuator_parameters,
         initial_orientations=initial_orientations,
         translation_deviation_parameters=torch.zeros(
             (10, 9), dtype=torch.float, device=device
@@ -153,6 +155,7 @@ def kinematic_model_ideal_1(
         rotation_deviation_parameters=torch.zeros(
             (10, 4), dtype=torch.float, device=device
         ),
+        actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
         device=device,
     )
 
@@ -183,14 +186,13 @@ def kinematic_model_ideal_2(
         device=device,
     )
 
-    actuator_parameters = torch.zeros((3, 4, 2), device=device)
-    actuator_parameters[:, 0, :] = 1
-    actuator_parameters[:, 1, 1] = 1
+    actuator_parameters_non_optimizable = torch.zeros((3, 4, 2), device=device)
+    actuator_parameters_non_optimizable[:, 0, :] = 1
+    actuator_parameters_non_optimizable[:, 1, 1] = 1
 
     return RigidBody(
         number_of_heliostats=3,
         heliostat_positions=positions,
-        actuator_parameters=actuator_parameters,
         initial_orientations=initial_orientations,
         translation_deviation_parameters=torch.zeros(
             (3, 9), dtype=torch.float, device=device
@@ -198,6 +200,7 @@ def kinematic_model_ideal_2(
         rotation_deviation_parameters=torch.zeros(
             (3, 4), dtype=torch.float, device=device
         ),
+        actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
         device=device,
     )
 
@@ -509,16 +512,20 @@ def test_incident_ray_direction_to_orientation(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_geometry_parameters = (
-        kinematic.actuators.geometry_parameters.repeat_interleave(
+    kinematic.actuators.active_non_optimizable_parameters = (
+        kinematic.actuators.non_optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_initial_parameters = (
-        kinematic.actuators.initial_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
+    if (
+        kinematic.actuators.active_optimizable_parameters.shape[0]
+        == active_heliostats_mask.shape[0]
+    ):
+        kinematic.actuators.active_optimizable_parameters = (
+            kinematic.actuators.optimizable_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
         )
-    )
 
     orientation_matrix = kinematic.incident_ray_directions_to_orientations(
         incident_ray_directions=incident_ray_directions.to(device),
@@ -753,16 +760,20 @@ def test_motor_positions_to_orientations(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_geometry_parameters = (
-        kinematic.actuators.geometry_parameters.repeat_interleave(
+    kinematic.actuators.active_non_optimizable_parameters = (
+        kinematic.actuators.non_optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_initial_parameters = (
-        kinematic.actuators.initial_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
+    if (
+        kinematic.actuators.active_optimizable_parameters.shape[0]
+        == active_heliostats_mask.shape[0]
+    ):
+        kinematic.actuators.active_optimizable_parameters = (
+            kinematic.actuators.optimizable_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
         )
-    )
 
     orientation_matrix = kinematic.motor_positions_to_orientations(
         motor_positions=motor_positions.to(device),

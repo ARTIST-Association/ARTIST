@@ -92,7 +92,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         nurbs_degrees: torch.Tensor,
         kinematic_translation_deviation_parameters: torch.Tensor,
         kinematic_rotation_deviation_parameters: torch.Tensor,
-        actuator_parameters: torch.Tensor,
+        actuator_parameters_non_optimizable: torch.Tensor,
+        actuator_parameters_optimizable: torch.Tensor = torch.tensor([]),
         device: torch.device | None = None,
     ) -> None:
         """
@@ -126,9 +127,12 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         kinematic_rotation_deviation_parameters : torch.Tensor
             The kinematic rotation deviation parameters of all heliostats in the group.
             Tensor of shape [number_of_heliostats, 4].
-        actuator_parameters : torch.Tensor
-            The actuator parameters of all actuators in the group.
-            Tensor of shape [number_of_heliostats, n, 2], where n=9 for linear actuators and n=4 for ideal actuators.
+        actuator_parameters_non_optimizable : torch.Tensor
+            The non-optimizable actuator parameters.
+            Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+        actuator_parameters_optimizable : torch.Tensor
+            The optimizable actuator parameters.
+            Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators (default is torch.tensor([])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -148,10 +152,11 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
-            actuator_parameters=actuator_parameters,
             initial_orientations=self.initial_orientations,
             translation_deviation_parameters=kinematic_translation_deviation_parameters,
             rotation_deviation_parameters=kinematic_rotation_deviation_parameters,
+            actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
+            actuator_parameters_optimizable=actuator_parameters_optimizable.to(device),
             device=device,
         )
 

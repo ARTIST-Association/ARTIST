@@ -198,7 +198,7 @@ class KinematicReconstructor:
                 optimizer = torch.optim.Adam(
                     [
                         heliostat_group.kinematic.rotation_deviation_parameters.requires_grad_(),
-                        heliostat_group.kinematic.actuators.initial_parameters.requires_grad_(),
+                        heliostat_group.kinematic.actuators.optimizable_parameters.requires_grad_(),
                     ],
                     lr=self.optimization_configuration[
                         config_dictionary.initial_learning_rate
@@ -367,7 +367,7 @@ class KinematicReconstructor:
                     src=source[0],
                 )
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.actuators.initial_parameters,
+                    heliostat_group.kinematic.actuators.optimizable_parameters,
                     src=source[0],
                 )
             torch.distributed.all_reduce(

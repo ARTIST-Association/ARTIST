@@ -20,9 +20,9 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
     HeliostatGroupRigidBody
         A heliostat group.
     """
-    actuator_parameters = torch.rand((3, 7, 2), device=device)
-    actuator_parameters[:, 0, :] = 0
-    actuator_parameters[:, 1, :] = 1
+    non_optimizable_parameters = torch.rand((3, 7, 2), device=device)
+    non_optimizable_parameters[:, 0, :] = 0
+    non_optimizable_parameters[:, 1, :] = 1
 
     return HeliostatGroupRigidBody(
         names=["heliostat_1", "heliostat_2", "heliostat_3"],
@@ -40,7 +40,7 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
         nurbs_degrees=torch.tensor([2, 2], device=device),
         kinematic_translation_deviation_parameters=torch.rand((3, 9), device=device),
         kinematic_rotation_deviation_parameters=torch.rand((3, 4), device=device),
-        actuator_parameters=actuator_parameters,
+        actuator_parameters_non_optimizable=non_optimizable_parameters,
         device=device,
     )
 
@@ -106,7 +106,7 @@ def test_activate_heliostats(
         assert parameter.shape[0] == expected_size
 
     assert (
-        heliostat_group.kinematic.actuators.active_geometry_parameters.shape[0]
+        heliostat_group.kinematic.actuators.active_non_optimizable_parameters.shape[0]
         == expected_size
     )
 

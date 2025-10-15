@@ -9,18 +9,18 @@ class Actuators(torch.nn.Module):
 
     Attributes
     ----------
-    geometry_parameters : torch.Tensor
-        Parameters concerning the actuator geometry.
-        Tensor of shape [number_of_heliostats, n, 2], where n=7 for linear actuators or n=4 for ideal actuators.
-    initial_parameters : torch.Tensor
-        Parameters concerning the initial actuator configuration.
-        Tensor of shape [number_of_heliostats, n, 2], where n=2 for linear actuators or n=4 for ideal actuators.
-    active_geometry_parameters : torch.Tensor
-        Active geometry parameters.
-        Tensor of shape [number_of_active_heliostats, n, 2], where n=7 for linear actuators or n=4 for ideal actuators.
-    active_geometry_parameters : torch.Tensor
-        Active initial parameters.
-        Tensor of shape [number_of_active_heliostats, n, 2], where n=2 for linear actuators or n=4 for ideal actuators.
+    non_optimizable_parameters : torch.Tensor
+        The non-optimizable actuator parameters, describing actuator geometry.
+        Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+    optimizable_parameters : torch.Tensor
+        The two optimizable actuator parameters, describing the initial actuator configuration.
+        Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators.
+    active_non_optimizable_parameters : torch.Tensor
+        Active non-optimizable geometry parameters.
+        Tensor of shape [number_of_active_heliostats, 7, 2] for linear actuators or [number_of_active_heliostats, 4, 2] for ideal actuators.
+    active_optimizable_parameters : torch.Tensor
+        Active optimizable parameters.
+        Tensor of shape [number_of_active_heliostats, 2, 2] for linear actuators or [] for ideal actuators.
 
     Methods
     -------
@@ -33,7 +33,10 @@ class Actuators(torch.nn.Module):
     """
 
     def __init__(
-        self, actuator_parameters: torch.Tensor, device: torch.device | None = None
+        self,
+        non_optimizable_parameters: torch.Tensor,
+        optimizable_parameters: torch.Tensor = torch.tensor([], requires_grad=True),
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize abstract actuators.
@@ -46,9 +49,12 @@ class Actuators(torch.nn.Module):
 
         Parameters
         ----------
-        actuator_parameters : torch.Tensor
-            The actuator parameters.
-            Tensor of shape [number_of_heliostats, n, 2], where n=9 for linear actuators or n=4 for ideal actuators.
+        non_optimizable_parameters : torch.Tensor
+            The non-optimizable actuator parameters, describing actuator geometry.
+            Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+        optimizable_parameters : torch.Tensor
+            The two optimizable actuator parameters, describing the initial actuator configuration.
+            Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators (default is torch.Tensor([])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -56,14 +62,14 @@ class Actuators(torch.nn.Module):
         """
         super().__init__()
 
-        self.geometry_parameters = actuator_parameters
-        self.initial_parameters = actuator_parameters
+        self.non_optimizable_parameters = non_optimizable_parameters
+        self.optimizable_parameters = optimizable_parameters
 
-        self.active_geometry_parameters = torch.empty_like(
-            self.geometry_parameters, device=device
+        self.active_non_optimizable_parameters = torch.empty_like(
+            self.non_optimizable_parameters, device=device
         )
-        self.active_initial_parameters = torch.empty_like(
-            self.initial_parameters, device=device
+        self.active_optimizable_parameters = torch.empty_like(
+            self.optimizable_parameters, device=device
         )
 
     def motor_positions_to_angles(

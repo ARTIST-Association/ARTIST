@@ -212,12 +212,12 @@ class MotorPositionsOptimizer:
                 group.kinematic.active_motor_positions.detach().clone()
             )
             initial_motor_positions_all_groups.append(initial_motor_positions)
-            motor_positions_minimum = group.kinematic.actuators.geometry_parameters[
-                :, 2
-            ]
-            motor_positions_maximum = group.kinematic.actuators.geometry_parameters[
-                :, 3
-            ]
+            motor_positions_minimum = (
+                group.kinematic.actuators.non_optimizable_parameters[:, 2]
+            )
+            motor_positions_maximum = (
+                group.kinematic.actuators.non_optimizable_parameters[:, 3]
+            )
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
             scales_all_groups.append(

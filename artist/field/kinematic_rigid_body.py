@@ -67,7 +67,8 @@ class RigidBody(Kinematic):
         initial_orientations: torch.Tensor,
         translation_deviation_parameters: torch.Tensor,
         rotation_deviation_parameters: torch.Tensor,
-        actuator_parameters: torch.Tensor,
+        actuator_parameters_non_optimizable: torch.Tensor,
+        actuator_parameters_optimizable: torch.Tensor = torch.tensor([]),
         device: torch.device | None = None,
     ) -> None:
         """
@@ -99,12 +100,12 @@ class RigidBody(Kinematic):
         rotation_deviation_parameters : torch.Tensor
             Kinematic rotation deviation parameter.
             Tensor of shape [number_of_heliostats, 4].
-        deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all heliostats.
-            Tensor of shape [number_of_heliostats, 18].
-        actuator_parameters : torch.Tensor
-            The actuator parameters.
-            Tensor of shape [number_of_heliostats, n, 2], where n=7 for linear actuators or n=2 for ideal actuators.
+        actuator_parameters_non_optimizable : torch.Tensor
+            The non-optimizable actuator parameters.
+            Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+        actuator_parameters_optimizable : torch.Tensor
+            The optimizable actuator parameters.
+            Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators (default is torch.tensor([])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -144,8 +145,12 @@ class RigidBody(Kinematic):
         )
 
         self.actuators = type_mappings.actuator_type_mapping[
-            actuator_parameters[0, 0, 0].item()
-        ](actuator_parameters=actuator_parameters, device=device)
+            actuator_parameters_non_optimizable[0, 0, 0].item()
+        ](
+            non_optimizable_parameters=actuator_parameters_non_optimizable,
+            optimizable_parameters=actuator_parameters_optimizable.to(device),
+            device=device,
+        )
 
     def _compute_orientations_from_motor_positions(
         self,

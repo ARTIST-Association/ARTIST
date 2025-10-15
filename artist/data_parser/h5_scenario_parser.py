@@ -392,7 +392,7 @@ def actuator_parameters(
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Load actuator parameters from an HDF5 scenario file.
 
@@ -425,7 +425,9 @@ def actuator_parameters(
     Returns
     -------
     torch.Tensor
-        Actuator parameters for for each actuator in the file.
+        Non-optimizable actuator parameters for for each actuator in the file.
+    torch.Tensor
+        Optimizable actuator parameters for for each actuator in the file.
     """
     device = get_device(device=device)
 
@@ -437,24 +439,28 @@ def actuator_parameters(
         actuator_config = scenario_file[config_dictionary.heliostat_actuator_key]
 
     if actuator_type == config_dictionary.linear_actuator_key:
-        actuator_parameters = linear_actuators(
-            actuator_config=actuator_config,
-            number_of_actuators=number_of_actuators,
-            initial_orientation=initial_orientation,
-            log=log,
-            heliostat_name=heliostat_name,
-            device=device,
+        actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
+            linear_actuators(
+                actuator_config=actuator_config,
+                number_of_actuators=number_of_actuators,
+                initial_orientation=initial_orientation,
+                log=log,
+                heliostat_name=heliostat_name,
+                device=device,
+            )
         )
     elif actuator_type == config_dictionary.ideal_actuator_key:
-        actuator_parameters = ideal_actuators(
-            actuator_config=actuator_config,
-            number_of_actuators=number_of_actuators,
-            device=device,
+        actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
+            ideal_actuators(
+                actuator_config=actuator_config,
+                number_of_actuators=number_of_actuators,
+                device=device,
+            )
         )
     else:
         raise ValueError(f"The actuator type: {actuator_type} is not yet implemented!")
 
-    return actuator_parameters
+    return actuator_parameters_non_optimizable, actuator_parameters_optimizable
 
 
 def linear_actuators(
@@ -464,7 +470,7 @@ def linear_actuators(
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Load actuator parameters for linear actuators from an HDF5 scenario file.
 
@@ -493,7 +499,9 @@ def linear_actuators(
     Returns
     -------
     torch.Tensor
-        Nine actuator parameters for each linear actuator in the file.
+        Non-optimizable actuator parameters for for each actuator in the file.
+    torch.Tensor
+        Optimizable actuator parameters for for each actuator in the file.
     """
     device = get_device(device=device)
 
@@ -503,8 +511,12 @@ def linear_actuators(
             f" Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuator(s)."
         )
 
-    actuator_parameters = torch.zeros(
-        (config_dictionary.number_of_linear_actuator_parameters, number_of_actuators),
+    actuator_parameters_non_optimizable = torch.zeros(
+        (7, number_of_actuators),
+        device=device,
+    )
+    actuator_parameters_optimizable = torch.zeros(
+        (2, number_of_actuators),
         device=device,
     )
 
@@ -582,34 +594,38 @@ def linear_actuators(
                 f"{heliostat_name}. Using default values!"
             )
 
-        actuator_parameters[0, index] = config_dictionary.linear_actuator_int
+        actuator_parameters_non_optimizable[0, index] = (
+            config_dictionary.linear_actuator_int
+        )
 
-        actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
+        actuator_parameters_non_optimizable[1, index] = (
+            0 if not clockwise_axis_movement else 1
+        )
 
-        actuator_parameters[2, index] = minimum_motor_position
-        actuator_parameters[3, index] = maximum_motor_position
+        actuator_parameters_non_optimizable[2, index] = minimum_motor_position
+        actuator_parameters_non_optimizable[3, index] = maximum_motor_position
 
-        actuator_parameters[4, index] = (
+        actuator_parameters_non_optimizable[4, index] = (
             torch.tensor(increment[()], dtype=torch.float, device=device)
             if increment
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[5, index] = (
+        actuator_parameters_non_optimizable[5, index] = (
             torch.tensor(offset[()], dtype=torch.float, device=device)
             if offset
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[6, index] = (
+        actuator_parameters_non_optimizable[6, index] = (
             torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
             if pivot_radius
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[7, index] = (
+        actuator_parameters_optimizable[0, index] = (
             torch.tensor(initial_angle[()], dtype=torch.float, device=device)
             if initial_angle
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters[8, index] = (
+        actuator_parameters_optimizable[1, index] = (
             torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
             if initial_stroke_length
             else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -621,20 +637,20 @@ def linear_actuators(
     # The first actuator always rotates along the east-axis.
     # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
     # of actuator number one needs to be transformed accordingly.
-    actuator_parameters[7, 0] = utils.transform_initial_angle(
-        initial_angle=actuator_parameters[7, 0].unsqueeze(0),
+    actuator_parameters_optimizable[0, 0] = utils.transform_initial_angle(
+        initial_angle=actuator_parameters_optimizable[0, 0].unsqueeze(0),
         initial_orientation=initial_orientation,
         device=device,
     )
 
-    return actuator_parameters
+    return actuator_parameters_non_optimizable, actuator_parameters_optimizable
 
 
 def ideal_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
     device: torch.device | None = None,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Load actuator parameters for ideal actuators from an HDF5 scenario file.
 
@@ -657,7 +673,9 @@ def ideal_actuators(
     Returns
     -------
     torch.Tensor
-        Four actuator parameters for each ideal actuator in the file.
+        Non-optimizable actuator parameters for for each actuator in the file.
+    torch.Tensor
+        Optimizable actuator parameters for for each actuator in the file.
     """
     device = get_device(device=device)
 
@@ -667,10 +685,11 @@ def ideal_actuators(
             f" Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuator(s)."
         )
 
-    actuator_parameters = torch.zeros(
-        (config_dictionary.number_of_ideal_actuator_parameters, number_of_actuators),
+    actuator_parameters_non_optimizable = torch.zeros(
+        (4, number_of_actuators),
         device=device,
     )
+    actuator_parameters_optimizable = torch.tensor([], device=device)
 
     for index, actuator in enumerate(actuator_config.keys()):
         clockwise_axis_movement = bool(
@@ -690,11 +709,15 @@ def ideal_actuators(
             ][()][1]
         )
 
-        actuator_parameters[0, index] = config_dictionary.ideal_actuator_int
+        actuator_parameters_non_optimizable[0, index] = (
+            config_dictionary.ideal_actuator_int
+        )
 
-        actuator_parameters[1, index] = 0 if not clockwise_axis_movement else 1
+        actuator_parameters_non_optimizable[1, index] = (
+            0 if not clockwise_axis_movement else 1
+        )
 
-        actuator_parameters[2, index] = minimum_motor_position
-        actuator_parameters[3, index] = maximum_motor_position
+        actuator_parameters_non_optimizable[2, index] = minimum_motor_position
+        actuator_parameters_non_optimizable[3, index] = maximum_motor_position
 
-    return actuator_parameters
+    return actuator_parameters_non_optimizable, actuator_parameters_optimizable

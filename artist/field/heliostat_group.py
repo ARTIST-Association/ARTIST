@@ -279,13 +279,17 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.actuators.active_geometry_parameters = (
-            self.kinematic.actuators.geometry_parameters.repeat_interleave(
+        self.kinematic.actuators.active_non_optimizable_parameters = (
+            self.kinematic.actuators.non_optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.actuators.active_initial_parameters = (
-            self.kinematic.actuators.initial_parameters.repeat_interleave(
-                active_heliostats_mask, dim=0
+        if (
+            self.kinematic.actuators.active_optimizable_parameters.shape[0]
+            == active_heliostats_mask.shape[0]
+        ):
+            self.kinematic.actuators.active_optimizable_parameters = (
+                self.kinematic.actuators.optimizable_parameters.repeat_interleave(
+                    active_heliostats_mask, dim=0
+                )
             )
-        )

@@ -66,7 +66,7 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
         ],
         device=device,
     )
-    actuator_parameters = torch.tensor(
+    actuator_parameters_non_optimizable = torch.tensor(
         [
             [
                 [0.0000e00, 0.0000e00],
@@ -76,6 +76,13 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
                 [1.5417e05, 1.5417e05],
                 [3.4061e-01, 3.4790e-01],
                 [3.2040e-01, 3.0900e-01],
+            ]
+        ],
+        device=device,
+    )
+    actuator_parameters_optimizable = torch.tensor(
+        [
+            [
                 [-1.5708e00, 9.5993e-01],
                 [7.5000e-02, 7.5000e-02],
             ]
@@ -89,7 +96,8 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
         initial_orientations=torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device),
         translation_deviation_parameters=translation_deviation_parameters,
         rotation_deviation_parameters=rotation_deviation_parameters,
-        actuator_parameters=actuator_parameters,
+        actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
+        actuator_parameters_optimizable=actuator_parameters_optimizable,
         device=device,
     )
 
@@ -114,13 +122,13 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_geometry_parameters = (
-        kinematic.actuators.geometry_parameters.repeat_interleave(
+    kinematic.actuators.active_non_optimizable_parameters = (
+        kinematic.actuators.non_optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_initial_parameters = (
-        kinematic.actuators.initial_parameters.repeat_interleave(
+    kinematic.actuators.active_optimizable_parameters = (
+        kinematic.actuators.optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
