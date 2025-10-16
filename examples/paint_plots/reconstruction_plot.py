@@ -1,4 +1,5 @@
 import argparse
+import math
 import pathlib
 import warnings
 from typing import Any
@@ -24,7 +25,7 @@ def plot_error_distribution(
     """
     Plot the distribution of reconstruction errors.
 
-    This function plots histograms and kernel density estimations of the mrad losses in reconstruction when comparing
+    This function plots histograms and kernel density estimations of the pointing errors in reconstruction when comparing
     HeliOS and UTIS as methods for focal spot centroid extraction.
 
     Parameters
@@ -39,31 +40,33 @@ def plot_error_distribution(
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 
     # Convert losses to list.
-    helios_losses = [
-        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
+    helios_losses_in_meters = [
+        math.sqrt(data[paint_mappings.HELIOS_KEY])
+        for data in reconstruction_results.values()
     ]
-    utis_losses = [
-        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
+    utis_losses_in_meters = [
+        math.sqrt(data[paint_mappings.UTIS_KEY])
+        for data in reconstruction_results.values()
     ]
-    x_max = max(utis_losses + helios_losses)
+    x_max = max(utis_losses_in_meters + helios_losses_in_meters)
     x_vals = np.linspace(0, x_max, 100)
 
-    kde_helios = gaussian_kde(helios_losses, bw_method="scott")
-    kde_utis = gaussian_kde(utis_losses, bw_method="scott")
+    kde_helios = gaussian_kde(helios_losses_in_meters, bw_method="scott")
+    kde_utis = gaussian_kde(utis_losses_in_meters, bw_method="scott")
 
     kde_values_helios = kde_helios(x_vals)
     kde_values_utis = kde_utis(x_vals)
 
-    mean_helios = np.mean(helios_losses)
+    mean_helios = np.mean(helios_losses_in_meters)
 
-    mean_utis = np.mean(utis_losses)
+    mean_utis = np.mean(utis_losses_in_meters)
 
     fig, ax = plt.subplots(figsize=(6, 4))
 
     # Best practice is to plot the histogram with the highest mean first.
     if mean_helios > mean_utis:
         ax.hist(
-            helios_losses,
+            helios_losses_in_meters,
             bins=25,
             range=(0, x_max),
             density=True,
@@ -72,7 +75,7 @@ def plot_error_distribution(
             color=plot_colors[paint_mappings.HELIOS_KEY],
         )
         ax.hist(
-            utis_losses,
+            utis_losses_in_meters,
             bins=25,
             range=(0, x_max),
             density=True,
@@ -82,7 +85,7 @@ def plot_error_distribution(
         )
     else:
         ax.hist(
-            utis_losses,
+            utis_losses_in_meters,
             bins=25,
             range=(0, x_max),
             density=True,
@@ -91,7 +94,7 @@ def plot_error_distribution(
             color=plot_colors[paint_mappings.UTIS_KEY],
         )
         ax.hist(
-            helios_losses,
+            helios_losses_in_meters,
             bins=25,
             range=(0, x_max),
             density=True,
@@ -109,7 +112,7 @@ def plot_error_distribution(
         mean_helios,
         color=plot_colors[paint_mappings.HELIOS_KEY],
         linestyle="--",
-        label=f"HeliOS Mean: {mean_helios:.2f} mrad",
+        label=f"HeliOS Mean: {mean_helios:.2f} meter",
     )
     ax.plot(
         x_vals,
@@ -121,10 +124,10 @@ def plot_error_distribution(
         mean_utis,
         color=plot_colors[paint_mappings.UTIS_KEY],
         linestyle="--",
-        label=f"UTIS Mean: {mean_utis:.2f} mrad",
+        label=f"UTIS Mean: {mean_utis:.2f} meter",
     )
 
-    ax.set_xlabel("\\textbf{Pointing Error} \n{\\small mrad}")
+    ax.set_xlabel("\\textbf{Pointing Error} \n{\\small meter}")
     ax.set_ylabel("\\textbf{Density}")
     ax.legend(fontsize=8)
     ax.grid(True)
@@ -145,7 +148,7 @@ def plot_error_against_distance(
     """
     Plot the reconstruction error against the distance.
 
-    This function plots the reconstruction error, in mrad, against the distance of that heliostat from the tower.
+    This function plots the reconstruction error, in meter, against the distance of that heliostat from the tower.
 
     Parameters
     ----------
@@ -164,17 +167,19 @@ def plot_error_against_distance(
 
     # Load as lists.
     positions_list = [data["Position"] for data in reconstruction_results.values()]
-    helios_loss_list = [
-        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
+    helios_loss_list_in_meters = [
+        math.sqrt(data[paint_mappings.HELIOS_KEY])
+        for data in reconstruction_results.values()
     ]
-    utis_loss_list = [
-        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
+    utis_loss_list_in_meters = [
+        math.sqrt(data[paint_mappings.UTIS_KEY])
+        for data in reconstruction_results.values()
     ]
 
     # Convert to arrays for plotting.
     positions = np.array(positions_list, dtype=float)
-    helios_losses = np.array(helios_loss_list, dtype=float)
-    utis_losses = np.array(utis_loss_list, dtype=float)
+    helios_losses = np.array(helios_loss_list_in_meters, dtype=float)
+    utis_losses = np.array(utis_loss_list_in_meters, dtype=float)
 
     # Vectorized calculation of distances.
     distances = np.linalg.norm(positions[:, :2], axis=1)
@@ -235,7 +240,7 @@ def plot_error_against_distance(
     )
 
     ax.set_xlabel("\\textbf{Heliostat Distance from Tower} \n{m}")
-    ax.set_ylabel("\\textbf{Mean Pointing Error} \n{mrad}")
+    ax.set_ylabel("\\textbf{Mean Pointing Error} \n{meter}")
     ax.grid(True)
     ax.legend(fontsize=8, loc="upper right", ncol=2)
 
