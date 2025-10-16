@@ -178,5 +178,21 @@ batched_bitmap_u = 2
 """Index to access the batched bitmap values of the up components."""
 bitmap_intensities = 1
 """Index to access bitmap intensity values."""
+first_light_source = 0
+"""Index to access the first light source."""
+number_of_surface_points_dimension = 1
+"""Index to access the number of surface points per heliostat,"""
+unbatched_bitmap_e = 0
+"""Index to access the unbatched bitmap values of the east components."""
+unbatched_bitmap_u = 1
+"""Index to access the unbatched bitmap values of the up components."""
+target_area_width = 0
+"""Index to access the target area width."""
+target_area_height = 1
+"""Index to access the target area height."""
+target_area_center_e = 0
+"""Index to access the target area center in the east component."""
+target_area_center_u = 2
+"""Index to access the target area center in the up component."""
 evaluation_points_e = 0
 evaluation_points_n = 1
