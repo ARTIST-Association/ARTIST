@@ -144,3 +144,11 @@ nurbs_derivative_order_1 = 1
 """Index to access the derivative order of one."""
 nurbs_normals = 3
 """Index to access the surface normals from within the nurbs."""
+reflected_rays = 2
+"""Index to access reflected rays."""
+heliostat_dimension = 0
+intensities = 3
+intersection_distances = 2
+intersection_distances_batched = 3
+number_rays_per_point = 1
+points_at_ray_origin = 2

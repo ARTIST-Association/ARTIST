@@ -2,6 +2,7 @@ import torch
 
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.scene.rays import Rays
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -31,8 +32,10 @@ def reflect(
         incident_ray_directions
         - 2
         * torch.sum(
-            incident_ray_directions * reflection_surface_normals, dim=-1
-        ).unsqueeze(-1)
+            incident_ray_directions * reflection_surface_normals,
+            dim=index_mapping.reflected_rays,
+            keepdim=True,
+        )
         * reflection_surface_normals
     )
 
@@ -86,7 +89,9 @@ def line_plane_intersections(
 
     if target_area_mask is None:
         target_area_mask = torch.zeros(
-            points_at_ray_origins.shape[0], dtype=torch.int32, device=device
+            points_at_ray_origins.shape[index_mapping.heliostat_dimension],
+            dtype=torch.int32,
+            device=device,
         )
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
@@ -96,7 +101,7 @@ def line_plane_intersections(
     relative_intensities = (
         -rays.ray_directions
         * target_areas.normal_vectors[target_area_mask][:, None, None, :]
-    ).sum(dim=-1)
+    ).sum(dim=index_mapping.intensities)
 
     if (relative_intensities <= epsilon).all():
         raise ValueError("No ray intersections on the front of the target area planes.")
@@ -110,13 +115,15 @@ def line_plane_intersections(
         (
             (points_at_ray_origins - target_areas.centers[target_area_mask][:, None, :])
             * target_areas.normal_vectors[target_area_mask][:, None, :]
-        ).sum(dim=-1)
-    ).unsqueeze(1) / relative_intensities
+        ).sum(dim=index_mapping.intersection_distances)
+    ).unsqueeze(index_mapping.number_rays_per_point) / relative_intensities
 
     # Combine to get the intersections
     intersections = points_at_ray_origins.unsqueeze(
-        1
-    ) + rays.ray_directions * intersection_distances.unsqueeze(-1)
+        index_mapping.number_rays_per_point
+    ) + rays.ray_directions * intersection_distances.unsqueeze(
+        index_mapping.intersection_distances_batched
+    )
 
     # Calculate the absolute intensities of the rays hitting the target planes.
     # Use the inverse-square law for distance attenuations from the heliostats to target planes.
@@ -128,11 +135,11 @@ def line_plane_intersections(
                     points_at_ray_origins
                     - target_areas.centers[target_area_mask][:, None, :]
                 ),
-                dim=-1,
+                dim=index_mapping.points_at_ray_origin,
             )
             ** 2
         )
-    ).unsqueeze(1)
+    ).unsqueeze(index_mapping.number_rays_per_point)
     absolute_intensities = (
         rays.ray_magnitudes * relative_intensities * distance_attenuations
     )

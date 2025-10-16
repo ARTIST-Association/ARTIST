@@ -216,10 +216,6 @@ mac = "Darwin"
 
 number_of_heliostat_groups = "number_of_heliostat_groups"
 """Key to access the number of heliostat groups for distributed setup."""
-nurbs_u_direction = 0
-"""Key to access the nurbs u direction."""
-nurbs_v_direction = 1
-"""Key to access the nurbs v direction."""
 
 utis_crop_width = 6
 """Key to access the crop width used in utis."""
