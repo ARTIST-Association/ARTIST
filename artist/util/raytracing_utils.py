@@ -101,7 +101,7 @@ def line_plane_intersections(
     relative_intensities = (
         -rays.ray_directions
         * target_areas.normal_vectors[target_area_mask][:, None, None, :]
-    ).sum(dim=index_mapping.intensities)
+    ).sum(dim=index_mapping.ray_intensities)
 
     if (relative_intensities <= epsilon).all():
         raise ValueError("No ray intersections on the front of the target area planes.")
@@ -135,7 +135,7 @@ def line_plane_intersections(
                     points_at_ray_origins
                     - target_areas.centers[target_area_mask][:, None, :]
                 ),
-                dim=index_mapping.points_at_ray_origin,
+                dim=index_mapping.points_dimension,
             )
             ** 2
         )

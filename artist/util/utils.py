@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as functional
 
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -52,17 +53,26 @@ def rotate_distortions(
     sin_u = torch.sin(u)
     ones = torch.ones(e.shape, device=device)
 
-    matrix = torch.zeros(e.shape[0], e.shape[1], e.shape[2], 4, 4, device=device)
+    matrix = torch.zeros(
+        e.shape[index_mapping.heliostat_dimension],
+        e.shape[index_mapping.facet_dimension],
+        e.shape[index_mapping.points_dimension],
+        4,
+        4,
+        device=device,
+    )
 
-    matrix[:, :, :, 0, 0] = cos_u
-    matrix[:, :, :, 0, 1] = -sin_u
-    matrix[:, :, :, 1, 0] = cos_e * sin_u
-    matrix[:, :, :, 1, 1] = cos_e * cos_u
-    matrix[:, :, :, 1, 2] = sin_e
-    matrix[:, :, :, 2, 0] = -sin_e * sin_u
-    matrix[:, :, :, 2, 1] = -sin_e * cos_u
-    matrix[:, :, :, 2, 2] = cos_e
-    matrix[:, :, :, 3, 3] = ones
+    matrix[:, :, :, index_mapping.e, index_mapping.e] = cos_u
+    matrix[:, :, :, index_mapping.e, index_mapping.n] = -sin_u
+    matrix[:, :, :, index_mapping.n, index_mapping.e] = cos_e * sin_u
+    matrix[:, :, :, index_mapping.n, index_mapping.n] = cos_e * cos_u
+    matrix[:, :, :, index_mapping.n, index_mapping.u] = sin_e
+    matrix[:, :, :, index_mapping.u, index_mapping.e] = -sin_e * sin_u
+    matrix[:, :, :, index_mapping.u, index_mapping.n] = -sin_e * cos_u
+    matrix[:, :, :, index_mapping.u, index_mapping.u] = cos_e
+    matrix[
+        :, :, :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = ones
 
     return matrix
 
@@ -99,14 +109,18 @@ def rotate_e(
     sin_e = -torch.sin(e)  # Heliostat convention.
     ones = torch.ones(e.shape, device=device)
 
-    matrix = torch.zeros(e.shape[0], 4, 4, device=device)
+    matrix = torch.zeros(
+        e.shape[index_mapping.heliostat_dimension], 4, 4, device=device
+    )
 
-    matrix[:, 0, 0] = ones
-    matrix[:, 1, 1] = cos_e
-    matrix[:, 1, 2] = sin_e
-    matrix[:, 2, 1] = -sin_e
-    matrix[:, 2, 2] = cos_e
-    matrix[:, 3, 3] = ones
+    matrix[:, index_mapping.e, index_mapping.e] = ones
+    matrix[:, index_mapping.n, index_mapping.n] = cos_e
+    matrix[:, index_mapping.n, index_mapping.u] = sin_e
+    matrix[:, index_mapping.u, index_mapping.n] = -sin_e
+    matrix[:, index_mapping.u, index_mapping.u] = cos_e
+    matrix[
+        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = ones
 
     return matrix
 
@@ -139,14 +153,18 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     sin_n = torch.sin(n)
     ones = torch.ones(n.shape, device=device)
 
-    matrix = torch.zeros(n.shape[0], 4, 4, device=device)
+    matrix = torch.zeros(
+        n.shape[index_mapping.heliostat_dimension], 4, 4, device=device
+    )
 
-    matrix[:, 0, 0] = cos_n
-    matrix[:, 0, 2] = -sin_n
-    matrix[:, 1, 1] = ones
-    matrix[:, 2, 0] = sin_n
-    matrix[:, 2, 2] = cos_n
-    matrix[:, 3, 3] = ones
+    matrix[:, index_mapping.e, index_mapping.e] = cos_n
+    matrix[:, index_mapping.e, index_mapping.u] = -sin_n
+    matrix[:, index_mapping.n, index_mapping.n] = ones
+    matrix[:, index_mapping.u, index_mapping.e] = sin_n
+    matrix[:, index_mapping.u, index_mapping.u] = cos_n
+    matrix[
+        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = ones
 
     return matrix
 
@@ -179,14 +197,18 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     sin_u = torch.sin(u)
     ones = torch.ones(u.shape, device=device)
 
-    matrix = torch.zeros(u.shape[0], 4, 4, device=device)
+    matrix = torch.zeros(
+        u.shape[index_mapping.heliostat_dimension], 4, 4, device=device
+    )
 
-    matrix[:, 0, 0] = cos_u
-    matrix[:, 0, 1] = -sin_u
-    matrix[:, 1, 0] = sin_u
-    matrix[:, 1, 1] = cos_u
-    matrix[:, 2, 2] = ones
-    matrix[:, 3, 3] = ones
+    matrix[:, index_mapping.e, index_mapping.e] = cos_u
+    matrix[:, index_mapping.e, index_mapping.n] = -sin_u
+    matrix[:, index_mapping.n, index_mapping.e] = sin_u
+    matrix[:, index_mapping.n, index_mapping.n] = cos_u
+    matrix[:, index_mapping.u, index_mapping.u] = ones
+    matrix[
+        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = ones
 
     return matrix
 
@@ -235,15 +257,19 @@ def translate_enu(
 
     ones = torch.ones(e.shape, device=device)
 
-    matrix = torch.zeros(e.shape[0], 4, 4, device=device)
+    matrix = torch.zeros(
+        e.shape[index_mapping.heliostat_dimension], 4, 4, device=device
+    )
 
-    matrix[:, 0, 0] = ones
-    matrix[:, 0, 3] = e
-    matrix[:, 1, 1] = ones
-    matrix[:, 1, 3] = n
-    matrix[:, 2, 2] = ones
-    matrix[:, 2, 3] = u
-    matrix[:, 3, 3] = ones
+    matrix[:, index_mapping.e, index_mapping.e] = ones
+    matrix[:, index_mapping.e, index_mapping.transform_homogenous] = e
+    matrix[:, index_mapping.n, index_mapping.n] = ones
+    matrix[:, index_mapping.n, index_mapping.transform_homogenous] = n
+    matrix[:, index_mapping.u, index_mapping.u] = ones
+    matrix[:, index_mapping.u, index_mapping.transform_homogenous] = u
+    matrix[
+        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = ones
 
     return matrix
 
@@ -349,9 +375,11 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
         Tensor of shape [number_of_points, 2].
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
-    min_vals = torch.min(points, dim=0).values
+    min_vals = torch.min(points, dim=index_mapping.unbatched_tensor_values).values
     point_range = points - min_vals
-    max_vals = torch.max(point_range + 2e-5, dim=0).values
+    max_vals = torch.max(
+        point_range + 2e-5, dim=index_mapping.unbatched_tensor_values
+    ).values
     normalized = (point_range + 1e-5) / max_vals
 
     return normalized
@@ -369,8 +397,10 @@ def decompose_rotations(
     ----------
     initial_vector : torch.Tensor
         The initial vector.
+        Tensor of shape [number_of_heliostats, 4].
     rotated_vector : torch.Tensor
         The rotated vector.
+        Tensor of shape [4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -389,16 +419,19 @@ def decompose_rotations(
     device = get_device(device=device)
 
     # Normalize the input vectors.
-    initial_vector = torch.nn.functional.normalize(initial_vector, p=2, dim=1)
-    target_vector = torch.nn.functional.normalize(target_vector, p=2, dim=0).unsqueeze(
-        0
+    initial_vector = torch.nn.functional.normalize(
+        initial_vector[:, : index_mapping.slice_forth_dimension]
     )
+    target_vector = torch.nn.functional.normalize(
+        target_vector[: index_mapping.slice_forth_dimension],
+        dim=index_mapping.unbatched_tensor_values,
+    ).unsqueeze(index_mapping.unbatched_tensor_values)
 
     # Compute the cross product (rotation axis).
     r = torch.linalg.cross(initial_vector, target_vector)
 
     # Normalize the rotation axis.
-    r_normalized = torch.nn.functional.normalize(r, p=2, dim=1)
+    r_normalized = torch.nn.functional.normalize(r)
 
     # Compute the angle between the vectors.
     theta = torch.arccos(torch.clamp(initial_vector @ target_vector.T, -1.0, 1.0))
@@ -474,20 +507,22 @@ def transform_initial_angle(
     """
     device = get_device(device=device)
 
-    # ``ARTIST`` is oriented towards the south ([0.0, -1.0, 0.0]) ENU.
+    # ARTIST is oriented towards the south ([0.0, -1.0, 0.0]) ENU.
     artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
 
     # Apply the rotation by the initial angle to the initial orientation.
     initial_orientation_with_offset = initial_orientation @ rotate_e(
         e=initial_angle,
         device=device,
-    ).squeeze(0)
+    ).squeeze(index_mapping.unbatched_tensor_values)
 
     # Compute the transformed angle relative to the reference orientation.
     transformed_initial_angle = angle_between_vectors(
-        initial_orientation[:-1], initial_orientation_with_offset[:-1]
+        initial_orientation[: index_mapping.slice_forth_dimension],
+        initial_orientation_with_offset[: index_mapping.slice_forth_dimension],
     ) - angle_between_vectors(
-        initial_orientation[:-1], artist_standard_orientation[:-1]
+        initial_orientation[: index_mapping.slice_forth_dimension],
+        artist_standard_orientation[: index_mapping.slice_forth_dimension],
     )
 
     return transformed_initial_angle
@@ -542,7 +577,9 @@ def get_center_of_mass(
     flux_thresholds = torch.where(
         bitmaps >= threshold, bitmaps, torch.zeros_like(bitmaps, device=device)
     )
-    total_intensities = flux_thresholds.sum(dim=(1, 2))
+    total_intensities = flux_thresholds.sum(
+        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    )
 
     # Generate normalized east and up coordinates adjusted for pixel centers.
     # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
@@ -555,29 +592,31 @@ def get_center_of_mass(
 
     # Compute the centers of intensity using weighted sums of the coordinates.
     center_of_masses_e = (
-        torch.sum(
-            (flux_thresholds.sum(dim=1).unsqueeze(1) * e_indices), dim=-1
-        ).squeeze(-1)
-        / total_intensities
-    )
-    center_of_masses_u = 1 - (
-        torch.sum(
-            (flux_thresholds.sum(dim=2).unsqueeze(1) * u_indices), dim=-1
-        ).squeeze(-1)
+        flux_thresholds.sum(dim=index_mapping.batched_bitmap_e) * e_indices
+    ).sum(dim=index_mapping.bitmap_intensities) / total_intensities
+    center_of_masses_u = (
+        1
+        - (flux_thresholds.sum(dim=index_mapping.batched_bitmap_u) * u_indices).sum(
+            dim=index_mapping.bitmap_intensities
+        )
         / total_intensities
     )
 
     # Construct the coordinates relative to target centers.
-    de = torch.zeros((bitmaps.shape[0], 4), device=device)
-    de[:, 0] = -target_widths
-    du = torch.zeros((bitmaps.shape[0], 4), device=device)
-    du[:, 2] = target_heights
+    de = torch.zeros(
+        (bitmaps.shape[index_mapping.heliostat_dimension], 4), device=device
+    )
+    de[:, index_mapping.e] = -target_widths
+    du = torch.zeros(
+        (bitmaps.shape[index_mapping.heliostat_dimension], 4), device=device
+    )
+    du[:, index_mapping.u] = target_heights
 
     center_coordinates = (
         target_centers
         - 0.5 * (de + du)
-        + center_of_masses_e.unsqueeze(-1) * de
-        + center_of_masses_u.unsqueeze(-1) * du
+        + center_of_masses_e.unsqueeze(index_mapping.bitmap_intensities) * de
+        + center_of_masses_u.unsqueeze(index_mapping.bitmap_intensities) * du
     )
 
     return center_coordinates

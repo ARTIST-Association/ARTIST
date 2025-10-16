@@ -148,7 +148,11 @@ reflected_rays = 2
 """Index to access reflected rays."""
 heliostat_dimension = 0
 """Index to access the heliostats in batched tensors."""
-intensities = 3
+facet_dimension = 1
+"""Index to access the facets in batched tensors."""
+points_dimension = 2
+"""Index to access the points in batched tensors."""
+ray_intensities = 3
 """Index to access the ray intensities for line plane intersections."""
 intersection_distances = 2
 """Index to access the intersection distances of line plane intersections."""
@@ -158,3 +162,21 @@ number_rays_per_point = 1
 """Index to access the number of rays per point."""
 surface_points = 2
 """Index to access the surface points in batched tensors."""
+e = 0
+"""Index to access east components."""
+n = 1
+"""Index to access north components."""
+u = 2
+"""Index to access up components."""
+transform_homogenous = 3
+"""Index to access homogenous transform for matrices."""
+unbatched_tensor_values = 0
+"""Index to access unbatched tensor values."""
+slice_forth_dimension = 3
+"""Index to slice off the fourth dimension."""
+batched_bitmap_e = 1
+"""Index to access the batched bitmap values of the east components."""
+batched_bitmap_u = 2
+"""Index to access the batched bitmap values of the up components."""
+bitmap_intensities = 1
+"""Index to access bitmap intensity values."""

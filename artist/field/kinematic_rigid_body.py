@@ -269,8 +269,8 @@ class RigidBody(Kinematic):
             Tensor of shape [number_of_active_heliostats, 4, 4].
         """
         east_angles, north_angles, up_angles = utils.decompose_rotations(
-            initial_vector=self.active_initial_orientations[:, :-1],
-            target_vector=self.artist_standard_orientation[:-1],
+            initial_vector=self.active_initial_orientations,
+            target_vector=self.artist_standard_orientation,
             device=device,
         )
 
