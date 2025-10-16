@@ -92,3 +92,55 @@ stral_surface_normals_start = 3
 """Index for the stral surface normals start."""
 stral_surface_normals_end = 6
 """Index for the stral surface normals end."""
+first_facet = 0
+"""Index for the first facet of a heliostat."""
+h5_control_points_u = 0
+"""Index for the control points in the u dimension in a h5 file."""
+h5_control_points_v = 1
+"""Index for the control points in the v dimension in a h5 file."""
+surface_points_from_tuple = 0
+"""Index for surface points in 2D tuple."""
+surface_normals_from_tuple = 1
+"""Index for surface normals in 2D tuple."""
+nurbs_surfaces = 0
+"""Index to access nurbs surfaces."""
+nurbs_facets = 1
+"""Index to access nurbs facets."""
+nurbs_u = 0
+"""Index to access the nurbs u parametric direction."""
+nurbs_v = 1
+"""Index to access the nurbs v parametric direction."""
+nurbs_control_points_start = 2
+"""Index to access the control points."""
+nurbs_knots_unbatched = 0
+"""Index to access the nurbs knots in unbatched tensors."""
+nurbs_knots_batched = 2
+"""Index to access the nurbs knots in batched tensors."""
+nurbs_span_lower = 0
+"""Index to access the lower spans."""
+nurbs_span_upper = 1
+"""Index to access the upper spans."""
+nurbs_evaluation_points = 2
+"""Index to access the nurbs evaluation points."""
+nurbs_spans = 3
+"""Index to access the nurbs spans."""
+nurbs_ndu_basis_i = 0
+"""Index to access nurbs basis function index in recursion."""
+nurbs_ndu_basis_j = 1
+"""Index to access the nurbs basis function recursion order."""
+nurbs_ndu_basis_index_0 = 0
+"""Index for the zeroth basis function index."""
+basis_function_derivative_order = 0
+"""Index to access the basis function derivative order."""
+nurbs_control_points_u = 2
+"""Index to access the nurbs u direction in the control points."""
+nurbs_control_points_v = 3
+"""Index to access the nurbs v direction in the control points."""
+nurbs_control_points = 4
+"""Index to access the nurbs control points."""
+nurbs_derivative_order_0 = 0
+"""Index to access the derivative order of zero."""
+nurbs_derivative_order_1 = 1
+"""Index to access the derivative order of one."""
+nurbs_normals = 3
+"""Index to access the surface normals from within the nurbs."""

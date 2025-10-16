@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from artist.scenario.configuration_classes import (
         SurfaceConfig,
     )
-from artist.util import config_dictionary, type_mappings, utils
+from artist.util import config_dictionary, index_mapping, type_mappings, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ class HeliostatField:
                             "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
                         )
                     else:
-                        actuator_type = actuator_type_list[0]
+                        actuator_type = actuator_type_list[index_mapping.actuator_type]
 
                 actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
                     h5_scenario_parser.actuator_parameters(
@@ -272,9 +272,9 @@ class HeliostatField:
             control_points = torch.empty(
                 (
                     number_of_facets,
-                    surface_config.facet_list[0].control_points.shape[0],
-                    surface_config.facet_list[0].control_points.shape[1],
-                    3,
+                    surface_config.facet_list[index_mapping.first_facet].control_points.shape[index_mapping.h5_control_points_u],
+                    surface_config.facet_list[index_mapping.first_facet].control_points.shape[index_mapping.h5_control_points_v],
+                    index_mapping.surface_dimensions,
                 ),
                 device=device,
             )
@@ -282,12 +282,12 @@ class HeliostatField:
             facet_translation_vectors = torch.empty(
                 (number_of_facets, 4), device=device
             )
-            for i in range(number_of_facets):
-                degrees = surface_config.facet_list[i].degrees
-                control_points[i] = surface_config.facet_list[i].control_points
-                canting[i] = surface_config.facet_list[i].canting
-                facet_translation_vectors[i] = surface_config.facet_list[
-                    i
+            for facet_index in range(number_of_facets):
+                degrees = surface_config.facet_list[facet_index].degrees
+                control_points[facet_index] = surface_config.facet_list[facet_index].control_points
+                canting[facet_index] = surface_config.facet_list[facet_index].canting
+                facet_translation_vectors[facet_index] = surface_config.facet_list[
+                    facet_index
                 ].translation_vector
 
             if change_number_of_control_points_per_facet is not None:
@@ -320,7 +320,7 @@ class HeliostatField:
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
                     device=device,
-                )[0]
+                )[index_mapping.surface_points_from_tuple]
             )
             grouped_field_data[heliostat_group_key][
                 config_dictionary.surface_normals
@@ -328,7 +328,7 @@ class HeliostatField:
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
                     device=device,
-                )[1]
+                )[index_mapping.surface_normals_from_tuple]
             )
             grouped_field_data[heliostat_group_key][
                 config_dictionary.facet_control_points
