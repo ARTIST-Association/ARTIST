@@ -122,7 +122,7 @@ nurbs_span_upper = 1
 """Index to access the upper spans."""
 nurbs_evaluation_points = 2
 """Index to access the nurbs evaluation points."""
-nurbs_spans = 3
+nurbs_spans = 2
 """Index to access the nurbs spans."""
 nurbs_ndu_basis_i = 0
 """Index to access nurbs basis function index in recursion."""
@@ -144,8 +144,6 @@ nurbs_derivative_order_1 = 1
 """Index to access the derivative order of one."""
 nurbs_normals = 3
 """Index to access the surface normals from within the nurbs."""
-reflected_rays = 2
-"""Index to access reflected rays."""
 heliostat_dimension = 0
 """Index to access the heliostats in batched tensors."""
 facet_dimension = 1
@@ -180,3 +178,5 @@ batched_bitmap_u = 2
 """Index to access the batched bitmap values of the up components."""
 bitmap_intensities = 1
 """Index to access bitmap intensity values."""
+evaluation_points_e = 0
+evaluation_points_n = 1

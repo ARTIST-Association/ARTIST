@@ -653,10 +653,16 @@ def create_nurbs_evaluation_grid(
     device = get_device(device=device)
 
     evaluation_points_e = torch.linspace(
-        epsilon, 1 - epsilon, number_of_evaluation_points[0], device=device
+        epsilon,
+        1 - epsilon,
+        number_of_evaluation_points[index_mapping.evaluation_points_e],
+        device=device,
     )
     evaluation_points_n = torch.linspace(
-        epsilon, 1 - epsilon, number_of_evaluation_points[1], device=device
+        epsilon,
+        1 - epsilon,
+        number_of_evaluation_points[index_mapping.evaluation_points_n],
+        device=device,
     )
     evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
 

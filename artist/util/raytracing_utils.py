@@ -33,7 +33,7 @@ def reflect(
         - 2
         * torch.sum(
             incident_ray_directions * reflection_surface_normals,
-            dim=index_mapping.reflected_rays,
+            dim=-1,
             keepdim=True,
         )
         * reflection_surface_normals

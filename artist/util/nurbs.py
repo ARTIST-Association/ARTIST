@@ -197,7 +197,7 @@ class NURBSSurfaces(torch.nn.Module):
         device = get_device(device=device)
         degree = self.degrees[direction].item()
         evaluation_points = evaluation_points[:, :, :, direction]
-        self.uniform = False
+
         if self.uniform:
             unique_knots = torch.unique(
                 knot_vectors, dim=index_mapping.nurbs_knots_batched
@@ -232,11 +232,11 @@ class NURBSSurfaces(torch.nn.Module):
             )
 
             in_span = (
-                evaluation_points.unsqueeze(index_mapping.nurbs_evaluation_points + 1)
-                >= lefts
+                evaluation_points.unsqueeze(-1)
+                >= lefts.unsqueeze(index_mapping.nurbs_spans)
             ) & (
-                evaluation_points.unsqueeze(index_mapping.nurbs_evaluation_points + 1)
-                < rights
+                evaluation_points.unsqueeze(-1)
+                < rights.unsqueeze(index_mapping.nurbs_spans)
             )
             is_last_knot = torch.isclose(
                 evaluation_points,
@@ -244,7 +244,7 @@ class NURBSSurfaces(torch.nn.Module):
                 atol=1e-5,
                 rtol=1e-5,
             )
-            spans = in_span.int().argmax(dim=index_mapping.nurbs_spans) + degree
+            spans = in_span.int().argmax(dim=-1) + degree
             spans = torch.where(
                 is_last_knot, torch.full_like(spans, number_of_knots - 1), spans
             )
