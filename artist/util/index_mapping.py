@@ -147,8 +147,14 @@ nurbs_normals = 3
 reflected_rays = 2
 """Index to access reflected rays."""
 heliostat_dimension = 0
+"""Index to access the heliostats in batched tensors."""
 intensities = 3
+"""Index to access the ray intensities for line plane intersections."""
 intersection_distances = 2
+"""Index to access the intersection distances of line plane intersections."""
 intersection_distances_batched = 3
+"""Index to access the intersection distances of line plane intersections in batched tensors."""
 number_rays_per_point = 1
-points_at_ray_origin = 2
+"""Index to access the number of rays per point."""
+surface_points = 2
+"""Index to access the surface points in batched tensors."""
