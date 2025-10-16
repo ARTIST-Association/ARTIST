@@ -212,9 +212,9 @@ with setup_distributed_environment(
 
     # Set optimizer parameters.
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-4,
+        config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 50,
+        config_dictionary.max_epoch: 30,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 100,
@@ -246,6 +246,6 @@ with setup_distributed_environment(
     )
 
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
-print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
+print(f"rank {ddp_setup['rank']}, final loss {final_loss_per_heliostat}")
 
 create_flux_plot_after_optimization()
