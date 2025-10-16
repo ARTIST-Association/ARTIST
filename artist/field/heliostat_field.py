@@ -272,9 +272,13 @@ class HeliostatField:
             control_points = torch.empty(
                 (
                     number_of_facets,
-                    surface_config.facet_list[index_mapping.first_facet].control_points.shape[index_mapping.h5_control_points_u],
-                    surface_config.facet_list[index_mapping.first_facet].control_points.shape[index_mapping.h5_control_points_v],
-                    index_mapping.surface_dimensions,
+                    surface_config.facet_list[
+                        index_mapping.first_facet
+                    ].control_points.shape[index_mapping.h5_control_points_u],
+                    surface_config.facet_list[
+                        index_mapping.first_facet
+                    ].control_points.shape[index_mapping.h5_control_points_v],
+                    3,
                 ),
                 device=device,
             )
@@ -284,7 +288,9 @@ class HeliostatField:
             )
             for facet_index in range(number_of_facets):
                 degrees = surface_config.facet_list[facet_index].degrees
-                control_points[facet_index] = surface_config.facet_list[facet_index].control_points
+                control_points[facet_index] = surface_config.facet_list[
+                    facet_index
+                ].control_points
                 canting[facet_index] = surface_config.facet_list[facet_index].canting
                 facet_translation_vectors[facet_index] = surface_config.facet_list[
                     facet_index
