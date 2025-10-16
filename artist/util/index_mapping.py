@@ -1,3 +1,5 @@
+actuator_one_index = 0
+"""Index for the first actuator."""
 actuator_type = 0
 """Index for the actuator type."""
 actuator_clockwise_movement = 1
@@ -195,4 +197,22 @@ target_area_center_e = 0
 target_area_center_u = 2
 """Index to access the target area center in the up component."""
 evaluation_points_e = 0
+"""Index to access the evaluation points in the east component."""
 evaluation_points_n = 1
+"""Index to access the evaluation points in the north component."""
+heliostat_position_e = 0
+"""Index to access the heliostat position in the east component."""
+heliostat_position_n = 1
+"""Index to access the heliostat position in the north component."""
+heliostat_position_u = 2
+"""Index to access the heliostat position in the up component."""
+first_joint_index = 0
+"""Index to access the first joint."""
+second_joint_index = 1
+"""Index to access the second joint."""
+concentrator_index = 2
+"""Index to access the concentrator."""
+joint_angles_e = 0
+"""Index to access the joint angles in the east component."""
+joint_angles_u = 1
+"""Index to access the joint angles in the up component."""

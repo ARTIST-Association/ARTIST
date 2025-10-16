@@ -315,3 +315,11 @@ bitmap_normalizer = 255.0
 """Constant to normalize bitmaps."""
 bitmap_resolution = 256
 """Constant for the bitmap resolution."""
+nurbs_degrees = 2
+"""Defines the degrees for nurbs tensors."""
+control_point_dimension = 3
+"""Defines the dimensions for control points."""
+canting_direction_dimension = 2
+"""Defines the dimensions for canting direction tensor."""
+rigid_body_motor_position_dimension = 2
+"""Defines the dimensions for rigid body motor position tensor."""
