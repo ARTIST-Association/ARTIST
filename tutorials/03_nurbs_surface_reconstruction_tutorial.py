@@ -57,14 +57,23 @@ def plot_surface_points_and_angle_map(
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
     normals = (
         (
-            surface_normals[..., :index_mapping.slice_fourth_dimension]
-            / torch.linalg.norm(surface_normals[..., :index_mapping.slice_fourth_dimension], axis=-1, keepdims=True)
+            surface_normals[..., : index_mapping.slice_fourth_dimension]
+            / torch.linalg.norm(
+                surface_normals[..., : index_mapping.slice_fourth_dimension],
+                axis=-1,
+                keepdims=True,
+            )
         )
         .cpu()
         .detach()
     )
     reference = (
-        (reference_direction[..., :index_mapping.slice_fourth_dimension] / torch.linalg.norm(reference_direction[..., :index_mapping.slice_fourth_dimension]))
+        (
+            reference_direction[..., : index_mapping.slice_fourth_dimension]
+            / torch.linalg.norm(
+                reference_direction[..., : index_mapping.slice_fourth_dimension]
+            )
+        )
         .cpu()
         .detach()
     )
@@ -414,7 +423,12 @@ with setup_distributed_environment(
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.4, reduction_dimensions=(index_mapping.facet_dimension, index_mapping.points_dimension, index_mapping.coordinates_dimension)
+        weight=0.4,
+        reduction_dimensions=(
+            index_mapping.facet_dimension,
+            index_mapping.points_dimension,
+            index_mapping.coordinates_dimension,
+        ),
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.3,

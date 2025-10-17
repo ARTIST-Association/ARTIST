@@ -23,7 +23,11 @@ torch.cuda.manual_seed(7)
 def create_flux_plot_before_optimization() -> None:
     """Create data to plot the heliostat fluxes."""
     total_flux = torch.zeros(
-        (bitmap_resolution[index_mapping.unbatched_bitmap_e], bitmap_resolution[index_mapping.unbatched_bitmap_u]), device=device
+        (
+            bitmap_resolution[index_mapping.unbatched_bitmap_e],
+            bitmap_resolution[index_mapping.unbatched_bitmap_u],
+        ),
+        device=device,
     )
 
     for heliostat_group_index, heliostat_group in enumerate(
@@ -86,7 +90,11 @@ def create_flux_plot_before_optimization() -> None:
 def create_flux_plot_after_optimization() -> None:
     """Create data to plot the heliostat fluxes."""
     total_flux = torch.zeros(
-        (bitmap_resolution[index_mapping.unbatched_bitmap_e], bitmap_resolution[index_mapping.unbatched_bitmap_u]), device=device
+        (
+            bitmap_resolution[index_mapping.unbatched_bitmap_e],
+            bitmap_resolution[index_mapping.unbatched_bitmap_u],
+        ),
+        device=device,
     )
 
     for heliostat_group_index, heliostat_group in enumerate(
@@ -191,7 +199,9 @@ with setup_distributed_environment(
     u_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=180, device=device
     )
-    ground_truth = u_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_u) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
+    ground_truth = u_trapezoid.unsqueeze(
+        index_mapping.unbatched_bitmap_u
+    ) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
     loss_definition = KLDivergenceLoss()
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
