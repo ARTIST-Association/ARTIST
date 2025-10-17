@@ -4,7 +4,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.util import config_dictionary
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -156,10 +156,10 @@ class TowerTargetAreas:
                 dtype=torch.float,
                 device=device,
             )
-            dimensions[index, 0] = float(
+            dimensions[index, index_mapping.target_area_plane_e] = float(
                 single_target_area_config[config_dictionary.target_area_plane_e][()]
             )
-            dimensions[index, 1] = float(
+            dimensions[index, index_mapping.target_area_plane_u] = float(
                 single_target_area_config[config_dictionary.target_area_plane_u][()]
             )
 
@@ -167,7 +167,7 @@ class TowerTargetAreas:
                 config_dictionary.target_area_curvature_e
                 in single_target_area_config.keys()
             ):
-                curvatures[index, 0] = float(
+                curvatures[index, index_mapping.target_area_curvature_e] = float(
                     single_target_area_config[
                         config_dictionary.target_area_curvature_e
                     ][()]
@@ -181,7 +181,7 @@ class TowerTargetAreas:
                 config_dictionary.target_area_curvature_u
                 in single_target_area_config.keys()
             ):
-                curvatures[index, 1] = float(
+                curvatures[index, index_mapping.target_area_curvature_u] = float(
                     single_target_area_config[
                         config_dictionary.target_area_curvature_u
                     ][()]
