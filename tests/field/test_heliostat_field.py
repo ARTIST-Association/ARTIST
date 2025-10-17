@@ -48,7 +48,8 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
             {
                 config_dictionary.kinematic_type: config_dictionary.rigid_body_key,
                 config_dictionary.kinematic_initial_orientation: torch.rand(4, 4),
-                config_dictionary.kinematic_deviations: torch.rand(4, 4),
+                config_dictionary.translation_deviations: torch.rand(4, 9),
+                config_dictionary.rotation_deviations: torch.rand(4, 4),
             },
             None,
             "If the heliostat does not have individual actuators, an actuator prototype must be provided!",

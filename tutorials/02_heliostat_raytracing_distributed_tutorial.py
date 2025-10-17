@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
+from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -56,8 +56,8 @@ with setup_distributed_environment(
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution[0],
-            bitmap_resolution[1],
+            bitmap_resolution[index_mapping.unbatched_bitmap_e],
+            bitmap_resolution[index_mapping.unbatched_bitmap_u],
         ),
         device=device,
     )

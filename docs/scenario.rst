@@ -96,7 +96,7 @@ These five elements result in an ``ARTIST`` scenario HDF5 file with the followin
     │   │   │   ├── initial_orientation [1,1]
     │   │   │   └── deviations [0,1]
     │   │   │       ├── first_joint_translation_e [0,1]
-    │   │   │       ├── first_joint_tilt_e [0,1]
+    │   │   │       ├── first_joint_tilt_n [0,1]
     │   │   │       └── ...
     │   │   └── actuator [0,*]
     │   │       ├── actuator_1

@@ -6,7 +6,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.data_loader import h5_loader
+from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.tower_target_areas import TowerTargetAreas
@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 class Scenario:
     """
-    Define a scenario loaded by ARTIST.
+    Define a scenario loaded by ``ARTIST``.
 
     Attributes
     ----------
@@ -62,7 +62,7 @@ class Scenario:
         Parameters
         ----------
         power_plant_position : torch.Tensor,
-            The position of the power plant as latitude, longitude, altitude.
+            The position of the power plant as latitude, longitude and altitude.
             Tensor of shape [3].
         target_areas : TargetAreaArray
             A list of tower target areas included in the scenario.
@@ -124,7 +124,7 @@ class Scenario:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -141,7 +141,7 @@ class Scenario:
         )
         if rank == 0:
             log.info(
-                f"Loading an ``ARTIST`` scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
+                f"Loading an ARTIST scenario HDF5 file. This scenario file is version {scenario_file.attrs['version']}."
             )
 
         power_plant_position = torch.tensor(
@@ -156,7 +156,7 @@ class Scenario:
             config_file=scenario_file, device=device
         )
 
-        prototype_surface = h5_loader.surface_config(
+        prototype_surface = h5_scenario_parser.surface_config(
             prototype=True, scenario_file=scenario_file, device=device
         )
 
@@ -172,20 +172,23 @@ class Scenario:
             config_dictionary.kinematic_prototype_key
         ][config_dictionary.kinematic_type][()].decode("utf-8")
 
-        prototype_kinematic_deviations, number_of_actuators = (
-            h5_loader.kinematic_deviations(
-                prototype=True,
-                kinematic_type=prototype_kinematic_type,
-                scenario_file=scenario_file,
-                log=log,
-                device=device,
-            )
+        (
+            prototype_translation_deviations,
+            prototype_rotation_deviations,
+            number_of_actuators,
+        ) = h5_scenario_parser.kinematic_deviations(
+            prototype=True,
+            kinematic_type=prototype_kinematic_type,
+            scenario_file=scenario_file,
+            log=log,
+            device=device,
         )
 
         prototype_kinematic = {
             config_dictionary.kinematic_type: prototype_kinematic_type,
             config_dictionary.kinematic_initial_orientation: prototype_initial_orientation,
-            config_dictionary.kinematic_deviations: prototype_kinematic_deviations,
+            config_dictionary.translation_deviations: prototype_translation_deviations,
+            config_dictionary.rotation_deviations: prototype_rotation_deviations,
         }
 
         prototype_actuator_keys = list(
@@ -212,7 +215,10 @@ class Scenario:
             else:
                 prototype_actuator_type = prototype_actuator_type_list[0]
 
-        prototype_actuator_parameters = h5_loader.actuator_parameters(
+        (
+            prototype_actuator_parameters_non_optimizable,
+            prototype_actuator_parameters_optimizable,
+        ) = h5_scenario_parser.actuator_parameters(
             prototype=True,
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,
@@ -224,7 +230,8 @@ class Scenario:
 
         prototype_actuators = {
             config_dictionary.actuator_type_key: prototype_actuator_type,
-            config_dictionary.actuator_parameters_key: prototype_actuator_parameters,
+            config_dictionary.actuator_parameters_non_optimizable: prototype_actuator_parameters_non_optimizable,
+            config_dictionary.actuator_parameters_optimizable: prototype_actuator_parameters_optimizable,
         }
 
         heliostat_field = HeliostatField.from_hdf5(
@@ -278,7 +285,7 @@ class Scenario:
             The default target area index (default is 0).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

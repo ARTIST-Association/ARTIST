@@ -1,7 +1,12 @@
 import os
 import platform
+import random
 
+import numpy as np
 import pytest
+
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
 import torch
 
 from artist.util import config_dictionary
@@ -73,3 +78,41 @@ def ddp_setup_for_testing() -> dict[
         config_dictionary.heliostat_group_world_size: 1,
         config_dictionary.ranks_to_groups_mapping: None,
     }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def enforce_determinism():
+    """
+    Pytest fixture that enforces deterministic behavior across all tests.
+
+    This fixture automatically runs once per pytest session and ensures reproducibility
+    of results by:
+      - Setting fixed random seeds for Python, NumPy, and PyTorch.
+      - Enabling deterministic algorithms in PyTorch.
+      - Disabling cuDNN benchmarking to prevent algorithm auto-selection.
+      - Making cuDNN operations deterministic (where supported).
+
+    Some PyTorch CUDA operations (e.g. `grid_sampler_2d_backward_cuda`) do not have
+    deterministic implementations. These may raise a `RuntimeError` when
+    `torch.use_deterministic_algorithms(True)` is enabled.
+    For these operations, determinism is temporarily disabled.
+    """
+    seed = 7
+
+    random.seed(seed)
+    np.random.seed(seed)
+
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+
+    print(f"[pytest] Deterministic mode enabled (seed={seed})")
+    print(f"[pytest] CUDA available: {torch.cuda.is_available()}")
+    print(
+        f"[pytest] Deterministic algorithms: {torch.are_deterministic_algorithms_enabled()}"
+    )
+
+    yield

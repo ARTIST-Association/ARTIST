@@ -9,13 +9,18 @@ class IdealActuators(Actuators):
 
     Attributes
     ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
+    non_optimizable_parameters : torch.Tensor
+        The four non-optimizable actuator parameters, describing actuator geometry.
         Tensor of shape [number_of_heliostats, 4, 2].
-    active_actuator_parameters : torch.Tensor
-        The active actuator parameters.
+    optimizable_parameters : torch.Tensor
+        The ideal actuators do not have optimizable parameters, this tensor is therefore empty.
+        Tensor of shape [].
+    active_non_optimizable_parameters : torch.Tensor
+        Active non-optimizable geometry parameters.
         Tensor of shape [number_of_active_heliostats, 4, 2].
-
+    active_optimizable_parameters : torch.Tensor
+        The ideal actuators do not have optimizable parameters, this tensor is therefore empty.
+        Tensor of shape [].
 
     Methods
     -------
@@ -30,22 +35,32 @@ class IdealActuators(Actuators):
     """
 
     def __init__(
-        self, actuator_parameters: torch.Tensor, device: torch.device | None = None
+        self,
+        non_optimizable_parameters: torch.Tensor,
+        optimizable_parameters: torch.Tensor = torch.tensor([], requires_grad=True),
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize ideal actuators.
 
         Parameters
         ----------
-        actuator_parameters : torch.Tensor
-            The four actuator parameters.
+        non_optimizable_parameters : torch.Tensor
+            The four non-optimizable actuator parameters, describing actuator geometry.
             Tensor of shape [number_of_heliostats, 4, 2].
+        optimizable_parameters : torch.Tensor
+            The ideal actuators do not have optimizable parameters, this tensor is therefore empty (default is torch.tensor([])).
+            Tensor of shape [].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
-        super().__init__(actuator_parameters=actuator_parameters, device=device)
+        super().__init__(
+            non_optimizable_parameters=non_optimizable_parameters,
+            optimizable_parameters=optimizable_parameters,
+            device=device,
+        )
 
     def motor_positions_to_angles(
         self, motor_positions: torch.Tensor, device: torch.device | None = None
@@ -60,7 +75,7 @@ class IdealActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -83,7 +98,7 @@ class IdealActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

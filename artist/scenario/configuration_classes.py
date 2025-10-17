@@ -481,8 +481,6 @@ class KinematicDeviations:
         The first joint translation in the north direction.
     first_joint_translation_u : torch.Tensor | None
         The first joint translation in the up direction.
-    first_joint_tilt_e : torch.Tensor | None
-        The first joint tilt in the east direction.
     first_joint_tilt_n : torch.Tensor | None
         The first joint tilt in the north direction.
     first_joint_tilt_u : torch.Tensor | None
@@ -497,20 +495,12 @@ class KinematicDeviations:
         The second joint tilt in the east direction.
     second_joint_tilt_n : torch.Tensor | None
         The second joint tilt in the north direction.
-    second_joint_tilt_u : torch.Tensor | None
-        The second joint tilt in the up direction.
     concentrator_translation_e : torch.Tensor | None
         The concentrator translation in the east direction.
     concentrator_translation_n : torch.Tensor | None
         The concentrator translation in the north direction.
     concentrator_translation_u : torch.Tensor | None
         The concentrator translation in the up direction.
-    concentrator_tilt_e : torch.Tensor | None
-        The concentrator tilt in the east direction.
-    concentrator_tilt_n : torch.Tensor | None
-        The concentrator tilt in the north direction.
-    concentrator_tilt_u : torch.Tensor | None
-        The concentrator tilt in the up direction.
 
     Methods
     -------
@@ -523,7 +513,6 @@ class KinematicDeviations:
         first_joint_translation_e: torch.Tensor | None = None,
         first_joint_translation_n: torch.Tensor | None = None,
         first_joint_translation_u: torch.Tensor | None = None,
-        first_joint_tilt_e: torch.Tensor | None = None,
         first_joint_tilt_n: torch.Tensor | None = None,
         first_joint_tilt_u: torch.Tensor | None = None,
         second_joint_translation_e: torch.Tensor | None = None,
@@ -531,13 +520,9 @@ class KinematicDeviations:
         second_joint_translation_u: torch.Tensor | None = None,
         second_joint_tilt_e: torch.Tensor | None = None,
         second_joint_tilt_n: torch.Tensor | None = None,
-        second_joint_tilt_u: torch.Tensor | None = None,
         concentrator_translation_e: torch.Tensor | None = None,
         concentrator_translation_n: torch.Tensor | None = None,
         concentrator_translation_u: torch.Tensor | None = None,
-        concentrator_tilt_e: torch.Tensor | None = None,
-        concentrator_tilt_n: torch.Tensor | None = None,
-        concentrator_tilt_u: torch.Tensor | None = None,
     ) -> None:
         """
         Initialize the kinematic deviations.
@@ -550,8 +535,6 @@ class KinematicDeviations:
             The first joint translation in the north direction.
         first_joint_translation_u : torch.Tensor | None
             The first joint translation in the up direction.
-        first_joint_tilt_e : torch.Tensor | None
-            The first joint tilt in the east direction.
         first_joint_tilt_n : torch.Tensor | None
             The first joint tilt in the north direction.
         first_joint_tilt_u : torch.Tensor | None
@@ -566,25 +549,16 @@ class KinematicDeviations:
             The second joint tilt in the east direction.
         second_joint_tilt_n : torch.Tensor | None
             The second joint tilt in the north direction.
-        second_joint_tilt_u : torch.Tensor | None
-            The second joint tilt in the up direction.
         concentrator_translation_e : torch.Tensor | None
             The concentrator translation in the east direction.
         concentrator_translation_n : torch.Tensor | None
             The concentrator translation in the north direction.
         concentrator_translation_u : torch.Tensor | None
             The concentrator translation in the up direction.
-        concentrator_tilt_e : torch.Tensor | None
-            The concentrator tilt in the east direction.
-        concentrator_tilt_n : torch.Tensor | None
-            The concentrator tilt in the north direction.
-        concentrator_tilt_u : torch.Tensor | None
-            The concentrator tilt in the up direction.
         """
         self.first_joint_translation_e = first_joint_translation_e
         self.first_joint_translation_n = first_joint_translation_n
         self.first_joint_translation_u = first_joint_translation_u
-        self.first_joint_tilt_e = first_joint_tilt_e
         self.first_joint_tilt_n = first_joint_tilt_n
         self.first_joint_tilt_u = first_joint_tilt_u
         self.second_joint_translation_e = second_joint_translation_e
@@ -592,13 +566,9 @@ class KinematicDeviations:
         self.second_joint_translation_u = second_joint_translation_u
         self.second_joint_tilt_e = second_joint_tilt_e
         self.second_joint_tilt_n = second_joint_tilt_n
-        self.second_joint_tilt_u = second_joint_tilt_u
         self.concentrator_translation_e = concentrator_translation_e
         self.concentrator_translation_n = concentrator_translation_n
         self.concentrator_translation_u = concentrator_translation_u
-        self.concentrator_tilt_e = concentrator_tilt_e
-        self.concentrator_tilt_n = concentrator_tilt_n
-        self.concentrator_tilt_u = concentrator_tilt_u
 
     def create_kinematic_deviations_dict(self) -> dict[str, Any]:
         """
@@ -627,10 +597,6 @@ class KinematicDeviations:
                 {
                     config_dictionary.first_joint_translation_u: self.first_joint_translation_u
                 }
-            )
-        if self.first_joint_tilt_e is not None:
-            deviations_dict.update(
-                {config_dictionary.first_joint_tilt_e: self.first_joint_tilt_e}
             )
         if self.first_joint_tilt_n is not None:
             deviations_dict.update(
@@ -666,10 +632,6 @@ class KinematicDeviations:
             deviations_dict.update(
                 {config_dictionary.second_joint_tilt_n: self.second_joint_tilt_n}
             )
-        if self.second_joint_tilt_u is not None:
-            deviations_dict.update(
-                {config_dictionary.second_joint_tilt_u: self.second_joint_tilt_u}
-            )
         if self.concentrator_translation_e is not None:
             deviations_dict.update(
                 {
@@ -687,18 +649,6 @@ class KinematicDeviations:
                 {
                     config_dictionary.concentrator_translation_u: self.concentrator_translation_u
                 }
-            )
-        if self.concentrator_tilt_e is not None:
-            deviations_dict.update(
-                {config_dictionary.concentrator_tilt_e: self.concentrator_tilt_e}
-            )
-        if self.concentrator_tilt_n is not None:
-            deviations_dict.update(
-                {config_dictionary.concentrator_tilt_n: self.concentrator_tilt_n}
-            )
-        if self.concentrator_tilt_u is not None:
-            deviations_dict.update(
-                {config_dictionary.concentrator_tilt_u: self.concentrator_tilt_u}
             )
         return deviations_dict
 
