@@ -1,6 +1,7 @@
 import torch
 
 from artist.field.actuators import Actuators
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -10,13 +11,18 @@ class LinearActuators(Actuators):
 
     Attributes
     ----------
-    actuator_parameters : torch.Tensor
-        The actuator parameters.
-        Tensor of shape [number_of_heliostats, 9, 2].
-    active_actuator_parameters : torch.Tensor
-        The active actuator parameters.
-        Tensor of shape [number_of_active_heliostats, 9, 2].
-
+    non_optimizable_parameters : torch.Tensor
+        The seven non-optimizable actuator parameters, describing actuator geometry.
+        Tensor of shape [number_of_heliostats, 7, 2].
+    optimizable_parameters : torch.Tensor
+        The two optimizable actuator parameters, describing the initial actuator configuration.
+        Tensor of shape [number_of_heliostats, 2, 2].
+    active_non_optimizable_parameters : torch.Tensor
+        Active non-optimizable geometry parameters.
+        Tensor of shape [number_of_active_heliostats, 7, 2].
+    active_optimizable_parameters : torch.Tensor
+        Active optimizable parameters.
+        Tensor of shape [number_of_active_heliostats, 2, 2].
 
     Methods
     -------
@@ -31,41 +37,52 @@ class LinearActuators(Actuators):
     """
 
     def __init__(
-        self, actuator_parameters: torch.Tensor, device: torch.device | None = None
+        self,
+        non_optimizable_parameters: torch.Tensor,
+        optimizable_parameters: torch.Tensor = torch.tensor([], requires_grad=True),
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize linear actuators.
 
-        A linear actuator describes movement within a 2D plane. One linear actuator has nine parameters.
-        Ordered by index, the first parameter describes the type of the actuator, i.e. linear, the second parameter
-        describes the turning direction of the actuator. The third and fourth parameters are the minimum and
-        maximum motor positions. The next five parameters are the increment, which stores
-        the information about the stroke length change per motor step, the initial stroke length, and an offset
-        that describes the difference between the linear actuator's pivoting point and the point around which the
-        actuator is allowed to pivot. Next, the actuator's pivoting radius is described by the pivot radius and
-        lastly, the initial angle indicates the angle that the actuator introduces to the manipulated coordinate
-        system at the initial stroke length.
+        A linear actuator describes movement within a 2D plane. One linear actuator has seven non optimizable parameters,
+        that describe the geometry. Ordered by index, the first parameter describes the type of the actuator, i.e.,
+        linear, the second parameter describes the turning direction of the actuator. The third and fourth parameters
+        are the minimum and maximum motor positions. The next five parameters are the increment, which stores
+        the information about the stroke length change per motor step, an offset that describes the difference between
+        the linear actuator's pivoting point and the point around which the actuator is allowed to pivot, and the
+        actuator's pivot radius. A linear actuator also has two optimizable parameters, namely the initial angle which
+        indicates the angle that the actuator introduces to the manipulated coordinate system at the initial stroke
+        length, which is the second parameter.
 
         Parameters
         ----------
-        actuator_parameters : torch.Tensor
-            The nine actuator parameters.
-            Tensor of shape [number_of_heliostats, 9, 2].
+        non_optimizable_parameters : torch.Tensor
+            The seven non-optimizable actuator parameters, describing actuator geometry.
+            Tensor of shape [number_of_heliostats, 7, 2].
+        optimizable_parameters : torch.Tensor
+            The two optimizable actuator parameters, describing the initial actuator configuration.
+            Tensor of shape [number_of_heliostats, 2, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
-        super().__init__(actuator_parameters=actuator_parameters, device=device)
+        super().__init__(
+            non_optimizable_parameters=non_optimizable_parameters,
+            optimizable_parameters=optimizable_parameters,
+            device=device,
+        )
+
         self.epsilon = 1e-6
 
     def _physics_informed_parameters(
         self, device: torch.device | None = None
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Limit actuator parameters to their physically valid ranges.
 
-        The first four parameters (types, turning directions, min and max increments) are not learnable and
+        The four parameters: types, turning directions, min and max increments are not optimizable and
         do not need to be physics informed. The parameters increment, initial stroke lengths, offsets and
         pivot radii are defined to be strictly positive.
 
@@ -73,38 +90,96 @@ class LinearActuators(Actuators):
         ----------
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
         -------
         torch.Tensor
-            The physics-informed actuator parameters.
+            The physics-informed optimizable parameters.
+            Tensor of shape [number_of_active_heliostats, 7, 2].
+        torch.Tensor
+            The physics-informed non-optimizable parameters.
+            Tensor of shape [number_of_active_heliostats, 2, 2].
         """
         device = get_device(device=device)
 
-        parameters = self.active_actuator_parameters
-        physics_informed_parameters = torch.empty_like(
-            self.active_actuator_parameters, device=device
+        non_optimizable_parameters = self.active_non_optimizable_parameters
+        optimizable_parameters = self.active_optimizable_parameters
+
+        physics_informed_non_optimizable_parameters = torch.empty_like(
+            self.active_non_optimizable_parameters, device=device
+        )
+        physics_informed_optimizable_parameters = torch.empty_like(
+            self.active_optimizable_parameters, device=device
         )
 
-        physics_informed_parameters[:, [0, 1, 2, 3, 8]] = parameters[:, [0, 1, 2, 3, 8]]
+        physics_informed_non_optimizable_parameters[
+            :,
+            [
+                index_mapping.actuator_type,
+                index_mapping.actuator_clockwise_movement,
+                index_mapping.actuator_min_motor_position,
+                index_mapping.actuator_max_motor_position,
+            ],
+        ] = non_optimizable_parameters[
+            :,
+            [
+                index_mapping.actuator_type,
+                index_mapping.actuator_clockwise_movement,
+                index_mapping.actuator_min_motor_position,
+                index_mapping.actuator_max_motor_position,
+            ],
+        ]
+        physics_informed_optimizable_parameters[
+            :, index_mapping.actuator_initial_angle
+        ] = optimizable_parameters[:, index_mapping.actuator_initial_angle]
 
         # Strictly positive parameters.
-        physics_informed_parameters[:, 4] = (
-            torch.nn.functional.softplus(parameters[:, 4], beta=100) + self.epsilon
+        # Increment.
+        physics_informed_non_optimizable_parameters[
+            :, index_mapping.actuator_increment
+        ] = (
+            torch.nn.functional.softplus(
+                non_optimizable_parameters[:, index_mapping.actuator_increment],
+                beta=100,
+            )
+            + self.epsilon
         )
-        physics_informed_parameters[:, 5] = (
-            torch.nn.functional.softplus(parameters[:, 5], beta=100) + self.epsilon
+        # Offset.
+        physics_informed_non_optimizable_parameters[
+            :, index_mapping.actuator_offset
+        ] = (
+            torch.nn.functional.softplus(
+                non_optimizable_parameters[:, index_mapping.actuator_offset], beta=100
+            )
+            + self.epsilon
         )
-        physics_informed_parameters[:, 6] = (
-            torch.nn.functional.softplus(parameters[:, 6], beta=100) + self.epsilon
+        # Pivot radius.
+        physics_informed_non_optimizable_parameters[
+            :, index_mapping.actuator_pivot_radius
+        ] = (
+            torch.nn.functional.softplus(
+                non_optimizable_parameters[:, index_mapping.actuator_pivot_radius],
+                beta=100,
+            )
+            + self.epsilon
         )
-        physics_informed_parameters[:, 7] = (
-            torch.nn.functional.softplus(parameters[:, 7], beta=100) + self.epsilon
+        # Initial stroke length.
+        physics_informed_optimizable_parameters[
+            :, index_mapping.actuator_initial_stroke_length
+        ] = (
+            torch.nn.functional.softplus(
+                optimizable_parameters[:, index_mapping.actuator_initial_stroke_length],
+                beta=100,
+            )
+            + self.epsilon
         )
 
-        return physics_informed_parameters
+        return (
+            physics_informed_non_optimizable_parameters,
+            physics_informed_optimizable_parameters,
+        )
 
     def _motor_positions_to_absolute_angles(
         self, motor_positions: torch.Tensor, device: torch.device | None = None
@@ -123,7 +198,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -134,12 +209,14 @@ class LinearActuators(Actuators):
         """
         device = get_device(device=device)
 
-        parameters = self._physics_informed_parameters(device=device)
-        increment, initial_stroke_lengths, offsets, pivot_radii = (
-            parameters[:, 4],
-            parameters[:, 5],
-            parameters[:, 6],
-            parameters[:, 7],
+        non_optimizable_parameters, optimizable_parameters = (
+            self._physics_informed_parameters(device=device)
+        )
+        increment, offsets, pivot_radii, initial_stroke_lengths = (
+            non_optimizable_parameters[:, index_mapping.actuator_increment],
+            non_optimizable_parameters[:, index_mapping.actuator_offset],
+            non_optimizable_parameters[:, index_mapping.actuator_pivot_radius],
+            optimizable_parameters[:, index_mapping.actuator_initial_stroke_length],
         )
 
         stroke_lengths = motor_positions / increment + initial_stroke_lengths
@@ -175,7 +252,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -185,6 +262,9 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         """
         device = get_device(device=device)
+
+        _, optimizable_parameters = self._physics_informed_parameters(device=device)
+        initial_angles = optimizable_parameters[:, index_mapping.actuator_initial_angle]
 
         absolute_angles = self._motor_positions_to_absolute_angles(
             motor_positions=motor_positions, device=device
@@ -196,9 +276,21 @@ class LinearActuators(Actuators):
         delta_angles = absolute_initial_angles - absolute_angles
 
         relative_angles = (
-            self._physics_informed_parameters(device=device)[:, 8]
-            + delta_angles * (self.active_actuator_parameters[:, 1] == 1)
-            - delta_angles * (self.active_actuator_parameters[:, 1] == 0)
+            initial_angles
+            + delta_angles
+            * (
+                self.active_non_optimizable_parameters[
+                    :, index_mapping.actuator_clockwise_movement
+                ]
+                == 1
+            )
+            - delta_angles
+            * (
+                self.active_non_optimizable_parameters[
+                    :, index_mapping.actuator_clockwise_movement
+                ]
+                == 0
+            )
         )
         return relative_angles
 
@@ -219,7 +311,7 @@ class LinearActuators(Actuators):
             Tensor of shape [number_of_active_heliostats, 2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -230,23 +322,28 @@ class LinearActuators(Actuators):
         """
         device = get_device(device=device)
 
-        parameters = self._physics_informed_parameters(device=device)
+        non_optimizable_parameters, optimizable_parameters = (
+            self._physics_informed_parameters(device=device)
+        )
         (
             increment,
-            initial_stroke_lengths,
             offsets,
             pivot_radii,
             initial_delta_angles,
+            initial_stroke_lengths,
         ) = (
-            parameters[:, 4],
-            parameters[:, 5],
-            parameters[:, 6],
-            parameters[:, 7],
-            parameters[:, 8],
+            non_optimizable_parameters[:, index_mapping.actuator_increment],
+            non_optimizable_parameters[:, index_mapping.actuator_offset],
+            non_optimizable_parameters[:, index_mapping.actuator_pivot_radius],
+            optimizable_parameters[:, index_mapping.actuator_initial_angle],
+            optimizable_parameters[:, index_mapping.actuator_initial_stroke_length],
         )
 
         delta_angles = torch.where(
-            self.active_actuator_parameters[:, 1] == 1,
+            self.active_non_optimizable_parameters[
+                :, index_mapping.actuator_clockwise_movement
+            ]
+            == 1,
             angles - initial_delta_angles,
             initial_delta_angles - angles,
         )

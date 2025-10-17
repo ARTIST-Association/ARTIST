@@ -15,9 +15,9 @@ def exponential(
     Parameters
     ----------
     optimizer : Optimizer
-        The optimzer.
+        The optimizer.
     parameters : dict[str, float]
-        The scheduler paramters.
+        The scheduler parameters.
 
     Returns
     -------
@@ -41,9 +41,9 @@ def cyclic(
     Parameters
     ----------
     optimizer : Optimizer
-        The optimzer.
+        The optimizer.
     parameters : dict[str, float]
-        The scheduler paramters.
+        The scheduler parameters.
 
     Returns
     -------
@@ -70,9 +70,9 @@ def reduce_on_plateau(
     Parameters
     ----------
     optimizer : Optimizer
-        The optimzer.
+        The optimizer.
     parameters : dict[str, float]
-        The scheduler paramters.
+        The scheduler parameters.
 
     Returns
     -------

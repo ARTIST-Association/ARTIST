@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_loader import paint_loader, stral_loader
+from artist.data_parser import paint_scenario_parser, stral_scenario_parser
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
 from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary
@@ -49,7 +49,7 @@ def test_surface_generator(device: torch.device) -> None:
     )
 
     _, facet_translation_vectors, canting, _, _, _ = (
-        paint_loader.extract_paint_heliostat_properties(
+        paint_scenario_parser.extract_paint_heliostat_properties(
             heliostat_properties_path=heliostat_file_path,
             power_plant_position=power_plant_position,
             device=device,
@@ -57,7 +57,7 @@ def test_surface_generator(device: torch.device) -> None:
     )
 
     surface_points_with_facets_list, surface_normals_with_facets_list = (
-        paint_loader.extract_paint_deflectometry_data(
+        paint_scenario_parser.extract_paint_deflectometry_data(
             heliostat_deflectometry_path=deflectometry_file_path,
             number_of_facets=4,
             device=device,
@@ -93,7 +93,7 @@ def test_surface_generator(device: torch.device) -> None:
         canting,
         surface_points_with_facets_list,
         surface_normals_with_facets_list,
-    ) = stral_loader.extract_stral_deflectometry_data(
+    ) = stral_scenario_parser.extract_stral_deflectometry_data(
         stral_file_path=stral_file_path, device=device
     )
 

@@ -9,21 +9,23 @@ from artist import ARTIST_ROOT
 from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
 from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "loss_class, data_source, early_stopping_delta",
+    "loss_class, data_parser, early_stopping_delta",
     [
-        (KLDivergenceLoss, "paint", 1e-4),
-        (PixelLoss, "paint", 1e-4),
-        (PixelLoss, "invalid", 1e-4),
+        (KLDivergenceLoss, PaintCalibrationDataParser(), 1e-4),
+        (PixelLoss, PaintCalibrationDataParser(), 1e-4),
+        (PixelLoss, CalibrationDataParser(), 1e-4),
     ],
 )
 def test_surface_reconstructor(
     loss_class: Loss,
-    data_source: str,
+    data_parser: CalibrationDataParser | PaintCalibrationDataParser,
     early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
@@ -35,8 +37,8 @@ def test_surface_reconstructor(
     ----------
     loss_class : Loss
         The loss class.
-    data_source : str
-        The name of the data source.
+    data_parser : CalibrationDataParser
+        The data parser used to load calibration data from files.
     early_stopping_delta : float
         The minimum required improvement to prevent early stopping.
     ddp_setup_for_testing : dict[str, Any]
@@ -62,7 +64,7 @@ def test_surface_reconstructor(
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3, 4)
+        weight=0.5, reduction_dimensions=(1, 2, 3)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.5,
@@ -89,7 +91,7 @@ def test_surface_reconstructor(
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 5e-4,
         config_dictionary.max_epoch: 15,
-        config_dictionary.num_log: 1,
+        config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 13,
         config_dictionary.scheduler: config_dictionary.reduce_on_plateau,
@@ -131,10 +133,15 @@ def test_surface_reconstructor(
         ),
     ]
 
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: data_source,
+    data: dict[
+        str,
+        CalibrationDataParser
+        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: data_parser,
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
+
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
@@ -156,20 +163,22 @@ def test_surface_reconstructor(
         PixelLoss(scenario=scenario) if loss_class is PixelLoss else KLDivergenceLoss()
     )
 
-    if data_source == "invalid":
-        with pytest.raises(ValueError) as exc_info:
+    if not isinstance(data_parser, PaintCalibrationDataParser):
+        with pytest.raises(NotImplementedError) as exc_info:
             _ = surface_reconstructor.reconstruct_surfaces(
                 loss_definition=loss_definition, device=device
             )
 
-            assert (
-                f"There is no data loader for the data source: {data_source}. Please use PAINT data instead."
-                in str(exc_info.value)
-            )
+            assert "Must be overridden!" in str(exc_info.value)
     else:
-        _ = surface_reconstructor.reconstruct_surfaces(
-            loss_definition=loss_definition, device=device
-        )
+        old_state = torch.are_deterministic_algorithms_enabled()
+        torch.use_deterministic_algorithms(False)
+        try:
+            _ = surface_reconstructor.reconstruct_surfaces(
+                loss_definition=loss_definition, device=device
+            )
+        finally:
+            torch.use_deterministic_algorithms(old_state)
 
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups

@@ -1,21 +1,21 @@
 {
     "motor_position": {
-        "axis_1_motor_position": 28061,
-        "axis_2_motor_position": 47874
+        "axis_1_motor_position": 16963,
+        "axis_2_motor_position": 72374
     },
-    "target_name": "solar_tower_juelich_lower",
+    "target_name": "multi_focus_tower",
     "focal_spot": {
         "HeliOS": [
-            50.91339202845171,
-            6.387825415672288,
-            122.84648628718551
+            50.91339561753624,
+            6.3875745058729905,
+            137.70818056409652
         ],
         "UTIS": [
-            50.91339204305797,
-            6.387826907411465,
-            122.7989273071289
+            50.913395620694814,
+            6.387574139476353,
+            137.70894622802734
         ]
     },
-    "sun_elevation": 59.87137244638667,
-    "sun_azimuth": 10.872092580221869
+    "sun_elevation": 27.809486551769538,
+    "sun_azimuth": -85.31171110078206
 }

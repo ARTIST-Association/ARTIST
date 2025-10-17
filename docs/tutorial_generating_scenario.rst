@@ -59,7 +59,6 @@ heliostats, simply add more files for each heliostat):
 
 .. code-block::
 
-    # PAINT
     # Specify the path to your tower-measurements.json file.
     tower_file = pathlib.Path(
         "please/insert/the/path/to/the/tower/measurements/here/tower-measurements.json"
@@ -95,10 +94,10 @@ Now we will get into building the scenario.
 
 Power Plant and Target Areas
 ----------------------------
-The location of the power plant as well as information on the target areas (i.e. the receiver or calibration targets) is
+The location of the power plant as well as information on the target areas (i.e., the receiver or calibration targets) is
 loaded simultaneously in paint form the ``tower-measurement.json`` file.
 
-We can load this information using functions from the ``paint_loader``. In this case, the function below will return
+We can load this information using functions from the ``paint_scenario_parser``. In this case, the function below will return
 an instance of the the ``PowerPlantConfig`` class as well as an instance of the ``TowerAreaListConfig`` containing a
 list of viable target areas.
 
@@ -106,7 +105,7 @@ list of viable target areas.
 
     # Include the power plant and target area configuration.
     power_plant_config, target_area_list_config = (
-        paint_loader.extract_paint_tower_measurements(
+        paint_scenario_parser.extract_paint_tower_measurements(
             tower_measurements_path=tower_file, device=device
         )
     )
@@ -177,7 +176,7 @@ Prototypes and Heliostats
 -------------------------
 ``ARTIST`` always requires prototypes and heliostats - see :ref:`our tutorial here <scenario>` for more information.
 
-The prototypes and list of heliostats can be easily extracted using the ``paint_loader``. Here it important to define one
+The prototypes and list of heliostats can be easily extracted using the ``paint_scenario_parser``. Here it important to define one
 target area from the list of possible target areas as the default aim point. In this case we use the receiver for this,
 as shown below:
 
@@ -219,7 +218,7 @@ prototype configuration.
 .. code-block::
 
     heliostat_list_config, prototype_config = (
-        paint_loader.extract_paint_heliostats_fitted_surface(
+        paint_scenario_parser.extract_paint_heliostats_fitted_surface(
             paths=heliostat_files_list,
             power_plant_position=power_plant_config.power_plant_position,
             number_of_nurbs_control_points=number_of_nurbs_control_points,
@@ -248,8 +247,10 @@ The ``prototype_config`` is a ``PrototypeConfig`` object, containing information
 - The ``kinematic_prototype`` used in the scenario, for heliostats without individual kinematic configurations (see :py:class:`artist.scenario.configuration_classes.KinematicPrototypeConfig`).
 - A list of ``actuators_prototype`` used in the scenario, for heliostats without individual actuator configurations (see :py:class:`artist.scenario.configuration_classes.ActuatorPrototypeConfig`).
 
+Different Surface Options
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**NOTE:** ``ARTIST`` does not require deflectometry data to generate a scenario. It is also possible to generate a
+``ARTIST`` does not require deflectometry data to generate a scenario. It is also possible to generate a
 scenario with an *ideal* surface. The true surface can then either be learnt via raytracing
 (see :ref:`the NURBS surface reconstructor<tutorial_surface_reconstruction>`), or if not information on the true surface
 is available an ideal surface can also be applied. To generate heliostats with ideal surface you call the function:
@@ -257,7 +258,7 @@ is available an ideal surface can also be applied. To generate heliostats with i
 .. code-block::
 
     heliostat_list_config, prototype_config = (
-            paint_loader.extract_paint_heliostats_ideal_surface(
+            paint_scenario_parser.extract_paint_heliostats_ideal_surface(
                 paths=heliostat_files_list,
                 power_plant_position=power_plant_config.power_plant_position,
                 device=device,
@@ -265,6 +266,55 @@ is available an ideal surface can also be applied. To generate heliostats with i
         )
 
 It is also not necessary to define and optimizer in this setting.
+
+It is also possible to generate scenarios containing both fitted and ideal surfaces with the function ``extract_paint_heliostats_mixed_surface()``.
+In this case, the type of surface created depends on the mapping derived above. More specifically, if you provide a path
+to a deflectometry file, then the surface will be fitted, if not, then an ideal surface will be generated.
+For example, for the following mapping:
+
+.. code-block::
+
+    heliostat_files_list = [
+        (
+            "heliostat_1",
+            pathlib.Path(
+                "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
+            ),
+            pathlib.Path(
+                "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
+            ),
+        ),
+        (
+            "heliostat_2",
+            pathlib.Path(
+                "please/insert/the/path/to/the/heliostat/properties/here/heliostat_properties.json"
+            ),
+        ),
+    ]
+
+Calling the function:
+
+.. code-block::
+
+    heliostat_list_config, prototype_config = (
+        paint_scenario_parser.extract_paint_heliostats_mixed_surface(
+            paths=heliostat_files_list,
+            power_plant_position=power_plant_config.power_plant_position,
+            number_of_nurbs_control_points=number_of_nurbs_control_points,
+            deflectometry_step_size=nurbs_deflectometry_step_size,
+            nurbs_fit_method=nurbs_fit_method,
+            nurbs_fit_tolerance=nurbs_fit_tolerance,
+            nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+            nurbs_fit_optimizer=nurbs_fit_optimizer,
+            nurbs_fit_scheduler=nurbs_fit_scheduler,
+            device=device,
+        )
+    )
+
+will generate a scenario where "heliostat_1" has a fitted surface and "heliostat_2" has an ideal surface.
+
+**NOTE:** In this situation, the prototype will always be an ideal surface.
+
 
 .. _create_hdf5:
 
@@ -374,7 +424,7 @@ canting, and the surface points and normals from ``STRAL`` with the following co
         canting,
         surface_points_with_facets_list,
         surface_normals_with_facets_list,
-    ) = stral_loader.extract_stral_deflectometry_data(
+    ) = stral_scenario_parser.extract_stral_deflectometry_data(
         stral_file_path=stral_file_path, device=device
     )
 
@@ -411,7 +461,7 @@ Finally, we can use the configuration to generate a fitted surface:
         device=device,
     )
 
-Alternatively, we can also generate an ideal surface that is not fitted based on defelectometry data. To generate this
+Alternatively, we can also generate an ideal surface that is not fitted based on deflectometry data. To generate this
 surface you don't need to define an optimizer or scheduler, but can simply call:
 
 .. code-block::

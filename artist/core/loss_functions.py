@@ -3,7 +3,7 @@ from typing import Any
 import torch
 
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary, index_mapping, utils
 from artist.util.environment_setup import get_device
 
 
@@ -89,7 +89,7 @@ class VectorLoss(Loss):
             Tensor of shape [number_of_samples, ...].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the Vector loss.
+            The ``reduction_dimensions`` is an expected keyword argument for the vector loss.
 
         Raises
         ------
@@ -191,9 +191,11 @@ class FocalSpotLoss(Loss):
         focal_spot = utils.get_center_of_mass(
             bitmaps=prediction,
             target_centers=self.scenario.target_areas.centers[target_area_mask],
-            target_widths=self.scenario.target_areas.dimensions[target_area_mask][:, 0],
+            target_widths=self.scenario.target_areas.dimensions[target_area_mask][
+                :, index_mapping.target_area_width
+            ],
             target_heights=self.scenario.target_areas.dimensions[target_area_mask][
-                :, 1
+                :, index_mapping.target_area_height
             ],
             device=device,
         )
@@ -280,28 +282,30 @@ class PixelLoss(Loss):
         normalized_predictions = utils.normalize_bitmaps(
             flux_distributions=prediction,
             target_area_widths=self.scenario.target_areas.dimensions[target_area_mask][
-                :, 0
+                :, index_mapping.target_area_width
             ],
             target_area_heights=self.scenario.target_areas.dimensions[target_area_mask][
-                :, 1
+                :, index_mapping.target_area_height
             ],
             number_of_rays=self.scenario.light_sources.light_source_list[
-                0
+                index_mapping.first_light_source
             ].number_of_rays,
         )
         normalized_ground_truth = utils.normalize_bitmaps(
             flux_distributions=ground_truth,
             target_area_widths=torch.full(
-                (ground_truth.shape[0],),
+                (ground_truth.shape[index_mapping.heliostat_dimension],),
                 config_dictionary.utis_crop_width,
                 device=device,
             ),
             target_area_heights=torch.full(
-                (ground_truth.shape[0],),
+                (ground_truth.shape[index_mapping.heliostat_dimension],),
                 config_dictionary.utis_crop_height,
                 device=device,
             ),
-            number_of_rays=ground_truth.sum(dim=[1, 2]),
+            number_of_rays=ground_truth.sum(
+                dim=[index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u]
+            ),
         )
 
         loss = self.loss_function(normalized_predictions, normalized_ground_truth)
@@ -322,7 +326,7 @@ class KLDivergenceLoss(Loss):
     def __init__(self) -> None:
         """Initialize the Kullback-Leibler divergence loss."""
         super().__init__(
-            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
+            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=False)
         )
 
     def __call__(
@@ -342,7 +346,7 @@ class KLDivergenceLoss(Loss):
             D_{\mathrm{KL}}(P \parallel Q) = \sum_{x} P(x) \log \frac{P(x)}{Q(x)},
 
         where :math:`P` is the ground truth distribution and :math:`Q` is the approximation or prediction
-        of :math:`Q`. The kl-divergence is an asymetric function. Switching :math:`P` and :math:`Q`
+        of :math:`Q`. The kl-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
         has the following effect:
         :math:`P \parallel Q` Penalizes extra mass in the prediction where the ground truth has none.
         :math:`Q \parallel P` Penalizes missing mass in the prediction where the ground truth has mass.
@@ -377,21 +381,31 @@ class KLDivergenceLoss(Loss):
                     f"The kl-divergence loss expects {key} as keyword argument. Please add this argument."
                 )
 
+        # Scale to make distributions non-negative.
         if ground_truth.min() < 0:
             ground_truth = ground_truth - ground_truth.min()
-        ground_truth_distributions = (
-            ground_truth / (ground_truth.sum(dim=(1, 2), keepdim=True) + 1e-12)
-        ) + 1e-12
         if prediction.min() < 0:
             prediction = prediction - prediction.min()
-        predicted_distributions = (
-            prediction / (prediction.sum(dim=(1, 2), keepdim=True) + 1e-12)
-        ) + 1e-12
 
-        log_input = torch.log(predicted_distributions)
-        log_target = torch.log(ground_truth_distributions)
+        # Normalize.
+        eps = 1e-12
+        ground_truth_distributions = torch.nn.functional.normalize(
+            ground_truth,
+            p=1,
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            eps=eps,
+        )
+        predicted_distributions = torch.nn.functional.normalize(
+            prediction,
+            p=1,
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            eps=eps,
+        )
 
-        loss = self.loss_function(log_target, log_input)
+        loss = self.loss_function(
+            torch.log(predicted_distributions + eps),
+            ground_truth_distributions,
+        )
 
         return loss.sum(dim=kwargs["reduction_dimensions"])
 

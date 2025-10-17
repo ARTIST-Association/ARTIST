@@ -44,6 +44,7 @@ examples = [
     "mpi4py",
     "propulate",
     "matplotlib",
+    "pandas",
 ]
 tutorials = ["matplotlib"]
 
@@ -142,6 +143,5 @@ testpaths = [
 
 [tool.coverage.run]
 omit = [
-    "artist/util/scenario_generator.py",
     "artist/util/configuration_classes.py"
     ]
