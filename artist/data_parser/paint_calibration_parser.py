@@ -6,10 +6,11 @@ from collections import Counter, defaultdict
 import paint.util.paint_mappings as paint_mappings
 import torch
 
+import artist.util.index_mapping
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, utils
+from artist.util import utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -73,7 +74,10 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         heliostat_group: HeliostatGroup,
         scenario: Scenario,
         bitmap_resolution: torch.Tensor = torch.tensor(
-            [config_dictionary.bitmap_resolution, config_dictionary.bitmap_resolution]
+            [
+                artist.util.index_mapping.bitmap_resolution,
+                artist.util.index_mapping.bitmap_resolution,
+            ]
         ),
         device: torch.device | None = None,
     ) -> tuple[

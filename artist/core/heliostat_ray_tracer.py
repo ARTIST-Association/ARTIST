@@ -4,12 +4,14 @@ from typing import TYPE_CHECKING, Iterator
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
+import artist.util.index_mapping
+
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.scene import LightSource
 from artist.scene.rays import Rays
-from artist.util import config_dictionary, index_mapping, raytracing_utils, utils
+from artist.util import index_mapping, raytracing_utils, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -219,7 +221,10 @@ class HeliostatRayTracer:
         batch_size: int = 100,
         random_seed: int = 7,
         bitmap_resolution: torch.Tensor = torch.tensor(
-            [config_dictionary.bitmap_resolution, config_dictionary.bitmap_resolution]
+            [
+                artist.util.index_mapping.bitmap_resolution,
+                artist.util.index_mapping.bitmap_resolution,
+            ]
         ),
     ) -> None:
         """

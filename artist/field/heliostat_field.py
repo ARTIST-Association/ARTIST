@@ -7,6 +7,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
+import artist.util.index_mapping
 from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
@@ -267,7 +268,9 @@ class HeliostatField:
 
             number_of_facets = len(surface_config.facet_list)
             degrees = torch.empty(
-                config_dictionary.nurbs_degrees, dtype=torch.int32, device=device
+                artist.util.index_mapping.nurbs_degrees,
+                dtype=torch.int32,
+                device=device,
             )
             # Each facet automatically has the same control points dimensions. This is required in ARTIST.
             # control_points: Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
@@ -280,12 +283,16 @@ class HeliostatField:
                     surface_config.facet_list[
                         index_mapping.first_facet
                     ].control_points.shape[index_mapping.h5_control_points_v],
-                    config_dictionary.control_point_dimension,
+                    artist.util.index_mapping.control_point_dimension,
                 ),
                 device=device,
             )
             canting = torch.empty(
-                (number_of_facets, config_dictionary.canting_direction_dimension, 4),
+                (
+                    number_of_facets,
+                    artist.util.index_mapping.canting_direction_dimension,
+                    4,
+                ),
                 device=device,
             )
             facet_translation_vectors = torch.empty(

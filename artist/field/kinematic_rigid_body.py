@@ -1,5 +1,6 @@
 import torch
 
+import artist.util.index_mapping
 from artist.field.kinematic import Kinematic
 from artist.util import config_dictionary, index_mapping, type_mappings, utils
 from artist.util.environment_setup import get_device
@@ -121,7 +122,7 @@ class RigidBody(Kinematic):
         self.motor_positions = torch.zeros(
             (
                 number_of_heliostats,
-                config_dictionary.rigid_body_motor_position_dimension,
+                artist.util.index_mapping.rigid_body_motor_position_dimension,
             ),
             device=device,
         )
