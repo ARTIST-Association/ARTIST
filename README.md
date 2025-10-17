@@ -4,7 +4,7 @@
 
 # AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17381222.svg)](https://doi.org/10.5281/zenodo.17381222)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11131/badge)](https://www.bestpractices.dev/projects/11131)
 [![fair-software.eu](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B%20%20%E2%97%8F%20%20%E2%97%8B-orange)](https://fair-software.eu)
