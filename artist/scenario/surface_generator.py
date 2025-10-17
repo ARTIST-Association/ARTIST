@@ -3,7 +3,7 @@ import logging
 import torch
 
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary, index_mapping, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -129,15 +129,15 @@ class SurfaceGenerator:
         device = get_device(device=device)
 
         evaluation_points = surface_points.clone()
-        evaluation_points[:, 2] = 0
+        evaluation_points[:, index_mapping.u] = 0
 
         # Initialize the NURBS surface.
         control_points = torch.zeros(
             (
                 1,
                 1,
-                self.number_of_control_points[0],
-                self.number_of_control_points[1],
+                self.number_of_control_points[index_mapping.nurbs_u],
+                self.number_of_control_points[index_mapping.nurbs_v],
                 3,
             ),
             device=device,
@@ -153,13 +153,13 @@ class SurfaceGenerator:
         origin_offsets_e = torch.linspace(
             -width_of_nurbs / 2,
             width_of_nurbs / 2,
-            self.number_of_control_points[0],
+            self.number_of_control_points[index_mapping.nurbs_u],
             device=device,
         )
         origin_offsets_n = torch.linspace(
             -height_of_nurbs / 2,
             height_of_nurbs / 2,
-            self.number_of_control_points[1],
+            self.number_of_control_points[index_mapping.nurbs_v],
             device=device,
         )
 
@@ -167,12 +167,14 @@ class SurfaceGenerator:
             origin_offsets_e, origin_offsets_n, indexing="ij"
         )
 
-        control_points[:, :, :, :, 0] = control_points_e
-        control_points[:, :, :, :, 1] = control_points_n
-        control_points[:, :, :, :, 2] = 0
+        control_points[:, :, :, :, index_mapping.e] = control_points_e
+        control_points[:, :, :, :, index_mapping.n] = control_points_n
+        control_points[:, :, :, :, index_mapping.u] = 0
 
         # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
-        evaluation_points[:, :2] = utils.normalize_points(evaluation_points[:, :2])
+        evaluation_points[:, : index_mapping.u] = utils.normalize_points(
+            evaluation_points[:, : index_mapping.u]
+        )
         evaluation_points = evaluation_points.unsqueeze(0).unsqueeze(0)
 
         nurbs_surface = NURBSSurfaces(
@@ -282,7 +284,9 @@ class SurfaceGenerator:
         # All single_facet_surface_points and single_facet_surface_normals must have the same
         # dimensions, so that they can be stacked into a single tensor to be used by ARTIST.
         minimum_number_of_surface_points_all_facets = min(
-            single_facet_surface_points.shape[0]
+            single_facet_surface_points.shape[
+                index_mapping.number_of_points_or_normals_per_facet
+            ]
             for single_facet_surface_points in surface_points_with_facets_list
         )
         reduced_single_facet_surface_points = [
@@ -292,7 +296,9 @@ class SurfaceGenerator:
         surface_points_with_facets = torch.stack(reduced_single_facet_surface_points)
 
         minimum_number_of_surface_normals_all_facets = min(
-            single_facet_surface_normals.shape[0]
+            single_facet_surface_normals.shape[
+                index_mapping.number_of_points_or_normals_per_facet
+            ]
             for single_facet_surface_normals in surface_normals_with_facets_list
         )
         reduced_single_facet_surface_normals = [
@@ -327,9 +333,12 @@ class SurfaceGenerator:
         # Each facet automatically has the same control point dimensions. This is required in ``ARTIST``.
         log.info(f"Generating NURBS surface for heliostat: {heliostat_name}.")
         facet_config_list = []
-        for i in range(surface_points_with_facets.shape[0]):
+        for i in range(
+            surface_points_with_facets.shape[index_mapping.number_of_facets]
+        ):
             log.info(
-                f"Generating facet {i + 1} of {surface_points_with_facets.shape[0]}."
+                f"Generating facet {i + 1} of {surface_points_with_facets.shape[index_mapping.number_of_facets]}"
+                "."
             )
             nurbs = self.fit_nurbs(
                 surface_points=surface_points_with_facets[i],

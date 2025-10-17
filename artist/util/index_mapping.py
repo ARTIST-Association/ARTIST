@@ -264,3 +264,5 @@ target_area_curvature_e = 0
 """Index to access the target area curvature east."""
 target_area_curvature_u = 1
 """Index to access the target area curvature up."""
+number_of_facets = 0
+"""Index to access the number of facets."""
