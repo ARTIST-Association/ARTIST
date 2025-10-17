@@ -1,8 +1,9 @@
-"""Heliostat group in ARTIST."""
+"""Heliostat group in ``ARTIST``."""
 
 import torch
 
 from artist.field.kinematic import Kinematic
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -112,13 +113,15 @@ class HeliostatGroup:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
 
         self.number_of_heliostats = len(names)
-        self.number_of_facets_per_heliostat = nurbs_control_points.shape[1]
+        self.number_of_facets_per_heliostat = nurbs_control_points.shape[
+            index_mapping.facet_dimension
+        ]
         self.names = names
         self.positions = positions
         self.surface_points = surface_points
@@ -171,7 +174,7 @@ class HeliostatGroup:
             Tensor of shape [number_of_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -201,7 +204,7 @@ class HeliostatGroup:
             Tensor of shape [number_of_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -232,7 +235,7 @@ class HeliostatGroup:
             Tensor of shape [number_of_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
@@ -264,8 +267,13 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_deviation_parameters = (
-            self.kinematic.deviation_parameters.repeat_interleave(
+        self.kinematic.active_translation_deviation_parameters = (
+            self.kinematic.translation_deviation_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+        self.kinematic.active_rotation_deviation_parameters = (
+            self.kinematic.rotation_deviation_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
@@ -274,8 +282,18 @@ class HeliostatGroup:
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.actuators.active_actuator_parameters = (
-            self.kinematic.actuators.actuator_parameters.repeat_interleave(
+        self.kinematic.actuators.active_non_optimizable_parameters = (
+            self.kinematic.actuators.non_optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
+        if self.kinematic.actuators.active_optimizable_parameters.numel() > 0:
+            self.kinematic.actuators.active_optimizable_parameters = (
+                self.kinematic.actuators.optimizable_parameters.repeat_interleave(
+                    active_heliostats_mask, dim=0
+                )
+            )
+        else:
+            self.kinematic.actuators.active_optimizable_parameters = torch.tensor(
+                [], requires_grad=True
+            )

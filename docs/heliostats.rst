@@ -48,18 +48,20 @@ These vectors point in the east, north, and up directions, as shown in the image
    :width: 55%
    :align: center
 
-In ``ARTIST`` these translations, as well as possible tilts at each joint, are included in the ``kinematic_deviations``
-tensor (see :py:class:`artist.field.kinematic_rigid_body.RigidBody`), allowing multiple rigid body kinematics with
-slightly different translations and tilts to be effectively modeled.
+In ``ARTIST`` these translations, as well as possible rotations of each joint, are included in the ``translation_deviation_parameters``
+and ``rotation_deviation_parameters`` tensors (see :py:class:`artist.field.kinematic_rigid_body.RigidBody`), allowing multiple rigid body
+kinematics with slightly different translations and rotations to be effectively modeled.
+Joint one and two and the concentrator all have translations in the east north and up direction, making the ``translation_deviation_parameters``
+a 9-dimensional tensor. Only joint one and two have ``rotation_deviation_parameters``. Joint one has these deviations only in the north and
+up direction, whereas joint two has them only in east and north, making this a 4-dimensional parameter for the rigid body kinematic.
 
 Actuators
 ^^^^^^^^^
 Heliostat actuators are the motors responsible for adjusting the heliostat's surface orientation to direct sunlight onto
-a defined aim point. The actuators are described by ``actuator_parameters``, which may contain information on motor
-turning direction, step size, or offsets. These parameters are essential for initialization.
-
-The abstract class ``Actuators`` contains one method to map motor steps to angles and another to map angles to motor steps.
-All derived actuator types override these methods.
+a defined aim point. The actuators are described by the actuator parameters, which may contain information on motor
+turning direction, step size, or offsets. The actuator parameters are split into ``non_optimizable_parameters`` and ``optimizable_parameters``
+when initializing the actuators. The abstract class ``Actuators`` contains one method to map motor steps to angles and another
+to map angles to motor steps. All derived actuator types override these methods.
 
 ``ARTIST`` currently supports the following actuator types:
 
@@ -73,7 +75,7 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
    :width: 100%
    :align: center
 
-.. list-table:: Actuator Parameters
+.. list-table:: Linear Actuator Non-Optimizable Parameters
    :header-rows: 1
    :widths: 20 80
 
@@ -89,14 +91,23 @@ The ``LinearActuator`` is modeled on the actuator used in the Jülich power plan
      - The largest motor position the actuator accepts.
    * - increment
      - The total number of increments per full stroke.
-   * - initial_stroke_length
-     - The initial extension length of the actuator. (3) in the image above.
    * - offset
      - The physical offset from the actuator axis to the pivot. (2) in the image above.
    * - pivot_radius
      - The radius from the pivot center to the actuator anchor. (1) in the image above.
+
+
+.. list-table:: Linear Actuator Optimizable Parameters
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Parameter Name
+     - Description
    * - initial_angle
      - The starting angular position of the actuator.
+   * - initial_stroke_length
+     - The initial extension length of the actuator. (3) in the image above.
+
 
 In ``ARTIST`` the linear actuator is physics-informed to prevent invalid values and NaNs during forward and backward
 passes. The parameters increment, initial_stroke_length, offset and pivot_radius are defined strictly positive using
@@ -112,3 +123,7 @@ radius) of the triangle must satisfy the triangle inequality:
 
 This ensures that a valid triangle can always be formed. With this physics-informed backbone, the linear actuator can
 accurately model real actuator behavior in an efficient manner.
+
+
+The ``IdealActuator`` has no optimizable parameters. The non-optimizable parameters only include the ``type``, ``clockwise_axis_movement``,
+``min_motor_pos`` and ``max_motor_pos``.

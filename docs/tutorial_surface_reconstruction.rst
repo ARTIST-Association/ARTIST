@@ -71,9 +71,12 @@ This data is then saved into a data dictionary which will be later used in the o
 
 .. code-block::
 
-    # Create dict for the data source name and the heliostat_data_mapping.
-    data: dict[str, str | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] = {
-        config_dictionary.data_source: config_dictionary.paint,
+    # Create dict for the data parser and the heliostat_data_mapping.
+    data: dict[
+        str,
+        CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=2),
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
@@ -112,20 +115,20 @@ surface. In this tutorial we consider two regularizers:
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3, 4)
+        weight=0.4, reduction_dimensions=(index_mapping.facet_dimension, index_mapping.points_dimension, index_mapping.coordinates_dimension)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
+        weight=0.3,
+        reduction_dimensions=(index_mapping.facet_dimension,),
         surface=config_dictionary.surface_points,
-        number_of_neighbors=64,
+        number_of_neighbors=1000,
         sigma=1e-3,
     )
     total_variation_regularizer_normals = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
+        weight=0.8,
+        reduction_dimensions=(index_mapping.facet_dimension,),
         surface=config_dictionary.surface_points,
-        number_of_neighbors=64,
+        number_of_neighbors=1000,
         sigma=1e-3,
     )
 
@@ -171,7 +174,7 @@ Given the scheduler we can now define the optimization parameters in the ``optim
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 0.00005,
         config_dictionary.max_epoch: 500,
-        config_dictionary.num_log: 50,
+        config_dictionary.log_step: 10,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 10,
         config_dictionary.scheduler: scheduler,

@@ -1,4 +1,4 @@
-"""Kinematic modules in ARTIST."""
+"""Kinematic modules in ``ARTIST``."""
 
 from typing import Optional
 
@@ -18,7 +18,7 @@ class Kinematic(torch.nn.Module):
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions.
     forward()
-        Specify the forward operation of the kinematic, i.e. calculate orientation matrices given the incident ray directions.
+        Specify the forward operation of the kinematic, i.e., calculate orientation matrices given the incident ray directions.
     """
 
     def __init__(self) -> None:
@@ -51,7 +51,7 @@ class Kinematic(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 4].
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -74,7 +74,7 @@ class Kinematic(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 2].
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -91,7 +91,7 @@ class Kinematic(torch.nn.Module):
         device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
-        Specify the forward operation of the kinematic, i.e. calculate orientation matrices given the incident ray directions.
+        Specify the forward operation of the kinematic, i.e., calculate orientation matrices given the incident ray directions.
 
         Parameters
         ----------
@@ -103,7 +103,7 @@ class Kinematic(torch.nn.Module):
             Tensor of shape [number_of_active_heliostats, 4].
         device : Optional[torch.device]
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns

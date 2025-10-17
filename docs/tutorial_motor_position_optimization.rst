@@ -38,7 +38,7 @@ also set the loss function as the ``KLDivergenceLoss``:
     u_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=180, device=device
     )
-    ground_truth = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
+    ground_truth = u_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_u) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
     loss_definition = KLDivergenceLoss()
 
 The ``KLDivergenceLoss`` measures how one probability distribution is different from a second, reference distribution. In
@@ -70,7 +70,7 @@ specific use case. In this tutorial we define the following scheduler and optimi
         config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 50,
-        config_dictionary.num_log: 10,
+        config_dictionary.log_step: 10,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 10,
         config_dictionary.scheduler: scheduler,

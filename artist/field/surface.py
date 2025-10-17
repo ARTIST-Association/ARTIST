@@ -1,7 +1,7 @@
 import torch
 
 from artist.scenario.configuration_classes import SurfaceConfig
-from artist.util import utils
+from artist.util import index_mapping, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -16,6 +16,7 @@ class Surface:
         A list of one nurbs surface for each facet.
     facet_translation_vectors : torch.Tensor
         The facet translation vectors for all facets.
+        Tensor of shape [number_of_facets, 4].
 
     Methods
     -------
@@ -40,7 +41,7 @@ class Surface:
             The surface configuration parameters used to construct the surface.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
@@ -73,7 +74,7 @@ class Surface:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -93,10 +94,20 @@ class Surface:
         # [number_of_facets, number_of_surface_points_per_facet, 4] and
         # [number_of_facets, number_of_surface_normals_per_facet, 4].
         surface_points = torch.empty(
-            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
+            len(self.nurbs_facets),
+            evaluation_points.shape[
+                index_mapping.number_of_points_or_normals_per_facet
+            ],
+            4,
+            device=device,
         )
         surface_normals = torch.empty(
-            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
+            len(self.nurbs_facets),
+            evaluation_points.shape[
+                index_mapping.number_of_points_or_normals_per_facet
+            ],
+            4,
+            device=device,
         )
         for i, nurbs_facet in enumerate(self.nurbs_facets):
             (

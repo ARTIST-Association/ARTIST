@@ -11,7 +11,7 @@ def per_heliostat_reduction(
     """
     Compute mean losses for each heliostat with multiple samples.
 
-    If the active heliostats of one group have different amounts of samples to train on, i.e.
+    If the active heliostats of one group have different amounts of samples to train on, i.e.,
     one heliostat is trained with more samples than another, this function makes sure that
     each heliostat still contributes equally to the overall loss of the group. This function
     computes the mean loss for each heliostat.
@@ -20,13 +20,13 @@ def per_heliostat_reduction(
     ----------
     per_sample_values : torch.Tensor
         The per sample values to be reduced.
-        Tensor of shape [number_of_samples]
+        Tensor of shape [number_of_samples].
     active_heliostats_mask : torch.Tensor
         A mask defining which heliostats are activated.
         Tensor of shape [number_of_heliostats].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
-        If None, ARTIST will automatically select the most appropriate
+        If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
     Returns
@@ -48,7 +48,7 @@ def per_heliostat_reduction(
         0, heliostat_ids, per_sample_values
     )
 
-    # Compute mean MSE per heliostat on each rank.
+    # Compute MSE loss per heliostat on each rank.
     number_of_samples_per_heliostat = torch.zeros(
         len(active_heliostats_mask), device=device
     )
@@ -76,7 +76,7 @@ def scale_loss(
     loss : torch.Tensor
         The loss to be scaled.
         Tensor of shape [1].
-    reference_loss :  torch.Tensor
+    reference : torch.Tensor
         The reference loss.
         Tensor of shape [1].
     weight : float
@@ -90,4 +90,9 @@ def scale_loss(
     """
     epsilon = 1e-12
     scale = (reference * weight) / (loss + epsilon)
-    return loss * scale
+    scaled_loss = loss * scale
+
+    inf_mask = torch.isinf(loss)
+    scaled_loss[inf_mask] = loss[inf_mask]
+
+    return scaled_loss

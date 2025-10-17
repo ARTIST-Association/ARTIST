@@ -9,7 +9,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class MotorPositionsOptimizer:
             Tensor of shape [2].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
@@ -144,7 +144,7 @@ class MotorPositionsOptimizer:
             The definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Returns
@@ -189,9 +189,8 @@ class MotorPositionsOptimizer:
                 self.incident_ray_direction.repeat(group.number_of_heliostats, 1)
             )
 
-            # Align all heliostats once, to the given incident ray direction and target, to set initial motor
-            # positions. The motor positions are set automatically within the ``align_surfaces_with_incident_ray_directions()``
-            # method.
+            # Align all heliostats once, to the given incident ray direction and target, to set initial motor positions.
+            # The motor positions are set automatically within the align_surfaces_with_incident_ray_directions() method.
             # Activate heliostats.
             group.activate_heliostats(
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
@@ -213,12 +212,16 @@ class MotorPositionsOptimizer:
                 group.kinematic.active_motor_positions.detach().clone()
             )
             initial_motor_positions_all_groups.append(initial_motor_positions)
-            motor_positions_minimum = group.kinematic.actuators.actuator_parameters[
-                :, 2
-            ]
-            motor_positions_maximum = group.kinematic.actuators.actuator_parameters[
-                :, 3
-            ]
+            motor_positions_minimum = (
+                group.kinematic.actuators.non_optimizable_parameters[
+                    :, index_mapping.actuator_min_motor_position
+                ]
+            )
+            motor_positions_maximum = (
+                group.kinematic.actuators.non_optimizable_parameters[
+                    :, index_mapping.actuator_max_motor_position
+                ]
+            )
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
             scales_all_groups.append(
@@ -256,7 +259,8 @@ class MotorPositionsOptimizer:
         epoch = 0
         log_step = (
             self.optimization_configuration[config_dictionary.max_epoch]
-            // self.optimization_configuration[config_dictionary.num_log]
+            if self.optimization_configuration[config_dictionary.log_step] == 0
+            else self.optimization_configuration[config_dictionary.log_step]
         )
         while (
             loss > self.optimization_configuration[config_dictionary.tolerance]
@@ -265,7 +269,11 @@ class MotorPositionsOptimizer:
             optimizer.zero_grad()
 
             total_flux = torch.zeros(
-                (self.bitmap_resolution[0], self.bitmap_resolution[1]), device=device
+                (
+                    self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
+                    self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
+                ),
+                device=device,
             )
 
             for heliostat_group_index in self.ddp_setup[
@@ -279,7 +287,9 @@ class MotorPositionsOptimizer:
 
                 # Reconstruct true motor positions from reparameterized version.
                 motor_positions_normalized = torch.tanh(
-                    optimizer.param_groups[0]["params"][heliostat_group_index]
+                    optimizer.param_groups[index_mapping.optimizer_param_group_0][
+                        "params"
+                    ][heliostat_group_index]
                 )
                 heliostat_group.kinematic.motor_positions = (
                     initial_motor_positions_all_groups[heliostat_group_index]
@@ -355,10 +365,12 @@ class MotorPositionsOptimizer:
                 )
 
             loss = loss_definition(
-                prediction=total_flux.unsqueeze(0),
-                ground_truth=self.ground_truth.unsqueeze(0),
+                prediction=total_flux.unsqueeze(index_mapping.heliostat_dimension),
+                ground_truth=self.ground_truth.unsqueeze(
+                    index_mapping.heliostat_dimension
+                ),
                 target_area_mask=torch.tensor([self.target_area_index], device=device),
-                reduction_dimensions=(1,),
+                reduction_dimensions=(index_mapping.heliostat_dimension,),
                 device=device,
             ).sum()
 
@@ -366,13 +378,13 @@ class MotorPositionsOptimizer:
 
             optimizer.step()
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                scheduler.step(loss)
+                scheduler.step(loss.detach())
             else:
                 scheduler.step()
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
 
             # Early stopping when loss has reached a plateau.
@@ -410,7 +422,8 @@ class MotorPositionsOptimizer:
                     index
                 ]
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.motor_positions, src=source[0]
+                    heliostat_group.kinematic.motor_positions,
+                    src=source[index_mapping.first_rank_from_group],
                 )
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")

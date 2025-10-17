@@ -90,8 +90,10 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         initial_orientations: torch.Tensor,
         nurbs_control_points: torch.Tensor,
         nurbs_degrees: torch.Tensor,
-        kinematic_deviation_parameters: torch.Tensor,
-        actuator_parameters: torch.Tensor,
+        kinematic_translation_deviation_parameters: torch.Tensor,
+        kinematic_rotation_deviation_parameters: torch.Tensor,
+        actuator_parameters_non_optimizable: torch.Tensor,
+        actuator_parameters_optimizable: torch.Tensor = torch.tensor([]),
         device: torch.device | None = None,
     ) -> None:
         """
@@ -119,13 +121,21 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         nurbs_degrees : torch.Tensor
             The spline degrees for NURBS surfaces in u and then in v direction, for all heliostats in the group.
             Tensor of shape [2].
-        kinematic_deviation_parameters : torch.Tensor
-            The kinematic deviation parameters of all heliostats in the group.
-        actuator_parameters : torch.Tensor
-            The actuator parameters of all actuators in the group.
+        kinematic_translation_deviation_parameters : torch.Tensor
+            The kinematic translation deviation parameters of all heliostats in the group.
+            Tensor of shape [number_of_heliostats, 9].
+        kinematic_rotation_deviation_parameters : torch.Tensor
+            The kinematic rotation deviation parameters of all heliostats in the group.
+            Tensor of shape [number_of_heliostats, 4].
+        actuator_parameters_non_optimizable : torch.Tensor
+            The non-optimizable actuator parameters.
+            Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+        actuator_parameters_optimizable : torch.Tensor
+            The optimizable actuator parameters.
+            Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators (default is torch.tensor([])).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
         super().__init__(
@@ -142,9 +152,11 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         self.kinematic = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
-            actuator_parameters=actuator_parameters,
             initial_orientations=self.initial_orientations,
-            deviation_parameters=kinematic_deviation_parameters,
+            translation_deviation_parameters=kinematic_translation_deviation_parameters,
+            rotation_deviation_parameters=kinematic_rotation_deviation_parameters,
+            actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
+            actuator_parameters_optimizable=actuator_parameters_optimizable.to(device),
             device=device,
         )
 
@@ -176,7 +188,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             Tensor of shape [number_of_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises
@@ -225,7 +237,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             Tensor of shape [number_of_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
 
         Raises

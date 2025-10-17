@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 
-from artist.util import config_dictionary
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -34,8 +34,7 @@ class Regularizer:
 
     def __call__(
         self,
-        current_nurbs_control_points: torch.Tensor,
-        original_nurbs_control_points: torch.Tensor,
+        original_surface_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -46,12 +45,9 @@ class Regularizer:
 
         Parameters
         ----------
-        current_nurbs_control_points : torch.Tensor
-            The predicted nurbs control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_nurbs_control_points : torch.Tensor
-            The original, unchanged control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_surface_points : torch.Tensor
+            The original surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -60,7 +56,7 @@ class Regularizer:
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         \*\*kwargs : Any
             Keyword arguments.
@@ -86,13 +82,13 @@ class TotalVariationRegularizer(Regularizer):
     surface : str
         Specifies which part of a surface is regularized (either the surface points or the surface normals).
     number_of_neighbors : int
-        The number of nearest neighbors to consider (default is 20).
+        The number of nearest neighbors to consider.
     sigma : float | None
-        Determines how quickly the weight falls off as the distance increases (default is None).
+        Determines how quickly the weight falls off as the distance increases.
     batch_size : int
-        Used to process smaller batches of points instead of creating full distance matrices for all points (default is 512).
+        Used to process smaller batches of points instead of creating full distance matrices for all points.
     epsilon : float
-        A small vlaue used to prevent divisions by zero (defualt is 1e-8).
+        A small value used to prevent divisions by zero.
     """
 
     def __init__(
@@ -123,7 +119,7 @@ class TotalVariationRegularizer(Regularizer):
         batch_size : int
             Used to process smaller batches of points instead of creating full distance matrices for all points (default is 512).
         epsilon : float
-            A small vlaue used to prevent divisions by zero (defualt is 1e-8).
+            A small value used to prevent divisions by zero (default is 1e-8).
         """
         self.weight = weight
         self.reduction_dimensions = reduction_dimensions
@@ -135,8 +131,7 @@ class TotalVariationRegularizer(Regularizer):
 
     def __call__(
         self,
-        current_nurbs_control_points: torch.Tensor,
-        original_nurbs_control_points: torch.Tensor,
+        original_surface_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -146,18 +141,15 @@ class TotalVariationRegularizer(Regularizer):
         Compute the regularization.
 
         This regularization suppresses the noise in the surface. It measures the noise in the surface by
-        taking absolute differences in the z values of the provided points. This loss implementation
+        taking absolute differences in the z-values of the provided points. This loss implementation
         focuses on local smoothness by applying a Gaussian distance weight and thereby letting
         closer points contribute more.
 
         Parameters
         ----------
-        current_nurbs_control_points : torch.Tensor
-            The predicted nurbs control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_nurbs_control_points : torch.Tensor
-            The original, unchanged control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_surface_points : torch.Tensor
+            The original surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -166,7 +158,7 @@ class TotalVariationRegularizer(Regularizer):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         \*\*kwargs : Any
             Keyword arguments.
@@ -187,8 +179,8 @@ class TotalVariationRegularizer(Regularizer):
         number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = (
             regularization_variable.shape
         )
-        coordinates = regularization_variable[:, :, :, :2]
-        z_values = regularization_variable[:, :, :, 2]
+        coordinates = regularization_variable[:, :, :, : index_mapping.z_coordinates]
+        z_values = regularization_variable[:, :, :, index_mapping.z_coordinates]
 
         if self.sigma is None:
             coordinates_std = coordinates.std(dim=1).mean().item()
@@ -225,23 +217,29 @@ class TotalVariationRegularizer(Regularizer):
                 self_mask, torch.full_like(distances, 1e9), distances
             )
 
-            # Select the k nearest neighbors (or fewer if the coordinate is near an edge).
+            # Select the k-nearest neighbors (or fewer if the coordinate is near an edge).
             number_of_neighbors_to_select = min(
                 self.number_of_neighbors, number_of_surface_points_per_facet - 1
             )
             selected_distances, selected_indices = torch.topk(
-                masked_distances, number_of_neighbors_to_select, largest=False, dim=3
+                masked_distances,
+                number_of_neighbors_to_select,
+                largest=False,
+                dim=index_mapping.neighboring_points,
             )
             valid_mask = selected_distances < 1e9
 
             # Get all z_values of the selected neighbors and the absolute z_value_variations.
             z_values_neighbors = torch.gather(
-                z_values.unsqueeze(2).expand(-1, -1, number_of_points_in_batch, -1),
+                z_values.unsqueeze(index_mapping.points_batch).expand(
+                    -1, -1, number_of_points_in_batch, -1
+                ),
                 3,
                 selected_indices,
             )
             z_value_variations = torch.abs(
-                batch_z_values.unsqueeze(-1) - z_values_neighbors
+                batch_z_values.unsqueeze(index_mapping.z_value_variations)
+                - z_values_neighbors
             )
             z_value_variations = z_value_variations * valid_mask.type_as(
                 z_value_variations
@@ -252,10 +250,10 @@ class TotalVariationRegularizer(Regularizer):
             weights = weights * valid_mask.type_as(weights)
             variation_loss_sum = variation_loss_sum + (
                 weights * z_value_variations
-            ).sum(dim=(2, 3))
+            ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
             number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(
                 z_value_variations
-            ).sum(dim=(2, 3))
+            ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
 
         # Batched total variation losses.
         variation_loss = variation_loss_sum / (number_of_valid_neighbors + self.epsilon)
@@ -283,7 +281,7 @@ class IdealSurfaceRegularizer(Regularizer):
         ----------
         weight : float
             The weight of the regularization term.
-        reduction_dimensions : tuple[int]
+        reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the regularization term.
         """
         self.weight = weight
@@ -291,8 +289,7 @@ class IdealSurfaceRegularizer(Regularizer):
 
     def __call__(
         self,
-        current_nurbs_control_points: torch.Tensor,
-        original_nurbs_control_points: torch.Tensor,
+        original_surface_points: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -301,17 +298,14 @@ class IdealSurfaceRegularizer(Regularizer):
         r"""
         Compute the regularization.
 
-        This regularization supresses large changes in the control points positions. The real
+        This regularization suppresses large changes in the control points positions. The real
         surface is expected to be close to the ideal surface, therefore large changes are penalized.
 
         Parameters
         ----------
-        current_nurbs_control_points : torch.Tensor
-            The predicted nurbs control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_nurbs_control_points : torch.Tensor
-            The original, unchanged control points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        original_surface_points : torch.Tensor
+            The original surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
             The surface points of the predicted surface.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
@@ -320,7 +314,7 @@ class IdealSurfaceRegularizer(Regularizer):
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
-            If None, ARTIST will automatically select the most appropriate
+            If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         \*\*kwargs : Any
             Keyword arguments.
@@ -333,8 +327,8 @@ class IdealSurfaceRegularizer(Regularizer):
         """
         loss_function = torch.nn.MSELoss(reduction="none")
 
-        loss = loss_function(
-            current_nurbs_control_points, original_nurbs_control_points
-        )
+        loss = loss_function(original_surface_points, surface_points)
 
-        return loss.sum(dim=self.reduction_dimensions)
+        reduced_loss = loss.sum(dim=self.reduction_dimensions)
+
+        return reduced_loss

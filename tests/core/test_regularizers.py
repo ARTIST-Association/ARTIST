@@ -28,8 +28,7 @@ def test_base_regularizer(
 
     with pytest.raises(NotImplementedError) as exc_info:
         base_regularizer(
-            current_nurbs_control_points=torch.empty((2, 4), device=device),
-            original_nurbs_control_points=torch.empty((2, 4), device=device),
+            original_surface_points=torch.empty((2, 4), device=device),
             surface_points=torch.tensor([0, 1], device=device),
             surface_normals=(1,),
             device=device,
@@ -85,8 +84,7 @@ def test_total_variation_regularizer(
         sigma=1.0,
     )
     loss = total_variation(
-        current_nurbs_control_points=torch.empty(1, device=device),
-        original_nurbs_control_points=torch.empty(1, device=device),
+        original_surface_points=torch.empty(1, device=device),
         surface_points=surfaces,
         surface_normals=torch.empty(1, device=device),
         device=device,
@@ -101,18 +99,18 @@ def test_total_variation_regularizer(
 
 
 @pytest.mark.parametrize(
-    "current_nurbs_control_points, original_nurbs_control_points, expected",
+    "original_surface_points, new_surface_points, expected",
     [
         (
-            torch.tensor([[[[[1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]]]]),
-            torch.tensor([[[[[1.0, 2.0, 3.0], [2.0, 1.0, 3.0]]]]]),
+            torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]]]),
+            torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 1.0, 3.0]]]]),
             torch.tensor([2.0]),
         ),
     ],
 )
 def test_ideal_surface_regularizer(
-    current_nurbs_control_points: torch.Tensor,
-    original_nurbs_control_points: torch.Tensor,
+    original_surface_points: torch.Tensor,
+    new_surface_points: torch.Tensor,
     expected: torch.Tensor,
     device: torch.device,
 ) -> None:
@@ -121,12 +119,12 @@ def test_ideal_surface_regularizer(
 
     Parameters
     ----------
-    current_nurbs_control_points : torch.Tensor
-        The predicted nurbs control points.
-        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-    original_nurbs_control_points : torch.Tensor
-        The original, unchanged control points.
-        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    original_surface_points : torch.Tensor
+        The original surface points.
+        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 3].
+    new_surface_points : torch.Tensor
+        The new surface points.
+        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 3].
     expected : torch.Tensor
         The expected loss.
         Tensor of shape [number_of_surfaces].
@@ -138,13 +136,12 @@ def test_ideal_surface_regularizer(
     AssertionError
         If test does not complete as expected.
     """
-    total_variation = IdealSurfaceRegularizer(
-        weight=1.0, reduction_dimensions=(1, 2, 3, 4)
+    ideal_surface_regularizer = IdealSurfaceRegularizer(
+        weight=1.0, reduction_dimensions=(1, 2, 3)
     )
-    loss = total_variation(
-        current_nurbs_control_points=current_nurbs_control_points.to(device),
-        original_nurbs_control_points=original_nurbs_control_points.to(device),
-        surface_points=torch.empty(1, device=device),
+    loss = ideal_surface_regularizer(
+        original_surface_points=original_surface_points.to(device),
+        surface_points=new_surface_points.to(device),
         surface_normals=torch.empty(1, device=device),
         device=device,
     )
