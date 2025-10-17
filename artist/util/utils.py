@@ -992,10 +992,10 @@ def crop_flux_distributions_around_center(
     # Apply affine transform.
     images_expanded = flux_distributions[:, None, :, :]
     sampling_grid = functional.affine_grid(
-        affine_matrices, size=images_expanded.shape, align_corners=False
+        affine_matrices, size=images_expanded.shape, align_corners=True
     )
     cropped_images = functional.grid_sample(
-        images_expanded, sampling_grid, align_corners=False, padding_mode="zeros"
+        images_expanded, sampling_grid, align_corners=True, padding_mode="zeros"
     )
 
     return cropped_images[:, 0, :, :]
