@@ -702,7 +702,9 @@ def create_ideal_canted_nurbs_control_points(
     """
     device = get_device(device=device)
 
-    number_of_facets = facet_translation_vectors.shape[index_mapping.facet_index_unbatched]
+    number_of_facets = facet_translation_vectors.shape[
+        index_mapping.facet_index_unbatched
+    ]
 
     control_points = torch.zeros(
         (
@@ -714,15 +716,27 @@ def create_ideal_canted_nurbs_control_points(
         device=device,
     )
 
-    offsets_e = torch.linspace(0, 1, control_points.shape[index_mapping.control_points_u_facet_batched], device=device)
-    offsets_n = torch.linspace(0, 1, control_points.shape[index_mapping.control_points_v_facet_batched], device=device)
+    offsets_e = torch.linspace(
+        0,
+        1,
+        control_points.shape[index_mapping.control_points_u_facet_batched],
+        device=device,
+    )
+    offsets_n = torch.linspace(
+        0,
+        1,
+        control_points.shape[index_mapping.control_points_v_facet_batched],
+        device=device,
+    )
     start = -torch.norm(canting, dim=index_mapping.canting)
     end = torch.norm(canting, dim=index_mapping.canting)
     origin_offsets_e = (
-        start[:, index_mapping.e, None] + (end - start)[:, index_mapping.e, None] * offsets_e[None, :]
+        start[:, index_mapping.e, None]
+        + (end - start)[:, index_mapping.e, None] * offsets_e[None, :]
     )
     origin_offsets_n = (
-        start[:, index_mapping.n, None] + (end - start)[:, index_mapping.n, None] * offsets_n[None, :]
+        start[:, index_mapping.n, None]
+        + (end - start)[:, index_mapping.n, None] * offsets_n[None, :]
     )
 
     control_points_e = origin_offsets_e[:, :, None].expand(
@@ -740,26 +754,47 @@ def create_ideal_canted_nurbs_control_points(
     # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
     rotation_matrix = torch.zeros((number_of_facets, 4, 4), device=device)
 
-    rotation_matrix[:, :, index_mapping.e] = torch.nn.functional.normalize(canting[:, index_mapping.e])
-    rotation_matrix[:, :, index_mapping.n] = torch.nn.functional.normalize(canting[:, index_mapping.n])
-    rotation_matrix[:, :index_mapping.slice_fourth_dimension, index_mapping.u] = torch.nn.functional.normalize(
-        torch.linalg.cross(rotation_matrix[:, :index_mapping.slice_fourth_dimension, index_mapping.e], rotation_matrix[:, :index_mapping.slice_fourth_dimension, index_mapping.n]), dim=0
+    rotation_matrix[:, :, index_mapping.e] = torch.nn.functional.normalize(
+        canting[:, index_mapping.e]
+    )
+    rotation_matrix[:, :, index_mapping.n] = torch.nn.functional.normalize(
+        canting[:, index_mapping.n]
+    )
+    rotation_matrix[:, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
+        torch.nn.functional.normalize(
+            torch.linalg.cross(
+                rotation_matrix[
+                    :, : index_mapping.slice_fourth_dimension, index_mapping.e
+                ],
+                rotation_matrix[
+                    :, : index_mapping.slice_fourth_dimension, index_mapping.n
+                ],
+            ),
+            dim=0,
+        )
     )
 
-    rotation_matrix[:, index_mapping.transform_homogenous, index_mapping.transform_homogenous] = 1.0
+    rotation_matrix[
+        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = 1.0
 
     canted_points = (
         convert_3d_points_to_4d_format(points=control_points, device=device).reshape(
             number_of_facets, -1, 4
         )
         @ rotation_matrix.mT
-    ).reshape(number_of_facets, control_points.shape[index_mapping.control_points_u_facet_batched], control_points.shape[index_mapping.control_points_v_facet_batched], 4)
+    ).reshape(
+        number_of_facets,
+        control_points.shape[index_mapping.control_points_u_facet_batched],
+        control_points.shape[index_mapping.control_points_v_facet_batched],
+        4,
+    )
 
     canted_with_translation = (
         canted_points + facet_translation_vectors[:, None, None, :]
     )
 
-    return canted_with_translation[:, :, :, :index_mapping.slice_fourth_dimension]
+    return canted_with_translation[:, :, :, : index_mapping.slice_fourth_dimension]
 
 
 def normalize_bitmaps(
@@ -793,21 +828,39 @@ def normalize_bitmaps(
         Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
     """
     plane_areas = target_area_widths * target_area_heights
-    num_pixels = flux_distributions.shape[index_mapping.batched_bitmap_e] * flux_distributions.shape[index_mapping.batched_bitmap_u]
+    num_pixels = (
+        flux_distributions.shape[index_mapping.batched_bitmap_e]
+        * flux_distributions.shape[index_mapping.batched_bitmap_u]
+    )
     plane_area_per_pixel = plane_areas / num_pixels
 
     normalized_fluxes = flux_distributions / (
         number_of_rays * plane_area_per_pixel
     ).unsqueeze(-1).unsqueeze(-1)
 
-    std = torch.std(normalized_fluxes, dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u), keepdim=True)
+    std = torch.std(
+        normalized_fluxes,
+        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+        keepdim=True,
+    )
     std = std + 1e-6
 
     standardized = (
-        normalized_fluxes - torch.mean(normalized_fluxes, dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u), keepdim=True)
+        normalized_fluxes
+        - torch.mean(
+            normalized_fluxes,
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            keepdim=True,
+        )
     ) / std
 
-    valid_mask = (flux_distributions.sum(dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u), keepdim=True) != 0).float()
+    valid_mask = (
+        flux_distributions.sum(
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            keepdim=True,
+        )
+        != 0
+    ).float()
 
     result = standardized * valid_mask
 
@@ -905,7 +958,11 @@ def crop_flux_distributions_around_center(
 
     # Compute center of mass.
     normalized_mass_map = flux_distributions / (
-        flux_distributions.sum(dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u), keepdim=True) + 1e-8
+        flux_distributions.sum(
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            keepdim=True,
+        )
+        + 1e-8
     )
 
     y_coordinates = torch.linspace(-1, 1, image_height, device=device)
@@ -914,8 +971,12 @@ def crop_flux_distributions_around_center(
     x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
     y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
 
-    x_center_of_mass = (x_grid * normalized_mass_map).sum(dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u))
-    y_center_of_mass = (y_grid * normalized_mass_map).sum(dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u))
+    x_center_of_mass = (x_grid * normalized_mass_map).sum(
+        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    )
+    y_center_of_mass = (y_grid * normalized_mass_map).sum(
+        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    )
 
     # Compute scale to match desired crop size in meters.
     scale_x = crop_width / target_plane_widths
@@ -985,7 +1046,9 @@ def azimuth_elevation_to_enu(
 
     r = slant_range * torch.cos(elevation)
 
-    enu = torch.zeros((azimuth.shape[index_mapping.unbatched_tensor_values], 3), device=device)
+    enu = torch.zeros(
+        (azimuth.shape[index_mapping.unbatched_tensor_values], 3), device=device
+    )
 
     enu[:, index_mapping.e] = r * torch.sin(azimuth)
     enu[:, index_mapping.n] = -r * torch.cos(azimuth)
@@ -1054,8 +1117,13 @@ def convert_wgs84_coordinates_to_local_enu(
     dlon_rad = longitude_reference_point - longitudes
 
     # Calculate north and east offsets in meters.
-    transformed_coordinates[:, index_mapping.e] = -(dlon_rad * rn1 * torch.cos(latitudes))
+    transformed_coordinates[:, index_mapping.e] = -(
+        dlon_rad * rn1 * torch.cos(latitudes)
+    )
     transformed_coordinates[:, index_mapping.n] = -(dlat_rad * rm1)
-    transformed_coordinates[:, index_mapping.u] = coordinates_to_transform[:, index_mapping.altitude] - reference_point[index_mapping.altitude]
+    transformed_coordinates[:, index_mapping.u] = (
+        coordinates_to_transform[:, index_mapping.altitude]
+        - reference_point[index_mapping.altitude]
+    )
 
     return transformed_coordinates
