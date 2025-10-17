@@ -115,20 +115,20 @@ surface. In this tutorial we consider two regularizers:
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3)
+        weight=0.4, reduction_dimensions=(index_mapping.facet_dimension, index_mapping.points_dimension, index_mapping.coordinates_dimension)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
+        weight=0.3,
+        reduction_dimensions=(index_mapping.facet_dimension,),
         surface=config_dictionary.surface_points,
-        number_of_neighbors=64,
+        number_of_neighbors=1000,
         sigma=1e-3,
     )
     total_variation_regularizer_normals = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
+        weight=0.8,
+        reduction_dimensions=(index_mapping.facet_dimension,),
         surface=config_dictionary.surface_points,
-        number_of_neighbors=64,
+        number_of_neighbors=1000,
         sigma=1e-3,
     )
 

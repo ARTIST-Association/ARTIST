@@ -103,8 +103,8 @@ bitmap, and also create a tensor to store the final result:
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution[0],
-            bitmap_resolution[1],
+            bitmap_resolution[index_mapping.unbatched_bitmap_e],
+            bitmap_resolution[index_mapping.unbatched_bitmap_u],
         ),
         device=device,
     )

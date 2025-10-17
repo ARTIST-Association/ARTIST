@@ -9,7 +9,7 @@ from matplotlib.pyplot import tight_layout
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import set_logger_config
+from artist.util import index_mapping, set_logger_config
 from artist.util.environment_setup import get_device
 
 # This is an introductory tutorial to look at some of the basic elements of ARTIST. Therefore, it is designed to only
@@ -36,14 +36,16 @@ with h5py.File(scenario_path) as scenario_path:
 # Inspect the scenario.
 print(scenario)
 print(
-    f"The light source is a {scenario.light_sources.light_source_list[0].__class__.__name__}."
-)
-print(f"The first target area is a {scenario.target_areas.names[0]}.")
-print(
-    f"The first heliostat in the first group in the field is {scenario.heliostat_field.heliostat_groups[0].names[0]}."
+    f"The light source is a {scenario.light_sources.light_source_list[index_mapping.first_light_source].__class__.__name__}."
 )
 print(
-    f"The location of {scenario.heliostat_field.heliostat_groups[0].names[0]} is: {scenario.heliostat_field.heliostat_groups[0].positions[0].tolist()}."
+    f"The first target area is a {scenario.target_areas.names[index_mapping.first_target_area]}."
+)
+print(
+    f"The first heliostat in the first group in the field is {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].names[index_mapping.first_heliostat]}."
+)
+print(
+    f"The location of {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].names[index_mapping.first_heliostat]} is: {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].positions[index_mapping.first_heliostat].tolist()}."
 )
 
 # Let's say we only want to consider one Heliostat for the beginning.
@@ -51,7 +53,9 @@ print(
 active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 
 # Activate heliostats, only activated heliostats will be aligned or raytraced.
-scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+scenario.heliostat_field.heliostat_groups[
+    index_mapping.first_heliostat_group
+].activate_heliostats(
     active_heliostats_mask=active_heliostats_mask,
     device=device,
 )
@@ -75,7 +79,7 @@ original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_p
 
 # Align the heliostat(s).
 scenario.heliostat_field.heliostat_groups[
-    0
+    index_mapping.first_heliostat_group
 ].align_surfaces_with_incident_ray_directions(
     aim_points=aim_point,
     incident_ray_directions=incident_ray_directions,
@@ -88,7 +92,7 @@ scenario.heliostat_field.heliostat_groups[
 # The aligned surface points are saved only for the active/current/aligned heliostats.
 # That is why we do not need to select specific indices here.
 aligned_surface_points = scenario.heliostat_field.heliostat_groups[
-    0
+    index_mapping.first_heliostat_group
 ].active_surface_points
 
 # Let's plot the original and the aligned surface points.
@@ -110,12 +114,54 @@ batch_size = number_of_surface_points_per_facet // number_of_facets
 for i in range(number_of_facets):
     start = i * batch_size
     end = start + batch_size
-    e_origin = original_surface_points[0, start:end, 0].cpu().detach().numpy()
-    n_origin = original_surface_points[0, start:end, 1].cpu().detach().numpy()
-    u_origin = original_surface_points[0, start:end, 2].cpu().detach().numpy()
-    e_aligned = aligned_surface_points[0, start:end, 0].cpu().detach().numpy()
-    n_aligned = aligned_surface_points[0, start:end, 1].cpu().detach().numpy()
-    u_aligned = aligned_surface_points[0, start:end, 2].cpu().detach().numpy()
+    e_origin = (
+        original_surface_points[
+            index_mapping.first_heliostat, start:end, index_mapping.e
+        ]
+        .cpu()
+        .detach()
+        .numpy()
+    )
+    n_origin = (
+        original_surface_points[
+            index_mapping.first_heliostat, start:end, index_mapping.n
+        ]
+        .cpu()
+        .detach()
+        .numpy()
+    )
+    u_origin = (
+        original_surface_points[
+            index_mapping.first_heliostat, start:end, index_mapping.u
+        ]
+        .cpu()
+        .detach()
+        .numpy()
+    )
+    e_aligned = (
+        aligned_surface_points[
+            index_mapping.first_heliostat, start:end, index_mapping.e
+        ]
+        .cpu()
+        .detach()
+        .numpy()
+    )
+    n_aligned = (
+        aligned_surface_points[
+            index_mapping.first_heliostat, start:end, index_mapping.n
+        ]
+        .cpu()
+        .detach()
+        .numpy()
+    )
+    u_aligned = (
+        aligned_surface_points[
+            index_mapping.first_heliostat, start:end, index_mapping.u
+        ]
+        .cpu()
+        .detach()
+        .numpy()
+    )
     ax1.scatter(e_origin, n_origin, u_origin, color=colors[i], label=f"Facet {i + 1}")
     ax2.scatter(
         e_aligned, n_aligned, u_aligned, color=colors[i], label=f"Facet {i + 1}"
@@ -150,7 +196,9 @@ plt.savefig("tut_1.png")
 # Create a ray tracer.
 ray_tracer = HeliostatRayTracer(
     scenario=scenario,
-    heliostat_group=scenario.heliostat_field.heliostat_groups[0],
+    heliostat_group=scenario.heliostat_field.heliostat_groups[
+        index_mapping.first_heliostat_group
+    ],
 )
 
 # Perform heliostat-based ray tracing.
@@ -195,14 +243,16 @@ def align_and_trace_rays(
         A tensor containing the distribution strengths used to generate the image on the receiver.
     """
     # Activate heliostats
-    scenario.heliostat_field.heliostat_groups[0].activate_heliostats(
+    scenario.heliostat_field.heliostat_groups[
+        index_mapping.first_heliostat_group
+    ].activate_heliostats(
         active_heliostats_mask=active_heliostats_mask,
         device=device,
     )
 
     # Align all heliostats.
     scenario.heliostat_field.heliostat_groups[
-        0
+        index_mapping.first_heliostat_group
     ].align_surfaces_with_incident_ray_directions(
         aim_points=scenario.target_areas.centers[target_area_mask],
         incident_ray_directions=light_direction,
@@ -294,9 +344,9 @@ image_above = align_and_trace_rays(
 
 # Plot the resulting images.
 plot_multiple_images(
-    image_south[0],
-    image_east[0],
-    image_west[0],
-    image_above[0],
+    image_south[index_mapping.first_heliostat],
+    image_east[index_mapping.first_heliostat],
+    image_west[index_mapping.first_heliostat],
+    image_above[index_mapping.first_heliostat],
     names=["South", "East", "West", "Above"],
 )

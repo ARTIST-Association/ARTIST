@@ -13,7 +13,7 @@ from artist.data_parser import paint_scenario_parser
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config, utils
+from artist.util import config_dictionary, index_mapping, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
 from artist.util.nurbs import NURBSSurfaces
 
@@ -57,14 +57,14 @@ def plot_surface_points_and_angle_map(
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
     normals = (
         (
-            surface_normals[..., :3]
-            / torch.linalg.norm(surface_normals[..., :3], axis=-1, keepdims=True)
+            surface_normals[..., :index_mapping.slice_fourth_dimension]
+            / torch.linalg.norm(surface_normals[..., :index_mapping.slice_fourth_dimension], axis=-1, keepdims=True)
         )
         .cpu()
         .detach()
     )
     reference = (
-        (reference_direction[..., :3] / torch.linalg.norm(reference_direction[..., :3]))
+        (reference_direction[..., :index_mapping.slice_fourth_dimension] / torch.linalg.norm(reference_direction[..., :index_mapping.slice_fourth_dimension]))
         .cpu()
         .detach()
     )
@@ -73,9 +73,9 @@ def plot_surface_points_and_angle_map(
 
     for facet_points, facet_normals in zip(surface_points.cpu().detach(), normals):
         x, y, z = (
-            facet_points[:, 0].cpu().detach(),
-            facet_points[:, 1].cpu().detach(),
-            facet_points[:, 2].cpu().detach(),
+            facet_points[:, index_mapping.e].cpu().detach(),
+            facet_points[:, index_mapping.n].cpu().detach(),
+            facet_points[:, index_mapping.u].cpu().detach(),
         )
 
         # Surface points scatter plot.
@@ -154,8 +154,8 @@ def create_surface_plots(name: str) -> None:
                     number_of_evaluation_points=number_of_surface_points,
                     device=device,
                 )
-                .unsqueeze(0)
-                .unsqueeze(0)
+                .unsqueeze(index_mapping.heliostat_dimension)
+                .unsqueeze(index_mapping.facet_index_unbatched)
                 .expand(
                     1,
                     heliostat_group.number_of_facets_per_heliostat,
@@ -169,22 +169,22 @@ def create_surface_plots(name: str) -> None:
                 degrees=heliostat_group.nurbs_degrees,
                 control_points=heliostat_group.nurbs_control_points[
                     heliostat_index
-                ].unsqueeze(0),
+                ].unsqueeze(index_mapping.heliostat_dimension),
                 device=device,
             )
 
             # Calculate new surface points and normals for this heliostat.
             temporary_points, temporary_normals = (
                 temporary_nurbs.calculate_surface_points_and_normals(
-                    evaluation_points=evaluation_points[0].unsqueeze(0),
+                    evaluation_points=evaluation_points,
                     device=device,
                 )
             )
 
             # Create the plot.
             plot_surface_points_and_angle_map(
-                surface_points=temporary_points[0],
-                surface_normals=temporary_normals[0],
+                surface_points=temporary_points[index_mapping.first_heliostat],
+                surface_normals=temporary_normals[index_mapping.first_heliostat],
                 reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
                 name=f"{name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}_heliostat_{heliostat_index}",
             )
@@ -262,8 +262,8 @@ def create_flux_plots(
                 number_of_evaluation_points=number_of_surface_points,
                 device=device,
             )
-            .unsqueeze(0)
-            .unsqueeze(0)
+            .unsqueeze(index_mapping.heliostat_dimension)
+            .unsqueeze(index_mapping.facet_index_unbatched)
             .expand(
                 validation_active_heliostats_mask.sum(),
                 heliostat_group.number_of_facets_per_heliostat,
@@ -414,18 +414,18 @@ with setup_distributed_environment(
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.4, reduction_dimensions=(1, 2, 3)
+        weight=0.4, reduction_dimensions=(index_mapping.facet_dimension, index_mapping.points_dimension, index_mapping.coordinates_dimension)
     )
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.3,
-        reduction_dimensions=(1,),
+        reduction_dimensions=(index_mapping.facet_dimension,),
         surface=config_dictionary.surface_points,
         number_of_neighbors=1000,
         sigma=1e-3,
     )
     total_variation_regularizer_normals = TotalVariationRegularizer(
         weight=0.8,
-        reduction_dimensions=(1,),
+        reduction_dimensions=(index_mapping.facet_dimension,),
         surface=config_dictionary.surface_points,
         number_of_neighbors=1000,
         sigma=1e-3,

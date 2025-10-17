@@ -182,6 +182,10 @@ bitmap_intensities = 1
 """Index to access bitmap intensity values."""
 first_light_source = 0
 """Index to access the first light source."""
+first_target_area = 0
+"""Index to access the first target area."""
+first_heliostat_group = 0
+"""Index to access the first heliostat group."""
 number_of_surface_points_dimension = 1
 """Index to access the number of surface points per heliostat,"""
 unbatched_bitmap_e = 0
@@ -266,3 +270,5 @@ target_area_curvature_u = 1
 """Index to access the target area curvature up."""
 number_of_facets = 0
 """Index to access the number of facets."""
+coordinates_dimension = 3
+"""Index to access the coordinates dimension"""

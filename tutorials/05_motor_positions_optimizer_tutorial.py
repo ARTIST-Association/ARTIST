@@ -8,7 +8,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config, utils
+from artist.util import config_dictionary, index_mapping, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -23,7 +23,7 @@ torch.cuda.manual_seed(7)
 def create_flux_plot_before_optimization() -> None:
     """Create data to plot the heliostat fluxes."""
     total_flux = torch.zeros(
-        (bitmap_resolution[0], bitmap_resolution[1]), device=device
+        (bitmap_resolution[index_mapping.unbatched_bitmap_e], bitmap_resolution[index_mapping.unbatched_bitmap_u]), device=device
     )
 
     for heliostat_group_index, heliostat_group in enumerate(
@@ -86,7 +86,7 @@ def create_flux_plot_before_optimization() -> None:
 def create_flux_plot_after_optimization() -> None:
     """Create data to plot the heliostat fluxes."""
     total_flux = torch.zeros(
-        (bitmap_resolution[0], bitmap_resolution[1]), device=device
+        (bitmap_resolution[index_mapping.unbatched_bitmap_e], bitmap_resolution[index_mapping.unbatched_bitmap_u]), device=device
     )
 
     for heliostat_group_index, heliostat_group in enumerate(
@@ -191,7 +191,7 @@ with setup_distributed_environment(
     u_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=180, device=device
     )
-    ground_truth = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
+    ground_truth = u_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_u) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
     loss_definition = KLDivergenceLoss()
 
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
