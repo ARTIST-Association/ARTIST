@@ -1,3 +1,5 @@
+actuator_one_index = 0
+"""Index for the first actuator."""
 actuator_type = 0
 """Index for the actuator type."""
 actuator_clockwise_movement = 1
@@ -178,13 +180,53 @@ batched_bitmap_u = 2
 """Index to access the batched bitmap values of the up components."""
 bitmap_intensities = 1
 """Index to access bitmap intensity values."""
+first_light_source = 0
+"""Index to access the first light source."""
+number_of_surface_points_dimension = 1
+"""Index to access the number of surface points per heliostat,"""
+unbatched_bitmap_e = 0
+"""Index to access the unbatched bitmap values of the east components."""
+unbatched_bitmap_u = 1
+"""Index to access the unbatched bitmap values of the up components."""
+target_area_width = 0
+"""Index to access the target area width."""
+target_area_height = 1
+"""Index to access the target area height."""
+target_area_center_e = 0
+"""Index to access the target area center in the east component."""
+target_area_center_u = 2
+"""Index to access the target area center in the up component."""
 evaluation_points_e = 0
-"""Index to access the evaluation points in east direction."""
+"""Index to access the evaluation points in the east component."""
 evaluation_points_n = 1
+"""Index to access the evaluation points in the north component."""
+heliostat_position_e = 0
+"""Index to access the heliostat position in the east component."""
+heliostat_position_n = 1
+"""Index to access the heliostat position in the north component."""
+heliostat_position_u = 2
+"""Index to access the heliostat position in the up component."""
+first_joint_index = 0
+"""Index to access the first joint."""
+second_joint_index = 1
+"""Index to access the second joint."""
+concentrator_index = 2
+"""Index to access the concentrator."""
+joint_angles_e = 0
+"""Index to access the joint angles in the east component."""
+joint_angles_u = 1
+"""Index to access the joint angles in the up component."""
 facet_index_unbatched = 0
+"""Index to access the unbatched facet."""
 control_points_u_facet_batched = 1
+"""Index to access the control points u component batched."""
 control_points_v_facet_batched = 2
+"""Index to access the control points v component batched."""
 canting = 2
+"""Index to access the canting batched."""
 latitude = 0
+"""Index to access the latitude."""
 longitude = 1
+"""Index to access the longitude."""
 altitude = 2
+"""Index to access the altitude."""

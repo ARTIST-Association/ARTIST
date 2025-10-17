@@ -266,7 +266,9 @@ class HeliostatField:
             surface = Surface(surface_config, device=device)
 
             number_of_facets = len(surface_config.facet_list)
-            degrees = torch.empty(2, dtype=torch.int32, device=device)
+            degrees = torch.empty(
+                config_dictionary.nurbs_degrees, dtype=torch.int32, device=device
+            )
             # Each facet automatically has the same control points dimensions. This is required in ARTIST.
             # control_points: Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
             control_points = torch.empty(
@@ -278,11 +280,14 @@ class HeliostatField:
                     surface_config.facet_list[
                         index_mapping.first_facet
                     ].control_points.shape[index_mapping.h5_control_points_v],
-                    3,
+                    config_dictionary.control_point_dimension,
                 ),
                 device=device,
             )
-            canting = torch.empty((number_of_facets, 2, 4), device=device)
+            canting = torch.empty(
+                (number_of_facets, config_dictionary.canting_direction_dimension, 4),
+                device=device,
+            )
             facet_translation_vectors = torch.empty(
                 (number_of_facets, 4), device=device
             )
