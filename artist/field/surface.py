@@ -1,7 +1,7 @@
 import torch
 
 from artist.scenario.configuration_classes import SurfaceConfig
-from artist.util import utils
+from artist.util import index_mapping, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -94,10 +94,20 @@ class Surface:
         # [number_of_facets, number_of_surface_points_per_facet, 4] and
         # [number_of_facets, number_of_surface_normals_per_facet, 4].
         surface_points = torch.empty(
-            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
+            len(self.nurbs_facets),
+            evaluation_points.shape[
+                index_mapping.number_of_points_or_normals_per_facet
+            ],
+            4,
+            device=device,
         )
         surface_normals = torch.empty(
-            len(self.nurbs_facets), evaluation_points.shape[0], 4, device=device
+            len(self.nurbs_facets),
+            evaluation_points.shape[
+                index_mapping.number_of_points_or_normals_per_facet
+            ],
+            4,
+            device=device,
         )
         for i, nurbs_facet in enumerate(self.nurbs_facets):
             (

@@ -254,3 +254,15 @@ first_heliostat = 0
 """Index to access the first heliostat in a group."""
 optimizable_control_points = 0
 """Index to access the optimizable control points during surface reconstruction."""
+number_of_points_or_normals_per_facet = 0
+"""Index to access the number of points for the surface."""
+target_area_plane_e = 0
+"""Index to access the target area east plane."""
+target_area_plane_u = 1
+"""Index to access the target area up plane."""
+target_area_curvature_e = 0
+"""Index to access the target area curvature east."""
+target_area_curvature_u = 1
+"""Index to access the target area curvature up."""
+number_of_facets = 0
+"""Index to access the number of facets."""
