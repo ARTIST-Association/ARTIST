@@ -170,7 +170,7 @@ transform_homogenous = 3
 """Index to access homogenous transform for matrices."""
 unbatched_tensor_values = 0
 """Index to access unbatched tensor values."""
-slice_forth_dimension = 3
+slice_fourth_dimension = 3
 """Index to slice off the fourth dimension."""
 batched_bitmap_e = 1
 """Index to access the batched bitmap values of the east components."""
@@ -179,4 +179,12 @@ batched_bitmap_u = 2
 bitmap_intensities = 1
 """Index to access bitmap intensity values."""
 evaluation_points_e = 0
+"""Index to access the evaluation points in east direction."""
 evaluation_points_n = 1
+facet_index_unbatched = 0
+control_points_u_facet_batched = 1
+control_points_v_facet_batched = 2
+canting = 2
+latitude = 0
+longitude = 1
+altitude = 2
