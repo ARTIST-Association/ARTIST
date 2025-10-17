@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 
-from artist.util import config_dictionary
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -179,8 +179,8 @@ class TotalVariationRegularizer(Regularizer):
         number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = (
             regularization_variable.shape
         )
-        coordinates = regularization_variable[:, :, :, :2]
-        z_values = regularization_variable[:, :, :, 2]
+        coordinates = regularization_variable[:, :, :, : index_mapping.z_coordinates]
+        z_values = regularization_variable[:, :, :, index_mapping.z_coordinates]
 
         if self.sigma is None:
             coordinates_std = coordinates.std(dim=1).mean().item()
@@ -222,18 +222,24 @@ class TotalVariationRegularizer(Regularizer):
                 self.number_of_neighbors, number_of_surface_points_per_facet - 1
             )
             selected_distances, selected_indices = torch.topk(
-                masked_distances, number_of_neighbors_to_select, largest=False, dim=3
+                masked_distances,
+                number_of_neighbors_to_select,
+                largest=False,
+                dim=index_mapping.neighboring_points,
             )
             valid_mask = selected_distances < 1e9
 
             # Get all z_values of the selected neighbors and the absolute z_value_variations.
             z_values_neighbors = torch.gather(
-                z_values.unsqueeze(2).expand(-1, -1, number_of_points_in_batch, -1),
+                z_values.unsqueeze(index_mapping.points_batch).expand(
+                    -1, -1, number_of_points_in_batch, -1
+                ),
                 3,
                 selected_indices,
             )
             z_value_variations = torch.abs(
-                batch_z_values.unsqueeze(-1) - z_values_neighbors
+                batch_z_values.unsqueeze(index_mapping.z_value_variations)
+                - z_values_neighbors
             )
             z_value_variations = z_value_variations * valid_mask.type_as(
                 z_value_variations
@@ -244,10 +250,10 @@ class TotalVariationRegularizer(Regularizer):
             weights = weights * valid_mask.type_as(weights)
             variation_loss_sum = variation_loss_sum + (
                 weights * z_value_variations
-            ).sum(dim=(2, 3))
+            ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
             number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(
                 z_value_variations
-            ).sum(dim=(2, 3))
+            ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
 
         # Batched total variation losses.
         variation_loss = variation_loss_sum / (number_of_valid_neighbors + self.epsilon)

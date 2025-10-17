@@ -230,3 +230,27 @@ longitude = 1
 """Index to access the longitude."""
 altitude = 2
 """Index to access the altitude."""
+ray_directions = 3
+"""Index to access the ray directions."""
+second_pixel = 2
+"""Index to access the second pixels in the bitmap sampler."""
+third_pixel = 3
+"""Index to access the third pixels in the bitmap sampler."""
+focal_spots = 1
+"""Index to access the focal spots."""
+first_rank_from_group = 0
+"""Index to access the first rank belonging to a process group in nested ddp."""
+optimizer_param_group_0 = 0
+"""Index to access the first optimizer parameter group."""
+z_coordinates = 2
+"""Index to access the z-coordinates in the 3D xyz-system."""
+neighboring_points = 3
+"""Index to access the neighboring pixels in the total variation loss."""
+points_batch = 2
+"""Index to access the point batch dimension."""
+z_value_variations = 3
+"""Index to access z-value variations in the total variation loss."""
+first_heliostat = 0
+"""Index to access the first heliostat in a group."""
+optimizable_control_points = 0
+"""Index to access the optimizable control points during surface reconstruction."""

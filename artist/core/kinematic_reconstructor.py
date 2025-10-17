@@ -12,7 +12,7 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -170,7 +170,9 @@ class KinematicReconstructor:
         final_loss_start_indices = torch.cat(
             [
                 torch.tensor([0], device=device),
-                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(
+                    index_mapping.heliostat_dimension
+                ),
             ]
         )
 
@@ -288,7 +290,7 @@ class KinematicReconstructor:
                         prediction=flux_distributions,
                         ground_truth=focal_spots_measured,
                         target_area_mask=target_area_mask,
-                        reduction_dimensions=(1,),
+                        reduction_dimensions=(index_mapping.focal_spots,),
                         device=device,
                     )
 
@@ -327,7 +329,7 @@ class KinematicReconstructor:
 
                     if epoch % log_step == 0:
                         log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
                     # Early stopping when loss has reached a plateau.
@@ -372,11 +374,11 @@ class KinematicReconstructor:
                 ]
                 torch.distributed.broadcast(
                     heliostat_group.kinematic.rotation_deviation_parameters,
-                    src=source[0],
+                    src=source[index_mapping.first_rank_from_group],
                 )
                 torch.distributed.broadcast(
                     heliostat_group.kinematic.actuators.optimizable_parameters,
-                    src=source[0],
+                    src=source[index_mapping.first_rank_from_group],
                 )
             torch.distributed.all_reduce(
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN

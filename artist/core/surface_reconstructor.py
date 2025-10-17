@@ -12,7 +12,7 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, utils
+from artist.util import config_dictionary, index_mapping, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
 
@@ -143,7 +143,9 @@ class SurfaceReconstructor:
         final_loss_start_indices = torch.cat(
             [
                 torch.tensor([0], device=device),
-                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(
+                    index_mapping.heliostat_dimension
+                ),
             ]
         )
 
@@ -185,10 +187,10 @@ class SurfaceReconstructor:
                         crop_height=config_dictionary.utis_crop_height,
                         target_plane_widths=self.scenario.target_areas.dimensions[
                             target_area_mask
-                        ][:, 0],
+                        ][:, index_mapping.target_area_width],
                         target_plane_heights=self.scenario.target_areas.dimensions[
                             target_area_mask
-                        ][:, 1],
+                        ][:, index_mapping.target_area_height],
                         device=device,
                     )
                 )
@@ -209,7 +211,7 @@ class SurfaceReconstructor:
                             nonzero_active_heliostats_mask[:-1],
                         ]
                     ),
-                    dim=0,
+                    dim=index_mapping.heliostat_dimension,
                 )
 
                 # Create NURBS evaluation points.
@@ -218,8 +220,8 @@ class SurfaceReconstructor:
                         number_of_evaluation_points=self.number_of_surface_points,
                         device=device,
                     )
-                    .unsqueeze(0)
-                    .unsqueeze(0)
+                    .unsqueeze(index_mapping.heliostat_dimension)
+                    .unsqueeze(index_mapping.facet_index_unbatched)
                     .expand(
                         heliostat_group.number_of_active_heliostats,
                         heliostat_group.number_of_facets_per_heliostat,
@@ -236,8 +238,10 @@ class SurfaceReconstructor:
 
                 original_surface_points, _ = (
                     original_nurbs_surfaces.calculate_surface_points_and_normals(
-                        evaluation_points=evaluation_points[0]
-                        .unsqueeze(0)
+                        evaluation_points=evaluation_points[
+                            index_mapping.first_heliostat
+                        ]
+                        .unsqueeze(index_mapping.heliostat_dimension)
                         .expand(heliostat_group.number_of_heliostats, -1, -1, -1),
                         device=device,
                     )
@@ -302,11 +306,19 @@ class SurfaceReconstructor:
 
                     # The alignment module and the ray tracer do not accept facetted points and normals, therefore they need to be reshaped.
                     heliostat_group.active_surface_points = new_surface_points.reshape(
-                        heliostat_group.active_surface_points.shape[0], -1, 4
+                        heliostat_group.active_surface_points.shape[
+                            index_mapping.heliostat_dimension
+                        ],
+                        -1,
+                        4,
                     )
                     heliostat_group.active_surface_normals = (
                         new_surface_normals.reshape(
-                            heliostat_group.active_surface_normals.shape[0], -1, 4
+                            heliostat_group.active_surface_normals.shape[
+                                index_mapping.heliostat_dimension
+                            ],
+                            -1,
+                            4,
                         )
                     )
 
@@ -356,10 +368,10 @@ class SurfaceReconstructor:
                             crop_height=config_dictionary.utis_crop_height,
                             target_plane_widths=self.scenario.target_areas.dimensions[
                                 target_area_mask
-                            ][:, 0],
+                            ][:, index_mapping.target_area_width],
                             target_plane_heights=self.scenario.target_areas.dimensions[
                                 target_area_mask
-                            ][:, 1],
+                            ][:, index_mapping.target_area_height],
                             device=device,
                         )
                     )
@@ -369,7 +381,10 @@ class SurfaceReconstructor:
                         prediction=cropped_flux_distributions,
                         ground_truth=cropped_measured_flux_distributions,
                         target_area_mask=target_area_mask,
-                        reduction_dimensions=(1, 2),
+                        reduction_dimensions=(
+                            index_mapping.batched_bitmap_e,
+                            index_mapping.batched_bitmap_u,
+                        ),
                         device=device,
                     )
 
@@ -434,10 +449,14 @@ class SurfaceReconstructor:
                                     )
 
                     # Keep the surfaces in their original geometric shape by locking the control points on the outer edges.
-                    optimizer.param_groups[0]["params"][
-                        0
+                    optimizer.param_groups[index_mapping.optimizer_param_group_0][
+                        "params"
+                    ][
+                        index_mapping.optimizable_control_points
                     ].grad = self.lock_control_points_on_outer_edges(
-                        gradients=optimizer.param_groups[0]["params"][0].grad,
+                        gradients=optimizer.param_groups[
+                            index_mapping.optimizer_param_group_0
+                        ]["params"][index_mapping.optimizable_control_points].grad,
                         device=device,
                     )
 
@@ -451,7 +470,7 @@ class SurfaceReconstructor:
 
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
-                            f"Epoch: {epoch}, Loss: {flux_loss_per_heliostat.tolist()}, LR: {optimizer.param_groups[0]['lr']}",
+                            f"Epoch: {epoch}, Loss: {flux_loss_per_heliostat.tolist()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
                     # Early stopping when loss has reached a plateau.
@@ -495,7 +514,8 @@ class SurfaceReconstructor:
                     index
                 ]
                 torch.distributed.broadcast(
-                    heliostat_group.nurbs_control_points, src=source[0]
+                    heliostat_group.nurbs_control_points,
+                    src=source[index_mapping.first_rank_from_group],
                 )
             torch.distributed.all_reduce(
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
@@ -540,22 +560,30 @@ class SurfaceReconstructor:
         with torch.no_grad():
             fixed_gradients = gradients.clone()
 
-            height = gradients.shape[2]
-            width = gradients.shape[3]
+            height = gradients.shape[index_mapping.nurbs_control_points_u]
+            width = gradients.shape[index_mapping.nurbs_control_points_v]
 
             rows = (
-                torch.arange(height, device=device).unsqueeze(1).expand(height, width)
+                torch.arange(height, device=device)
+                .unsqueeze(index_mapping.unbatched_bitmap_u)
+                .expand(height, width)
             )
-            cols = torch.arange(width, device=device).unsqueeze(0).expand(height, width)
+            cols = (
+                torch.arange(width, device=device)
+                .unsqueeze(index_mapping.unbatched_bitmap_e)
+                .expand(height, width)
+            )
 
             edge_mask = (
                 (rows == 0) | (rows == height - 1) | (cols == 0) | (cols == width - 1)
             )
 
-            fixed_gradients[:, :, :, :, :2] = torch.where(
-                edge_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1),
+            fixed_gradients[:, :, :, :, : index_mapping.z_coordinates] = torch.where(
+                edge_mask.unsqueeze(index_mapping.heliostat_dimension)
+                .unsqueeze(index_mapping.facet_index_unbatched)
+                .unsqueeze(index_mapping.nurbs_control_points),
                 torch.tensor(0.0, device=device),
-                gradients[:, :, :, :, :2],
+                gradients[:, :, :, :, : index_mapping.z_coordinates],
             )
 
             return fixed_gradients
