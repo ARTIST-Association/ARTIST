@@ -1,7 +1,7 @@
 .. _tutorial_kinematic_calibration:
 
 ``ARTIST`` Tutorial: Kinematic Reconstruction
-==========================================
+=============================================
 
 .. note::
 
@@ -21,7 +21,7 @@ structure of a :ref:`scenario<scenario>`. If you are not using your own scenario
 scenarios provided in the "scenarios" folder.
 
 Kinematic Reconstruction Basics
-----------------------------
+-------------------------------
 In the real world most components of the kinematic have mechanical errors. This means if we tell an actuator to orient
 a heliostat along a specific angle, the heliostat might not end up pointing exactly at the specified aim point.
 In ``ARTIST`` we create a digital twin of a solar tower power plant. In the computer simulation, the heliostat will, per default,
@@ -130,7 +130,7 @@ and the optimization configuration:
 Now we are ready to set up the kinematic reconstructor.
 
 Setting up the ``KinematicReconstructor``
---------------------------------------
+-----------------------------------------
 
 Before we can create a ``KinematicReconstructor`` object we need to decide which method we want to use to perform reconstruction.
 Currently there is only one method to reconstruct the kinematic. In this tutorial we optimize using flux density distributions and
