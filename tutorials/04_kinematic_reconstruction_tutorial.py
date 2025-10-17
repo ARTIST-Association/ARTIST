@@ -11,7 +11,6 @@ from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
-from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -21,14 +20,13 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 159 for the tutorial code.
+# Skip to line 143 for the tutorial code.
 #############################################################################################################
 
 
 def create_fluxes(
     data_parser: CalibrationDataParser,
-    heliostat_group: HeliostatGroup,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
 
@@ -36,82 +34,75 @@ def create_fluxes(
     ----------
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
-    heliostat_group : HeliostatGroup
-        Heliostat group for the plots.
 
     Returns
     -------
-    torch.Tensor
+    list[torch.Tensor]
         Bitmaps per heliostat.
-    torch.Tensor
+    list[torch.Tensor]
         Measured flux bitmap.
-    torch.Tensor
-        Current heliostat group.
-    torch.Tensor
-        Mask containing active heliostats.
     """
-    (
-        measured_flux,
-        _,
-        incident_ray_directions,
-        _,
-        active_heliostats_mask,
-        target_area_mask,
-    ) = data_parser.parse_data_for_reconstruction(
-        heliostat_data_mapping=heliostat_data_mapping,
-        heliostat_group=heliostat_group,
-        scenario=scenario,
-        bitmap_resolution=torch.tensor([256, 256]),
-        device=device,
-    )
-
-    # Activate heliostats.
-    heliostat_group.activate_heliostats(
-        active_heliostats_mask=active_heliostats_mask,
-        device=device,
-    )
-
-    # Align heliostats.
-    heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_mask],
-        incident_ray_directions=incident_ray_directions,
-        active_heliostats_mask=active_heliostats_mask,
-        device=device,
-    )
-
+    bitmaps = []
+    measured_bitmaps = []
     scenario.set_number_of_rays(number_of_rays=500)
+    for heliostat_group in scenario.heliostat_field.heliostat_groups:
+        (
+            measured_flux,
+            _,
+            incident_ray_directions,
+            _,
+            active_heliostats_mask,
+            target_area_mask,
+        ) = data_parser.parse_data_for_reconstruction(
+            heliostat_data_mapping=heliostat_data_mapping,
+            heliostat_group=heliostat_group,
+            scenario=scenario,
+            bitmap_resolution=torch.tensor([256, 256]),
+            device=device,
+        )
 
-    # Create a ray tracer.
-    ray_tracer = HeliostatRayTracer(
-        scenario=scenario,
-        heliostat_group=heliostat_group,
-        batch_size=heliostat_group.number_of_active_heliostats,
-        bitmap_resolution=torch.tensor([256, 256], device=device),
-    )
+        measured_bitmaps.append(measured_flux)
 
-    # Perform heliostat-based ray tracing.
-    bitmaps_per_heliostat = ray_tracer.trace_rays(
-        incident_ray_directions=incident_ray_directions,
-        active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
-        device=device,
-    )
+        # Activate heliostats.
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+
+        # Align heliostats.
+        heliostat_group.align_surfaces_with_incident_ray_directions(
+            aim_points=scenario.target_areas.centers[target_area_mask],
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+
+        # Create a ray tracer.
+        ray_tracer = HeliostatRayTracer(
+            scenario=scenario,
+            heliostat_group=heliostat_group,
+            batch_size=heliostat_group.number_of_active_heliostats,
+            bitmap_resolution=torch.tensor([256, 256], device=device),
+        )
+
+        # Perform heliostat-based ray tracing.
+        bitmaps_per_heliostat = ray_tracer.trace_rays(
+            incident_ray_directions=incident_ray_directions,
+            active_heliostats_mask=active_heliostats_mask,
+            target_area_mask=target_area_mask,
+            device=device,
+        )
+        bitmaps.append(bitmaps_per_heliostat)
+
     scenario.set_number_of_rays(number_of_rays=4)
 
-    return (
-        bitmaps_per_heliostat,
-        measured_flux,
-        heliostat_group,
-        active_heliostats_mask,
-    )
+    return bitmaps, measured_bitmaps
 
 
 def create_plots(
-    flux_before: torch.Tensor,
-    flux_after: torch.Tensor,
-    flux_measured: torch.Tensor,
-    heliostat_group: HeliostatGroup,
-    active_heliostats_mask: torch.Tensor,
+    fluxes_before: torch.Tensor,
+    fluxes_after: torch.Tensor,
+    fluxes_measured: torch.Tensor,
 ) -> None:
     """
     Create the plots with the reconstruction results.
@@ -124,35 +115,28 @@ def create_plots(
         Flux after kinematic reconstruction.
     flux_measured : torch.Tensor
         Measured flux reference.
-    heliostat_group : HeliostatGroup
-        Current heliostat group.
-    active_heliostats_mask : torch.Tensor
-        Mask containing active heliostats.
     """
-    for heliostat_index in range(heliostat_group.number_of_active_heliostats):
-        repeated_names = [
-            s
-            for s, n in zip(heliostat_group.names, active_heliostats_mask.tolist())
-            for _ in range(n)
-        ]
+    for group_index, (flux_before, flux_after, flux_measured) in enumerate(
+        zip(fluxes_before, fluxes_after, fluxes_measured)
+    ):
+        for i in range(len(flux_before)):
+            _, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
 
-        _, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
+            axes[0].imshow(flux_before[i].cpu().detach(), cmap="gray")
+            axes[0].set_title("Before reconstruction", fontsize=16)
+            axes[0].axis("off")
 
-        axes[0].imshow(flux_before[heliostat_index].cpu().detach(), cmap="gray")
-        axes[0].set_title("Before reconstruction", fontsize=16)
-        axes[0].axis("off")
+            axes[1].imshow(flux_after[i].cpu().detach(), cmap="gray")
+            axes[1].set_title("After reconstruction", fontsize=16)
+            axes[1].axis("off")
 
-        axes[1].imshow(flux_after[heliostat_index].cpu().detach(), cmap="gray")
-        axes[1].set_title("After reconstruction", fontsize=16)
-        axes[1].axis("off")
+            axes[2].imshow(flux_measured[i].cpu().detach(), cmap="gray")
+            axes[2].set_title("Measured", fontsize=16)
+            axes[2].axis("off")
 
-        axes[2].imshow(flux_measured[heliostat_index].cpu().detach(), cmap="gray")
-        axes[2].set_title("Measured", fontsize=16)
-        axes[2].axis("off")
-
-        plt.subplots_adjust(wspace=0.05)
-        plt.show()
-        plt.savefig(f"heliostat_{repeated_names[heliostat_index]}_calibration.png")
+            plt.subplots_adjust(wspace=0.05)
+            plt.show()
+            plt.savefig(f"heliostat_{i}_in_group_{group_index}_calibration.png")
 
 
 #############################################################################################################
@@ -270,9 +254,8 @@ with setup_distributed_environment(
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 
-    flux_before, _, _, _ = create_fluxes(
+    bitmaps_before, _ = create_fluxes(
         data_parser=data_parser_plots,
-        heliostat_group=scenario.heliostat_field.heliostat_groups[1],
     )
 
     # Create the kinematic reconstructor.
@@ -294,14 +277,11 @@ with setup_distributed_environment(
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
 
-flux_after, flux_measured, heliostat_group, active_heliostats_mask = create_fluxes(
+bitmaps_after, bitmaps_measured = create_fluxes(
     data_parser=data_parser_plots,
-    heliostat_group=scenario.heliostat_field.heliostat_groups[1],
 )
 create_plots(
-    flux_before=flux_before,
-    flux_after=flux_after,
-    flux_measured=flux_measured,
-    heliostat_group=heliostat_group,
-    active_heliostats_mask=active_heliostats_mask,
+    fluxes_before=bitmaps_before,
+    fluxes_after=bitmaps_after,
+    fluxes_measured=bitmaps_measured,
 )
