@@ -6,7 +6,7 @@
 .. note::
 
     You can find the corresponding ``Python`` script for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/03_nurbs_surface_reconstruction.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/03_nurbs_surface_reconstruction_tutorial.py
 
 This tutorial shows how a heliostat surface can be reconstructed using Non-Uniform Rational B-Splines (NURBS) in ``ARTIST``.
 

@@ -6,8 +6,8 @@
 .. note::
 
     You can find the corresponding ``Python`` scripts for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_stral.py
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_paint.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_stral_tutorial.py
+    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_paint_tutorial.py
 
 In this tutorial, we will guide you through the process of generating simple ``ARTIST`` scenario HDF5 files. Before
 starting the tutorial, make sure you have read the information regarding the structure of an ``ARTIST`` scenario file
