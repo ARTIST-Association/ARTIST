@@ -298,7 +298,7 @@ def reconstruct_and_create_flux_image(
 
         # Configure regularizers and their weights.
         ideal_surface_regularizer = IdealSurfaceRegularizer(
-            weight=reconstruction_parameters["ideal_surface_loss_weight"],
+            weight=0.4,#reconstruction_parameters["ideal_surface_loss_weight"],
             reduction_dimensions=(1, 2, 3),
         )
 
@@ -320,8 +320,8 @@ def reconstruct_and_create_flux_image(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0.00005,
-            config_dictionary.max_epoch: 4500,
-            config_dictionary.log_step: 10,
+            config_dictionary.max_epoch: 100,
+            config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
             config_dictionary.early_stopping_patience: 5000,
             config_dictionary.scheduler: scheduler,

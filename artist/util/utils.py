@@ -751,50 +751,86 @@ def create_ideal_canted_nurbs_control_points(
     control_points[:, :, :, index_mapping.u] = 0
 
     # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
-    # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
-    rotation_matrix = torch.zeros((number_of_facets, 4, 4), device=device)
+    # Each facet needs to be translated to the actual facet position.
+    # rotation_matrix = torch.zeros((number_of_facets, 4, 4), device=device)
 
-    rotation_matrix[:, :, index_mapping.e] = torch.nn.functional.normalize(
-        canting[:, index_mapping.e]
+    # rotation_matrix[:, :, index_mapping.e] = torch.nn.functional.normalize(
+    #     canting[:, index_mapping.e]
+    # )
+    # rotation_matrix[:, :, index_mapping.n] = torch.nn.functional.normalize(
+    #     canting[:, index_mapping.n]
+    # )
+    # rotation_matrix[:, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
+    #     torch.nn.functional.normalize(
+    #         torch.linalg.cross(
+    #             rotation_matrix[
+    #                 :, : index_mapping.slice_fourth_dimension, index_mapping.e
+    #             ],
+    #             rotation_matrix[
+    #                 :, : index_mapping.slice_fourth_dimension, index_mapping.n
+    #             ],
+    #         ),
+    #         dim=0,
+    #     )
+    # )
+
+    # rotation_matrix[
+    #     :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    # ] = 1.0
+
+    # canted_points = (
+    #     convert_3d_points_to_4d_format(points=control_points, device=device).reshape(
+    #         number_of_facets, -1, 4
+    #     )
+    #     @ rotation_matrix.mT
+    # ).reshape(
+    #     number_of_facets,
+    #     control_points.shape[index_mapping.control_points_u_facet_batched],
+    #     control_points.shape[index_mapping.control_points_v_facet_batched],
+    #     4,
+    # )
+
+    # control_points_with_translation = (
+    #     control_points + facet_translation_vectors[:, None, None, :index_mapping.slice_fourth_dimension]
+    # )
+
+    return control_points
+
+def perform_canting_and_translation(
+    canting,
+    facet_translations,
+    data,
+    device
+):
+    number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
+    number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
+    rotation_matrix = torch.zeros((number_of_surfaces, number_of_facets_per_surface, 4, 4), device=device)
+
+    e = canting[:, :, index_mapping.e, :index_mapping.slice_fourth_dimension]
+    n = canting[:, :, index_mapping.n, :index_mapping.slice_fourth_dimension]
+    u = torch.linalg.cross(e, n, dim=2)
+    
+    rotation_matrix[:, :, :index_mapping.slice_fourth_dimension, index_mapping.e] = torch.nn.functional.normalize(
+        e, dim=-1
     )
-    rotation_matrix[:, :, index_mapping.n] = torch.nn.functional.normalize(
-        canting[:, index_mapping.n]
+    rotation_matrix[:, :, :index_mapping.slice_fourth_dimension, index_mapping.n] = torch.nn.functional.normalize(
+        n, dim=-1
     )
-    rotation_matrix[:, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
-        torch.nn.functional.normalize(
-            torch.linalg.cross(
-                rotation_matrix[
-                    :, : index_mapping.slice_fourth_dimension, index_mapping.e
-                ],
-                rotation_matrix[
-                    :, : index_mapping.slice_fourth_dimension, index_mapping.n
-                ],
-            ),
-            dim=0,
-        )
+    rotation_matrix[:, :, :index_mapping.slice_fourth_dimension, index_mapping.u] = torch.nn.functional.normalize(
+        u, dim=-1
     )
 
     rotation_matrix[
-        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :, :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
     ] = 1.0
 
-    canted_points = (
-        convert_3d_points_to_4d_format(points=control_points, device=device).reshape(
-            number_of_facets, -1, 4
-        )
-        @ rotation_matrix.mT
-    ).reshape(
-        number_of_facets,
-        control_points.shape[index_mapping.control_points_u_facet_batched],
-        control_points.shape[index_mapping.control_points_v_facet_batched],
-        4,
+    canted_data = data @ rotation_matrix.mT
+
+    canted_data_with_translation = (
+        canted_data + facet_translations.reshape(number_of_surfaces, number_of_facets_per_surface, 1, 4)
     )
 
-    canted_with_translation = (
-        canted_points + facet_translation_vectors[:, None, None, :]
-    )
-
-    return canted_with_translation[:, :, :, : index_mapping.slice_fourth_dimension]
+    return canted_data_with_translation
 
 
 def normalize_bitmaps(

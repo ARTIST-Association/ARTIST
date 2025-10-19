@@ -46,22 +46,25 @@ class Surface:
         """
         device = get_device(device=device)
 
-        self.nurbs_facets = []
+        degrees = surface_config.facet_list[index_mapping.first_facet].degrees
+        control_points = []
 
         for facet_config in surface_config.facet_list:
-            self.nurbs_facets.append(
-                NURBSSurfaces(
-                    degrees=facet_config.degrees,
-                    control_points=facet_config.control_points.unsqueeze(0).unsqueeze(
-                        0
-                    ),
-                    device=device,
-                )
-            )
+            control_points.append(facet_config.control_points)
+
+        control_points = torch.stack(control_points)
+        
+        self.nurbs_surface = NURBSSurfaces(
+            degrees=degrees,
+            control_points=control_points.unsqueeze(index_mapping.heliostat_dimension),
+            device=device,
+        )
 
     def get_surface_points_and_normals(
         self,
         number_of_points_per_facet: torch.Tensor,
+        canting: torch.Tensor,
+        facet_translations: torch.Tensor,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -86,35 +89,31 @@ class Surface:
         """
         device = get_device(device=device)
 
-        evaluation_points = utils.create_nurbs_evaluation_grid(
-            number_of_evaluation_points=number_of_points_per_facet, device=device
+        evaluation_points = (
+            utils.create_nurbs_evaluation_grid(
+                number_of_evaluation_points=number_of_points_per_facet, 
+                device=device
+            )
+            .unsqueeze(index_mapping.heliostat_dimension)
+            .unsqueeze(index_mapping.facet_index_unbatched)
+            .expand(
+                1,
+                self.nurbs_surface.number_of_facets_per_surface,
+                -1,
+                -1
+            )
         )
 
         # The surface points and surface normals will be returned as tensors of shape:
         # [number_of_facets, number_of_surface_points_per_facet, 4] and
         # [number_of_facets, number_of_surface_normals_per_facet, 4].
-        surface_points = torch.empty(
-            len(self.nurbs_facets),
-            evaluation_points.shape[
-                index_mapping.number_of_points_or_normals_per_facet
-            ],
-            4,
+        (
+            surface_points,
+            surface_normals,
+        ) = self.nurbs_surface.calculate_surface_points_and_normals(
+            evaluation_points=evaluation_points,
+            canting=canting.unsqueeze(index_mapping.heliostat_dimension),
+            facet_translations=facet_translations.unsqueeze(index_mapping.heliostat_dimension),
             device=device,
         )
-        surface_normals = torch.empty(
-            len(self.nurbs_facets),
-            evaluation_points.shape[
-                index_mapping.number_of_points_or_normals_per_facet
-            ],
-            4,
-            device=device,
-        )
-        for i, nurbs_facet in enumerate(self.nurbs_facets):
-            (
-                surface_points[i],
-                surface_normals[i],
-            ) = nurbs_facet.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0),
-                device=device,
-            )
         return surface_points, surface_normals

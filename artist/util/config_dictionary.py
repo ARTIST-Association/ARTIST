@@ -49,6 +49,8 @@ facets_translation_vector = "position"
 """Key to access the translation vector indicating the position of the facet relative to the center of the heliostat."""
 facets_canting = "canting"
 """Key to access the facet canting in the east and north direction."""
+facet_translations = "facet_translations"
+"""Key to access the facet translation vectors."""
 
 first_joint_translation_e = "first_joint_translation_e"
 """Key to access the kinematic first joint translation in the east direction."""
@@ -122,7 +124,6 @@ ideal_actuator_int = 1
 linear_actuator_key = "linear"
 """Int defining that the actuator used is a linear actuator."""
 linear_actuator_int = 0
-
 
 surface_prototype_key = "surface"
 """Key to access the surface prototype."""

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "AA39",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/258959-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/244862-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/270398-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/246213-calibration-properties.json"
+    ],
+    "flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/258959-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/244862-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/270398-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AA39/Calibration/246213-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AA39/Properties/AA39-heliostat-properties.json"
+  }
+]

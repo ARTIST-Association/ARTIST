@@ -337,6 +337,8 @@ class HeliostatField:
             ].append(
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
+                    canting=canting,
+                    facet_translations=facet_translation_vectors,
                     device=device,
                 )[index_mapping.surface_points_from_tuple]
             )
@@ -345,9 +347,17 @@ class HeliostatField:
             ].append(
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
+                    canting=canting,
+                    facet_translations=facet_translation_vectors,
                     device=device,
                 )[index_mapping.surface_normals_from_tuple]
             )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.facets_canting
+            ].append(canting)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.facet_translations
+            ].append(facet_translation_vectors)
             grouped_field_data[heliostat_group_key][
                 config_dictionary.facet_control_points
             ].append(control_points)
@@ -403,6 +413,12 @@ class HeliostatField:
                             config_dictionary.surface_normals
                         ],
                     ).reshape(number_of_heliostats_in_group, -1, 4),
+                    canting=grouped_field_data[heliostat_group_name][
+                        config_dictionary.facets_canting
+                    ],
+                    facet_translations=grouped_field_data[heliostat_group_name][
+                        config_dictionary.facet_translations
+                    ],
                     nurbs_control_points=grouped_field_data[heliostat_group_name][
                         config_dictionary.facet_control_points
                     ],

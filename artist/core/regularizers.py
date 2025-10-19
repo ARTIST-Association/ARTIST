@@ -35,6 +35,7 @@ class Regularizer:
     def __call__(
         self,
         original_surface_points: torch.Tensor,
+        original_surface_normals:torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -132,6 +133,7 @@ class TotalVariationRegularizer(Regularizer):
     def __call__(
         self,
         original_surface_points: torch.Tensor,
+        original_surface_normals: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -290,6 +292,7 @@ class IdealSurfaceRegularizer(Regularizer):
     def __call__(
         self,
         original_surface_points: torch.Tensor,
+        original_surface_normals: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -327,8 +330,10 @@ class IdealSurfaceRegularizer(Regularizer):
         """
         loss_function = torch.nn.MSELoss(reduction="none")
 
-        loss = loss_function(original_surface_points, surface_points)
+        loss_points = loss_function(original_surface_points, surface_points)
+        loss_normals = loss_function(original_surface_normals, surface_normals)
 
-        reduced_loss = loss.sum(dim=self.reduction_dimensions)
+        reduced_loss_points = loss_points.sum(dim=self.reduction_dimensions)
+        reduced_loss_normals = loss_normals.sum(dim=self.reduction_dimensions)
 
-        return reduced_loss
+        return reduced_loss_points + reduced_loss_normals

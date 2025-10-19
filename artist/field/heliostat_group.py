@@ -81,6 +81,8 @@ class HeliostatGroup:
         positions: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        canting: torch.Tensor,
+        facet_translations: torch.Tensor,
         initial_orientations: torch.Tensor,
         nurbs_control_points: torch.Tensor,
         nurbs_degrees: torch.Tensor,
@@ -126,6 +128,8 @@ class HeliostatGroup:
         self.positions = positions
         self.surface_points = surface_points
         self.surface_normals = surface_normals
+        self.canting = canting
+        self.facet_translations = facet_translations
         self.initial_orientations = initial_orientations
 
         self.nurbs_control_points = nurbs_control_points
@@ -142,6 +146,12 @@ class HeliostatGroup:
         )
         self.active_surface_normals = torch.empty_like(
             self.surface_normals, device=device
+        )
+        self.active_canting = torch.empty_like(
+            self.canting, device=device
+        )
+        self.active_facet_translations = torch.empty_like(
+            self.facet_translations, device=device
         )
         self.active_nurbs_control_points = torch.empty_like(
             self.nurbs_control_points, device=device
@@ -251,6 +261,12 @@ class HeliostatGroup:
             active_heliostats_mask, dim=0
         )
         self.active_surface_normals = self.surface_normals.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_canting = self.canting.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_facet_translations = self.facet_translations.repeat_interleave(
             active_heliostats_mask, dim=0
         )
         self.active_nurbs_control_points = self.nurbs_control_points.repeat_interleave(

@@ -1,0 +1,11 @@
+{
+  "number_of_surface_points": 97,
+  "number_of_control_points": 16,
+  "number_of_rays": 193,
+  "nurbs_degree": 3,
+  "ideal_surface_loss_weight": 0.132421514007604,
+  "initial_learning_rate": 7.271861034098388e-05,
+  "reduce_factor": 0.46406723654741394,
+  "patience": 22,
+  "threshold": 0.0005949023648831848
+}

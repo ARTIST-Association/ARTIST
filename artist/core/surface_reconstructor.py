@@ -230,22 +230,22 @@ class SurfaceReconstructor:
                     )
                 )
 
-                original_nurbs_surfaces = NURBSSurfaces(
-                    degrees=heliostat_group.nurbs_degrees,
-                    control_points=heliostat_group.nurbs_control_points,
-                    device=device,
-                )
-
-                original_surface_points, _ = (
-                    original_nurbs_surfaces.calculate_surface_points_and_normals(
-                        evaluation_points=evaluation_points[
-                            index_mapping.first_heliostat
-                        ]
-                        .unsqueeze(index_mapping.heliostat_dimension)
-                        .expand(heliostat_group.number_of_heliostats, -1, -1, -1),
+                with torch.no_grad():
+                    original_nurbs_surfaces = NURBSSurfaces(
+                        degrees=heliostat_group.nurbs_degrees,
+                        control_points=heliostat_group.nurbs_control_points,
                         device=device,
                     )
-                )
+                    original_surface_points, original_surface_normals = (
+                        original_nurbs_surfaces.calculate_surface_points_and_normals(
+                            evaluation_points=evaluation_points[:heliostat_group.number_of_heliostats],
+                            canting=heliostat_group.canting,
+                            facet_translations=heliostat_group.facet_translations,
+                            device=device,
+                        )
+                    )
+                original_surface_points = original_surface_points.detach()
+                original_surface_normals = original_surface_normals.detach()
 
                 # Create the optimizer.
                 optimizer = torch.optim.Adam(
@@ -301,7 +301,10 @@ class SurfaceReconstructor:
                         new_surface_points,
                         new_surface_normals,
                     ) = nurbs_surfaces.calculate_surface_points_and_normals(
-                        evaluation_points=evaluation_points, device=device
+                        evaluation_points=evaluation_points, 
+                        canting=heliostat_group.active_canting,
+                        facet_translations=heliostat_group.active_facet_translations,
+                        device=device
                     )
 
                     # The alignment module and the ray tracer do not accept facetted points and normals, therefore they need to be reshaped.
@@ -400,6 +403,9 @@ class SurfaceReconstructor:
                     ]:
                         regularization_term_active_heliostats = regularizer(
                             original_surface_points=original_surface_points[
+                                active_heliostats_mask > 0
+                            ],
+                            original_surface_normals=original_surface_normals[
                                 active_heliostats_mask > 0
                             ],
                             surface_points=new_surface_points[start_indices_heliostats],
