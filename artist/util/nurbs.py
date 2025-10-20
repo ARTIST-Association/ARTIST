@@ -617,7 +617,13 @@ class NURBSSurfaces(torch.nn.Module):
                     )
                     temp[s] += bu * gathered_control_points
 
-        derivatives = torch.stack(derivatives, dim=3)  # k, t dims
+            dd = min(nth_derivative - k, dv)
+            for t in range(dd + 1):
+                derivatives[:, :, :, k, t] = 0
+                for s in range(self.degrees[index_mapping.nurbs_v] + 1):
+                    derivatives[:, :, :, k, t] += (
+                        basis_values_derivatives_v[t][s].unsqueeze(-1) * temp[s]
+                    )
 
         surface_normals = torch.linalg.cross(
             derivatives[
@@ -673,18 +679,20 @@ class NURBSSurfaces(torch.nn.Module):
         )
 
         if canting is not None:
-            surface_points = utils.perform_canting_and_translation(
+            canted_surface_points = utils.perform_canting_and_translation(
                 canting=canting,
                 facet_translations=facet_translations,
                 data=surface_points,
                 device=device
             )
-            surface_normals = utils.perform_canting_and_translation(
+            transformed_surface_points = canted_surface_points + facet_translations.reshape(self.number_of_surfaces, self.number_of_facets_per_surface, 1, 4)
+            transformed_surface_normals = utils.perform_canting_and_translation(
                 canting=canting,
                 facet_translations=facet_translations,
                 data=surface_normals,
                 device=device
             )
+            return transformed_surface_points, transformed_surface_normals
 
         return surface_points, surface_normals
 

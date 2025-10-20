@@ -826,11 +826,7 @@ def perform_canting_and_translation(
 
     canted_data = data @ rotation_matrix.mT
 
-    canted_data_with_translation = (
-        canted_data + facet_translations.reshape(number_of_surfaces, number_of_facets_per_surface, 1, 4)
-    )
-
-    return canted_data_with_translation
+    return canted_data
 
 
 def normalize_bitmaps(

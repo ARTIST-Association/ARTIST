@@ -104,16 +104,24 @@ class Surface:
             )
         )
 
-        # The surface points and surface normals will be returned as tensors of shape:
-        # [number_of_facets, number_of_surface_points_per_facet, 4] and
-        # [number_of_facets, number_of_surface_normals_per_facet, 4].
-        (
-            surface_points,
-            surface_normals,
-        ) = self.nurbs_surface.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points,
-            canting=canting.unsqueeze(index_mapping.heliostat_dimension),
-            facet_translations=facet_translations.unsqueeze(index_mapping.heliostat_dimension),
-            device=device,
-        )
+        if torch.all(self.nurbs_surface.control_points[..., 2] == 0):
+            (
+                surface_points,
+                surface_normals,
+            ) = self.nurbs_surface.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points,
+                canting=canting.unsqueeze(index_mapping.heliostat_dimension),
+                facet_translations=facet_translations.unsqueeze(index_mapping.heliostat_dimension),
+                device=device,
+            )
+        else:
+            (
+                surface_points,
+                surface_normals,
+            ) = self.nurbs_surface.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points,
+                canting=None,
+                facet_translations=None,
+                device=device,
+            )
         return surface_points, surface_normals

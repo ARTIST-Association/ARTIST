@@ -424,15 +424,15 @@ class SurfaceReconstructor:
                             active_heliostats_mask > 0
                         ] = regularization_term_active_heliostats
 
-                        scaled_regularization_term_per_heliostat = scale_loss(
-                            loss=regularization_term_per_heliostat,
-                            reference=flux_loss_per_heliostat,
-                            weight=regularizer.weight,
-                        )
+                        # scaled_regularization_term_per_heliostat = scale_loss(
+                        #     loss=regularization_term_per_heliostat,
+                        #     reference=flux_loss_per_heliostat,
+                        #     weight=regularizer.weight,
+                        # )
 
                         flux_loss_per_heliostat = (
                             flux_loss_per_heliostat
-                            + scaled_regularization_term_per_heliostat
+                            + (regularization_term_per_heliostat * regularizer.weight)
                         )
 
                     flux_loss_mean = flux_loss_per_heliostat[

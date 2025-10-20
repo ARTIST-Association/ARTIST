@@ -265,7 +265,7 @@ def reconstruct_and_create_flux_image(
             CalibrationDataParser
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ] = {
-            config_dictionary.data_parser: PaintCalibrationDataParser(),
+            config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=4),
             config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
         }
 
@@ -373,6 +373,8 @@ def reconstruct_and_create_flux_image(
         reconstructed_points, reconstructed_normals = (
             reconstructed_nurbs.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points[0].unsqueeze(0),
+                canting=heliostat_group_for_reconstruction.canting,
+                facet_translations=heliostat_group_for_reconstruction.facet_translations,
                 device=device,
             )
         )
@@ -731,6 +733,8 @@ def create_deflectometry_surface(
         points_deflectometry, normals_deflectometry = (
             nurbs.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points[0].unsqueeze(0),
+                canting=None,
+                facet_translations=None,
                 device=device,
             )
         )
@@ -918,7 +922,7 @@ if __name__ == "__main__":
 
     create_deflectometry_surface(
         data_directory=data_dir,
-        scenario_path=ideal_scenario_file,
+        scenario_path=deflectometry_scenario_file,
         reconstruction_parameters=reconstruction_parameters,
         validation_heliostat_data_mapping=validation_heliostat_data_mapping,
         results_file=results_path,
