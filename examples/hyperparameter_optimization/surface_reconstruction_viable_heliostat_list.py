@@ -41,75 +41,76 @@ def find_heliostat_files(
         - A list of flux image file paths.
         - The associated heliostat properties path.
     """
-    found_heliostat = []
+    found_heliostats = []
 
     json_suffix_to_remove = (
         paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER.removesuffix(".json")
     )
+    
+    for heliostat_name in list(heliostat_calibrations.keys()):
+    #heliostat_name = list(heliostat_calibrations.keys())
 
-    heliostat_name = list(heliostat_calibrations.keys())[0]
+        heliostat_dir = data_directory / heliostat_name
 
-    heliostat_dir = data_directory / heliostat_name
+        if not heliostat_dir.is_dir():
+            heliostat_dir = data_directory / "AA39"
+            raise ValueError(f"No data found for {heliostat_name}.")
 
-    if not heliostat_dir.is_dir():
-        heliostat_dir = data_directory / "AA39"
-        raise ValueError(f"No data found for {heliostat_name}.")
-
-    properties_path = (
-        heliostat_dir
-        / paint_mappings.SAVE_PROPERTIES
-        / f"{paint_mappings.HELIOSTAT_PROPERTIES_SAVE_NAME % heliostat_name}"
-    )
-    calibration_dir = heliostat_dir / paint_mappings.SAVE_CALIBRATION
-
-    valid_calibration_files = []
-    flux_images = []
-
-    calibration_numbers = set(map(str, heliostat_calibrations[heliostat_name]))
-    matching_files = [
-        file
-        for file in calibration_dir.iterdir()
-        if file.is_file()
-        and any(number in file.name for number in calibration_numbers)
-        and paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER in file.name
-    ]
-
-    for calibration_file_path in matching_files:
-        try:
-            with calibration_file_path.open("r") as f:
-                calibration_data = json.load(f)
-                focal_spot_data = calibration_data.get(
-                    paint_mappings.FOCAL_SPOT_KEY, {}
-                )
-
-                if (
-                    paint_mappings.HELIOS_KEY in focal_spot_data
-                    and paint_mappings.UTIS_KEY in focal_spot_data
-                ):
-                    # Check for the existence of the corresponding flux image.
-                    file_stem = calibration_file_path.stem.removesuffix(
-                        json_suffix_to_remove
-                    )
-                    flux_image_path = (
-                        calibration_dir / f"{file_stem}-{calibration_image_type}.png"
-                    )
-
-                    if flux_image_path.exists():
-                        valid_calibration_files.append(calibration_file_path)
-                        flux_images.append(flux_image_path)
-        except Exception as e:
-            print(f"Warning: Skipping {calibration_file_path} due to error: {e}")
-
-    found_heliostat.append(
-        (
-            heliostat_name,
-            valid_calibration_files,
-            flux_images,
-            properties_path,
+        properties_path = (
+            heliostat_dir
+            / paint_mappings.SAVE_PROPERTIES
+            / f"{paint_mappings.HELIOSTAT_PROPERTIES_SAVE_NAME % heliostat_name}"
         )
-    )
+        calibration_dir = heliostat_dir / paint_mappings.SAVE_CALIBRATION
 
-    return sorted(found_heliostat, key=lambda x: x[0])
+        valid_calibration_files = []
+        flux_images = []
+
+        calibration_numbers = set(map(str, heliostat_calibrations[heliostat_name]))
+        matching_files = [
+            file
+            for file in calibration_dir.iterdir()
+            if file.is_file()
+            and any(number in file.name for number in calibration_numbers)
+            and paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER in file.name
+        ]
+
+        for calibration_file_path in matching_files:
+            try:
+                with calibration_file_path.open("r") as f:
+                    calibration_data = json.load(f)
+                    focal_spot_data = calibration_data.get(
+                        paint_mappings.FOCAL_SPOT_KEY, {}
+                    )
+
+                    if (
+                        paint_mappings.HELIOS_KEY in focal_spot_data
+                        and paint_mappings.UTIS_KEY in focal_spot_data
+                    ):
+                        # Check for the existence of the corresponding flux image.
+                        file_stem = calibration_file_path.stem.removesuffix(
+                            json_suffix_to_remove
+                        )
+                        flux_image_path = (
+                            calibration_dir / f"{file_stem}-{calibration_image_type}.png"
+                        )
+
+                        if flux_image_path.exists():
+                            valid_calibration_files.append(calibration_file_path)
+                            flux_images.append(flux_image_path)
+            except Exception as e:
+                print(f"Warning: Skipping {calibration_file_path} due to error: {e}")
+
+        found_heliostats.append(
+            (
+                heliostat_name,
+                valid_calibration_files,
+                flux_images,
+                properties_path,
+            )
+        )
+
+    return sorted(found_heliostats, key=lambda x: x[0])
 
 
 if __name__ == "__main__":
@@ -163,7 +164,7 @@ if __name__ == "__main__":
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
+    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
     heliostat_for_reconstruction_default = config.get(
         "heliostat_for_reconstruction", {"AA39": [244862, 270398, 246213, 258959]}
     )

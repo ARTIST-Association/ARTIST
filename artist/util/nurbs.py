@@ -679,16 +679,14 @@ class NURBSSurfaces(torch.nn.Module):
         )
 
         if canting is not None:
-            canted_surface_points = utils.perform_canting_and_translation(
+            canted_surface_points = utils.perform_canting(
                 canting=canting,
-                facet_translations=facet_translations,
                 data=surface_points,
                 device=device
             )
             transformed_surface_points = canted_surface_points + facet_translations.reshape(self.number_of_surfaces, self.number_of_facets_per_surface, 1, 4)
-            transformed_surface_normals = utils.perform_canting_and_translation(
+            transformed_surface_normals = utils.perform_canting(
                 canting=canting,
-                facet_translations=facet_translations,
                 data=surface_normals,
                 device=device
             )

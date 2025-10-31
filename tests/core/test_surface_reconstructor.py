@@ -69,14 +69,12 @@ def test_surface_reconstructor(
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.5,
         reduction_dimensions=(1,),
-        surface=config_dictionary.surface_points,
         number_of_neighbors=64,
         sigma=1e-3,
     )
     total_variation_regularizer_normals = TotalVariationRegularizer(
         weight=0.5,
         reduction_dimensions=(1,),
-        surface=config_dictionary.surface_normals,
         number_of_neighbors=64,
         sigma=1e-3,
     )
@@ -166,7 +164,7 @@ def test_surface_reconstructor(
     if not isinstance(data_parser, PaintCalibrationDataParser):
         with pytest.raises(NotImplementedError) as exc_info:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_definition=loss_definition, device=device
+                loss_definition=loss_definition, batch_size=10, device=device
             )
 
             assert "Must be overridden!" in str(exc_info.value)

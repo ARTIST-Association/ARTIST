@@ -11,10 +11,13 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
+from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
 
+runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
+runtime_log = runtime_manager.get_logger(__name__)
 
 class MotorPositionsOptimizer:
     """
@@ -99,6 +102,7 @@ class MotorPositionsOptimizer:
         self.ground_truth = ground_truth
         self.bitmap_resolution = bitmap_resolution.to(device)
 
+    @runtime_manager.track_runtime(runtime_log)
     def optimize(
         self,
         loss_definition: Loss,
@@ -322,7 +326,7 @@ class MotorPositionsOptimizer:
                         config_dictionary.heliostat_group_world_size
                     ],
                     rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                    batch_size=heliostat_group.number_of_active_heliostats,
+                    batch_size=self.optimization_configuration[config_dictionary.batch_size],
                     random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],
                     bitmap_resolution=self.bitmap_resolution,
                 )
@@ -370,9 +374,9 @@ class MotorPositionsOptimizer:
                     index_mapping.heliostat_dimension
                 ),
                 target_area_mask=torch.tensor([self.target_area_index], device=device),
-                reduction_dimensions=(index_mapping.heliostat_dimension,),
+                reduction_dimensions=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
                 device=device,
-            ).sum()
+            )
 
             loss.backward()
 

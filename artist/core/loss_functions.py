@@ -200,9 +200,11 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        loss = self.loss_function(focal_spot, ground_truth)
+        loss = self.loss_function(focal_spot[:, :3], ground_truth[:, :3])
 
-        return loss.sum(dim=kwargs["reduction_dimensions"])
+        loss_rmse = torch.sqrt(loss.mean(dim=kwargs["reduction_dimensions"]))
+
+        return loss_rmse
 
 
 class PixelLoss(Loss):
@@ -278,35 +280,10 @@ class PixelLoss(Loss):
         device = get_device(device=kwargs["device"])
 
         target_area_mask = kwargs["target_area_mask"]
-
-        normalized_predictions = utils.normalize_bitmaps(
-            flux_distributions=prediction,
-            target_area_widths=self.scenario.target_areas.dimensions[target_area_mask][
-                :, index_mapping.target_area_width
-            ],
-            target_area_heights=self.scenario.target_areas.dimensions[target_area_mask][
-                :, index_mapping.target_area_height
-            ],
-            number_of_rays=self.scenario.light_sources.light_source_list[
-                index_mapping.first_light_source
-            ].number_of_rays,
-        )
-        normalized_ground_truth = utils.normalize_bitmaps(
-            flux_distributions=ground_truth,
-            target_area_widths=torch.full(
-                (ground_truth.shape[index_mapping.heliostat_dimension],),
-                config_dictionary.utis_crop_width,
-                device=device,
-            ),
-            target_area_heights=torch.full(
-                (ground_truth.shape[index_mapping.heliostat_dimension],),
-                config_dictionary.utis_crop_height,
-                device=device,
-            ),
-            number_of_rays=ground_truth.sum(
-                dim=[index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u]
-            ),
-        )
+        
+        # TODO normalize 
+        normalized_predictions = prediction
+        normalized_ground_truth = ground_truth
 
         loss = self.loss_function(normalized_predictions, normalized_ground_truth)
 
@@ -326,7 +303,7 @@ class KLDivergenceLoss(Loss):
     def __init__(self) -> None:
         """Initialize the Kullback-Leibler divergence loss."""
         super().__init__(
-            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=False)
+            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
         )
 
     def __call__(
@@ -404,7 +381,7 @@ class KLDivergenceLoss(Loss):
 
         loss = self.loss_function(
             torch.log(predicted_distributions + eps),
-            ground_truth_distributions,
+            torch.log(ground_truth_distributions + eps),
         )
 
         return loss.sum(dim=kwargs["reduction_dimensions"])

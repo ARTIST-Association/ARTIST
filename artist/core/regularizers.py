@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 
-from artist.util import config_dictionary, index_mapping
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -96,7 +96,6 @@ class TotalVariationRegularizer(Regularizer):
         self,
         weight: float,
         reduction_dimensions: tuple[int, ...],
-        surface: str,
         number_of_neighbors: int = 20,
         sigma: float | None = None,
         batch_size: int = 512,
@@ -124,7 +123,6 @@ class TotalVariationRegularizer(Regularizer):
         """
         self.weight = weight
         self.reduction_dimensions = reduction_dimensions
-        self.surface = surface
         self.number_of_neighbors = number_of_neighbors
         self.sigma = sigma
         self.batch_size = batch_size
@@ -173,94 +171,95 @@ class TotalVariationRegularizer(Regularizer):
         """
         device = get_device(device=device)
 
-        if self.surface == config_dictionary.surface_points:
-            regularization_variable = surface_points
-        if self.surface == config_dictionary.surface_normals:
-            regularization_variable = surface_normals
+        variation_losses = []
 
-        number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = (
-            regularization_variable.shape
-        )
-        coordinates = regularization_variable[:, :, :, : index_mapping.z_coordinates]
-        z_values = regularization_variable[:, :, :, index_mapping.z_coordinates]
+        for regularization_variable in [surface_points, surface_normals]:
 
-        if self.sigma is None:
-            coordinates_std = coordinates.std(dim=1).mean().item()
-            sigma = max(coordinates_std * 0.1, 1e-6)
-        else:
-            sigma = float(self.sigma + 1e-12)
-
-        variation_loss_sum = torch.zeros(
-            (number_of_surfaces, number_of_facets), device=device
-        )
-        number_of_valid_neighbors = torch.zeros(
-            (number_of_surfaces, number_of_facets), device=device
-        )
-
-        # Iterate over query points in batches to limit memory usage.
-        for start_index in range(
-            0, number_of_surface_points_per_facet, self.batch_size
-        ):
-            end_index = min(
-                start_index + self.batch_size, number_of_surface_points_per_facet
+            number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = (
+                regularization_variable.shape
             )
-            number_of_points_in_batch = end_index - start_index
+            coordinates = regularization_variable[:, :, :, : index_mapping.z_coordinates]
+            z_values = regularization_variable[:, :, :, index_mapping.z_coordinates]
 
-            batch_coordinates = coordinates[:, :, start_index:end_index, :]
-            batch_z_values = z_values[:, :, start_index:end_index]
+            if self.sigma is None:
+                coordinates_std = coordinates.std(dim=1).mean().item()
+                sigma = max(coordinates_std * 0.1, 1e-6)
+            else:
+                sigma = float(self.sigma + 1e-12)
 
-            # Compute pairwise distances between the current batch coordinates and all coordinates and exclude identities.
-            distances = torch.cdist(batch_coordinates, coordinates)
-            rows = torch.arange(number_of_points_in_batch, device=device)
-            cols = (start_index + rows).to(device)
-            self_mask = torch.zeros_like(distances, dtype=torch.bool)
-            self_mask[:, :, rows, cols] = True
-            masked_distances = torch.where(
-                self_mask, torch.full_like(distances, 1e9), distances
+            variation_loss_sum = torch.zeros(
+                (number_of_surfaces, number_of_facets), device=device
+            )
+            number_of_valid_neighbors = torch.zeros(
+                (number_of_surfaces, number_of_facets), device=device
             )
 
-            # Select the k-nearest neighbors (or fewer if the coordinate is near an edge).
-            number_of_neighbors_to_select = min(
-                self.number_of_neighbors, number_of_surface_points_per_facet - 1
-            )
-            selected_distances, selected_indices = torch.topk(
-                masked_distances,
-                number_of_neighbors_to_select,
-                largest=False,
-                dim=index_mapping.neighboring_points,
-            )
-            valid_mask = selected_distances < 1e9
+            # Iterate over query points in batches to limit memory usage.
+            for start_index in range(
+                0, number_of_surface_points_per_facet, self.batch_size
+            ):
+                end_index = min(
+                    start_index + self.batch_size, number_of_surface_points_per_facet
+                )
+                number_of_points_in_batch = end_index - start_index
 
-            # Get all z_values of the selected neighbors and the absolute z_value_variations.
-            z_values_neighbors = torch.gather(
-                z_values.unsqueeze(index_mapping.points_batch).expand(
-                    -1, -1, number_of_points_in_batch, -1
-                ),
-                3,
-                selected_indices,
-            )
-            z_value_variations = torch.abs(
-                batch_z_values.unsqueeze(index_mapping.z_value_variations)
-                - z_values_neighbors
-            )
-            z_value_variations = z_value_variations * valid_mask.type_as(
-                z_value_variations
-            )
+                batch_coordinates = coordinates[:, :, start_index:end_index, :]
+                batch_z_values = z_values[:, :, start_index:end_index]
 
-            # Accumulate weighted z_value_variations.
-            weights = torch.exp(-0.5 * (selected_distances / sigma) ** 2)
-            weights = weights * valid_mask.type_as(weights)
-            variation_loss_sum = variation_loss_sum + (
-                weights * z_value_variations
-            ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
-            number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(
-                z_value_variations
-            ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
+                # Compute pairwise distances between the current batch coordinates and all coordinates and exclude identities.
+                distances = torch.cdist(batch_coordinates, coordinates)
+                rows = torch.arange(number_of_points_in_batch, device=device)
+                cols = (start_index + rows).to(device)
+                self_mask = torch.zeros_like(distances, dtype=torch.bool)
+                self_mask[:, :, rows, cols] = True
+                masked_distances = torch.where(
+                    self_mask, torch.full_like(distances, 1e9), distances
+                )
 
-        # Batched total variation losses.
-        variation_loss = variation_loss_sum / (number_of_valid_neighbors + self.epsilon)
+                # Select the k-nearest neighbors (or fewer if the coordinate is near an edge).
+                number_of_neighbors_to_select = min(
+                    self.number_of_neighbors, number_of_surface_points_per_facet - 1
+                )
+                selected_distances, selected_indices = torch.topk(
+                    masked_distances,
+                    number_of_neighbors_to_select,
+                    largest=False,
+                    dim=index_mapping.neighboring_points,
+                )
+                valid_mask = selected_distances < 1e9
 
-        return variation_loss.sum(dim=self.reduction_dimensions)
+                # Get all z_values of the selected neighbors and the absolute z_value_variations.
+                z_values_neighbors = torch.gather(
+                    z_values.unsqueeze(index_mapping.points_batch).expand(
+                        -1, -1, number_of_points_in_batch, -1
+                    ),
+                    3,
+                    selected_indices,
+                )
+                z_value_variations = torch.abs(
+                    batch_z_values.unsqueeze(index_mapping.z_value_variations)
+                    - z_values_neighbors
+                )
+                z_value_variations = z_value_variations * valid_mask.type_as(
+                    z_value_variations
+                )
+
+                # Accumulate weighted z_value_variations.
+                weights = torch.exp(-0.5 * (selected_distances / sigma) ** 2)
+                weights = weights * valid_mask.type_as(weights)
+                variation_loss_sum = variation_loss_sum + (
+                    weights * z_value_variations
+                ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
+                number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(
+                    z_value_variations
+                ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
+
+            # Batched total variation losses.
+            variation_loss = variation_loss_sum / (number_of_valid_neighbors + self.epsilon)
+            variation_loss_summed = variation_loss.sum(dim=self.reduction_dimensions)
+            variation_losses.append(variation_loss_summed)
+
+        return variation_losses[0], variation_losses[1]
 
 
 class IdealSurfaceRegularizer(Regularizer):
@@ -331,9 +330,13 @@ class IdealSurfaceRegularizer(Regularizer):
         loss_function = torch.nn.MSELoss(reduction="none")
 
         loss_points = loss_function(original_surface_points, surface_points)
-        loss_normals = loss_function(original_surface_normals, surface_normals)
+        reduced_loss_points = loss_points.mean(dim=self.reduction_dimensions)
+        rmse_points = torch.clamp(reduced_loss_points, min=1e-12)
 
-        reduced_loss_points = loss_points.sum(dim=self.reduction_dimensions)
-        reduced_loss_normals = loss_normals.sum(dim=self.reduction_dimensions)
+        eps = 1e-8
+        original_normals_normed = original_surface_normals[:, :, :, :3] / (original_surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps)
+        normals_normed = surface_normals[:, :, :, :3] / (surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps)
 
-        return reduced_loss_points + reduced_loss_normals
+        loss_normals = (1 - torch.sum(normals_normed * original_normals_normed, dim=-1)).mean(dim=(1, 2))
+        
+        return rmse_points, loss_normals

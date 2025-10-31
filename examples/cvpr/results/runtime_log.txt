@@ -1,0 +1,499 @@
+2025-10-30 13:28:19 [INFO] [__main___runtime] main started
+2025-10-30 13:28:19 [INFO] [__main___runtime] Number of heliostats: 96
+2025-10-30 13:28:19 [INFO] [__main___runtime] surface reconstruction: {'initial_learning_rate': 7e-05, 'tolerance': 1e-15, 'max_epoch': 70, 'batch_size': 1, 'log_step': 0, 'early_stopping_delta': 5e-05, 'early_stopping_patience': 200, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995}, 'regularizers': [<artist.core.regularizers.IdealSurfaceRegularizer object at 0x7f92a35c4a00>]}
+2025-10-30 13:28:19 [INFO] [__main___runtime] kinematic reconstruction: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 50, 'log_step': 0, 'early_stopping_delta': 0.0001, 'early_stopping_patience': 300, 'scheduler': 'reduce_on_plateau', 'scheduler_parameters': {'min': 1e-06, 'reduce_factor': 0.0001, 'patience': 50, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 13:28:19 [INFO] [__main___runtime] aim point optimization: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 946, 'log_step': 0, 'early_stopping_delta': 0.0003, 'early_stopping_patience': 1000, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995, 'min': 1e-06, 'max': 0.001, 'step_size_up': 500, 'reduce_factor': 0.3, 'patience': 100, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 13:28:19 [INFO] [__main___runtime] Results_file_number: 1
+2025-10-30 13:28:19 [INFO] [__main___runtime] results number: 1
+2025-10-30 13:28:19 [INFO] [__main___runtime] create_distributions started
+2025-10-30 13:28:20 [INFO] [__main___runtime] create_distributions finished in 0.213s
+2025-10-30 13:28:20 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison started
+2025-10-30 13:28:21 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison finished in 1.688s
+2025-10-30 13:28:21 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:28:21 [INFO] [__main___runtime] case: 1
+2025-10-30 13:28:24 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:28:25 [INFO] [__main___runtime] align_and_trace_rays finished in 0.308s
+2025-10-30 13:28:25 [INFO] [__main___runtime] ablation_study finished in 3.342s
+2025-10-30 13:28:25 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:28:25 [INFO] [__main___runtime] case: 2
+2025-10-30 13:28:28 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:29:15 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 47.185s
+2025-10-30 13:29:15 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:29:15 [INFO] [__main___runtime] align_and_trace_rays finished in 0.170s
+2025-10-30 13:29:15 [INFO] [__main___runtime] ablation_study finished in 50.480s
+2025-10-30 13:29:15 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:29:15 [INFO] [__main___runtime] case: 3
+2025-10-30 13:29:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:29:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:29:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.044s
+2025-10-30 13:29:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.046s
+2025-10-30 13:29:18 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 13:29:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:29:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:29:20 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.053s
+2025-10-30 13:29:20 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.079s
+2025-10-30 13:30:57 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 98.368s
+2025-10-30 13:30:57 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:30:57 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:30:57 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 13:30:57 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 13:30:57 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:30:57 [INFO] [__main___runtime] align_and_trace_rays finished in 0.169s
+2025-10-30 13:30:57 [INFO] [__main___runtime] ablation_study finished in 101.778s
+2025-10-30 13:30:57 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:30:57 [INFO] [__main___runtime] case: 4
+2025-10-30 13:31:00 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:31:45 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.826s
+2025-10-30 13:31:45 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:31:45 [INFO] [__main___runtime] align_and_trace_rays finished in 0.164s
+2025-10-30 13:31:45 [INFO] [__main___runtime] ablation_study finished in 48.033s
+2025-10-30 13:31:45 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:31:45 [INFO] [__main___runtime] case: 5
+2025-10-30 13:31:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:31:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:31:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 13:31:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 13:31:48 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 13:31:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:31:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:31:49 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.677s
+2025-10-30 13:31:49 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.687s
+2025-10-30 13:33:48 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 120.034s
+2025-10-30 13:33:48 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 13:33:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:33:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:33:49 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.670s
+2025-10-30 13:33:49 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.679s
+2025-10-30 13:35:48 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 120.059s
+2025-10-30 13:35:48 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 13:35:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:35:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:35:49 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.675s
+2025-10-30 13:35:49 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.685s
+2025-10-30 13:37:48 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 120.029s
+2025-10-30 13:37:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:37:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:37:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.033s
+2025-10-30 13:37:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.035s
+2025-10-30 13:37:48 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:37:48 [INFO] [__main___runtime] align_and_trace_rays finished in 0.173s
+2025-10-30 13:37:48 [INFO] [__main___runtime] ablation_study finished in 363.541s
+2025-10-30 13:37:48 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:37:48 [INFO] [__main___runtime] case: 6
+2025-10-30 13:37:52 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:38:38 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 46.227s
+2025-10-30 13:38:38 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:38:38 [INFO] [__main___runtime] align_and_trace_rays finished in 0.170s
+2025-10-30 13:38:38 [INFO] [__main___runtime] ablation_study finished in 49.566s
+2025-10-30 13:38:38 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:38:38 [INFO] [__main___runtime] case: 7
+2025-10-30 13:38:41 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:38:41 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:38:41 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.033s
+2025-10-30 13:38:41 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.035s
+2025-10-30 13:38:41 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 13:38:41 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:38:41 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:38:43 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.048s
+2025-10-30 13:38:43 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.074s
+2025-10-30 13:40:21 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 99.474s
+2025-10-30 13:40:21 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:40:21 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:40:21 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.033s
+2025-10-30 13:40:21 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.035s
+2025-10-30 13:40:21 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:40:21 [INFO] [__main___runtime] align_and_trace_rays finished in 0.167s
+2025-10-30 13:40:21 [INFO] [__main___runtime] ablation_study finished in 103.035s
+2025-10-30 13:40:21 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:40:21 [INFO] [__main___runtime] case: 8
+2025-10-30 13:40:24 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:41:09 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.802s
+2025-10-30 13:41:09 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:41:09 [INFO] [__main___runtime] align_and_trace_rays finished in 0.163s
+2025-10-30 13:41:09 [INFO] [__main___runtime] ablation_study finished in 48.181s
+2025-10-30 13:41:09 [INFO] [__main___runtime] -----------------
+2025-10-30 13:41:09 [INFO] [__main___runtime] main finished in 769.881s
+2025-10-30 13:43:50 [INFO] [__main___runtime] main started
+2025-10-30 13:43:50 [INFO] [__main___runtime] Number of heliostats: 96
+2025-10-30 13:43:50 [INFO] [__main___runtime] surface reconstruction: {'initial_learning_rate': 7e-05, 'tolerance': 1e-15, 'max_epoch': 70, 'batch_size': 1, 'log_step': 0, 'early_stopping_delta': 5e-05, 'early_stopping_patience': 200, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995}, 'regularizers': [<artist.core.regularizers.IdealSurfaceRegularizer object at 0x7f4d8c400970>]}
+2025-10-30 13:43:50 [INFO] [__main___runtime] kinematic reconstruction: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 50, 'log_step': 0, 'early_stopping_delta': 0.0001, 'early_stopping_patience': 300, 'scheduler': 'reduce_on_plateau', 'scheduler_parameters': {'min': 1e-06, 'reduce_factor': 0.0001, 'patience': 50, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 13:43:50 [INFO] [__main___runtime] aim point optimization: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 946, 'log_step': 0, 'early_stopping_delta': 0.0003, 'early_stopping_patience': 1000, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995, 'min': 1e-06, 'max': 0.001, 'step_size_up': 500, 'reduce_factor': 0.3, 'patience': 100, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 13:43:50 [INFO] [__main___runtime] Results_file_number: 2
+2025-10-30 13:43:50 [INFO] [__main___runtime] create_distributions started
+2025-10-30 13:43:50 [INFO] [__main___runtime] create_distributions finished in 0.220s
+2025-10-30 13:43:50 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison started
+2025-10-30 13:43:51 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison finished in 1.661s
+2025-10-30 13:43:51 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:43:51 [INFO] [__main___runtime] case: 1
+2025-10-30 13:43:54 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:43:55 [INFO] [__main___runtime] align_and_trace_rays finished in 0.334s
+2025-10-30 13:43:55 [INFO] [__main___runtime] ablation_study finished in 3.512s
+2025-10-30 13:43:55 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:43:55 [INFO] [__main___runtime] case: 2
+2025-10-30 13:43:58 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:44:45 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 47.052s
+2025-10-30 13:44:45 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:44:45 [INFO] [__main___runtime] align_and_trace_rays finished in 0.170s
+2025-10-30 13:44:45 [INFO] [__main___runtime] ablation_study finished in 50.276s
+2025-10-30 13:44:45 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:44:45 [INFO] [__main___runtime] case: 3
+2025-10-30 13:44:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:44:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:44:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.044s
+2025-10-30 13:44:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.046s
+2025-10-30 13:44:48 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 13:44:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:44:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:44:50 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.031s
+2025-10-30 13:44:50 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.057s
+2025-10-30 13:46:26 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 97.953s
+2025-10-30 13:46:26 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:46:26 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:46:26 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 13:46:26 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 13:46:26 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:46:27 [INFO] [__main___runtime] align_and_trace_rays finished in 0.169s
+2025-10-30 13:46:27 [INFO] [__main___runtime] ablation_study finished in 101.341s
+2025-10-30 13:46:27 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:46:27 [INFO] [__main___runtime] case: 4
+2025-10-30 13:46:30 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:47:14 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.773s
+2025-10-30 13:47:14 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:47:15 [INFO] [__main___runtime] align_and_trace_rays finished in 0.164s
+2025-10-30 13:47:15 [INFO] [__main___runtime] ablation_study finished in 47.999s
+2025-10-30 13:47:15 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:47:15 [INFO] [__main___runtime] case: 5
+2025-10-30 13:47:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:47:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:47:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 13:47:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.033s
+2025-10-30 13:47:18 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 13:47:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:47:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:47:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.657s
+2025-10-30 13:47:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.667s
+2025-10-30 13:49:18 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.928s
+2025-10-30 13:49:18 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 13:49:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:49:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:49:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.660s
+2025-10-30 13:49:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.670s
+2025-10-30 13:51:18 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.997s
+2025-10-30 13:51:18 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 13:51:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:51:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:51:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.663s
+2025-10-30 13:51:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.673s
+2025-10-30 13:53:18 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.950s
+2025-10-30 13:53:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:53:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:53:18 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.031s
+2025-10-30 13:53:18 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.033s
+2025-10-30 13:53:18 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:53:18 [INFO] [__main___runtime] align_and_trace_rays finished in 0.173s
+2025-10-30 13:53:18 [INFO] [__main___runtime] ablation_study finished in 363.294s
+2025-10-30 13:53:18 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:53:18 [INFO] [__main___runtime] case: 6
+2025-10-30 13:53:21 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:54:07 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 46.174s
+2025-10-30 13:54:07 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:54:07 [INFO] [__main___runtime] align_and_trace_rays finished in 0.169s
+2025-10-30 13:54:07 [INFO] [__main___runtime] ablation_study finished in 49.521s
+2025-10-30 13:54:07 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:54:07 [INFO] [__main___runtime] case: 7
+2025-10-30 13:54:11 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:54:11 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:54:11 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 13:54:11 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 13:54:11 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 13:54:11 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:54:11 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:54:13 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 1.985s
+2025-10-30 13:54:13 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.011s
+2025-10-30 13:55:50 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 99.095s
+2025-10-30 13:55:50 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 13:55:50 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 13:55:50 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 13:55:50 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 13:55:50 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:55:50 [INFO] [__main___runtime] align_and_trace_rays finished in 0.167s
+2025-10-30 13:55:50 [INFO] [__main___runtime] ablation_study finished in 102.647s
+2025-10-30 13:55:50 [INFO] [__main___runtime] ablation_study started
+2025-10-30 13:55:50 [INFO] [__main___runtime] case: 8
+2025-10-30 13:55:53 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 13:56:38 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.854s
+2025-10-30 13:56:38 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 13:56:38 [INFO] [__main___runtime] align_and_trace_rays finished in 0.163s
+2025-10-30 13:56:38 [INFO] [__main___runtime] ablation_study finished in 48.201s
+2025-10-30 13:56:38 [INFO] [__main___runtime] -----------------
+2025-10-30 13:56:38 [INFO] [__main___runtime] main finished in 768.698s
+2025-10-30 14:02:29 [INFO] [__main___runtime] main started
+2025-10-30 14:02:29 [INFO] [__main___runtime] Number of heliostats: 96
+2025-10-30 14:02:29 [INFO] [__main___runtime] surface reconstruction: {'initial_learning_rate': 7e-05, 'tolerance': 1e-15, 'max_epoch': 70, 'batch_size': 1, 'log_step': 0, 'early_stopping_delta': 5e-05, 'early_stopping_patience': 200, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995}, 'regularizers': [<artist.core.regularizers.IdealSurfaceRegularizer object at 0x7f514f80c970>]}
+2025-10-30 14:02:29 [INFO] [__main___runtime] kinematic reconstruction: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 50, 'log_step': 0, 'early_stopping_delta': 0.0001, 'early_stopping_patience': 300, 'scheduler': 'reduce_on_plateau', 'scheduler_parameters': {'min': 1e-06, 'reduce_factor': 0.0001, 'patience': 50, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 14:02:29 [INFO] [__main___runtime] aim point optimization: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 946, 'log_step': 0, 'early_stopping_delta': 0.0003, 'early_stopping_patience': 1000, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995, 'min': 1e-06, 'max': 0.001, 'step_size_up': 500, 'reduce_factor': 0.3, 'patience': 100, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 14:02:29 [INFO] [__main___runtime] Results_file_number: 3
+2025-10-30 14:02:29 [INFO] [__main___runtime] create_distributions started
+2025-10-30 14:02:29 [INFO] [__main___runtime] create_distributions finished in 0.217s
+2025-10-30 14:02:29 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison started
+2025-10-30 14:02:30 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison finished in 1.695s
+2025-10-30 14:02:30 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:02:30 [INFO] [__main___runtime] case: 1
+2025-10-30 14:02:33 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:02:34 [INFO] [__main___runtime] align_and_trace_rays finished in 0.336s
+2025-10-30 14:02:34 [INFO] [__main___runtime] ablation_study finished in 3.519s
+2025-10-30 14:02:34 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:02:34 [INFO] [__main___runtime] case: 2
+2025-10-30 14:02:37 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:03:25 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 47.672s
+2025-10-30 14:03:25 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:03:25 [INFO] [__main___runtime] align_and_trace_rays finished in 0.170s
+2025-10-30 14:03:25 [INFO] [__main___runtime] ablation_study finished in 50.920s
+2025-10-30 14:03:25 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:03:25 [INFO] [__main___runtime] case: 3
+2025-10-30 14:03:28 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:03:28 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:03:28 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.045s
+2025-10-30 14:03:28 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.047s
+2025-10-30 14:03:28 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 14:03:28 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:03:28 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:03:30 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.018s
+2025-10-30 14:03:30 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.044s
+2025-10-30 14:05:06 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 98.232s
+2025-10-30 14:05:06 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:05:06 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:05:06 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.035s
+2025-10-30 14:05:06 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.037s
+2025-10-30 14:05:06 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:05:06 [INFO] [__main___runtime] align_and_trace_rays finished in 0.169s
+2025-10-30 14:05:07 [INFO] [__main___runtime] ablation_study finished in 101.656s
+2025-10-30 14:05:07 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:05:07 [INFO] [__main___runtime] case: 4
+2025-10-30 14:05:10 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:05:54 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.901s
+2025-10-30 14:05:54 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:05:55 [INFO] [__main___runtime] align_and_trace_rays finished in 0.164s
+2025-10-30 14:05:55 [INFO] [__main___runtime] ablation_study finished in 48.150s
+2025-10-30 14:05:55 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:05:55 [INFO] [__main___runtime] case: 5
+2025-10-30 14:05:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:05:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:05:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:05:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:05:58 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 14:05:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:05:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:05:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.664s
+2025-10-30 14:05:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.674s
+2025-10-30 14:07:58 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.951s
+2025-10-30 14:07:58 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 14:07:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:07:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:07:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.660s
+2025-10-30 14:07:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.670s
+2025-10-30 14:09:58 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 120.030s
+2025-10-30 14:09:58 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 14:09:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:09:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:09:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.665s
+2025-10-30 14:09:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.675s
+2025-10-30 14:11:58 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.989s
+2025-10-30 14:11:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:11:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:11:58 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:11:58 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:11:58 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:11:58 [INFO] [__main___runtime] align_and_trace_rays finished in 0.173s
+2025-10-30 14:11:58 [INFO] [__main___runtime] ablation_study finished in 363.407s
+2025-10-30 14:11:58 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:11:58 [INFO] [__main___runtime] case: 6
+2025-10-30 14:12:01 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:12:48 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 46.327s
+2025-10-30 14:12:48 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:12:48 [INFO] [__main___runtime] align_and_trace_rays finished in 0.170s
+2025-10-30 14:12:48 [INFO] [__main___runtime] ablation_study finished in 49.700s
+2025-10-30 14:12:48 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:12:48 [INFO] [__main___runtime] case: 7
+2025-10-30 14:12:51 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:12:51 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:12:51 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:12:51 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:12:51 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 14:12:51 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:12:51 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:12:53 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.001s
+2025-10-30 14:12:53 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.027s
+2025-10-30 14:14:30 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 99.263s
+2025-10-30 14:14:30 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:14:30 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:14:30 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:14:30 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:14:30 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:14:31 [INFO] [__main___runtime] align_and_trace_rays finished in 0.167s
+2025-10-30 14:14:31 [INFO] [__main___runtime] ablation_study finished in 102.823s
+2025-10-30 14:14:31 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:14:31 [INFO] [__main___runtime] case: 8
+2025-10-30 14:14:34 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:15:18 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.607s
+2025-10-30 14:15:18 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:15:19 [INFO] [__main___runtime] align_and_trace_rays finished in 0.162s
+2025-10-30 14:15:19 [INFO] [__main___runtime] ablation_study finished in 47.964s
+2025-10-30 14:15:19 [INFO] [__main___runtime] -----------------
+2025-10-30 14:15:19 [INFO] [__main___runtime] main finished in 770.080s
+2025-10-30 14:41:47 [INFO] [__main___runtime] main started
+2025-10-30 14:41:47 [INFO] [__main___runtime] Number of heliostats: 96
+2025-10-30 14:41:47 [INFO] [__main___runtime] surface reconstruction: {'initial_learning_rate': 7e-05, 'tolerance': 1e-15, 'max_epoch': 70, 'batch_size': 1, 'log_step': 0, 'early_stopping_delta': 5e-05, 'early_stopping_patience': 200, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995}, 'regularizers': [<artist.core.regularizers.IdealSurfaceRegularizer object at 0x7f1b895b8970>]}
+2025-10-30 14:41:47 [INFO] [__main___runtime] kinematic reconstruction: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 50, 'log_step': 0, 'early_stopping_delta': 0.0001, 'early_stopping_patience': 300, 'scheduler': 'reduce_on_plateau', 'scheduler_parameters': {'min': 1e-06, 'reduce_factor': 0.0001, 'patience': 50, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 14:41:47 [INFO] [__main___runtime] aim point optimization: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 946, 'log_step': 0, 'early_stopping_delta': 0.0003, 'early_stopping_patience': 1000, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995, 'min': 1e-06, 'max': 0.001, 'step_size_up': 500, 'reduce_factor': 0.3, 'patience': 100, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 14:41:47 [INFO] [__main___runtime] Results_file_number: 4
+2025-10-30 14:41:47 [INFO] [__main___runtime] create_distributions started
+2025-10-30 14:41:47 [INFO] [__main___runtime] create_distributions finished in 0.192s
+2025-10-30 14:41:47 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison started
+2025-10-30 14:41:49 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison finished in 1.693s
+2025-10-30 14:41:49 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:41:49 [INFO] [__main___runtime] case: 1
+2025-10-30 14:41:52 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:41:52 [INFO] [__main___runtime] align_and_trace_rays finished in 0.306s
+2025-10-30 14:41:53 [INFO] [__main___runtime] ablation_study finished in 3.472s
+2025-10-30 14:41:53 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:41:53 [INFO] [__main___runtime] case: 2
+2025-10-30 14:41:56 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:42:43 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 47.199s
+2025-10-30 14:42:43 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:42:43 [INFO] [__main___runtime] align_and_trace_rays finished in 0.169s
+2025-10-30 14:42:43 [INFO] [__main___runtime] ablation_study finished in 50.421s
+2025-10-30 14:42:43 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:42:43 [INFO] [__main___runtime] case: 3
+2025-10-30 14:42:46 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:42:46 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:42:46 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.042s
+2025-10-30 14:42:46 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.044s
+2025-10-30 14:42:46 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 14:42:46 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:42:46 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:42:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.017s
+2025-10-30 14:42:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.043s
+2025-10-30 14:44:24 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 98.357s
+2025-10-30 14:44:24 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:44:24 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:44:24 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:44:24 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:44:25 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:44:25 [INFO] [__main___runtime] align_and_trace_rays finished in 0.169s
+2025-10-30 14:44:25 [INFO] [__main___runtime] ablation_study finished in 101.760s
+2025-10-30 14:44:25 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:44:25 [INFO] [__main___runtime] case: 4
+2025-10-30 14:44:28 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:45:12 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.631s
+2025-10-30 14:45:12 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:45:13 [INFO] [__main___runtime] align_and_trace_rays finished in 0.165s
+2025-10-30 14:45:13 [INFO] [__main___runtime] ablation_study finished in 47.859s
+2025-10-30 14:45:13 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:45:13 [INFO] [__main___runtime] case: 5
+2025-10-30 14:45:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:45:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:45:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:45:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:45:16 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 14:45:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:45:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:45:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.655s
+2025-10-30 14:45:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.665s
+2025-10-30 14:47:16 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.873s
+2025-10-30 14:47:16 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 14:47:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:47:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:47:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.659s
+2025-10-30 14:47:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.669s
+2025-10-30 14:49:16 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.963s
+2025-10-30 14:49:16 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces started
+2025-10-30 14:49:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:49:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:49:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.667s
+2025-10-30 14:49:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.677s
+2025-10-30 14:51:16 [INFO] [artist.core.surface_reconstructor_runtime] reconstruct_surfaces finished in 119.927s
+2025-10-30 14:51:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:51:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:51:16 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:51:16 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:51:16 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:51:16 [INFO] [__main___runtime] align_and_trace_rays finished in 0.173s
+2025-10-30 14:51:16 [INFO] [__main___runtime] ablation_study finished in 363.222s
+2025-10-30 14:51:16 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:51:16 [INFO] [__main___runtime] case: 6
+2025-10-30 14:51:19 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:52:05 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 46.438s
+2025-10-30 14:52:05 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:52:06 [INFO] [__main___runtime] align_and_trace_rays finished in 0.170s
+2025-10-30 14:52:06 [INFO] [__main___runtime] ablation_study finished in 49.784s
+2025-10-30 14:52:06 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:52:06 [INFO] [__main___runtime] case: 7
+2025-10-30 14:52:09 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:52:09 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:52:09 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:52:09 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:52:09 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic started
+2025-10-30 14:52:09 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:52:09 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:52:11 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 2.023s
+2025-10-30 14:52:11 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 2.050s
+2025-10-30 14:53:48 [INFO] [artist.core.kinematic_reconstructor_runtime] reconstruct_kinematic finished in 99.603s
+2025-10-30 14:53:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction started
+2025-10-30 14:53:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png started
+2025-10-30 14:53:48 [INFO] [artist.data_parser.calibration_data_parser_runtime] load_flux_from_png finished in 0.032s
+2025-10-30 14:53:48 [INFO] [artist.data_parser.paint_calibration_parser_runtime] parse_data_for_reconstruction finished in 0.034s
+2025-10-30 14:53:49 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:53:49 [INFO] [__main___runtime] align_and_trace_rays finished in 0.167s
+2025-10-30 14:53:49 [INFO] [__main___runtime] ablation_study finished in 103.165s
+2025-10-30 14:53:49 [INFO] [__main___runtime] ablation_study started
+2025-10-30 14:53:49 [INFO] [__main___runtime] case: 8
+2025-10-30 14:53:52 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 14:54:36 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 44.537s
+2025-10-30 14:54:36 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 14:54:37 [INFO] [__main___runtime] align_and_trace_rays finished in 0.162s
+2025-10-30 14:54:37 [INFO] [__main___runtime] ablation_study finished in 47.902s
+2025-10-30 14:54:37 [INFO] [__main___runtime] -----------------
+2025-10-30 14:54:37 [INFO] [__main___runtime] main finished in 769.496s
+
+2025-10-30 16:52:29 [INFO] [__main___runtime] main started
+2025-10-30 16:52:29 [INFO] [__main___runtime] Number of heliostats: 1891
+2025-10-30 16:52:29 [INFO] [__main___runtime] surface reconstruction: {'initial_learning_rate': 7e-05, 'tolerance': 1e-15, 'max_epoch': 70, 'batch_size': 1, 'log_step': 0, 'early_stopping_delta': 5e-05, 'early_stopping_patience': 200, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995}, 'regularizers': [<artist.core.regularizers.IdealSurfaceRegularizer object at 0x7f1e1a494c40>]}
+2025-10-30 16:52:29 [INFO] [__main___runtime] kinematic reconstruction: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 50, 'log_step': 0, 'early_stopping_delta': 0.0001, 'early_stopping_patience': 300, 'scheduler': 'reduce_on_plateau', 'scheduler_parameters': {'min': 1e-06, 'reduce_factor': 0.0001, 'patience': 50, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 16:52:29 [INFO] [__main___runtime] aim point optimization: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 946, 'log_step': 0, 'early_stopping_delta': 0.0003, 'early_stopping_patience': 1000, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995, 'min': 1e-06, 'max': 0.001, 'step_size_up': 500, 'reduce_factor': 0.3, 'patience': 100, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 16:52:29 [INFO] [__main___runtime] Results_file_number: 2
+2025-10-30 16:52:29 [INFO] [__main___runtime] create_distributions started
+2025-10-30 16:52:29 [INFO] [__main___runtime] create_distributions finished in 0.214s
+2025-10-30 16:52:29 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison started
+2025-10-30 16:52:30 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison finished in 1.572s
+2025-10-30 16:52:30 [INFO] [__main___runtime] ablation_study started
+2025-10-30 16:52:30 [INFO] [__main___runtime] case: 1
+2025-10-30 16:53:27 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 16:53:31 [INFO] [__main___runtime] align_and_trace_rays finished in 3.374s
+2025-10-30 16:53:31 [INFO] [__main___runtime] ablation_study finished in 60.480s
+2025-10-30 16:53:31 [INFO] [__main___runtime] ablation_study started
+2025-10-30 16:53:31 [INFO] [__main___runtime] case: 2
+2025-10-30 16:54:28 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 17:07:46 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 798.301s
+2025-10-30 17:07:46 [INFO] [__main___runtime] align_and_trace_rays started
+
+2025-10-30 17:21:58 [INFO] [__main___runtime] main started
+2025-10-30 17:21:58 [INFO] [__main___runtime] Number of heliostats: 1891
+2025-10-30 17:21:58 [INFO] [__main___runtime] surface reconstruction: {'initial_learning_rate': 7e-05, 'tolerance': 1e-15, 'max_epoch': 70, 'batch_size': 1, 'log_step': 0, 'early_stopping_delta': 5e-05, 'early_stopping_patience': 200, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995}, 'regularizers': [<artist.core.regularizers.IdealSurfaceRegularizer object at 0x7f9a80ad8c40>]}
+2025-10-30 17:21:58 [INFO] [__main___runtime] kinematic reconstruction: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 50, 'log_step': 0, 'early_stopping_delta': 0.0001, 'early_stopping_patience': 300, 'scheduler': 'reduce_on_plateau', 'scheduler_parameters': {'min': 1e-06, 'reduce_factor': 0.0001, 'patience': 50, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 17:21:58 [INFO] [__main___runtime] aim point optimization: {'initial_learning_rate': 8e-05, 'tolerance': 0.0005, 'max_epoch': 600, 'batch_size': 946, 'log_step': 0, 'early_stopping_delta': 0.0003, 'early_stopping_patience': 1000, 'scheduler': 'exponential', 'scheduler_parameters': {'gamma': 0.995, 'min': 1e-06, 'max': 0.001, 'step_size_up': 500, 'reduce_factor': 0.3, 'patience': 100, 'threshold': 0.001, 'cooldown': 10}}
+2025-10-30 17:21:58 [INFO] [__main___runtime] Results_file_number: 3
+2025-10-30 17:21:58 [INFO] [__main___runtime] create_distributions started
+2025-10-30 17:21:58 [INFO] [__main___runtime] create_distributions finished in 0.231s
+2025-10-30 17:21:58 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison started
+2025-10-30 17:22:00 [INFO] [__main___runtime] create_deflectometry_surface_for_comparison finished in 1.716s
+2025-10-30 17:22:00 [INFO] [__main___runtime] ablation_study started
+2025-10-30 17:22:00 [INFO] [__main___runtime] case: 1
+2025-10-30 17:22:57 [INFO] [__main___runtime] align_and_trace_rays started
+2025-10-30 17:23:00 [INFO] [__main___runtime] align_and_trace_rays finished in 3.371s
+2025-10-30 17:23:00 [INFO] [__main___runtime] ablation_study finished in 60.637s
+2025-10-30 17:23:00 [INFO] [__main___runtime] ablation_study started
+2025-10-30 17:23:00 [INFO] [__main___runtime] case: 2
+2025-10-30 17:23:58 [INFO] [artist.core.motor_position_optimizer_runtime] optimize started
+2025-10-30 17:37:16 [INFO] [artist.core.motor_position_optimizer_runtime] optimize finished in 798.130s
+2025-10-30 17:37:16 [INFO] [__main___runtime] align_and_trace_rays started

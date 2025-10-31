@@ -6,7 +6,7 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
-from artist.core.core_utils import per_heliostat_reduction, scale_loss
+from artist.core.core_utils import per_heliostat_reduction
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
@@ -15,9 +15,13 @@ from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, utils
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
+from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
+
+runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
+runtime_log = runtime_manager.get_logger(__name__)
 
 
 class SurfaceReconstructor:
@@ -105,6 +109,7 @@ class SurfaceReconstructor:
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.bitmap_resolution = bitmap_resolution.to(device)
 
+    @runtime_manager.track_runtime(runtime_log)
     def reconstruct_surfaces(
         self,
         loss_definition: Loss,
@@ -180,20 +185,20 @@ class SurfaceReconstructor:
 
             if active_heliostats_mask.sum() > 0:
                 # Crop target fluxes.
-                cropped_measured_flux_distributions = (
-                    utils.crop_flux_distributions_around_center(
-                        flux_distributions=measured_flux_distributions,
-                        crop_width=config_dictionary.utis_crop_width,
-                        crop_height=config_dictionary.utis_crop_height,
-                        target_plane_widths=self.scenario.target_areas.dimensions[
-                            target_area_mask
-                        ][:, index_mapping.target_area_width],
-                        target_plane_heights=self.scenario.target_areas.dimensions[
-                            target_area_mask
-                        ][:, index_mapping.target_area_height],
-                        device=device,
-                    )
-                )
+                # cropped_measured_flux_distributions = (
+                #     utils.crop_flux_distributions_around_center(
+                #         flux_distributions=measured_flux_distributions,
+                #         crop_width=config_dictionary.utis_crop_width,
+                #         crop_height=config_dictionary.utis_crop_height,
+                #         target_plane_widths=self.scenario.target_areas.dimensions[
+                #             target_area_mask
+                #         ][:, index_mapping.target_area_width],
+                #         target_plane_heights=self.scenario.target_areas.dimensions[
+                #             target_area_mask
+                #         ][:, index_mapping.target_area_height],
+                #         device=device,
+                #     )
+                # )
 
                 # Activate heliostats.
                 heliostat_group.activate_heliostats(
@@ -238,7 +243,7 @@ class SurfaceReconstructor:
                     )
                     original_surface_points, original_surface_normals = (
                         original_nurbs_surfaces.calculate_surface_points_and_normals(
-                            evaluation_points=evaluation_points[:heliostat_group.number_of_heliostats],
+                            evaluation_points=evaluation_points[0].expand(heliostat_group.number_of_heliostats, heliostat_group.number_of_facets_per_heliostat, -1, 2),
                             canting=heliostat_group.canting,
                             facet_translations=heliostat_group.facet_translations,
                             device=device,
@@ -341,7 +346,7 @@ class SurfaceReconstructor:
                             config_dictionary.heliostat_group_world_size
                         ],
                         rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                        batch_size=heliostat_group.number_of_active_heliostats,
+                        batch_size=self.optimization_configuration[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
@@ -382,7 +387,7 @@ class SurfaceReconstructor:
                     # Loss comparing the predicted flux and the target flux.
                     flux_loss_per_sample = loss_definition(
                         prediction=cropped_flux_distributions,
-                        ground_truth=cropped_measured_flux_distributions,
+                        ground_truth=measured_flux_distributions,
                         target_area_mask=target_area_mask,
                         reduction_dimensions=(
                             index_mapping.batched_bitmap_e,
@@ -397,11 +402,12 @@ class SurfaceReconstructor:
                         device=device,
                     )
 
+                    regularizer_loss = torch.zeros_like(flux_loss_per_heliostat, device=device)
                     # Include regularization terms.
                     for regularizer in self.optimization_configuration[
                         config_dictionary.regularizers
                     ]:
-                        regularization_term_active_heliostats = regularizer(
+                        regularization_term_active_heliostats_points, regularization_term_active_heliostats_normals = regularizer(
                             original_surface_points=original_surface_points[
                                 active_heliostats_mask > 0
                             ],
@@ -415,6 +421,12 @@ class SurfaceReconstructor:
                             device=device,
                         )
 
+                        alpha = regularizer.weight
+                        exponent_points = torch.clamp(alpha * torch.relu(regularization_term_active_heliostats_points - 0.004), max=50.0)
+                        exponent_normals = torch.clamp(alpha * torch.relu(regularization_term_active_heliostats_normals - 2.2e-6), max=50.0)
+                        scaled_loss_points = regularization_term_active_heliostats_points * torch.exp(exponent_points)
+                        scaled_loss_normals = regularization_term_active_heliostats_normals * torch.exp(exponent_normals)
+                        
                         regularization_term_per_heliostat = torch.full(
                             (active_heliostats_mask.shape[0],),
                             float("inf"),
@@ -422,7 +434,7 @@ class SurfaceReconstructor:
                         )
                         regularization_term_per_heliostat[
                             active_heliostats_mask > 0
-                        ] = regularization_term_active_heliostats
+                        ] = scaled_loss_points + scaled_loss_normals
 
                         # scaled_regularization_term_per_heliostat = scale_loss(
                         #     loss=regularization_term_per_heliostat,
@@ -430,15 +442,13 @@ class SurfaceReconstructor:
                         #     weight=regularizer.weight,
                         # )
 
-                        flux_loss_per_heliostat = (
-                            flux_loss_per_heliostat
-                            + (regularization_term_per_heliostat * regularizer.weight)
-                        )
+                        regularizer_loss = regularizer_loss + regularization_term_per_heliostat
+        
 
-                    flux_loss_mean = flux_loss_per_heliostat[
-                        torch.isfinite(flux_loss_per_heliostat)
-                    ].mean()
-                    loss = flux_loss_mean
+                        #print(regularizer, regularization_term_per_heliostat * regularizer.weight)
+
+                    combined_loss = flux_loss_per_heliostat + regularizer_loss
+                    loss = flux_loss_per_heliostat[torch.isfinite(combined_loss)].mean()
                     loss.backward()
 
                     if self.ddp_setup[config_dictionary.is_nested]:
@@ -508,7 +518,7 @@ class SurfaceReconstructor:
                     final_loss_start_indices[
                         heliostat_group_index
                     ] : final_loss_start_indices[heliostat_group_index + 1]
-                ] = flux_loss_per_heliostat
+                ] = combined_loss
 
                 log.info(f"Rank: {rank}, surfaces reconstructed.")
 

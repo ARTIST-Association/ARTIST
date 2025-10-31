@@ -245,11 +245,11 @@ if __name__ == "__main__":
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
-    results_dir_default = config.get("results_dir", "./results")
+    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
     heliostat_for_reconstruction_default = config.get(
         "heliostat_for_reconstruction", {"AA39": [244862, 270398, 246213, 258959]}
     )
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
+    scenarios_dir_default = config.get("scenarios_dir", "./examples/hyperparameter_optimization/scenarios")
 
     parser.add_argument(
         "--device",

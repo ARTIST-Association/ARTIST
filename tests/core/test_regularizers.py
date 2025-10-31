@@ -29,6 +29,7 @@ def test_base_regularizer(
     with pytest.raises(NotImplementedError) as exc_info:
         base_regularizer(
             original_surface_points=torch.empty((2, 4), device=device),
+            original_surface_normals=torch.empty((2, 4), device=device),
             surface_points=torch.tensor([0, 1], device=device),
             surface_normals=(1,),
             device=device,
@@ -70,8 +71,14 @@ def test_total_variation_regularizer(
         [x.flatten(), y.flatten(), z_irregular.flatten()], dim=1
     ).unsqueeze(0)
 
-    surfaces = (
+    surface_points = (
         torch.cat([coordinates_smooth, coordinates_irregular], dim=0)
+        .unsqueeze(1)
+        .expand(2, 4, -1, 3)
+    )
+
+    surface_normals = (
+        torch.cat([coordinates_smooth, coordinates_irregular * 2], dim=0)
         .unsqueeze(1)
         .expand(2, 4, -1, 3)
     )
@@ -79,39 +86,51 @@ def test_total_variation_regularizer(
     total_variation = TotalVariationRegularizer(
         weight=1.0,
         reduction_dimensions=(1,),
-        surface="surface_points",
         number_of_neighbors=10,
         sigma=1.0,
     )
-    loss = total_variation(
+    loss_points, loss_normals = total_variation(
         original_surface_points=torch.empty(1, device=device),
-        surface_points=surfaces,
-        surface_normals=torch.empty(1, device=device),
+        original_surface_normals=torch.empty(1, device=device),
+        surface_points=surface_points,
+        surface_normals=surface_normals,
         device=device,
     )
 
     torch.testing.assert_close(
-        loss,
+        loss_points,
         torch.tensor([0.174590915442, 2.252339363098], device=device),
+        atol=5e-2,
+        rtol=5e-2,
+    )
+    torch.testing.assert_close(
+        loss_normals,
+        torch.tensor([0.174590915442, 4.307547569275], device=device),
         atol=5e-2,
         rtol=5e-2,
     )
 
 
 @pytest.mark.parametrize(
-    "original_surface_points, new_surface_points, expected",
+    "original_surface_points, new_surface_points, original_surface_normals, new_surface_normals, expected_points, expected_normals",
     [
         (
             torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]]]),
             torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 1.0, 3.0]]]]),
-            torch.tensor([2.0]),
+            torch.tensor([[[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]]]),    
+            torch.tensor([[[[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]]]),
+            torch.tensor([0.3333]),
+            torch.tensor([0.5]),
         ),
     ],
 )
 def test_ideal_surface_regularizer(
     original_surface_points: torch.Tensor,
     new_surface_points: torch.Tensor,
-    expected: torch.Tensor,
+    original_surface_normals: torch.Tensor,
+    new_surface_normals: torch.Tensor,
+    expected_points: torch.Tensor,
+    expected_normals: torch.Tensor,
     device: torch.device,
 ) -> None:
     """
@@ -139,11 +158,13 @@ def test_ideal_surface_regularizer(
     ideal_surface_regularizer = IdealSurfaceRegularizer(
         weight=1.0, reduction_dimensions=(1, 2, 3)
     )
-    loss = ideal_surface_regularizer(
+    loss_points, loss_normals = ideal_surface_regularizer(
         original_surface_points=original_surface_points.to(device),
+        original_surface_normals=original_surface_normals.to(device),
         surface_points=new_surface_points.to(device),
-        surface_normals=torch.empty(1, device=device),
+        surface_normals=new_surface_normals.to(device),
         device=device,
     )
 
-    torch.testing.assert_close(loss, expected.to(device), atol=5e-2, rtol=5e-2)
+    torch.testing.assert_close(loss_points, expected_points.to(device), atol=5e-2, rtol=5e-2)
+    torch.testing.assert_close(loss_normals, expected_normals.to(device), atol=5e-2, rtol=5e-2)

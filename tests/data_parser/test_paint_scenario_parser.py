@@ -151,7 +151,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.609997987747, 0.206321120262, 0.043028946966]),
+                torch.tensor([-0.802500069141, -0.436184167862,  0.000000000000])
             ],
         ),
     ],
@@ -419,7 +419,7 @@ def test_extract_paint_heliostats_fitted_surface(
                         ],
                     ]
                 ),
-                torch.tensor([-1.609997987747, 0.206321120262, 0.043028946966]),
+                torch.tensor([-0.802500069141, -0.436184167862,  0.000000000000])
             ],
             [
                 torch.tensor(
@@ -445,7 +445,7 @@ def test_extract_paint_heliostats_fitted_surface(
                         ],
                     ]
                 ),
-                torch.tensor([-1.606200933456, 0.212735980749, 0.040915220976]),
+                torch.tensor([-1.606200933456,  0.212735980749,  0.040915220976])
             ],
         ),
     ],

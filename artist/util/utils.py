@@ -1,3 +1,5 @@
+from functools import wraps
+import time
 import torch
 import torch.nn.functional as functional
 
@@ -796,11 +798,11 @@ def create_ideal_canted_nurbs_control_points(
 
     return control_points
 
-def perform_canting_and_translation(
+def perform_canting(
     canting,
-    facet_translations,
     data,
-    device
+    inverse=False,
+    device=None
 ):
     number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
     number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
@@ -824,79 +826,12 @@ def perform_canting_and_translation(
         :, :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
     ] = 1.0
 
-    canted_data = data @ rotation_matrix.mT
+    if inverse:
+        canted_data = data @ rotation_matrix
+    else:
+        canted_data = data @ rotation_matrix.mT
 
     return canted_data
-
-
-def normalize_bitmaps(
-    flux_distributions: torch.Tensor,
-    target_area_widths: torch.Tensor,
-    target_area_heights: torch.Tensor,
-    number_of_rays: torch.Tensor | int,
-) -> torch.Tensor:
-    """
-    Normalize a bitmap.
-
-    Parameters
-    ----------
-    flux_distributions : torch.Tensor
-        The flux distributions to be normalized.
-        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
-    target_area_widths : torch.Tensor
-        The target area widths.
-        Tensor of shape [number_of_bitmaps].
-    target_area_heights : torch.Tensor
-        The target area heights.
-        Tensor of shape [number_of_bitmaps].
-    number_of_rays : torch.Tensor | int
-        The number of rays used to generate the flux.
-        Tensor of shape [number_of_bitmaps].
-
-    Returns
-    -------
-    torch.Tensor
-        The normalized and scaled flux density distributions.
-        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
-    """
-    plane_areas = target_area_widths * target_area_heights
-    num_pixels = (
-        flux_distributions.shape[index_mapping.batched_bitmap_e]
-        * flux_distributions.shape[index_mapping.batched_bitmap_u]
-    )
-    plane_area_per_pixel = plane_areas / num_pixels
-
-    normalized_fluxes = flux_distributions / (
-        number_of_rays * plane_area_per_pixel
-    ).unsqueeze(-1).unsqueeze(-1)
-
-    std = torch.std(
-        normalized_fluxes,
-        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-        keepdim=True,
-    )
-    std = std + 1e-6
-
-    standardized = (
-        normalized_fluxes
-        - torch.mean(
-            normalized_fluxes,
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-            keepdim=True,
-        )
-    ) / std
-
-    valid_mask = (
-        flux_distributions.sum(
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-            keepdim=True,
-        )
-        != 0
-    ).float()
-
-    result = standardized * valid_mask
-
-    return result
 
 
 def trapezoid_distribution(

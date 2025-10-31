@@ -10,9 +10,14 @@ import artist.util.index_mapping
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util.environment_setup import get_device
+from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the calibration data parser."""
+
+
+runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
+runtime_log = runtime_manager.get_logger(__name__)
 
 
 class CalibrationDataParser:
@@ -109,6 +114,7 @@ class CalibrationDataParser:
         """
         raise NotImplementedError("Must be overridden!")
 
+    @runtime_manager.track_runtime(runtime_log)
     def load_flux_from_png(
         self,
         heliostat_flux_path_mapping: list[tuple[str, list[pathlib.Path]]],

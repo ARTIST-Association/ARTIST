@@ -2,13 +2,15 @@ metadata_root: "./"
 metadata_file_name: "calibration_metadata_all_heliostats.csv"
 data_dir: "/workVERLEIHNIX/share/PAINT"
 tower_file_name: "WRI1030197-tower-measurements.json"
-scenarios_dir: "./scenarios"
-results_dir: "./results"
-plots_dir: "./plots"
+scenarios_dir: "./examples/hyperparameter_optimization/scenarios"
+results_dir: "./examples/hyperparameter_optimization/results"
+plots_dir: "./examples/hyperparameter_optimization/plots"
 propulate_logs_dir: "./logs"
 calibration_image_type: "flux-centered"
 heliostat_for_reconstruction:
-  AA39: [244862, 270398, 246213, 258959]
+  AM56: [100249, 101584]  #"2022-04-28Z09:54:22Z", "2022-05-03Z08:33:12Z",
+  AM55: [100134, 101443]  #"2022-04-28Z09:04:45Z", "2022-05-03Z06:46:45Z",
+  AK54: [101239, 102345]  #"2022-05-03Z05:34:07Z", "2022-05-03Z12:26:30Z",
 reconstruction_parameter_ranges:
   number_of_surface_points: [30, 110]
   number_of_control_points: [4, 20]

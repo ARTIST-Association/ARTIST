@@ -529,55 +529,6 @@ def test_distortion_rotations(
         torch.testing.assert_close(distorted_rays, expected_distorted_rays.to(device))
 
 
-def test_normalize_bitmaps(device: torch.device) -> None:
-    """
-    Test the normalization for bitmaps.
-
-    Parameters
-    ----------
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    bitmap_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_optimized_motor_positions/distribution.pt"
-    )
-
-    bitmap = torch.load(bitmap_path, map_location=device, weights_only=True).unsqueeze(
-        0
-    )
-
-    normalized_bitmaps = utils.normalize_bitmaps(
-        flux_distributions=bitmap,
-        target_area_widths=torch.full(
-            (bitmap.shape[0],),
-            config_dictionary.utis_crop_width,
-            device=device,
-        ),
-        target_area_heights=torch.full(
-            (bitmap.shape[0],),
-            config_dictionary.utis_crop_height,
-            device=device,
-        ),
-        number_of_rays=bitmap.sum(dim=[1, 2]),
-    )
-
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_normalized_bitmaps"
-        / f"bitmaps_{device.type}.pt"
-    )
-
-    expected = torch.load(expected_path, map_location=device, weights_only=True)
-
-    torch.testing.assert_close(normalized_bitmaps, expected, atol=5e-4, rtol=5e-4)
-
-
 @pytest.mark.parametrize(
     "total_width, slope_width, plateau_width, expected",
     [

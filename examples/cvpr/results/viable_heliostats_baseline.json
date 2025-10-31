@@ -1,0 +1,1538 @@
+[
+  {
+    "name": "AG48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG48/Calibration/101317-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG48/Calibration/102468-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG48/Calibration/101317-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG48/Calibration/102468-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG48/Calibration/101317-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG48/Calibration/102468-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG48/Properties/AG48-heliostat-properties.json"
+  },
+  {
+    "name": "AG49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG49/Calibration/100519-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG49/Calibration/101790-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG49/Calibration/100519-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG49/Calibration/101790-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG49/Calibration/100519-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG49/Calibration/101790-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG49/Properties/AG49-heliostat-properties.json"
+  },
+  {
+    "name": "AG50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG50/Calibration/101315-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG50/Calibration/102465-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG50/Calibration/101315-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG50/Calibration/102465-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG50/Calibration/101315-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG50/Calibration/102465-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG50/Properties/AG50-heliostat-properties.json"
+  },
+  {
+    "name": "AG51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG51/Calibration/100130-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG51/Calibration/101380-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG51/Calibration/100130-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG51/Calibration/101380-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG51/Calibration/100130-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG51/Calibration/101380-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG51/Properties/AG51-heliostat-properties.json"
+  },
+  {
+    "name": "AG52",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG52/Calibration/134124-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG52/Calibration/134172-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG52/Calibration/134124-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG52/Calibration/134172-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG52/Calibration/134124-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG52/Calibration/134172-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG52/Properties/AG52-heliostat-properties.json"
+  },
+  {
+    "name": "AG53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG53/Calibration/111558-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG53/Calibration/113297-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG53/Calibration/111558-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG53/Calibration/113297-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG53/Calibration/111558-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG53/Calibration/113297-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG53/Properties/AG53-heliostat-properties.json"
+  },
+  {
+    "name": "AG54",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG54/Calibration/111556-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG54/Calibration/113294-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG54/Calibration/111556-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG54/Calibration/113294-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG54/Calibration/111556-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG54/Calibration/113294-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG54/Properties/AG54-heliostat-properties.json"
+  },
+  {
+    "name": "AG55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG55/Calibration/113066-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG55/Calibration/113932-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG55/Calibration/113066-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG55/Calibration/113932-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG55/Calibration/113066-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG55/Calibration/113932-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG55/Properties/AG55-heliostat-properties.json"
+  },
+  {
+    "name": "AG56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG56/Calibration/111557-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG56/Calibration/113295-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG56/Calibration/111557-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG56/Calibration/113295-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG56/Calibration/111557-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG56/Calibration/113295-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG56/Properties/AG56-heliostat-properties.json"
+  },
+  {
+    "name": "AG57",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG57/Calibration/111555-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG57/Calibration/113292-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG57/Calibration/111555-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG57/Calibration/113292-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG57/Calibration/111555-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG57/Calibration/113292-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG57/Properties/AG57-heliostat-properties.json"
+  },
+  {
+    "name": "AG58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AG58/Calibration/100173-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AG58/Calibration/101501-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG58/Calibration/100173-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AG58/Calibration/101501-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AG58/Calibration/100173-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AG58/Calibration/101501-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AG58/Properties/AG58-heliostat-properties.json"
+  },
+  {
+    "name": "AH48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH48/Calibration/100056-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH48/Calibration/101344-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH48/Calibration/100056-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH48/Calibration/101344-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH48/Calibration/100056-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH48/Calibration/101344-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH48/Properties/AH48-heliostat-properties.json"
+  },
+  {
+    "name": "AH49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH49/Calibration/100415-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH49/Calibration/101715-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH49/Calibration/100415-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH49/Calibration/101715-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH49/Calibration/100415-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH49/Calibration/101715-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH49/Properties/AH49-heliostat-properties.json"
+  },
+  {
+    "name": "AH50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH50/Calibration/101312-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH50/Calibration/103662-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH50/Calibration/101312-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH50/Calibration/103662-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH50/Calibration/101312-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH50/Calibration/103662-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH50/Properties/AH50-heliostat-properties.json"
+  },
+  {
+    "name": "AH55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH55/Calibration/100695-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH55/Calibration/101244-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH55/Calibration/100695-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH55/Calibration/101244-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH55/Calibration/100695-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH55/Calibration/101244-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH55/Properties/AH55-heliostat-properties.json"
+  },
+  {
+    "name": "AH56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH56/Calibration/100127-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH56/Calibration/101377-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH56/Calibration/100127-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH56/Calibration/101377-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH56/Calibration/100127-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH56/Calibration/101377-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH56/Properties/AH56-heliostat-properties.json"
+  },
+  {
+    "name": "AH57",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH57/Calibration/100128-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH57/Calibration/101379-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH57/Calibration/100128-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH57/Calibration/101379-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH57/Calibration/100128-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH57/Calibration/101379-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH57/Properties/AH57-heliostat-properties.json"
+  },
+  {
+    "name": "AH58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AH58/Calibration/100125-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AH58/Calibration/101376-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH58/Calibration/100125-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AH58/Calibration/101376-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AH58/Calibration/100125-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AH58/Calibration/101376-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AH58/Properties/AH58-heliostat-properties.json"
+  },
+  {
+    "name": "AI48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI48/Calibration/100557-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI48/Calibration/101826-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI48/Calibration/100557-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI48/Calibration/101826-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI48/Calibration/100557-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI48/Calibration/101826-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI48/Properties/AI48-heliostat-properties.json"
+  },
+  {
+    "name": "AI49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI49/Calibration/100618-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI49/Calibration/101866-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI49/Calibration/100618-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI49/Calibration/101866-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI49/Calibration/100618-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI49/Calibration/101866-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI49/Properties/AI49-heliostat-properties.json"
+  },
+  {
+    "name": "AI50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI50/Calibration/150849-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI50/Calibration/150870-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI50/Calibration/150849-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI50/Calibration/150870-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI50/Calibration/150849-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI50/Calibration/150870-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI50/Properties/AI50-heliostat-properties.json"
+  },
+  {
+    "name": "AI51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI51/Calibration/100562-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI51/Calibration/101830-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI51/Calibration/100562-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI51/Calibration/101830-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI51/Calibration/100562-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI51/Calibration/101830-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI51/Properties/AI51-heliostat-properties.json"
+  },
+  {
+    "name": "AI52",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI52/Calibration/100480-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI52/Calibration/101747-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI52/Calibration/100480-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI52/Calibration/101747-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI52/Calibration/100480-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI52/Calibration/101747-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI52/Properties/AI52-heliostat-properties.json"
+  },
+  {
+    "name": "AI53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI53/Calibration/100112-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI53/Calibration/101359-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI53/Calibration/100112-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI53/Calibration/101359-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI53/Calibration/100112-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI53/Calibration/101359-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI53/Properties/AI53-heliostat-properties.json"
+  },
+  {
+    "name": "AI54",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI54/Calibration/100478-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI54/Calibration/101745-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI54/Calibration/100478-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI54/Calibration/101745-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI54/Calibration/100478-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI54/Calibration/101745-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI54/Properties/AI54-heliostat-properties.json"
+  },
+  {
+    "name": "AI55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI55/Calibration/100111-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI55/Calibration/101357-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI55/Calibration/100111-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI55/Calibration/101357-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI55/Calibration/100111-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI55/Calibration/101357-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI55/Properties/AI55-heliostat-properties.json"
+  },
+  {
+    "name": "AI56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI56/Calibration/100230-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI56/Calibration/101565-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI56/Calibration/100230-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI56/Calibration/101565-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI56/Calibration/100230-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI56/Calibration/101565-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI56/Properties/AI56-heliostat-properties.json"
+  },
+  {
+    "name": "AI57",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI57/Calibration/100219-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI57/Calibration/101550-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI57/Calibration/100219-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI57/Calibration/101550-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI57/Calibration/100219-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI57/Calibration/101550-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI57/Properties/AI57-heliostat-properties.json"
+  },
+  {
+    "name": "AI58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI58/Calibration/100109-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI58/Calibration/101353-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI58/Calibration/100109-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI58/Calibration/101353-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI58/Calibration/100109-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI58/Calibration/101353-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI58/Properties/AI58-heliostat-properties.json"
+  },
+  {
+    "name": "AI59",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI59/Calibration/161464-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI59/Calibration/161914-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI59/Calibration/161464-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI59/Calibration/161914-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI59/Calibration/161464-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI59/Calibration/161914-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI59/Properties/AI59-heliostat-properties.json"
+  },
+  {
+    "name": "AI60",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI60/Calibration/100227-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI60/Calibration/101562-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI60/Calibration/100227-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI60/Calibration/101562-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI60/Calibration/100227-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI60/Calibration/101562-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI60/Properties/AI60-heliostat-properties.json"
+  },
+  {
+    "name": "AI61",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AI61/Calibration/100014-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AI61/Calibration/101338-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI61/Calibration/100014-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AI61/Calibration/101338-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AI61/Calibration/100014-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AI61/Calibration/101338-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AI61/Properties/AI61-heliostat-properties.json"
+  },
+  {
+    "name": "AJ49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ49/Calibration/101280-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ49/Calibration/102456-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ49/Calibration/101280-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ49/Calibration/102456-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ49/Calibration/101280-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ49/Calibration/102456-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ49/Properties/AJ49-heliostat-properties.json"
+  },
+  {
+    "name": "AJ50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ50/Calibration/100684-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ50/Calibration/101899-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ50/Calibration/100684-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ50/Calibration/101899-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ50/Calibration/100684-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ50/Calibration/101899-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ50/Properties/AJ50-heliostat-properties.json"
+  },
+  {
+    "name": "AJ51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ51/Calibration/100564-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ51/Calibration/101831-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ51/Calibration/100564-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ51/Calibration/101831-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ51/Calibration/100564-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ51/Calibration/101831-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ51/Properties/AJ51-heliostat-properties.json"
+  },
+  {
+    "name": "AJ53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ53/Calibration/101274-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ53/Calibration/103655-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ53/Calibration/101274-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ53/Calibration/103655-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ53/Calibration/101274-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ53/Calibration/103655-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ53/Properties/AJ53-heliostat-properties.json"
+  },
+  {
+    "name": "AJ54",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ54/Calibration/100120-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ54/Calibration/101371-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ54/Calibration/100120-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ54/Calibration/101371-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ54/Calibration/100120-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ54/Calibration/101371-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ54/Properties/AJ54-heliostat-properties.json"
+  },
+  {
+    "name": "AJ55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ55/Calibration/100113-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ55/Calibration/101360-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ55/Calibration/100113-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ55/Calibration/101360-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ55/Calibration/100113-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ55/Calibration/101360-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ55/Properties/AJ55-heliostat-properties.json"
+  },
+  {
+    "name": "AJ56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ56/Calibration/101268-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ56/Calibration/102452-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ56/Calibration/101268-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ56/Calibration/102452-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ56/Calibration/101268-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ56/Calibration/102452-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ56/Properties/AJ56-heliostat-properties.json"
+  },
+  {
+    "name": "AJ57",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ57/Calibration/101354-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ57/Calibration/101378-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ57/Calibration/101354-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ57/Calibration/101378-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ57/Calibration/101354-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ57/Calibration/101378-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ57/Properties/AJ57-heliostat-properties.json"
+  },
+  {
+    "name": "AJ58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ58/Calibration/113067-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ58/Calibration/119674-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ58/Calibration/113067-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ58/Calibration/119674-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ58/Calibration/113067-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ58/Calibration/119674-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ58/Properties/AJ58-heliostat-properties.json"
+  },
+  {
+    "name": "AJ61",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ61/Calibration/100110-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ61/Calibration/101355-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ61/Calibration/100110-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ61/Calibration/101355-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ61/Calibration/100110-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ61/Calibration/101355-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ61/Properties/AJ61-heliostat-properties.json"
+  },
+  {
+    "name": "AJ62",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AJ62/Calibration/100222-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AJ62/Calibration/101557-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ62/Calibration/100222-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AJ62/Calibration/101557-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AJ62/Calibration/100222-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AJ62/Calibration/101557-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AJ62/Properties/AJ62-heliostat-properties.json"
+  },
+  {
+    "name": "AK48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK48/Calibration/100568-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK48/Calibration/101833-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK48/Calibration/100568-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK48/Calibration/101833-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK48/Calibration/100568-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK48/Calibration/101833-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK48/Properties/AK48-heliostat-properties.json"
+  },
+  {
+    "name": "AK49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK49/Calibration/100632-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK49/Calibration/101875-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK49/Calibration/100632-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK49/Calibration/101875-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK49/Calibration/100632-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK49/Calibration/101875-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK49/Properties/AK49-heliostat-properties.json"
+  },
+  {
+    "name": "AK50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK50/Calibration/101246-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK50/Calibration/103648-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK50/Calibration/101246-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK50/Calibration/103648-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK50/Calibration/101246-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK50/Calibration/103648-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK50/Properties/AK50-heliostat-properties.json"
+  },
+  {
+    "name": "AK51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK51/Calibration/100571-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK51/Calibration/101835-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK51/Calibration/100571-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK51/Calibration/101835-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK51/Calibration/100571-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK51/Calibration/101835-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK51/Properties/AK51-heliostat-properties.json"
+  },
+  {
+    "name": "AK52",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK52/Calibration/100579-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK52/Calibration/101841-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK52/Calibration/100579-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK52/Calibration/101841-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK52/Calibration/100579-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK52/Calibration/101841-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK52/Properties/AK52-heliostat-properties.json"
+  },
+  {
+    "name": "AK53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK53/Calibration/100321-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK53/Calibration/100350-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK53/Calibration/100321-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK53/Calibration/100350-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK53/Calibration/100321-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK53/Calibration/100350-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK53/Properties/AK53-heliostat-properties.json"
+  },
+  {
+    "name": "AK54",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK54/Calibration/101239-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK54/Calibration/102345-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK54/Calibration/101239-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK54/Calibration/102345-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK54/Calibration/101239-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK54/Calibration/102345-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK54/Properties/AK54-heliostat-properties.json"
+  },
+  {
+    "name": "AK55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK55/Calibration/100224-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK55/Calibration/101559-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK55/Calibration/100224-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK55/Calibration/101559-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK55/Calibration/100224-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK55/Calibration/101559-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK55/Properties/AK55-heliostat-properties.json"
+  },
+  {
+    "name": "AK56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK56/Calibration/101387-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK56/Calibration/102474-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK56/Calibration/101387-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK56/Calibration/102474-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK56/Calibration/101387-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK56/Calibration/102474-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK56/Properties/AK56-heliostat-properties.json"
+  },
+  {
+    "name": "AK58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK58/Calibration/135432-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK58/Calibration/136411-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK58/Calibration/135432-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK58/Calibration/136411-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK58/Calibration/135432-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK58/Calibration/136411-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK58/Properties/AK58-heliostat-properties.json"
+  },
+  {
+    "name": "AK59",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK59/Calibration/100229-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK59/Calibration/101564-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK59/Calibration/100229-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK59/Calibration/101564-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK59/Calibration/100229-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK59/Calibration/101564-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK59/Properties/AK59-heliostat-properties.json"
+  },
+  {
+    "name": "AK60",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK60/Calibration/101395-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK60/Calibration/102478-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK60/Calibration/101395-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK60/Calibration/102478-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK60/Calibration/101395-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK60/Calibration/102478-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK60/Properties/AK60-heliostat-properties.json"
+  },
+  {
+    "name": "AK61",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK61/Calibration/100368-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK61/Calibration/101676-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK61/Calibration/100368-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK61/Calibration/101676-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK61/Calibration/100368-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK61/Calibration/101676-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK61/Properties/AK61-heliostat-properties.json"
+  },
+  {
+    "name": "AK62",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AK62/Calibration/100179-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AK62/Calibration/101511-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK62/Calibration/100179-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AK62/Calibration/101511-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AK62/Calibration/100179-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AK62/Calibration/101511-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AK62/Properties/AK62-heliostat-properties.json"
+  },
+  {
+    "name": "AL48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL48/Calibration/100139-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL48/Calibration/101451-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL48/Calibration/100139-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL48/Calibration/101451-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL48/Calibration/100139-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL48/Calibration/101451-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL48/Properties/AL48-heliostat-properties.json"
+  },
+  {
+    "name": "AL49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL49/Calibration/101429-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL49/Calibration/102541-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL49/Calibration/101429-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL49/Calibration/102541-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL49/Calibration/101429-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL49/Calibration/102541-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL49/Properties/AL49-heliostat-properties.json"
+  },
+  {
+    "name": "AL51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL51/Calibration/101426-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL51/Calibration/102527-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL51/Calibration/101426-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL51/Calibration/102527-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL51/Calibration/101426-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL51/Calibration/102527-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL51/Properties/AL51-heliostat-properties.json"
+  },
+  {
+    "name": "AL53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL53/Calibration/138485-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL53/Calibration/139117-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL53/Calibration/138485-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL53/Calibration/139117-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL53/Calibration/138485-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL53/Calibration/139117-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL53/Properties/AL53-heliostat-properties.json"
+  },
+  {
+    "name": "AL56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL56/Calibration/100015-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL56/Calibration/101433-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL56/Calibration/100015-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL56/Calibration/101433-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL56/Calibration/100015-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL56/Calibration/101433-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL56/Properties/AL56-heliostat-properties.json"
+  },
+  {
+    "name": "AL58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL58/Calibration/100527-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL58/Calibration/101804-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL58/Calibration/100527-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL58/Calibration/101804-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL58/Calibration/100527-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL58/Calibration/101804-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL58/Properties/AL58-heliostat-properties.json"
+  },
+  {
+    "name": "AL59",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL59/Calibration/101402-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL59/Calibration/102489-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL59/Calibration/101402-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL59/Calibration/102489-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL59/Calibration/101402-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL59/Calibration/102489-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL59/Properties/AL59-heliostat-properties.json"
+  },
+  {
+    "name": "AL60",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL60/Calibration/101525-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL60/Calibration/105740-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL60/Calibration/101525-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL60/Calibration/105740-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL60/Calibration/101525-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL60/Calibration/105740-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL60/Properties/AL60-heliostat-properties.json"
+  },
+  {
+    "name": "AL61",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL61/Calibration/101517-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL61/Calibration/103771-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL61/Calibration/101517-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL61/Calibration/103771-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL61/Calibration/101517-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL61/Calibration/103771-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL61/Properties/AL61-heliostat-properties.json"
+  },
+  {
+    "name": "AL62",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AL62/Calibration/101399-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AL62/Calibration/103730-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL62/Calibration/101399-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AL62/Calibration/103730-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AL62/Calibration/101399-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AL62/Calibration/103730-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AL62/Properties/AL62-heliostat-properties.json"
+  },
+  {
+    "name": "AM48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM48/Calibration/100160-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM48/Calibration/101486-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM48/Calibration/100160-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM48/Calibration/101486-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM48/Calibration/100160-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM48/Calibration/101486-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM48/Properties/AM48-heliostat-properties.json"
+  },
+  {
+    "name": "AM49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM49/Calibration/100867-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM49/Calibration/126084-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM49/Calibration/100867-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM49/Calibration/126084-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM49/Calibration/100867-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM49/Calibration/126084-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM49/Properties/AM49-heliostat-properties.json"
+  },
+  {
+    "name": "AM50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM50/Calibration/101023-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM50/Calibration/102231-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM50/Calibration/101023-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM50/Calibration/102231-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM50/Calibration/101023-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM50/Calibration/102231-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM50/Properties/AM50-heliostat-properties.json"
+  },
+  {
+    "name": "AM51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM51/Calibration/100167-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM51/Calibration/101494-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM51/Calibration/100167-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM51/Calibration/101494-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM51/Calibration/100167-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM51/Calibration/101494-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM51/Properties/AM51-heliostat-properties.json"
+  },
+  {
+    "name": "AM52",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM52/Calibration/100168-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM52/Calibration/101495-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM52/Calibration/100168-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM52/Calibration/101495-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM52/Calibration/100168-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM52/Calibration/101495-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM52/Properties/AM52-heliostat-properties.json"
+  },
+  {
+    "name": "AM53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM53/Calibration/100811-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM53/Calibration/102021-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM53/Calibration/100811-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM53/Calibration/102021-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM53/Calibration/100811-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM53/Calibration/102021-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM53/Properties/AM53-heliostat-properties.json"
+  },
+  {
+    "name": "AM54",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM54/Calibration/100244-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM54/Calibration/101579-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM54/Calibration/100244-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM54/Calibration/101579-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM54/Calibration/100244-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM54/Calibration/101579-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM54/Properties/AM54-heliostat-properties.json"
+  },
+  {
+    "name": "AM55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM55/Calibration/100134-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM55/Calibration/101443-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM55/Calibration/100134-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM55/Calibration/101443-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM55/Calibration/100134-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM55/Calibration/101443-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM55/Properties/AM55-heliostat-properties.json"
+  },
+  {
+    "name": "AM56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM56/Calibration/100249-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM56/Calibration/101584-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM56/Calibration/100249-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM56/Calibration/101584-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM56/Calibration/100249-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM56/Calibration/101584-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM56/Properties/AM56-heliostat-properties.json"
+  },
+  {
+    "name": "AM57",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM57/Calibration/100234-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM57/Calibration/101569-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM57/Calibration/100234-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM57/Calibration/101569-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM57/Calibration/100234-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM57/Calibration/101569-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM57/Properties/AM57-heliostat-properties.json"
+  },
+  {
+    "name": "AM58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM58/Calibration/100246-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM58/Calibration/101581-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM58/Calibration/100246-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM58/Calibration/101581-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM58/Calibration/100246-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM58/Calibration/101581-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM58/Properties/AM58-heliostat-properties.json"
+  },
+  {
+    "name": "AM59",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM59/Calibration/101416-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM59/Calibration/103692-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM59/Calibration/101416-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM59/Calibration/103692-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM59/Calibration/101416-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM59/Calibration/103692-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM59/Properties/AM59-heliostat-properties.json"
+  },
+  {
+    "name": "AM60",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM60/Calibration/101406-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM60/Calibration/103688-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM60/Calibration/101406-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM60/Calibration/103688-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM60/Calibration/101406-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM60/Calibration/103688-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM60/Properties/AM60-heliostat-properties.json"
+  },
+  {
+    "name": "AM62",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AM62/Calibration/100236-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AM62/Calibration/101571-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM62/Calibration/100236-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AM62/Calibration/101571-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AM62/Calibration/100236-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AM62/Calibration/101571-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AM62/Properties/AM62-heliostat-properties.json"
+  },
+  {
+    "name": "AN48",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN48/Calibration/101028-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN48/Calibration/102239-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN48/Calibration/101028-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN48/Calibration/102239-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN48/Calibration/101028-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN48/Calibration/102239-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN48/Properties/AN48-heliostat-properties.json"
+  },
+  {
+    "name": "AN49",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN49/Calibration/100873-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN49/Calibration/102077-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN49/Calibration/100873-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN49/Calibration/102077-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN49/Calibration/100873-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN49/Calibration/102077-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN49/Properties/AN49-heliostat-properties.json"
+  },
+  {
+    "name": "AN50",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN50/Calibration/100162-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN50/Calibration/101489-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN50/Calibration/100162-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN50/Calibration/101489-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN50/Calibration/100162-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN50/Calibration/101489-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN50/Properties/AN50-heliostat-properties.json"
+  },
+  {
+    "name": "AN51",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN51/Calibration/100169-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN51/Calibration/101496-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN51/Calibration/100169-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN51/Calibration/101496-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN51/Calibration/100169-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN51/Calibration/101496-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN51/Properties/AN51-heliostat-properties.json"
+  },
+  {
+    "name": "AN52",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN52/Calibration/100165-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN52/Calibration/101492-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN52/Calibration/100165-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN52/Calibration/101492-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN52/Calibration/100165-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN52/Calibration/101492-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN52/Properties/AN52-heliostat-properties.json"
+  },
+  {
+    "name": "AN53",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN53/Calibration/59917-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN53/Calibration/61996-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN53/Calibration/59917-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN53/Calibration/61996-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN53/Calibration/59917-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN53/Calibration/61996-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN53/Properties/AN53-heliostat-properties.json"
+  },
+  {
+    "name": "AN54",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN54/Calibration/100239-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN54/Calibration/101574-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN54/Calibration/100239-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN54/Calibration/101574-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN54/Calibration/100239-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN54/Calibration/101574-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN54/Properties/AN54-heliostat-properties.json"
+  },
+  {
+    "name": "AN55",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN55/Calibration/134131-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN55/Calibration/134179-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN55/Calibration/134131-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN55/Calibration/134179-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN55/Calibration/134131-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN55/Calibration/134179-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN55/Properties/AN55-heliostat-properties.json"
+  },
+  {
+    "name": "AN56",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN56/Calibration/100238-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN56/Calibration/101573-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN56/Calibration/100238-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN56/Calibration/101573-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN56/Calibration/100238-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN56/Calibration/101573-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN56/Properties/AN56-heliostat-properties.json"
+  },
+  {
+    "name": "AN57",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN57/Calibration/100242-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN57/Calibration/101578-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN57/Calibration/100242-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN57/Calibration/101578-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN57/Calibration/100242-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN57/Calibration/101578-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN57/Properties/AN57-heliostat-properties.json"
+  },
+  {
+    "name": "AN58",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN58/Calibration/101397-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN58/Calibration/102483-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN58/Calibration/101397-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN58/Calibration/102483-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN58/Calibration/101397-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN58/Calibration/102483-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN58/Properties/AN58-heliostat-properties.json"
+  },
+  {
+    "name": "AN59",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN59/Calibration/101404-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN59/Calibration/102497-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN59/Calibration/101404-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN59/Calibration/102497-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN59/Calibration/101404-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN59/Calibration/102497-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN59/Properties/AN59-heliostat-properties.json"
+  },
+  {
+    "name": "AN60",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN60/Calibration/100298-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN60/Calibration/101629-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN60/Calibration/100298-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN60/Calibration/101629-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN60/Calibration/100298-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN60/Calibration/101629-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN60/Properties/AN60-heliostat-properties.json"
+  },
+  {
+    "name": "AN61",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN61/Calibration/100096-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN61/Calibration/101441-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN61/Calibration/100096-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN61/Calibration/101441-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN61/Calibration/100096-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN61/Calibration/101441-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN61/Properties/AN61-heliostat-properties.json"
+  },
+  {
+    "name": "AN62",
+    "calibrations": [
+      "/workVERLEIHNIX/share/PAINT/AN62/Calibration/101407-calibration-properties.json",
+      "/workVERLEIHNIX/share/PAINT/AN62/Calibration/103690-calibration-properties.json"
+    ],
+    "kinematic_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN62/Calibration/101407-flux.png",
+      "/workVERLEIHNIX/share/PAINT/AN62/Calibration/103690-flux.png"
+    ],
+    "surface_reconstruction_flux_images": [
+      "/workVERLEIHNIX/share/PAINT/AN62/Calibration/101407-flux-centered.png",
+      "/workVERLEIHNIX/share/PAINT/AN62/Calibration/103690-flux-centered.png"
+    ],
+    "properties": "/workVERLEIHNIX/share/PAINT/AN62/Properties/AN62-heliostat-properties.json"
+  }
+]

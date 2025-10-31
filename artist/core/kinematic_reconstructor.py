@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import time
 from typing import Any, cast
 
 import torch
@@ -14,9 +15,13 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
+from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
+
+runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
+runtime_log = runtime_manager.get_logger(__name__)
 
 
 class KinematicReconstructor:
@@ -93,6 +98,7 @@ class KinematicReconstructor:
                 f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
             )
 
+    @runtime_manager.track_runtime(runtime_log)
     def reconstruct_kinematic(
         self,
         loss_definition: Loss,
@@ -190,7 +196,7 @@ class KinematicReconstructor:
                 self.data[config_dictionary.heliostat_data_mapping],
             )
             (
-                _,
+                measured_fluxes,
                 focal_spots_measured,
                 incident_ray_directions,
                 _,
@@ -265,7 +271,7 @@ class KinematicReconstructor:
                             config_dictionary.heliostat_group_world_size
                         ],
                         rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                        batch_size=heliostat_group.number_of_active_heliostats,
+                        batch_size=self.optimization_configuration[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
@@ -300,7 +306,7 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    loss = loss_per_heliostat[torch.isfinite(loss_per_heliostat)].sum()
+                    loss = loss_per_heliostat[torch.isfinite(loss_per_heliostat)].mean()
 
                     loss.backward()
 

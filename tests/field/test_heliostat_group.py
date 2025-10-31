@@ -32,6 +32,8 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
         ),
         surface_points=torch.rand((3, 100, 4), device=device),
         surface_normals=torch.rand((3, 100, 4), device=device),
+        canting=torch.rand((3, 4, 2, 4), device=device),
+        facet_translations=torch.rand((3, 4, 4), device=device),
         initial_orientations=torch.tensor(
             [[0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
             device=device,
@@ -135,6 +137,8 @@ def test_abstract_align(
         ),
         surface_points=torch.rand((3, 100, 4), device=device),
         surface_normals=torch.rand((3, 100, 4), device=device),
+        canting=torch.rand((3, 4, 2, 4), device=device),
+        facet_translations=torch.rand((3, 4, 4), device=device),
         initial_orientations=torch.tensor(
             [[0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
             device=device,

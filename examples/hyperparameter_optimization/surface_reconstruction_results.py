@@ -269,11 +269,11 @@ def reconstruct_and_create_flux_image(
             config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
         }
 
-        heliostat_for_reconstruction_name = heliostat_data_mapping[0][0]
+        heliostats_for_reconstruction = [heliostat_data[0] for heliostat_data in heliostat_data_mapping]
         heliostat_group_for_reconstruction = [
             group
             for group in scenario.heliostat_field.heliostat_groups
-            if heliostat_for_reconstruction_name in group.names
+            if heliostats_for_reconstruction == group.names
         ][0]
 
         heliostat_properties_tuples: list[tuple[str, pathlib.Path]] = [
@@ -283,6 +283,7 @@ def reconstruct_and_create_flux_image(
                     f"{data_directory}/{heliostat_for_reconstruction_name}/{paint_mappings.SAVE_PROPERTIES}/{heliostat_for_reconstruction_name}-{paint_mappings.HELIOSTAT_PROPERTIES_KEY}.json"
                 ),
             )
+            for heliostat_for_reconstruction_name in heliostat_group_for_reconstruction.names
         ]
 
         # Extract facet translations and canting vectors.
@@ -291,14 +292,10 @@ def reconstruct_and_create_flux_image(
             convert_to_4d=True,
             device=device,
         )
-        facet_transforms_by_name = {
-            heliostat_name: (facet_translations, facet_canting_vectors)
-            for heliostat_name, facet_translations, facet_canting_vectors in facet_transforms
-        }
 
         # Configure regularizers and their weights.
         ideal_surface_regularizer = IdealSurfaceRegularizer(
-            weight=0.4,#reconstruction_parameters["ideal_surface_loss_weight"],
+            weight=reconstruction_parameters["ideal_surface_loss_weight"],
             reduction_dimensions=(1, 2, 3),
         )
 
@@ -306,8 +303,9 @@ def reconstruct_and_create_flux_image(
             ideal_surface_regularizer,
         ]
 
-        scheduler = config_dictionary.reduce_on_plateau
+        scheduler = config_dictionary.exponential
         scheduler_parameters = {
+            config_dictionary.gamma:0.999,
             config_dictionary.min: 1e-7,
             config_dictionary.reduce_factor: reconstruction_parameters["reduce_factor"],
             config_dictionary.patience: reconstruction_parameters["patience"],
@@ -355,7 +353,7 @@ def reconstruct_and_create_flux_image(
             .unsqueeze(0)
             .unsqueeze(0)
             .expand(
-                1,
+                heliostat_group_for_reconstruction.number_of_heliostats,
                 heliostat_group_for_reconstruction.number_of_facets_per_heliostat,
                 -1,
                 -1,
@@ -364,15 +362,13 @@ def reconstruct_and_create_flux_image(
 
         reconstructed_nurbs = NURBSSurfaces(
             degrees=heliostat_group_for_reconstruction.nurbs_degrees,
-            control_points=heliostat_group_for_reconstruction.nurbs_control_points[
-                0
-            ].unsqueeze(0),
+            control_points=heliostat_group_for_reconstruction.nurbs_control_points,
             device=device,
         )
 
         reconstructed_points, reconstructed_normals = (
             reconstructed_nurbs.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points[0].unsqueeze(0),
+                evaluation_points=evaluation_points,
                 canting=heliostat_group_for_reconstruction.canting,
                 facet_translations=heliostat_group_for_reconstruction.facet_translations,
                 device=device,
@@ -443,25 +439,32 @@ def reconstruct_and_create_flux_image(
             target_area_mask=validation_target_area_mask,
             reduction_dimensions=(1, 2),
             device=device,
-        )[0].item()
+        )
 
     # Apply inverse canting and translation.
-    facet_translations, facet_canting_vectors = facet_transforms_by_name[
-        heliostat_for_reconstruction_name
-    ]
-    reconstructed_normals_decanted = perform_inverse_canting_and_translation(
-        canted_points=reconstructed_normals[0],
-        translation=facet_translations,
-        canting=facet_canting_vectors,
+    #facet_translations = torch.stack([facet_transforms[i][1] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
+    canting = torch.stack([facet_transforms[i][2] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
+
+    reconstructed_normals_decanted = utils.perform_canting(
+        canting=canting,
+        data=reconstructed_normals,
+        inverse=True,
+        device=device,
+    )
+
+    reconstructed_points_decanted = utils.perform_canting(
+        canting=canting,
+        data=reconstructed_points,
+        inverse=True,
         device=device,
     )
 
     results = {
         "measured_flux": validation_measured_flux_distributions,
         "reconstructed_flux": validation_bitmaps_per_heliostat_reconstructed,
-        "kl_div_reconstructed": kl_div_r,
-        "points_reconstructed": reconstructed_points,
-        "normals_reconstructed": reconstructed_normals_decanted.unsqueeze(0),
+        "kl_div": kl_div_r,
+        "points": reconstructed_points_decanted,
+        "normals": reconstructed_normals_decanted
     }
 
     results_dict[result_key] = results
@@ -601,7 +604,7 @@ def create_ideal_flux_image(
 
     results = {
         "ideal_flux": validation_bitmaps_per_heliostat_ideal,
-        "kl_div_ideal": kl_div_ideal,
+        "kl_div": kl_div_ideal,
     }
     results_dict[result_key] = results
 
@@ -680,11 +683,11 @@ def create_deflectometry_surface(
                 device=device,
             )
 
-        heliostat_for_reconstruction_name = validation_heliostat_data_mapping[0][0]
+        heliostats_for_reconstruction = [heliostat_data[0] for heliostat_data in validation_heliostat_data_mapping]
         heliostat_group_for_reconstruction = [
             group
             for group in scenario.heliostat_field.heliostat_groups
-            if heliostat_for_reconstruction_name in group.names
+            if heliostats_for_reconstruction == group.names
         ][0]
 
         heliostat_properties_tuples: list[tuple[str, pathlib.Path]] = [
@@ -694,6 +697,7 @@ def create_deflectometry_surface(
                     f"{data_directory}/{heliostat_for_reconstruction_name}/{paint_mappings.SAVE_PROPERTIES}/{heliostat_for_reconstruction_name}-{paint_mappings.HELIOSTAT_PROPERTIES_KEY}.json"
                 ),
             )
+            for heliostat_for_reconstruction_name in heliostat_group_for_reconstruction.names
         ]
 
         # Extract facet translations and canting vectors.
@@ -702,10 +706,6 @@ def create_deflectometry_surface(
             convert_to_4d=True,
             device=device,
         )
-        facet_transforms_by_name = {
-            heliostat_name: (facet_translations, facet_canting_vectors)
-            for heliostat_name, facet_translations, facet_canting_vectors in facet_transforms
-        }
 
         evaluation_points = (
             utils.create_nurbs_evaluation_grid(
@@ -715,7 +715,7 @@ def create_deflectometry_surface(
             .unsqueeze(0)
             .unsqueeze(0)
             .expand(
-                1,
+                heliostat_group_for_reconstruction.number_of_heliostats,
                 heliostat_group_for_reconstruction.number_of_facets_per_heliostat,
                 -1,
                 -1,
@@ -724,34 +724,38 @@ def create_deflectometry_surface(
 
         nurbs = NURBSSurfaces(
             degrees=heliostat_group_for_reconstruction.nurbs_degrees,
-            control_points=heliostat_group_for_reconstruction.nurbs_control_points[
-                0
-            ].unsqueeze(0),
+            control_points=heliostat_group_for_reconstruction.nurbs_control_points,
             device=device,
         )
 
         points_deflectometry, normals_deflectometry = (
             nurbs.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points[0].unsqueeze(0),
+                evaluation_points=evaluation_points,
                 canting=None,
                 facet_translations=None,
                 device=device,
             )
         )
         # Apply inverse canting and translation.
-        facet_translations, facet_canting_vectors = facet_transforms_by_name[
-            heliostat_for_reconstruction_name
-        ]
-        normals_decanted = perform_inverse_canting_and_translation(
-            canted_points=normals_deflectometry[0],
-            translation=facet_translations,
-            canting=facet_canting_vectors,
+        canting = torch.stack([facet_transforms[i][2] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
+
+        reconstructed_normals_decanted = utils.perform_canting(
+            canting=canting,
+            data=normals_deflectometry,
+            inverse=True,
+            device=device,
+        )
+
+        reconstructed_points_decanted = utils.perform_canting(
+            canting=canting,
+            data=points_deflectometry,
+            inverse=True,
             device=device,
         )
 
     results = {
-        "points_deflectometry": points_deflectometry,
-        "normals_deflectometry": normals_decanted.unsqueeze(0),
+        "points": reconstructed_points_decanted,
+        "normals": reconstructed_normals_decanted,
     }
 
     results_dict[result_key] = results
@@ -819,8 +823,8 @@ if __name__ == "__main__":
     heliostat_for_reconstruction_default = config.get(
         "heliostat_for_reconstruction", {"AA39": [244862, 270398, 246213, 258959]}
     )
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
-    results_dir_default = config.get("results_dir", "./results")
+    scenarios_dir_default = config.get("scenarios_dir", "./examples/hyperparameter_optimization/scenarios")
+    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
 
     parser.add_argument(
         "--device",
@@ -891,16 +895,17 @@ if __name__ == "__main__":
 
     validation_heliostat_data_mapping = [
         (
-            heliostat_data_mapping[0][0],
-            [heliostat_data_mapping[0][1][0]],
-            [heliostat_data_mapping[0][2][0]],
+            heliostat_data[0],
+            [heliostat_data[1][0]],
+            [heliostat_data[2][0]],
         )
+        for heliostat_data in heliostat_data_mapping
     ]
 
     with open(optimized_parameter_file, "r") as file:
         reconstruction_parameters = json.load(file)
 
-    # Generate and merge flux images and surfaces.
+    #Generate and merge flux images and surfaces.
     reconstruct_and_create_flux_image(
         data_directory=data_dir,
         scenario_path=ideal_scenario_file,
@@ -927,5 +932,15 @@ if __name__ == "__main__":
         validation_heliostat_data_mapping=validation_heliostat_data_mapping,
         results_file=results_path,
         result_key="deflectometry",
+        device=device,
+    )
+
+    create_deflectometry_surface(
+        data_directory=data_dir,
+        scenario_path=ideal_scenario_file,
+        reconstruction_parameters=reconstruction_parameters,
+        validation_heliostat_data_mapping=validation_heliostat_data_mapping,
+        results_file=results_path,
+        result_key="ideal_surface",
         device=device,
     )

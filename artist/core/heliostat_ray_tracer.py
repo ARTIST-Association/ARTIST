@@ -397,8 +397,12 @@ class HeliostatRayTracer:
                 target_area_mask=target_area_mask[active_heliostats_mask_batch],
                 device=device,
             )
+            
+            active_heliostat_indices = torch.nonzero(
+                active_heliostats_mask_batch, as_tuple=False
+            ).squeeze()
 
-            flux_distributions = flux_distributions + bitmaps
+            flux_distributions[active_heliostat_indices] = bitmaps
 
         return flux_distributions
 
@@ -686,20 +690,24 @@ class HeliostatRayTracer:
             )
             & intersection_indices_2
         )
-        mask = final_intersection_indices.flatten()
+        mask = final_intersection_indices.contiguous().view(-1)
 
         active_heliostat_indices = torch.nonzero(
             active_heliostats_mask, as_tuple=False
-        ).squeeze()
-        heliostat_indices = torch.repeat_interleave(
-            active_heliostat_indices,
-            total_intersections * self.heliostat_group.number_of_facets_per_heliostat,
+        )
+        # heliostat_indices = torch.repeat_interleave(
+        #     active_heliostat_indices,
+        #     total_intersections * self.heliostat_group.number_of_facets_per_heliostat,
+        # )
+        active_heliostat_indices_batch = active_heliostat_indices.squeeze() - active_heliostat_indices[0].item()
+        heliostat_indices_batch = active_heliostat_indices_batch.repeat_interleave(
+            total_intersections * self.heliostat_group.number_of_facets_per_heliostat
         )
 
         # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(
             (
-                self.heliostat_group.number_of_active_heliostats,
+                active_heliostat_indices.shape[0],
                 self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
                 self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
             ),
@@ -710,7 +718,7 @@ class HeliostatRayTracer:
         # Add up all distributed intensities in the corresponding indices.
         bitmaps_per_heliostat.index_put_(
             (
-                heliostat_indices[mask],
+                heliostat_indices_batch[mask],
                 self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
                 - 1
                 - y_indices[final_intersection_indices],
