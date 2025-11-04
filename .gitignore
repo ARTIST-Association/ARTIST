@@ -172,11 +172,12 @@ cython_debug/
 .vscode/settings.json
 examples/paint_plots/data/
 examples/paint_plots/plots/
-examples/cvpr/data_for_stral/
-examples/cvpr/measured_data/
-examples/cvpr/plots/
-examples/cvpr/results/
-examples/cvpr/scenarios/
+examples/field_optimizations/data_for_stral/
+examples/field_optimizations/measured_data/
+examples/field_optimizations/plots/
+examples/field_optimizations/results/
+examples/field_optimizations/scenarios/
+examples/field_optimizations/metadata
 
 # Local config files.
 **/config.local.json
