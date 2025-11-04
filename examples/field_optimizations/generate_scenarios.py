@@ -35,11 +35,6 @@ def find_latest_deflectometry_file(heliostat_name: str, data_directory: Path) ->
     -------
     pathlib.Path
         Path to the latest deflectometry file.
-
-    Raises
-    ------
-    FileNotFoundError
-        If no matching file is found.
     """
     search_path = (
         pathlib.Path(data_directory)
@@ -50,9 +45,6 @@ def find_latest_deflectometry_file(heliostat_name: str, data_directory: Path) ->
     files = sorted(search_path.glob(pattern))
     if not files:
         return None
-        # raise FileNotFoundError(
-        #     f"No deflectometry file found for {heliostat_name} in {search_path}."
-        # )
     return files[-1]
 
 
@@ -63,24 +55,20 @@ def generate_ideal_scenario(
     device: torch.device | None = None,
 ) -> None:
     """
-    Generate an HDF5 scenario for the flux prediction plots using ``PAINT`` data.
+    Generate an ideal HDF5 scenario for the field optimizations.
 
     Parameters
     ----------
-    data_directory : pathlib.Path
-        Directory where the ``PAINT`` data is stored.
     scenario_path : pathlib.Path
         Path to save the generated HDF5 scenario.
     tower_file_path : pathlib.Path
         Path to the tower measurements file.
-    heliostat_names : list[str]
-        Names of the heliostats to include in the scenario.
+    heliostat_files_list : list[tuple[str, pathlib.Path]]
+        List of heliostat names and their property files to include in the scenario.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
-    use_deflectometry : bool, optional
-        Whether to use deflectometry data for surface fitting (default is True).
     """
     device = get_device(device=device)
 
@@ -127,13 +115,30 @@ def generate_ideal_scenario(
 
 
 def generate_fitted_scenario(
-    data_directory: Path,
-    scenario_path: Path,
-    tower_file_path: Path,
+    data_directory: pathlib.Path,
+    scenario_path: pathlib.Path,
+    tower_file_path: pathlib.Path,
     heliostat_names: list[str],
     device: torch.device | None = None,
 ) -> None:
+    """
+    Generate a deflectometry HDF5 scenario for the evaluation of the field optimizations.
     
+    Parameters
+    ----------
+    data_directory : pathlib.Path
+        Path to the data directory.
+    scenario_path : pathlib.Path
+        Path to where the scenarios will be saved.
+    tower_file_path : pathlib.Path
+        Path to the tower data file.
+    heliostat_names : list[str]
+        List of heliostat names to include in the scenario.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+    """
     device = get_device(device=device)
 
     # Include the power plant configuration.
@@ -174,7 +179,7 @@ def generate_fitted_scenario(
         if (deflectometry_file := find_latest_deflectometry_file(heliostat_name, data_directory)) is not None
     ]
 
-
+    # Fit the NURBS.
     nurbs_fit_optimizer = torch.optim.Adam(
         [torch.empty(1, requires_grad=True)], lr=1e-3
     )
@@ -187,6 +192,7 @@ def generate_fitted_scenario(
         threshold_mode="abs",
     )
 
+    # Create the list of heliostats.
     heliostat_list_config, prototype_config = (
         paint_scenario_parser.extract_paint_heliostats_fitted_surface(
             paths=heliostat_files_list,
@@ -201,6 +207,7 @@ def generate_fitted_scenario(
             device=device,
         )
     )
+
     # Generate the scenario given the defined parameters.
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
@@ -213,15 +220,13 @@ def generate_fitted_scenario(
     scenario_generator.generate_scenario()
 
 
-
 if __name__ == "__main__":
     """
-    Generate scenarios for the flux prediction plots.
+    Generate scenarios for the field optimizations.
 
-    One of these scenarios uses ideal surfaces whilst one includes surfaces fitted with deflectometry data.
-    If a configuration file is provided the values will be loaded from this file. It is also possible to override
-    the configuration file using command line arguments. If no command line arguments and no configuration file
-    is provided, default values will be used which may fail.
+    This will generate ideal scenarios for the baseline case and for the full-field. Additionally it will generate 
+    a fitted scenario with deflectometry data, containing only the heliostats from the baseline case which also have 
+    available deflectometry measurements. The deflectometry scenario is used for the evaluation plots. 
 
     Parameters
     ----------
@@ -233,14 +238,16 @@ if __name__ == "__main__":
         Path to the data directory.
     tower_file_name : str
         Name of the file containing the tower measurements.
-    heliostats : dict[str, int]
-        The heliostats and associated calibration measurement required in the scenario.
+    results_dir : str
+        Path to the results directory containing the viable heliostats list.
     scenarios_dir : str
         Path to the directory for saving the generated scenarios.
+    heliostat_list_baseline : list[str]
+        List of all heliostat names included in the baseline measurement.
     """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
-    default_config_path = script_dir / "cvpr_config.yaml"
+    default_config_path = script_dir / "config.yaml"
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -266,17 +273,14 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
+    data_dir_default = config.get("data_dir", "./examples/field_optimizations/field_data")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
-    heliostats_for_plots_default = config.get(
-        "heliostats_for_plots", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
-    )
-    results_dir_default = config.get("results_dir", "./examples/cvpr/results")
-    scenarios_dir_default = config.get("scenarios_dir", "./examples/cvpr/scenarios")
-    heliostat_list_default = config.get("heliostat_list", None)
+    results_dir_default = config.get("results_dir", "./examples/field_optimizations/results")
+    scenarios_dir_default = config.get("scenarios_dir", "./examples/field_optimizations/scenarios")
+    heliostat_list_baseline_default = config.get("heliostat_list_baseline", None)
 
     parser.add_argument(
         "--device",
@@ -287,51 +291,43 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir",
         type=str,
-        help="Path to downloaded paint data.",
+        help="Path to the data directory.",
         default=data_dir_default,
     )
     parser.add_argument(
         "--tower_file_name",
         type=str,
-        help="File name containing the tower data.",
+        help="Name of the file containing the tower measurements.",
         default=tower_file_name_default,
     )
     parser.add_argument(
         "--results_dir",
         type=str,
-        help="Path to the results containing the viable heliostats list.",
+        help="Path to the results directory containing the viable heliostats list.",
         default=results_dir_default,
     )
     parser.add_argument(
         "--scenarios_dir",
         type=str,
-        help="Path to save the generated scenario.",
+        help="Path to the directory for saving the generated scenarios.",
         default=scenarios_dir_default,
     )
     parser.add_argument(
-        "--heliostats_for_plots",
-        type=str,
-        help="Heliostats and calibration measurement required in the scenario.",
-        nargs="+",
-        default=heliostats_for_plots_default,
-    )
-    parser.add_argument(
-        "--heliostat_list",
-        type=str,
-        help="Path to JSON file containing a list of heliostat names to restrict to.",
-        default=heliostat_list_default,
+        "--heliostat_list_baseline",
+        type=list[str],
+        help="List of all heliostat names included in the baseline measurement.",
+        default=heliostat_list_baseline_default,
     )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
 
     device = get_device(torch.device(args.device))
-
     data_dir = pathlib.Path(args.data_dir)
     tower_file = data_dir / args.tower_file_name
 
-    for case in ["test", "baseline", "full_field"]:
-        viable_heliostats_data = pathlib.Path(args.results_dir) / f"viable_heliostats_{case}.json"
+    for case in ["baseline", "full_field"]:
+        viable_heliostats_data = pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
         if not viable_heliostats_data.exists():
             raise FileNotFoundError(
                 f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
@@ -368,7 +364,7 @@ if __name__ == "__main__":
             )
 
     deflectometry_scenario_path = (
-        pathlib.Path(args.scenarios_dir) / "deflectometry_baseline_scenario.h5"
+        pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_for_comparison.h5"
     )
     if deflectometry_scenario_path.exists():
         print(
@@ -382,6 +378,6 @@ if __name__ == "__main__":
             data_directory=data_dir,
             scenario_path=deflectometry_scenario_path,
             tower_file_path=tower_file,
-            heliostat_names=args.heliostat_list,
+            heliostat_names=args.heliostat_list_baseline,
             device=device,
         )
