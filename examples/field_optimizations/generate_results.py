@@ -30,7 +30,7 @@ set_logger_config()
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-runtime_manager = RuntimeLogger(log_file="./examples/cvpr/results/runtime_log.txt")
+runtime_manager = RuntimeLogger(log_file="./examples/field_optimizations/results/runtime_log.txt")
 runtime_log = runtime_manager.get_logger(__name__)
 
 
@@ -1258,8 +1258,7 @@ def main():
         runtime_log.info(f"kinematic reconstruction: {kinematic_reconstruction_optimization_configuration}")
         runtime_log.info(f"aim point optimization: {aimpoint_optimization_configuration}")
         results_number = get_incremented_path_number(base_path=results_dir / "results.pt")
-        print(results_number)
-
+        
         create_distributions(
             measured_data_dir=measured_data_dir,
             results_dir=results_dir,
