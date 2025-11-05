@@ -1158,7 +1158,7 @@ def main():
     device = get_device(torch.device(args.device))
 
     # for case in ["baseline", "full_field"]:
-    for case in ["baseline"]:
+    for case in ["full_field"]:
         results_dir = (
             pathlib.Path(args.results_dir) / f"{case}"
         )
