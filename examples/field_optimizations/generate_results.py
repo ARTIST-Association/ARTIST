@@ -1258,6 +1258,7 @@ def main():
         runtime_log.info(f"kinematic reconstruction: {kinematic_reconstruction_optimization_configuration}")
         runtime_log.info(f"aim point optimization: {aimpoint_optimization_configuration}")
         results_number = get_incremented_path_number(base_path=results_dir / "results.pt")
+        print(results_number)
 
         create_distributions(
             measured_data_dir=measured_data_dir,
@@ -1276,7 +1277,7 @@ def main():
             device=device
         )
 
-        results_path = results_dir / "results.pt"
+        results_path = results_dir / f"results_{results_number}.pt"
         loaded = torch.load(results_path, weights_only=False)
         results_dict = cast(dict[str, dict[str, torch.Tensor]], loaded)
 
