@@ -25,7 +25,7 @@ def exponential(
         An exponential learning rate scheduler.
     """
     scheduler = torch.optim.lr_scheduler.ExponentialLR(
-        optimizer, gamma=parameters[config_dictionary.gamma]
+        optimizer, gamma=float(parameters[config_dictionary.gamma])
     )
 
     return scheduler
@@ -52,8 +52,8 @@ def cyclic(
     """
     scheduler = torch.optim.lr_scheduler.CyclicLR(
         optimizer,
-        base_lr=parameters[config_dictionary.min],
-        max_lr=parameters[config_dictionary.max],
+        base_lr=float(parameters[config_dictionary.min]),
+        max_lr=float(parameters[config_dictionary.max]),
         step_size_up=parameters[config_dictionary.step_size_up],
     )
 
@@ -81,11 +81,11 @@ def reduce_on_plateau(
     """
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        factor=parameters[config_dictionary.reduce_factor],
+        factor=float(parameters[config_dictionary.reduce_factor]),
         patience=parameters[config_dictionary.patience],
-        threshold=parameters[config_dictionary.threshold],
+        threshold=float(parameters[config_dictionary.threshold]),
         cooldown=parameters[config_dictionary.cooldown],
-        min_lr=parameters[config_dictionary.min],
+        min_lr=float(parameters[config_dictionary.min]),
     )
 
     return scheduler

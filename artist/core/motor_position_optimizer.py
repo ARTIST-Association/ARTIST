@@ -241,7 +241,7 @@ class MotorPositionsOptimizer:
 
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
-            lr=self.optimization_configuration[config_dictionary.initial_learning_rate],
+            lr=float(self.optimization_configuration[config_dictionary.initial_learning_rate]),
         )
 
         # Create a learning rate scheduler.
@@ -267,7 +267,7 @@ class MotorPositionsOptimizer:
             else self.optimization_configuration[config_dictionary.log_step]
         )
         while (
-            loss > self.optimization_configuration[config_dictionary.tolerance]
+            loss > float(self.optimization_configuration[config_dictionary.tolerance])
             and epoch <= self.optimization_configuration[config_dictionary.max_epoch]
         ):
             optimizer.zero_grad()
@@ -395,9 +395,9 @@ class MotorPositionsOptimizer:
             if (
                 loss
                 < best_loss
-                - self.optimization_configuration[
+                - float(self.optimization_configuration[
                     config_dictionary.early_stopping_delta
-                ]
+                ])
             ):
                 best_loss = loss
                 patience_counter = 0
@@ -405,9 +405,9 @@ class MotorPositionsOptimizer:
                 patience_counter += 1
             if (
                 patience_counter
-                >= self.optimization_configuration[
+                >= float(self.optimization_configuration[
                     config_dictionary.early_stopping_patience
-                ]
+                ])
             ):
                 log.info(
                     f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."

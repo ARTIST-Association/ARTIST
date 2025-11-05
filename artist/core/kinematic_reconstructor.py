@@ -1,6 +1,5 @@
 import logging
 import pathlib
-import time
 from typing import Any, cast
 
 import torch
@@ -216,9 +215,9 @@ class KinematicReconstructor:
                         heliostat_group.kinematic.rotation_deviation_parameters.requires_grad_(),
                         heliostat_group.kinematic.actuators.optimizable_parameters.requires_grad_(),
                     ],
-                    lr=self.optimization_configuration[
+                    lr=float(self.optimization_configuration[
                         config_dictionary.initial_learning_rate
-                    ],
+                    ]),
                 )
 
                 # Create a learning rate scheduler.
@@ -244,7 +243,7 @@ class KinematicReconstructor:
                     else self.optimization_configuration[config_dictionary.log_step]
                 )
                 while (
-                    loss > self.optimization_configuration[config_dictionary.tolerance]
+                    loss > float(self.optimization_configuration[config_dictionary.tolerance])
                     and epoch
                     <= self.optimization_configuration[config_dictionary.max_epoch]
                 ):
@@ -342,9 +341,9 @@ class KinematicReconstructor:
                     if (
                         loss
                         < best_loss
-                        - self.optimization_configuration[
+                        - float(self.optimization_configuration[
                             config_dictionary.early_stopping_delta
-                        ]
+                        ])
                     ):
                         best_loss = loss
                         patience_counter = 0
@@ -352,9 +351,9 @@ class KinematicReconstructor:
                         patience_counter += 1
                     if (
                         patience_counter
-                        >= self.optimization_configuration[
+                        >= float(self.optimization_configuration[
                             config_dictionary.early_stopping_patience
-                        ]
+                        ])
                     ):
                         log.info(
                             f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."

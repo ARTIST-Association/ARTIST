@@ -255,9 +255,9 @@ class SurfaceReconstructor:
                 # Create the optimizer.
                 optimizer = torch.optim.Adam(
                     [heliostat_group.nurbs_control_points.requires_grad_()],
-                    lr=self.optimization_configuration[
+                    lr=float(self.optimization_configuration[
                         config_dictionary.initial_learning_rate
-                    ],
+                    ]),
                 )
 
                 # Create a learning rate scheduler.
@@ -283,7 +283,7 @@ class SurfaceReconstructor:
                     else self.optimization_configuration[config_dictionary.log_step]
                 )
                 while (
-                    loss > self.optimization_configuration[config_dictionary.tolerance]
+                    loss > float(self.optimization_configuration[config_dictionary.tolerance])
                     and epoch
                     <= self.optimization_configuration[config_dictionary.max_epoch]
                 ):
@@ -493,9 +493,9 @@ class SurfaceReconstructor:
                     if (
                         loss
                         < best_loss
-                        - self.optimization_configuration[
+                        - float(self.optimization_configuration[
                             config_dictionary.early_stopping_delta
-                        ]
+                        ])
                     ):
                         best_loss = loss
                         patience_counter = 0
@@ -503,9 +503,9 @@ class SurfaceReconstructor:
                         patience_counter += 1
                     if (
                         patience_counter
-                        >= self.optimization_configuration[
+                        >= float(self.optimization_configuration[
                             config_dictionary.early_stopping_patience
-                        ]
+                        ])
                     ):
                         log.info(
                             f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
