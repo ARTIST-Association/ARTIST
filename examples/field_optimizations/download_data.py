@@ -31,12 +31,16 @@ if __name__ == "__main__":
     minimum_number_of_measurements : int
         Minimum number of calibration measurements per heliostat required.
     """
+    # Set default location for configuration file.
+    script_dir = pathlib.Path(__file__).resolve().parent
+    default_config_path = script_dir / "config.yaml"
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="examples/field_optimizations/config.yaml",
+        default=default_config_path,
     )
 
     # Parse the config argument first to load the configuration.

@@ -21,15 +21,18 @@ if __name__ == "__main__":
     metadata_root : str
         Path to the root directory where the metadata folder is created.
     """
-    parser = argparse.ArgumentParser()
+    # Set default location for configuration file.
+    script_dir = pathlib.Path(__file__).resolve().parent
+    default_config_path = script_dir / "config.yaml"
 
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
         type=str,
         help="Path to the YAML configuration file.",
-        default="examples/field_optimizations/config.yaml",
+        default=default_config_path,
     )
-
+    
     # Parse the config argument first to load the configuration.
     args, unknown = parser.parse_known_args()
     config_path = pathlib.Path(args.config)
