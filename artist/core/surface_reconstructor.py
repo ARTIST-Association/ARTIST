@@ -12,17 +12,18 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, utils
+from artist.util import (
+    config_dictionary,
+    index_mapping,
+    runtime_log,
+    track_runtime,
+    utils,
+)
 from artist.util.environment_setup import get_device
 from artist.util.nurbs import NURBSSurfaces
-from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
-
-runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
-runtime_log = runtime_manager.get_logger(__name__)
-
 
 class SurfaceReconstructor:
     """
@@ -109,7 +110,7 @@ class SurfaceReconstructor:
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.bitmap_resolution = bitmap_resolution.to(device)
 
-    @runtime_manager.track_runtime(runtime_log)
+    @track_runtime(runtime_log)
     def reconstruct_surfaces(
         self,
         loss_definition: Loss,

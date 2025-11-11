@@ -2,6 +2,8 @@
 
 import logging
 import sys
+import time
+from functools import wraps
 from pathlib import Path
 
 import colorlog
@@ -63,3 +65,71 @@ def set_logger_config(
         file_handler.setFormatter(simple_formatter)
         base_logger.addHandler(file_handler)
     base_logger.setLevel(level)
+
+
+def set_runtime_logger(
+    log_file: str | Path = "runtime_log.txt",
+    level: int = logging.INFO,
+) -> logging.Logger:
+    """
+    Configure and return a shared runtime logger that logs execution times
+    of functions across scripts.
+
+    Parameters
+    ----------
+    log_file : str | Path
+        The file path to write runtime logs.
+    level : int
+        The logging level (default: logging.INFO).
+
+    Returns
+    -------
+    logging.Logger
+        The configured runtime logger.
+    """
+    logger_name = "artist.runtime"
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(level)
+
+    if not logger.handlers:
+        log_file = Path(log_file)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(logging.Formatter(
+            "[%(asctime)s][%(name)s][%(levelname)s] - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        ))
+        logger.addHandler(file_handler)
+
+    return logger
+
+
+def track_runtime(logger: logging.Logger):
+    """
+    Decorator to log start, finish, and duration of function execution.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        The runtime logger returned by `set_runtime_logger`.
+
+    Returns
+    -------
+    Callable
+        The decorated function with runtime tracking.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            func_name = func.__name__
+            logger.info(f"{func_name} started")
+            start_time = time.perf_counter()
+            result = func(*args, **kwargs)
+            duration = time.perf_counter() - start_time
+            logger.info(f"{func_name} finished in {duration:.3f}s")
+            return result
+        return wrapper
+    return decorator
+
+runtime_log = set_runtime_logger("/workVERLEIHNIX/mb/ARTIST/examples/field_optimizations/results/runtime_log.txt")

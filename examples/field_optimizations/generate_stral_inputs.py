@@ -3,6 +3,7 @@ import os
 import pathlib
 import struct
 import warnings
+from array import array
 
 import numpy as np
 import torch
@@ -24,12 +25,44 @@ def save_binp_from_artist_data(
     canting: torch.Tensor,
     surface_points_with_facets_list: list[torch.Tensor],
     surface_normals_with_facets_list: list[torch.Tensor],
-):
+) -> None:
+    """
+    Generate .binp files to be used in the ``STRAL`` software comparison.
+
+    Parameters
+    ----------
+    heliostat : str
+        Name of the heliostat.
+    output_path : str
+        Path to where the binary file will be saved.
+    heliostat_position : tuple[float, float, float]
+        Heliostat positions in the east, north, up coordinate system. 
+    width : float
+        Width of the heliostat.
+    height : float
+        Height of the heliostat.
+    number_of_facets : tuple[int, int]
+        Number of facets.
+    axis_offset : float
+        Axis offset.
+    mirror_offset : float
+        Mirror offset.
+    facet_translation_vectors : torch.Tensor
+        Translation vectors for the facets.
+    canting : torch.Tensor
+        Canting vectors for the facets.
+    surface_points_with_facets_list : list[torch.Tensor]
+        Surface points per facet.
+    surface_normals_with_facets_list : list[torch.Tensor]
+        Surface normals per facet.
+    """
     concentrator_header_struct = struct.Struct("=5f2I2f")
     facet_header_struct = struct.Struct("=i9fI")
     ray_struct = struct.Struct("=7f")
 
     n_facets = facet_translation_vectors.shape[0]
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "wb") as f:
         header_data = (
@@ -63,40 +96,40 @@ def save_binp_from_artist_data(
                 ray_data = (
                     float(pos[0]), float(pos[1]), float(pos[2]),
                     float(normal[0]), float(normal[1]), float(normal[2]),
-                    float(0.0) # power coefficient
+                    float((width * height) / (len(positions) * n_facets)) # power coefficient
                 )
                 f.write(ray_struct.pack(*ray_data))
 
-        f.write("TrackingTCPIP".encode())
+        tracking_dll = "STJ_HELIOKON.DLL"
+        tracking_method = "TrackingBasic"
+
+        float_array = array('f', [0.0, 0.0])
+        f.write(float_array)
+
+        f.write(len(tracking_dll).to_bytes(4, byteorder="little"))
+        f.write(tracking_dll.encode("ascii"))
+        f.write(len(tracking_method).to_bytes(4, byteorder="little"))
+        f.write(tracking_method.encode('ascii'))
 
     print(f"Wrote .binp file for heliostat {heliostat} to {os.path.abspath(output_path)}")
 
 
-
-
 if __name__ == "__main__":
     """
-    Generate reconstruction results and save them.
-
-    This script performs kinematic reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
-    plots.
+    Generate .binp files to be used in the ``STRAL`` software comparison.
 
     Parameters
     ----------
     config : str
         Path to the configuration file.
-    data_dir : str
-        Path to the data directory.
     device : str
         Device to use for the computation.
-    results_dir : str
-        Path to the directory for the results.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
+    data_for_stral_dir : str
+        Path to the directory for the generated ``STRAL`` files.
     """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
-    default_config_path = script_dir / "cvpr_config.yaml"
+    default_config_path = script_dir / "config.yaml"
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -123,7 +156,6 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    measured_data_dir_default = config.get("measured_data_dir", "./measured_data")
     data_for_stral_dir_default = config.get("data_for_stral_dir", "./data_for_stral")
 
     parser.add_argument(
@@ -131,12 +163,6 @@ if __name__ == "__main__":
         type=str,
         help="Device to use.",
         default=device_default,
-    )
-    parser.add_argument(
-        "--measured_data_dir",
-        type=str,
-        help="Path to save the generated scenario.",
-        default=measured_data_dir_default,
     )
     parser.add_argument(
         "--data_for_stral_dir",
@@ -150,13 +176,13 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    heliostats_data_path = pathlib.Path(args.measured_data_dir) / "reconstructed_heliostats_data.pt"
+    heliostats_data_path = pathlib.Path(args.data_for_stral_dir) / "baseline" / "reconstructed_heliostats_data_9.pt"
 
     heliostats_data = torch.load(heliostats_data_path, weights_only=False)
 
     for heliostat_index, heliostat in enumerate(heliostats_data["names"]):
         
-        path = pathlib.Path(args.data_for_stral_dir) / f"{heliostat}.binp"
+        path = pathlib.Path(args.data_for_stral_dir) / "baseline" / f"{heliostat}.binp"
         save_binp_from_artist_data(
             heliostat=heliostat,
             output_path=path,

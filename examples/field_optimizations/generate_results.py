@@ -21,18 +21,20 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, set_logger_config, utils
+from artist.util import (
+    config_dictionary,
+    index_mapping,
+    runtime_log,
+    set_logger_config,
+    track_runtime,
+    utils,
+)
 from artist.util.environment_setup import get_device, setup_distributed_environment
 from artist.util.nurbs import NURBSSurfaces
-from artist.util.runtime_monitor import RuntimeLogger
 
 set_logger_config()
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
-
-runtime_manager = RuntimeLogger(log_file="./examples/field_optimizations/results/runtime_log.txt")
-runtime_log = runtime_manager.get_logger(__name__)
-
 
 def get_incremented_path_number(
     base_path: pathlib.Path
@@ -73,7 +75,7 @@ def get_incremented_path_number(
 
     return next_number
 
-@runtime_manager.track_runtime(runtime_log)
+@track_runtime(runtime_log)
 def create_distributions(
     measured_data_dir: pathlib.Path,
     results_dir: pathlib.Path,
@@ -141,7 +143,7 @@ def create_distributions(
     
     torch.save(results_dict, results_path)
 
-@runtime_manager.track_runtime(runtime_log)
+@track_runtime(runtime_log)
 def create_deflectometry_surface_for_comparison(
     scenario_path: pathlib.Path,
     results_dir: pathlib.Path,
@@ -258,7 +260,7 @@ def save_heliostat_model(
         start = -torch.norm(heliostat_group.canting, dim=index_mapping.canting)
         end = torch.norm(heliostat_group.canting, dim=index_mapping.canting)
         heliostat_widths.extend(((end[:, 0]-start[:, 0]) * 2)[:, 0] + 0.01)
-        heliostat_heights.extend(((end[:, 0]-start[:, 0]) * 2)[:, 0] + 0.01)
+        heliostat_heights.extend(((end[:, 0]-start[:, 0]) * 2)[:, 1] + 0.01)
         number_of_facets.extend([(heliostat_group.number_of_facets_per_heliostat, 1)] * heliostat_group.number_of_heliostats)
         axis_offsets.extend([0.0] * heliostat_group.number_of_heliostats)
         mirror_offsets.extend([0.0] * heliostat_group.number_of_heliostats)
@@ -283,7 +285,7 @@ def save_heliostat_model(
 
     torch.save(data, save_dir / f"reconstructed_heliostats_data_{results_number}.pt")
 
-@runtime_manager.track_runtime(runtime_log)
+@track_runtime(runtime_log)
 def align_and_trace_rays(
     scenario: Scenario,
     ddp_setup: dict[str, Any],
@@ -757,7 +759,7 @@ def create_surface_reconstruction_batches(
 
     return data_surfaces
 
-@runtime_manager.track_runtime(runtime_log)
+@track_runtime(runtime_log)
 def ablation_study(
     scenario_path: pathlib.Path,
     results_dir: pathlib.Path,
@@ -845,7 +847,7 @@ def ablation_study(
             config_dictionary.data_parser: data_parser,
             config_dictionary.heliostat_data_mapping: data_mappings["surface_plot"]
         }
-        batch_size = 90
+        batch_size = 380
         data_surfaces = create_surface_reconstruction_batches(
             data_mappings["surface_reconstruction"],
             data_parser,
@@ -1056,7 +1058,7 @@ def ablation_study(
 
         print(f"Ablation study case {ablation_study_case} results saved to {results_path}")
 
-@runtime_manager.track_runtime(runtime_log)
+@track_runtime(runtime_log)
 def main():
     """
     Generate field optimization results and save them.
@@ -1157,8 +1159,8 @@ def main():
 
     device = get_device(torch.device(args.device))
 
-    # for case in ["baseline", "full_field"]:
-    for case in ["full_field"]:
+    for case in ["baseline", "full_field"]:
+    #for case in ["baseline"]:
         results_dir = (
             pathlib.Path(args.results_dir) / f"{case}"
         )

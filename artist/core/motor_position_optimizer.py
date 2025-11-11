@@ -9,15 +9,12 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping
+from artist.util import config_dictionary, index_mapping, runtime_log, track_runtime
 from artist.util.environment_setup import get_device
-from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
 
-runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
-runtime_log = runtime_manager.get_logger(__name__)
 
 class MotorPositionsOptimizer:
     """
@@ -102,7 +99,7 @@ class MotorPositionsOptimizer:
         self.ground_truth = ground_truth
         self.bitmap_resolution = bitmap_resolution.to(device)
 
-    @runtime_manager.track_runtime(runtime_log)
+    @track_runtime(runtime_log)
     def optimize(
         self,
         loss_definition: Loss,

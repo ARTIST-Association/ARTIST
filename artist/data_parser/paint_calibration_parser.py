@@ -12,14 +12,9 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import utils
 from artist.util.environment_setup import get_device
-from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the paint calibration data parser."""
-
-runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
-runtime_log = runtime_manager.get_logger(__name__)
-
 
 class PaintCalibrationDataParser(CalibrationDataParser):
     """
@@ -70,7 +65,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             )
         self.centroid_extraction_method = centroid_extraction_method
 
-    @runtime_manager.track_runtime(runtime_log)
+
     def parse_data_for_reconstruction(
         self,
         heliostat_data_mapping: list[

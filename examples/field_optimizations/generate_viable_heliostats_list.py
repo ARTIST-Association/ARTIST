@@ -5,10 +5,7 @@ import re
 import warnings
 
 import paint.util.paint_mappings as paint_mappings
-import torch
 import yaml
-
-from artist.util.environment_setup import get_device
 
 
 def find_viable_heliostats(
@@ -242,11 +239,9 @@ if __name__ == "__main__":
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
 
-    device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
 
     for case in ["baseline", "full_field"]:
-        
         if case == "baseline": 
             heliostat_list=args.heliostat_list_baseline
         else:

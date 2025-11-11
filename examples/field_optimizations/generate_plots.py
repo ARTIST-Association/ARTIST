@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
-    default_config_path = script_dir / "cvpr_config.yaml"
+    default_config_path = script_dir / "config.yaml"
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

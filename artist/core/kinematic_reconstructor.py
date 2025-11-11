@@ -12,15 +12,11 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping
+from artist.util import config_dictionary, index_mapping, runtime_log, track_runtime
 from artist.util.environment_setup import get_device
-from artist.util.runtime_monitor import RuntimeLogger
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
-
-runtime_manager = RuntimeLogger(log_file="runtime_log.txt")
-runtime_log = runtime_manager.get_logger(__name__)
 
 
 class KinematicReconstructor:
@@ -97,7 +93,7 @@ class KinematicReconstructor:
                 f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
             )
 
-    @runtime_manager.track_runtime(runtime_log)
+    @track_runtime(runtime_log)
     def reconstruct_kinematic(
         self,
         loss_definition: Loss,
