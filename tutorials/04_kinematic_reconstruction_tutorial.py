@@ -9,7 +9,6 @@ from matplotlib import pyplot as plt
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.loss_functions import FocalSpotLoss
-from artist.data_parser import paint_scenario_parser
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
@@ -21,7 +20,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 146 for the tutorial code.
+# Skip to line 145 for the tutorial code.
 #############################################################################################################
 
 
