@@ -6,7 +6,10 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
-from artist.core.core_utils import per_heliostat_reduction
+from artist.core.core_utils import (
+    loss_per_heliostat,
+    reduce_gradients,
+)
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
@@ -191,7 +194,7 @@ class KinematicReconstructor:
                 self.data[config_dictionary.heliostat_data_mapping],
             )
             (
-                measured_fluxes,
+                _,
                 focal_spots_measured,
                 incident_ray_directions,
                 _,
@@ -280,45 +283,26 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    if self.ddp_setup[config_dictionary.is_nested]:
-                        flux_distributions = torch.distributed.nn.functional.all_reduce(
-                            flux_distributions,
-                            group=self.ddp_setup[config_dictionary.process_subgroup],
-                            op=torch.distributed.ReduceOp.SUM,
-                        )
+                    indices_for_rank = ray_tracer.get_sampler_indices()
 
                     loss_per_sample = loss_definition(
                         prediction=flux_distributions,
-                        ground_truth=focal_spots_measured,
-                        target_area_mask=target_area_mask,
+                        ground_truth=focal_spots_measured[indices_for_rank],
+                        target_area_mask=target_area_mask[indices_for_rank],
                         reduction_dimensions=(index_mapping.focal_spots,),
                         device=device,
                     )
 
-                    loss_per_heliostat = per_heliostat_reduction(
-                        per_sample_values=loss_per_sample,
-                        active_heliostats_mask=active_heliostats_mask,
-                        device=device,
-                    )
-
-                    loss = loss_per_heliostat[torch.isfinite(loss_per_heliostat)].mean()
+                    loss = loss_per_sample.mean()
 
                     loss.backward()
 
-                    if self.ddp_setup[config_dictionary.is_nested]:
-                        # Reduce gradients within each heliostat group.
-                        for param_group in optimizer.param_groups:
-                            for param in param_group["params"]:
-                                if param.grad is not None:
-                                    param.grad = (
-                                        torch.distributed.nn.functional.all_reduce(
-                                            param.grad,
-                                            op=torch.distributed.ReduceOp.SUM,
-                                            group=self.ddp_setup[
-                                                config_dictionary.process_subgroup
-                                            ],
-                                        )
-                                    )
+                    reduce_gradients(
+                        parameters=[heliostat_group.kinematic.rotation_deviation_parameters,
+                                    heliostat_group.kinematic.actuators.optimizable_parameters],
+                        process_group=self.ddp_setup["process_subgroup"],
+                        mean=True
+                    )
 
                     optimizer.step()
                     if isinstance(
@@ -358,11 +342,23 @@ class KinematicReconstructor:
 
                     epoch += 1
 
-                final_loss_per_heliostat[
-                    final_loss_start_indices[
-                        heliostat_group_index
-                    ] : final_loss_start_indices[heliostat_group_index + 1]
-                ] = loss_per_heliostat
+                local_loss_per_heliostat = loss_per_heliostat(
+                    local_loss_per_sample=loss_per_sample,
+                    samples_per_heliostat=active_heliostats_mask,
+                    ddp_setup=self.ddp_setup,
+                    device=device
+                )
+
+                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
+                    heliostat_group_index
+                ]
+
+                if rank == source[index_mapping.first_rank_from_group]:
+                    final_loss_per_heliostat[
+                        final_loss_start_indices[
+                            heliostat_group_index
+                        ] : final_loss_start_indices[heliostat_group_index + 1]
+                    ] = local_loss_per_heliostat
 
                 log.info(f"Rank: {rank}, kinematic parameters optimized.")
 
