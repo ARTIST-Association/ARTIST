@@ -149,12 +149,18 @@ class RestrictedDistributedSampler(Sampler):
         # Adjust num_replicas if dataset is smaller than world_size.
         self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
 
-        # Only assign data to first active ranks.
-        self.number_of_samples_per_rank = (
-            self.number_of_samples // self.number_of_active_ranks
-            if self.rank < self.number_of_active_ranks
-            else 0
-        )
+        # Compute how many samples each active rank gets
+        self.samples_per_rank = self.number_of_samples // self.number_of_active_ranks
+        self.remainder = self.number_of_samples % self.number_of_active_ranks
+
+        # Determine start and end index for this rank
+        if self.rank < self.number_of_active_ranks:
+            # Distribute the remainder among the first few ranks
+            start = self.rank * self.samples_per_rank + min(self.rank, self.remainder)
+            end = start + self.samples_per_rank + (1 if self.rank < self.remainder else 0)
+            self.rank_indices = list(range(start, end))
+        else:
+            self.rank_indices = []
 
     def __iter__(self) -> Iterator[int]:
         """
@@ -165,11 +171,7 @@ class RestrictedDistributedSampler(Sampler):
         Iterator[int]
             An iterator over indices for the current rank.
         """
-        rank_indices = []
-        for i in range(self.rank, self.number_of_samples, self.world_size):
-            rank_indices.append(i)
-
-        return iter(rank_indices)
+        return iter(self.rank_indices)
 
 
 class HeliostatRayTracer:
@@ -290,6 +292,18 @@ class HeliostatRayTracer:
 
         self.bitmap_resolution = bitmap_resolution
 
+    def get_sampler_indices(self) -> torch.Tensor:
+        """
+        Return the indices assigned to the current rank by the distributed sampler.
+
+        Returns
+        -------
+        torch.Tensor
+            Indices of the distortions dataset that are assigned to this rank.
+            Tensor of shape [number of samples assigned to the current rank].
+        """
+        return torch.tensor(self.distortions_sampler.rank_indices, device=self.distortions_dataset.distortions_u.device)
+
     def trace_rays(
         self,
         incident_ray_directions: torch.Tensor,
@@ -339,15 +353,6 @@ class HeliostatRayTracer:
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
 
-        flux_distributions = torch.zeros(
-            (
-                self.heliostat_group.number_of_active_heliostats,
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            ),
-            device=device,
-        )
-
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(
                 index_mapping.number_rays_per_point
@@ -355,6 +360,7 @@ class HeliostatRayTracer:
             reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
 
+        flux_distributions = []
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
             sampler_indices = list(self.distortions_sampler)
 
@@ -390,7 +396,7 @@ class HeliostatRayTracer:
                 )
             )
 
-            bitmaps = self.sample_bitmaps(
+            batch_bitmaps = self.sample_bitmaps(
                 intersections=intersections,
                 absolute_intensities=absolute_intensities,
                 active_heliostats_mask=active_heliostats_mask_batch,
@@ -398,13 +404,11 @@ class HeliostatRayTracer:
                 device=device,
             )
             
-            active_heliostat_indices = torch.nonzero(
-                active_heliostats_mask_batch, as_tuple=False
-            ).squeeze()
+            flux_distributions.append(batch_bitmaps)
 
-            flux_distributions[active_heliostat_indices] = bitmaps
-
-        return flux_distributions
+        combined = torch.cat(flux_distributions, dim=0)
+       
+        return combined
 
     def scatter_rays(
         self,
@@ -690,27 +694,19 @@ class HeliostatRayTracer:
             )
             & intersection_indices_2
         )
-        mask = final_intersection_indices.contiguous().view(-1)
+        
+        mask = final_intersection_indices.flatten()
 
-        active_heliostat_indices = torch.nonzero(
-            active_heliostats_mask, as_tuple=False
-        )
-        # heliostat_indices = torch.repeat_interleave(
-        #     active_heliostat_indices,
-        #     total_intersections * self.heliostat_group.number_of_facets_per_heliostat,
-        # )
-        active_heliostat_indices_batch = active_heliostat_indices.squeeze() - active_heliostat_indices[0].item()
-        heliostat_indices_batch = active_heliostat_indices_batch.repeat_interleave(
+        heliostat_indices = torch.repeat_interleave(
+            torch.arange(active_heliostats_mask.sum(), device=active_heliostats_mask.device),
             total_intersections * self.heliostat_group.number_of_facets_per_heliostat
         )
 
         # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(
-            (
-                active_heliostat_indices.shape[0],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            ),
+            (active_heliostats_mask.sum(), 
+            self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
             dtype=dx_intersections.dtype,
             device=device,
         )
@@ -718,7 +714,7 @@ class HeliostatRayTracer:
         # Add up all distributed intensities in the corresponding indices.
         bitmaps_per_heliostat.index_put_(
             (
-                heliostat_indices_batch[mask],
+                heliostat_indices[mask],
                 self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
                 - 1
                 - y_indices[final_intersection_indices],
@@ -731,6 +727,7 @@ class HeliostatRayTracer:
         )
 
         return bitmaps_per_heliostat
+
 
     def get_bitmaps_per_target(
         self,
