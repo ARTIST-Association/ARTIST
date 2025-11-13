@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.loss_functions import FocalSpotLoss
+from artist.data_parser import paint_scenario_parser
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
@@ -20,7 +21,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 143 for the tutorial code.
+# Skip to line 146 for the tutorial code.
 #############################################################################################################
 
 
@@ -61,38 +62,40 @@ def create_fluxes(
             device=device,
         )
 
-        measured_bitmaps.append(measured_flux)
+        if active_heliostats_mask.sum() > 0:
 
-        # Activate heliostats.
-        heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask,
-            device=device,
-        )
+            measured_bitmaps.append(measured_flux)
 
-        # Align heliostats.
-        heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            device=device,
-        )
+            # Activate heliostats.
+            heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
 
-        # Create a ray tracer.
-        ray_tracer = HeliostatRayTracer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            batch_size=heliostat_group.number_of_active_heliostats,
-            bitmap_resolution=torch.tensor([256, 256], device=device),
-        )
+            # Align heliostats.
+            heliostat_group.align_surfaces_with_incident_ray_directions(
+                aim_points=scenario.target_areas.centers[target_area_mask],
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
 
-        # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-        bitmaps.append(bitmaps_per_heliostat)
+            # Create a ray tracer.
+            ray_tracer = HeliostatRayTracer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                batch_size=heliostat_group.number_of_active_heliostats,
+                bitmap_resolution=torch.tensor([256, 256], device=device),
+            )
+
+            # Perform heliostat-based ray tracing.
+            bitmaps_per_heliostat = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask=target_area_mask,
+                device=device,
+            )
+            bitmaps.append(bitmaps_per_heliostat)
 
     scenario.set_number_of_rays(number_of_rays=4)
 
@@ -247,6 +250,7 @@ with setup_distributed_environment(
         config_dictionary.initial_learning_rate: 0.0005,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 500,
+        config_dictionary.batch_size: 2,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 300,
