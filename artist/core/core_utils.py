@@ -3,68 +3,6 @@ import torch
 from artist.util.environment_setup import get_device
 
 
-def per_heliostat_reduction(
-    per_sample_values: torch.Tensor,
-    active_heliostats_mask: torch.Tensor,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Compute mean losses for each heliostat with multiple samples.
-
-    If the active heliostats of one group have different amounts of samples to train on, i.e.,
-    one heliostat is trained with more samples than another, this function makes sure that
-    each heliostat still contributes equally to the overall loss of the group. This function
-    computes the mean loss for each heliostat.
-
-    Parameters
-    ----------
-    per_sample_values : torch.Tensor
-        The per sample values to be reduced.
-        Tensor of shape [number_of_samples].
-    active_heliostats_mask : torch.Tensor
-        A mask defining which heliostats are activated.
-        Tensor of shape [number_of_heliostats].
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        The mean loss per heliostat.
-        Tensor of shape [number_of_heliostats].
-    """
-    device = get_device(device=device)
-
-    # A sample to heliostat index mapping.
-    heliostat_ids = torch.repeat_interleave(
-        torch.arange(len(active_heliostats_mask), device=device),
-        active_heliostats_mask,
-    )
-
-    loss_sum_per_heliostat = torch.zeros(len(active_heliostats_mask), device=device)
-    loss_sum_per_heliostat = loss_sum_per_heliostat.index_add(
-        0, heliostat_ids, per_sample_values
-    )
-
-    # Compute MSE loss per heliostat on each rank.
-    number_of_samples_per_heliostat = torch.zeros(
-        len(active_heliostats_mask), device=device
-    )
-    number_of_samples_per_heliostat.index_add_(
-        0, heliostat_ids, torch.ones_like(per_sample_values, device=device)
-    )
-
-    counts_clamped = number_of_samples_per_heliostat.clamp_min(1.0)
-    mean_loss_per_heliostat = loss_sum_per_heliostat / counts_clamped
-    mean_loss_per_heliostat = torch.where(
-        number_of_samples_per_heliostat > 0, mean_loss_per_heliostat, torch.inf
-    )
-
-    return mean_loss_per_heliostat
-
-
 def scale_loss(
     loss: torch.Tensor, reference: torch.Tensor, weight: float
 ) -> torch.Tensor:
@@ -96,3 +34,91 @@ def scale_loss(
     scaled_loss[inf_mask] = loss[inf_mask]
 
     return scaled_loss
+
+def reduce_gradients(parameters, process_group=None, mean=True):
+    """
+    Manually reduce gradients across all ranks.
+
+    Parameters
+    ----------
+    parameters : Iterable[torch.Tensor]
+        Iterable of tensors with .grad attributes.
+    process_group : torch.distributed.ProcessGroup | None
+        Optional subgroup to reduce over (defaults to the global process group).
+    mean : bool
+        Whether to divide the reduced gradients by world size (default is True).
+    """
+    if not torch.distributed.is_initialized():
+        return
+
+    world_size = torch.distributed.get_world_size(group=process_group)
+    for param in parameters:
+        if param.grad is None:
+            continue
+        
+        grad = param.grad.data
+        
+        torch.distributed.all_reduce(grad, op=torch.distributed.ReduceOp.SUM, group=process_group)
+        
+        if mean and world_size > 0:
+            grad /= world_size
+
+
+def loss_per_heliostat(local_loss_per_sample, samples_per_heliostat, ddp_setup, device=None):
+    """
+    Gather per-sample losses from all ranks to rank 0, and compute per-object loss.
+
+    Parameters
+    ----------
+    local_loss_per_sample : torch.Tensor
+        Tensor of shape [num_local_samples] containing per-sample losses on this rank.
+    samples_per_object : torch.Tensor
+        Tensor of shape [num_objects] indicating how many samples belong to each object.
+    device : torch.device or None
+        Device to place the final tensor on. Defaults to local tensor device.
+
+    Returns
+    -------
+    torch.Tensor or None
+        Tensor of shape [num_objects] with per-object losses on rank 0.
+        Returns None on other ranks.
+    """
+    device = get_device(device=device)
+
+    rank = ddp_setup["heliostat_group_rank"]
+    world_size = ddp_setup["heliostat_group_world_size"]
+    process_subgroup = ddp_setup["process_subgroup"]
+
+    local_number_of_samples = torch.tensor([local_loss_per_sample.numel()], device=device)
+    max_number_of_samples = local_number_of_samples.clone()
+    torch.distributed.all_reduce(max_number_of_samples, op= torch.distributed.ReduceOp.MAX, group=process_subgroup)
+    max_number_of_samples = max_number_of_samples.item()
+
+    if local_loss_per_sample.numel() < max_number_of_samples:
+        padded = torch.zeros(max_number_of_samples, dtype=local_loss_per_sample.dtype, device=device)
+        padded[:local_loss_per_sample.numel()] = local_loss_per_sample
+    else:
+        padded = local_loss_per_sample
+    
+    gathered = [torch.zeros_like(padded) for _ in range(world_size)]
+    torch.distributed.all_gather(gathered, padded, group=process_subgroup)
+
+    if rank == 0:
+        all_losses = []
+        for i, size_tensor in enumerate([local_number_of_samples for _ in range(world_size)]):
+            size = size_tensor.item()
+            all_losses.extend(gathered[i][:size].tolist())
+            
+        final_loss_per_heliostat = torch.empty(len(samples_per_heliostat), device=device)
+        start_index = 0
+        for i, number_of_samples in enumerate(samples_per_heliostat):
+            if number_of_samples > 0:
+                heliostat_losses = all_losses[start_index:start_index + number_of_samples]
+                final_loss_per_heliostat[i] = torch.tensor(heliostat_losses, device=device).mean()
+            else:
+                final_loss_per_heliostat[i] = float('nan')
+            start_index += number_of_samples
+
+        return final_loss_per_heliostat
+    else:
+        return None
