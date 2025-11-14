@@ -283,12 +283,12 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    indices_for_rank = ray_tracer.get_sampler_indices()
+                    sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
 
                     loss_per_sample = loss_definition(
                         prediction=flux_distributions,
-                        ground_truth=focal_spots_measured[indices_for_rank],
-                        target_area_mask=target_area_mask[indices_for_rank],
+                        ground_truth=focal_spots_measured[sample_indices_for_local_rank],
+                        target_area_mask=target_area_mask[sample_indices_for_local_rank],
                         reduction_dimensions=(index_mapping.focal_spots,),
                         device=device,
                     )
@@ -360,7 +360,7 @@ class KinematicReconstructor:
                         ] : final_loss_start_indices[heliostat_group_index + 1]
                     ] = local_loss_per_heliostat
 
-                log.info(f"Rank: {rank}, kinematic parameters optimized.")
+                log.info(f"Rank: {rank}, Kinematic reconstructed.")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
