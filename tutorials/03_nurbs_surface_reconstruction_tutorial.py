@@ -23,7 +23,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 324 for the tutorial code.
+# Skip to line 337 for the tutorial code.
 #############################################################################################################
 
 
@@ -186,6 +186,8 @@ def create_surface_plots(name: str) -> None:
             temporary_points, temporary_normals = (
                 temporary_nurbs.calculate_surface_points_and_normals(
                     evaluation_points=evaluation_points,
+                    canting=heliostat_group.canting[heliostat_index].unsqueeze(index_mapping.heliostat_dimension),
+                    facet_translations=heliostat_group.facet_translations[heliostat_index].unsqueeze(index_mapping.heliostat_dimension),
                     device=device,
                 )
             )
@@ -285,6 +287,8 @@ def create_flux_plots(
         validation_surface_points, validation_surface_normals = (
             validation_nurbs.calculate_surface_points_and_normals(
                 evaluation_points=validation_evaluation_points,
+                canting=heliostat_group.active_canting,
+                facet_translations=heliostat_group.active_facet_translations,
                 device=device,
             )
         )
@@ -433,14 +437,12 @@ with setup_distributed_environment(
     total_variation_regularizer_points = TotalVariationRegularizer(
         weight=0.3,
         reduction_dimensions=(index_mapping.facet_dimension,),
-        surface=config_dictionary.surface_points,
         number_of_neighbors=1000,
         sigma=1e-3,
     )
     total_variation_regularizer_normals = TotalVariationRegularizer(
         weight=0.8,
         reduction_dimensions=(index_mapping.facet_dimension,),
-        surface=config_dictionary.surface_points,
         number_of_neighbors=1000,
         sigma=1e-3,
     )
@@ -470,6 +472,7 @@ with setup_distributed_environment(
         config_dictionary.initial_learning_rate: 1e-5,
         config_dictionary.tolerance: 1e-5,
         config_dictionary.max_epoch: 200,
+        config_dictionary.batch_size: 2,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 5e-5,
         config_dictionary.early_stopping_patience: 200,
@@ -483,7 +486,6 @@ with setup_distributed_environment(
     resolution = torch.tensor([256, 256], device=device)
 
     # Visualize the ideal surfaces and flux distributions from ideal heliostats.
-    # Please adapt the heliostat names according to the ones to be plotted.
     number_of_plots_per_heliostat = 2
     create_surface_plots(name="ideal")
     create_flux_plots(
