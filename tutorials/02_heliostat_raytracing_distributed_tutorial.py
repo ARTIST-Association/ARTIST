@@ -5,6 +5,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
@@ -19,7 +20,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -68,7 +69,7 @@ with setup_distributed_environment(
     for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
         ddp_setup[config_dictionary.rank]
     ]:
-        heliostat_group = scenario.heliostat_field.heliostat_groups[
+        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
         ]
         # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
@@ -121,7 +122,7 @@ with setup_distributed_environment(
         )
 
         # Plot the bitmaps of each single heliostat.
-        for heliostat_index in range(heliostat_group.number_of_heliostats):
+        for heliostat_index in range(bitmaps_per_heliostat.shape[0]):
             plt.imshow(
                 bitmaps_per_heliostat[heliostat_index].cpu().detach(), cmap="gray"
             )
@@ -133,10 +134,12 @@ with setup_distributed_environment(
                 f"bitmap_of_heliostat_{heliostat_group.names[heliostat_index]}_in_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}.png"
             )
 
+        sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+
         # Get the flux distributions per target.
         bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
             bitmaps_per_heliostat=bitmaps_per_heliostat,
-            target_area_mask=target_area_mask,
+            target_area_mask=target_area_mask[sample_indices_for_local_rank],
             device=device,
         )
 
