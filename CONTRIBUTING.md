@@ -123,12 +123,12 @@ as shown below. Do not include attributes and methods of the parent class explic
 
 
 6. **Test Changes**: Test all existing and added functionality.
-    * ``ARTIST`` uses ``pytest`` for running the test suite. If you followed all of the above steps correctly you already have the project and all dependencies installed. All of our pytests lie in the ``tests/`` directory. Please also add your tests into the ``tests/`` directory. 
+    * ``ARTIST`` uses ``pytest`` for running the test suite. If you followed all of the above steps correctly, you already have the project and all dependencies installed. All of our tests are located in the ``tests/`` directory. Please also add your tests into the ``tests/`` directory. 
     * To run all tests execute:
         ```bash
         pytest tests/
         ```
-    * To run the tests with Coverage:
+    * To run the tests with coverage:
         ```bash
         pytest --cov=artist tests/
         ```
