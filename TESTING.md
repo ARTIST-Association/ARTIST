@@ -7,6 +7,7 @@ To run all tests execute:
 ```bash
 pytest tests/
 ```
+
 To run the tests with Coverage:
 ```bash
 pytest --cov=artist tests/
