@@ -138,7 +138,7 @@ class HeliostatGroup:
         self.kinematic = Kinematic()
 
         self.number_of_active_heliostats = 0
-        self.active_heliostats_mask = torch.empty(
+        self.active_heliostats_mask = torch.zeros(
             self.number_of_heliostats, device=device
         )
         self.active_surface_points = torch.empty_like(

@@ -106,6 +106,7 @@ def test_kinematic_reconstructor(
         config_dictionary.initial_learning_rate: initial_learning_rate,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 100,
+        config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 80,
@@ -172,6 +173,7 @@ def test_kinematic_reconstructor(
 
         ddp_setup_for_testing[config_dictionary.device] = device
         ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+        ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {0: [0], 1: [0]}
 
         if reconstruction_method == "invalid":
             with pytest.raises(ValueError) as exc_info:
