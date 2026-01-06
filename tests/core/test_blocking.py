@@ -75,6 +75,7 @@ def test_blocking(device: torch.device) -> None:
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
+        blocking_active=True,
         batch_size=10,
     )
 
@@ -90,6 +91,12 @@ def test_blocking(device: torch.device) -> None:
         / "tests/data/expected_bitmaps_blocking"
         / f"bitmaps_{device.type}.pt"
     )
+
+    for i in range(bitmaps_per_heliostat.shape[0]):
+        import matplotlib.pyplot as plt
+
+        plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
+        plt.savefig(f"bitmap_{i}.png")
 
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 

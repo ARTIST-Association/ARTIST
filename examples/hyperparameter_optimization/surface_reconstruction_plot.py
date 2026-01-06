@@ -120,18 +120,18 @@ def plot_reconstruction_results(
             .cpu()
             .detach()
         )
-        normals_i = (
-            (
-                results_dicts["ideal_surface"]["normals"][..., :3]
-                / torch.linalg.norm(
-                    results_dicts["ideal_surface"]["normals"][..., :3],
-                    axis=-1,
-                    keepdims=True,
-                )
-            )
-            .cpu()
-            .detach()
-        )
+        # normals_i = (
+        #     (
+        #         results_dicts["ideal_surface"]["normals"][..., :3]
+        #         / torch.linalg.norm(
+        #             results_dicts["ideal_surface"]["normals"][..., :3],
+        #             axis=-1,
+        #             keepdims=True,
+        #         )
+        #     )
+        #     .cpu()
+        #     .detach()
+        # )
 
         facet_points_flat_r = (
             results_dicts["reconstructed"]["points"][:, :, :, :3]
@@ -161,16 +161,16 @@ def plot_reconstruction_results(
             torch.arccos(torch.clip(cos_theta_d, -1.0, 1.0)), -0.1, 0.1
         )
 
-        facet_points_flat_i = results_dicts["ideal_surface"]["points"][
-            :, :, :, :3
-        ].reshape(num_surfaces, -1, 3)
-        facet_normals_flat_i = normals_i.reshape(num_surfaces, -1, 3)
-        x_i = facet_points_flat_i[:, :, 0]
-        y_i = facet_points_flat_i[:, :, 1]
-        cos_theta_i = facet_normals_flat_i @ reference_direction
-        angles_i = torch.clip(
-            torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)), -0.1, 0.1
-        )
+        # facet_points_flat_i = results_dicts["ideal_surface"]["points"][
+        #     :, :, :, :3
+        # ].reshape(num_surfaces, -1, 3)
+        # facet_normals_flat_i = normals_i.reshape(num_surfaces, -1, 3)
+        # x_i = facet_points_flat_i[:, :, 0]
+        # y_i = facet_points_flat_i[:, :, 1]
+        # cos_theta_i = facet_normals_flat_i @ reference_direction
+        # angles_i = torch.clip(
+        #     torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)), -0.1, 0.1
+        # )
 
         sc3 = axes[i % 6 + 3 + (i * 5)].scatter(
             x_d[i], y_d[i], c=angles_d[i], cmap="viridis", s=20, vmin=0.0, vmax=0.006

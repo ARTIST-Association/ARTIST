@@ -221,6 +221,7 @@ class HeliostatRayTracer:
         self,
         scenario: Scenario,
         heliostat_group: "HeliostatGroup",
+        blocking_active: bool = True,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 100,
@@ -261,6 +262,7 @@ class HeliostatRayTracer:
         """
         self.scenario = scenario
         self.heliostat_group = heliostat_group
+        self.blocking_active = blocking_active
 
         self.world_size = world_size
         self.rank = rank
@@ -435,57 +437,59 @@ class HeliostatRayTracer:
                 )
             )
 
-            points_at_ray_origins = self.heliostat_group.active_surface_points[
-                active_heliostats_mask_batch, None, :, :3
-            ].expand(-1, self.light_source.number_of_rays, -1, -1)
+            # Set blocked to all zeros indicates that there is no blocking at all in the scene.
+            # If blocking was activated in the HeliostatRaytracer, blocking will be computed.
             number_of_heliostats, number_of_rays, number_of_points, _ = (
-                points_at_ray_origins.shape
+                intersections.shape
             )
-            ray_to_heliostat_mapping = torch.arange(
-                number_of_heliostats, device=device
-            ).repeat_interleave(number_of_rays * number_of_points)
-
-            filtered_blocking_primitive_indices = blocking.blocking_filter_lbvh(
-                points_at_ray_origins=points_at_ray_origins,
-                ray_directions=rays.ray_directions[..., :3],
-                blocking_primitives_corners=blocking_primitives_corners[..., :3],
-                ray_to_heliostat_mapping=ray_to_heliostat_mapping,
-                max_stack_size=128,
+            blocked = torch.zeros(
+                (number_of_heliostats, number_of_rays, number_of_points),
                 device=device,
             )
+            if self.blocking_active:
+                points_at_ray_origins = self.heliostat_group.active_surface_points[
+                    active_heliostats_mask_batch, None, :, :3
+                ].expand(-1, self.light_source.number_of_rays, -1, -1)
+                ray_to_heliostat_mapping = torch.arange(
+                    number_of_heliostats, device=device
+                ).repeat_interleave(number_of_rays * number_of_points)
 
-            if filtered_blocking_primitive_indices.numel() == 0:
-                blocked = torch.zeros(
-                    (number_of_heliostats, number_of_rays, number_of_points),
+                filtered_blocking_primitive_indices = blocking.blocking_filter_lbvh(
+                    points_at_ray_origins=points_at_ray_origins,
+                    ray_directions=rays.ray_directions[..., :3],
+                    blocking_primitives_corners=blocking_primitives_corners[..., :3],
+                    ray_to_heliostat_mapping=ray_to_heliostat_mapping,
+                    max_stack_size=128,
                     device=device,
                 )
-            else:
-                blocked = blocking.compute_soft_ray_blocking(
-                    ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ],
-                    ray_directions=rays.ray_directions,
-                    blocking_primitives_corners=blocking_primitives_corners[
-                        filtered_blocking_primitive_indices
-                    ],
-                    blocking_primitives_spans=blocking_primitives_spans[
-                        filtered_blocking_primitive_indices
-                    ],
-                    blocking_primitives_normals=blocking_primitives_normals[
-                        filtered_blocking_primitive_indices
-                    ],
-                    distances_to_target=torch.norm(
-                        intersections[..., :3] - points_at_ray_origins, dim=-1
-                    ),
-                    epsilon=1e-6,
-                    softness=50.0,
-                )
 
-            blocked_intensities = absolute_intensities * (1 - blocked)
+                if filtered_blocking_primitive_indices.numel() > 0:
+                    blocked = blocking.compute_soft_ray_blocking(
+                        ray_origins=self.heliostat_group.active_surface_points[
+                            active_heliostats_mask_batch
+                        ],
+                        ray_directions=rays.ray_directions,
+                        blocking_primitives_corners=blocking_primitives_corners[
+                            filtered_blocking_primitive_indices
+                        ],
+                        blocking_primitives_spans=blocking_primitives_spans[
+                            filtered_blocking_primitive_indices
+                        ],
+                        blocking_primitives_normals=blocking_primitives_normals[
+                            filtered_blocking_primitive_indices
+                        ],
+                        distances_to_target=torch.norm(
+                            intersections[..., :3] - points_at_ray_origins, dim=-1
+                        ),
+                        epsilon=1e-6,
+                        softness=50.0,
+                    )
+
+            intensities = absolute_intensities * (1 - blocked)
 
             batch_bitmaps = self.sample_bitmaps(
                 intersections=intersections,
-                absolute_intensities=blocked_intensities,
+                absolute_intensities=intensities,
                 active_heliostats_mask=active_heliostats_mask_batch,
                 target_area_mask=target_area_mask[active_heliostats_mask_batch],
                 device=device,

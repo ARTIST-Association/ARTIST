@@ -19,7 +19,7 @@ device: "cuda"
 surface_reconstruction_optimization_configuration:
   initial_learning_rate: 7e-5
   tolerance: 1e-15
-  max_epoch: 70
+  max_epoch: 3
   batch_size: 1
   log_step: 0
   early_stopping_delta: 5e-5
@@ -30,7 +30,7 @@ surface_reconstruction_optimization_configuration:
 kinematic_reconstruction_optimization_configuration:
   initial_learning_rate: 8e-5
   tolerance: 0.0005
-  max_epoch: 600
+  max_epoch: 3
   batch_size: 50
   log_step: 0
   early_stopping_delta: 1e-4
@@ -45,7 +45,7 @@ kinematic_reconstruction_optimization_configuration:
 aimpoint_optimization_configuration:
   initial_learning_rate: 8e-5
   tolerance: 0.0005
-  max_epoch: 600
+  max_epoch: 50
   batch_size: 946
   log_step: 0
   early_stopping_delta: 3e-4

@@ -135,7 +135,7 @@ class FocalSpotLoss(Loss):
         scenario : Scenario
             The scenario.
         """
-        super().__init__(loss_function=torch.nn.MSELoss(reduction="none"))
+        super().__init__(loss_function=None)
         self.scenario = scenario
 
     def __call__(
@@ -200,11 +200,11 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        loss = self.loss_function(focal_spot[:, :3], ground_truth[:, :3])
+        loss = torch.norm(focal_spot[:, :3] - ground_truth[:, :3], dim=1)
 
-        loss_rmse = torch.sqrt(loss.mean(dim=kwargs["reduction_dimensions"]))
+        loss_reduced = loss.mean(dim=kwargs["reduction_dimensions"])
 
-        return loss_rmse
+        return loss_reduced
 
 
 class PixelLoss(Loss):

@@ -1,6 +1,7 @@
 import argparse
 import pathlib
 import warnings
+from typing import Any
 
 import torch
 import yaml
@@ -12,9 +13,19 @@ from artist.util.environment_setup import get_device
 
 
 def plot_kinematic_reconstruction(
-    results,
+    results: dict[str, Any],
     save_dir: pathlib.Path,
 ) -> None:
+    """
+    Plot the kinematic reconstruction results.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Results of the kinematic reconstruction.
+    save_dir : pathlib.Path
+        Path to the location where the plots are saved.
+    """
     for i, reconstruction in enumerate(
         [
             "kinematic_reconstruction_ideal_surface",
@@ -83,9 +94,19 @@ def plot_kinematic_reconstruction(
 
 
 def plot_surface_reconstruction(
-    results,
+    results: dict[str, Any],
     save_dir: pathlib.Path,
 ) -> None:
+    """
+    Plot the surface reconstruction results.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Results of the surface reconstruction.
+    save_dir : pathlib.Path
+        Path to the location where the plots are saved.
+    """
     number_of_heliostats = len(results["surface_reconstruction"])
     fig, axes = plt.subplots(number_of_heliostats, 7, figsize=(35, 15))
     for index, heliostat_name in enumerate(results["surface_reconstruction"]):
@@ -110,15 +131,15 @@ def plot_surface_reconstruction(
 
         reference_direction = torch.tensor([0.0, 0.0, 1.0], device=torch.device("cpu"))
         canting = heliostat_data["canting"].cpu().detach()
-        deflectometry_uncanted_fitted = utils.perform_canting(
-            canting_angles=canting.expand(2, -1, -1, -1),
-            data=results["deflectometry_fitted"][heliostat_name]
-            .reshape(2, 4, -1, 4)
-            .cpu()
-            .detach(),
-            inverse=True,
-            device=torch.device("cpu"),
-        )
+        # deflectometry_uncanted_fitted = utils.perform_canting(
+        #     canting_angles=canting.expand(2, -1, -1, -1),
+        #     data=results["deflectometry_fitted"][heliostat_name]
+        #     .reshape(2, 4, -1, 4)
+        #     .cpu()
+        #     .detach(),
+        #     inverse=True,
+        #     device=torch.device("cpu"),
+        # )
         deflectometry_original = (
             results["deflectometry_original"][heliostat_name].cpu().detach()
         )
@@ -143,39 +164,39 @@ def plot_surface_reconstruction(
             device=torch.device("cpu"),
         )
 
-        deflectometry_normals_fitted = torch.nn.functional.normalize(
-            deflectometry_uncanted_fitted[1, :, :, :3], dim=-1
-        ).reshape(-1, 3)
+        # deflectometry_normals_fitted = torch.nn.functional.normalize(
+        #     deflectometry_uncanted_fitted[1, :, :, :3], dim=-1
+        # ).reshape(-1, 3)
         deflectometry_normals_original = torch.nn.functional.normalize(
             deflectometry_uncanted_original[1, :, :, :3], dim=-1
         ).reshape(-1, 3)
-        ideal_normals = torch.nn.functional.normalize(
-            normals_uncanted[0, :, :, :3], dim=-1
-        ).reshape(-1, 3)
+        # ideal_normals = torch.nn.functional.normalize(
+        #     normals_uncanted[0, :, :, :3], dim=-1
+        # ).reshape(-1, 3)
         reconstructed_normals = torch.nn.functional.normalize(
             normals_uncanted[1, :, :, :3], dim=-1
         ).reshape(-1, 3)
-        deflectometry_points_fitted = deflectometry_uncanted_fitted[
-            0, :, :, :3
-        ].reshape(-1, 3)
+        # deflectometry_points_fitted = deflectometry_uncanted_fitted[
+        #     0, :, :, :3
+        # ].reshape(-1, 3)
         deflectometry_points_original = deflectometry_uncanted_original[
             0, :, :, :3
         ].reshape(-1, 3)
-        ideal_points = points_uncanted[0, :, :, :3].reshape(-1, 3)
+        # ideal_points = points_uncanted[0, :, :, :3].reshape(-1, 3)
         reconstructed_points = points_uncanted[1, :, :, :3].reshape(-1, 3)
 
-        cos_theta_d_fitted = deflectometry_normals_fitted @ reference_direction
-        angles_d_fitted = torch.clip(
-            torch.arccos(torch.clip(cos_theta_d_fitted, -1.0, 1.0)), -0.1, 0.1
-        )
+        # cos_theta_d_fitted = deflectometry_normals_fitted @ reference_direction
+        # angles_d_fitted = torch.clip(
+        #     torch.arccos(torch.clip(cos_theta_d_fitted, -1.0, 1.0)), -0.1, 0.1
+        # )
         cos_theta_d_original = deflectometry_normals_original @ reference_direction
         angles_d_original = torch.clip(
             torch.arccos(torch.clip(cos_theta_d_original, -1.0, 1.0)), -0.1, 0.1
         )
-        cos_theta_i = ideal_normals @ reference_direction
-        angles_i = torch.clip(
-            torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)), -0.1, 0.1
-        )
+        # cos_theta_i = ideal_normals @ reference_direction
+        # angles_i = torch.clip(
+        #     torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)), -0.1, 0.1
+        # )
         cos_theta_r = reconstructed_normals @ reference_direction
         angles_r = torch.clip(
             torch.arccos(torch.clip(cos_theta_r, -1.0, 1.0)), -0.1, 0.1
@@ -329,9 +350,19 @@ def plot_surface_reconstruction(
 
 
 def plot_aim_point_optimization(
-    results,
+    results: dict[str, Any],
     save_dir: pathlib.Path,
 ) -> None:
+    """
+    Plot the aim point optimization results.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Results of the aim point optimization.
+    save_dir : pathlib.Path
+        Path to the location where the plots are saved.
+    """
     measured_flux = results["measured_flux"]
     homogeneous_distribution = results["homogeneous_distribution"]
     unoptimized_flux = results["ablation_study_case_7"]["flux"].squeeze(0)

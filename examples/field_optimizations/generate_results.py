@@ -248,35 +248,38 @@ def save_heliostat_model(
     results_number : int
         The incremented number of the results file.
     """
-    heliostat_names = []
-    heliostat_positions = []
-    heliostat_widths = []
-    heliostat_heights = []
-    number_of_facets = []
-    axis_offsets = []
-    mirror_offsets = []
-    facet_translations = []
-    canting_vectors = []
-    surface_points = []
-    surface_normals = []
+    data: dict[str, list] = {
+        "names": [],
+        "positions": [],
+        "widths": [],
+        "heights": [],
+        "number_of_facets": [],
+        "axis_offsets": [],
+        "mirror_offsets": [],
+        "facet_translations": [],
+        "canting_vectors": [],
+        "surface_points": [],
+        "surface_normals": [],
+    }
+
     for heliostat_group in scenario.heliostat_field.heliostat_groups:
-        heliostat_names.extend(heliostat_group.names)
-        heliostat_positions.extend(
+        data["names"].extend(heliostat_group.names)
+        data["positions"].extend(
             tuple(position[:3].tolist()) for position in heliostat_group.positions
         )
         start = -torch.norm(heliostat_group.canting, dim=index_mapping.canting)
         end = torch.norm(heliostat_group.canting, dim=index_mapping.canting)
-        heliostat_widths.extend(((end[:, 0] - start[:, 0]) * 2)[:, 0] + 0.01)
-        heliostat_heights.extend(((end[:, 0] - start[:, 0]) * 2)[:, 1] + 0.01)
-        number_of_facets.extend(
+        data["widths"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 0] + 0.01)
+        data["heights"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 1] + 0.01)
+        data["number_of_facets"].extend(
             [(heliostat_group.number_of_facets_per_heliostat, 1)]
             * heliostat_group.number_of_heliostats
         )
-        axis_offsets.extend([0.0] * heliostat_group.number_of_heliostats)
-        mirror_offsets.extend([0.0] * heliostat_group.number_of_heliostats)
-        facet_translations.extend(heliostat_group.facet_translations)
-        canting_vectors.extend(heliostat_group.canting)
-        surface_points.extend(
+        data["axis_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
+        data["mirror_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
+        data["facet_translations"].extend(heliostat_group.facet_translations)
+        data["canting_vectors"].extend(heliostat_group.canting)
+        data["surface_points"].extend(
             heliostat_group.surface_points.reshape(
                 heliostat_group.number_of_heliostats,
                 heliostat_group.number_of_facets_per_heliostat,
@@ -284,7 +287,7 @@ def save_heliostat_model(
                 4,
             )
         )
-        surface_normals.extend(
+        data["surface_normals"].extend(
             heliostat_group.surface_normals.reshape(
                 heliostat_group.number_of_heliostats,
                 heliostat_group.number_of_facets_per_heliostat,
@@ -292,20 +295,6 @@ def save_heliostat_model(
                 4,
             )
         )
-
-    data = {
-        "names": heliostat_names,
-        "positions": heliostat_positions,
-        "widths": heliostat_widths,
-        "heights": heliostat_heights,
-        "number_of_facets": number_of_facets,
-        "axis_offsets": axis_offsets,
-        "mirror_offsets": mirror_offsets,
-        "facet_translations": facet_translations,
-        "canting_vectors": canting_vectors,
-        "surface_points": surface_points,
-        "surface_normals": surface_normals,
-    }
 
     torch.save(data, save_dir / f"reconstructed_heliostats_data_{results_number}.pt")
 
@@ -778,7 +767,13 @@ def create_surface_reconstruction_batches(
     heliostat_data: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     data_parser: CalibrationDataParser,
     batch_size: int,
-) -> list[dict[str, list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]]:
+) -> list[
+    dict[
+        str,
+        CalibrationDataParser
+        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ]
+]:
     """
     Create batches of data for the surface reconstruction to avoid out of memory errors.
 
@@ -793,13 +788,19 @@ def create_surface_reconstruction_batches(
 
     Returns
     -------
-    list[dict[str, list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]]
+    list[dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]]:
         Batches of surfaces reconstruction data in a list.
     """
     if heliostat_data is None:
         return []
 
-    data_surfaces = []
+    data_surfaces: list[
+        dict[
+            str,
+            CalibrationDataParser
+            | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+        ]
+    ] = []
 
     for i in range(0, len(heliostat_data), batch_size):
         batch = heliostat_data[i : i + batch_size]
@@ -1171,7 +1172,7 @@ def ablation_study(
                 motor_positions=motor_positions,
             )
 
-        if ablation_study_case == 7:
+        if ablation_study_case == 7 and data_for_stral_dir is not None:
             save_heliostat_model(
                 scenario=scenario,
                 save_dir=data_for_stral_dir,
@@ -1193,7 +1194,7 @@ def ablation_study(
 
 
 @track_runtime(runtime_log)
-def main():
+def main() -> None:
     """
     Generate field optimization results and save them.
 
@@ -1310,7 +1311,7 @@ def main():
     device = get_device(torch.device(args.device))
 
     # for case in ["baseline", "full_field"]:
-    for case in ["full_field"]:
+    for case in ["baseline"]:
         results_dir = pathlib.Path(args.results_dir) / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1483,107 +1484,105 @@ def main():
             device=device,
         )
 
-        pass
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=2,
+            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+            target_distribution=target_distribution,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=2,
-        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-        #     target_distribution=target_distribution,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=3,
+            data_mappings=data_mappings,
+            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=3,
-        #     data_mappings=data_mappings,
-        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=4,
+            data_mappings=data_mappings,
+            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+            target_distribution=target_distribution,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=4,
-        #     data_mappings=data_mappings,
-        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-        #     target_distribution=target_distribution,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=5,
+            data_mappings=data_mappings,
+            surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=5,
-        #     data_mappings=data_mappings,
-        #     surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=6,
+            data_mappings=data_mappings,
+            surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
+            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+            target_distribution=target_distribution,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=6,
-        #     data_mappings=data_mappings,
-        #     surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
-        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-        #     target_distribution=target_distribution,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=7,
+            data_mappings=data_mappings,
+            surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
+            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+            data_for_stral_dir=data_for_stral_dir,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=7,
-        #     data_mappings=data_mappings,
-        #     surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
-        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-        #     data_for_stral_dir=data_for_stral_dir,
-        #     device=device,
-        # )
-
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_dir=results_dir,
-        #     results_number=results_number,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=8,
-        #     data_mappings=data_mappings,
-        #     surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
-        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-        #     target_distribution=target_distribution,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_dir=results_dir,
+            results_number=results_number,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=8,
+            data_mappings=data_mappings,
+            surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
+            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+            target_distribution=target_distribution,
+            device=device,
+        )
 
 
 if __name__ == "__main__":

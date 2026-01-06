@@ -20,7 +20,9 @@ from artist.util.environment_setup import get_device
 set_logger_config()
 
 
-def find_latest_deflectometry_file(heliostat_name: str, data_directory: Path) -> Path:
+def find_latest_deflectometry_file(
+    heliostat_name: str, data_directory: Path
+) -> Path | None:
     """
     Find the latest deflectometry HDF5 file for a given heliostat.
 
@@ -33,8 +35,8 @@ def find_latest_deflectometry_file(heliostat_name: str, data_directory: Path) ->
 
     Returns
     -------
-    pathlib.Path
-        Path to the latest deflectometry file.
+    pathlib.Path | None
+        Path to the latest deflectometry file or None.
     """
     search_path = (
         pathlib.Path(data_directory)

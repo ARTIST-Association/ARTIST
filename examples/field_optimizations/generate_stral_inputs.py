@@ -14,7 +14,7 @@ from artist.util.environment_setup import get_device
 
 def save_binp_from_artist_data(
     heliostat: str,
-    output_path: str,
+    output_path: pathlib.Path,
     heliostat_position: tuple[float, float, float],
     width: float,
     height: float,
@@ -33,7 +33,7 @@ def save_binp_from_artist_data(
     ----------
     heliostat : str
         Name of the heliostat.
-    output_path : str
+    output_path : pathlib.Path
         Path to where the binary file will be saved.
     heliostat_position : tuple[float, float, float]
         Heliostat positions in the east, north, up coordinate system.

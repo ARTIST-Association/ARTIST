@@ -340,6 +340,7 @@ class SurfaceReconstructor:
                     ray_tracer = HeliostatRayTracer(
                         scenario=self.scenario,
                         heliostat_group=heliostat_group,
+                        blocking_active=False,
                         world_size=self.ddp_setup[
                             config_dictionary.heliostat_group_world_size
                         ],
