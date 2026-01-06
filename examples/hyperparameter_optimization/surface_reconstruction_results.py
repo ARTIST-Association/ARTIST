@@ -269,7 +269,9 @@ def reconstruct_and_create_flux_image(
             config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
         }
 
-        heliostats_for_reconstruction = [heliostat_data[0] for heliostat_data in heliostat_data_mapping]
+        heliostats_for_reconstruction = [
+            heliostat_data[0] for heliostat_data in heliostat_data_mapping
+        ]
         heliostat_group_for_reconstruction = [
             group
             for group in scenario.heliostat_field.heliostat_groups
@@ -305,7 +307,7 @@ def reconstruct_and_create_flux_image(
 
         scheduler = config_dictionary.exponential
         scheduler_parameters = {
-            config_dictionary.gamma:0.999,
+            config_dictionary.gamma: 0.999,
             config_dictionary.min: 1e-7,
             config_dictionary.reduce_factor: reconstruction_parameters["reduce_factor"],
             config_dictionary.patience: reconstruction_parameters["patience"],
@@ -442,18 +444,23 @@ def reconstruct_and_create_flux_image(
         )
 
     # Apply inverse canting and translation.
-    #facet_translations = torch.stack([facet_transforms[i][1] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
-    canting = torch.stack([facet_transforms[i][2] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
+    # facet_translations = torch.stack([facet_transforms[i][1] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
+    canting = torch.stack(
+        [
+            facet_transforms[i][2]
+            for i in range(heliostat_group_for_reconstruction.number_of_heliostats)
+        ]
+    )
 
     reconstructed_normals_decanted = utils.perform_canting(
-        canting=canting,
+        canting_angles=canting,
         data=reconstructed_normals,
         inverse=True,
         device=device,
     )
 
     reconstructed_points_decanted = utils.perform_canting(
-        canting=canting,
+        canting_angles=canting,
         data=reconstructed_points,
         inverse=True,
         device=device,
@@ -464,7 +471,7 @@ def reconstruct_and_create_flux_image(
         "reconstructed_flux": validation_bitmaps_per_heliostat_reconstructed,
         "kl_div": kl_div_r,
         "points": reconstructed_points_decanted,
-        "normals": reconstructed_normals_decanted
+        "normals": reconstructed_normals_decanted,
     }
 
     results_dict[result_key] = results
@@ -683,7 +690,9 @@ def create_deflectometry_surface(
                 device=device,
             )
 
-        heliostats_for_reconstruction = [heliostat_data[0] for heliostat_data in validation_heliostat_data_mapping]
+        heliostats_for_reconstruction = [
+            heliostat_data[0] for heliostat_data in validation_heliostat_data_mapping
+        ]
         heliostat_group_for_reconstruction = [
             group
             for group in scenario.heliostat_field.heliostat_groups
@@ -737,17 +746,22 @@ def create_deflectometry_surface(
             )
         )
         # Apply inverse canting and translation.
-        canting = torch.stack([facet_transforms[i][2] for i in range(heliostat_group_for_reconstruction.number_of_heliostats)])
+        canting = torch.stack(
+            [
+                facet_transforms[i][2]
+                for i in range(heliostat_group_for_reconstruction.number_of_heliostats)
+            ]
+        )
 
         reconstructed_normals_decanted = utils.perform_canting(
-            canting=canting,
+            canting_angles=canting,
             data=normals_deflectometry,
             inverse=True,
             device=device,
         )
 
         reconstructed_points_decanted = utils.perform_canting(
-            canting=canting,
+            canting_angles=canting,
             data=points_deflectometry,
             inverse=True,
             device=device,
@@ -823,8 +837,12 @@ if __name__ == "__main__":
     heliostat_for_reconstruction_default = config.get(
         "heliostat_for_reconstruction", {"AA39": [244862, 270398, 246213, 258959]}
     )
-    scenarios_dir_default = config.get("scenarios_dir", "./examples/hyperparameter_optimization/scenarios")
-    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"
+    )
+    results_dir_default = config.get(
+        "results_dir", "./examples/hyperparameter_optimization/results"
+    )
 
     parser.add_argument(
         "--device",
@@ -905,7 +923,7 @@ if __name__ == "__main__":
     with open(optimized_parameter_file, "r") as file:
         reconstruction_parameters = json.load(file)
 
-    #Generate and merge flux images and surfaces.
+    # Generate and merge flux images and surfaces.
     reconstruct_and_create_flux_image(
         data_directory=data_dir,
         scenario_path=ideal_scenario_file,

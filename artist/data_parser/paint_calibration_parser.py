@@ -16,6 +16,7 @@ from artist.util.environment_setup import get_device
 log = logging.getLogger(__name__)
 """A logger for the paint calibration data parser."""
 
+
 class PaintCalibrationDataParser(CalibrationDataParser):
     """
     A calibration data parser for the data source ``PAINT``.
@@ -64,7 +65,6 @@ class PaintCalibrationDataParser(CalibrationDataParser):
                 f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
             )
         self.centroid_extraction_method = centroid_extraction_method
-
 
     def parse_data_for_reconstruction(
         self,

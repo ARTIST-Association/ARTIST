@@ -35,6 +35,7 @@ def scale_loss(
 
     return scaled_loss
 
+
 def reduce_gradients(parameters, process_group=None, mean=True):
     """
     Manually reduce gradients across all ranks.
@@ -55,16 +56,20 @@ def reduce_gradients(parameters, process_group=None, mean=True):
     for param in parameters:
         if param.grad is None:
             continue
-        
+
         grad = param.grad.data
-        
-        torch.distributed.all_reduce(grad, op=torch.distributed.ReduceOp.SUM, group=process_group)
-        
+
+        torch.distributed.all_reduce(
+            grad, op=torch.distributed.ReduceOp.SUM, group=process_group
+        )
+
         if mean and world_size > 0:
             grad /= world_size
 
 
-def loss_per_heliostat(local_loss_per_sample, samples_per_heliostat, ddp_setup, device=None):
+def loss_per_heliostat(
+    local_loss_per_sample, samples_per_heliostat, ddp_setup, device=None
+):
     """
     Gather per-sample losses from all ranks to rank 0, and compute per-object loss.
 
@@ -89,36 +94,52 @@ def loss_per_heliostat(local_loss_per_sample, samples_per_heliostat, ddp_setup, 
     world_size = ddp_setup["heliostat_group_world_size"]
     process_subgroup = ddp_setup["process_subgroup"]
 
-    local_number_of_samples = torch.tensor([local_loss_per_sample.numel()], device=device)
+    local_number_of_samples = torch.tensor(
+        [local_loss_per_sample.numel()], device=device
+    )
     max_number_of_samples = local_number_of_samples.clone()
     if torch.distributed.is_initialized():
-        torch.distributed.all_reduce(max_number_of_samples, op=torch.distributed.ReduceOp.MAX, group=process_subgroup)
+        torch.distributed.all_reduce(
+            max_number_of_samples,
+            op=torch.distributed.ReduceOp.MAX,
+            group=process_subgroup,
+        )
     max_number_of_samples = max_number_of_samples.item()
 
     if local_loss_per_sample.numel() < max_number_of_samples:
-        padded = torch.zeros(max_number_of_samples, dtype=local_loss_per_sample.dtype, device=device)
-        padded[:local_loss_per_sample.numel()] = local_loss_per_sample
+        padded = torch.zeros(
+            max_number_of_samples, dtype=local_loss_per_sample.dtype, device=device
+        )
+        padded[: local_loss_per_sample.numel()] = local_loss_per_sample
     else:
         padded = local_loss_per_sample
-    
+
     gathered = [torch.zeros_like(padded) for _ in range(world_size)]
     if torch.distributed.is_initialized():
         torch.distributed.all_gather(gathered, padded, group=process_subgroup)
 
     if rank == 0:
         all_losses = []
-        for i, size_tensor in enumerate([local_number_of_samples for _ in range(world_size)]):
+        for i, size_tensor in enumerate(
+            [local_number_of_samples for _ in range(world_size)]
+        ):
             size = size_tensor.item()
             all_losses.extend(gathered[i][:size].tolist())
-            
-        final_loss_per_heliostat = torch.empty(len(samples_per_heliostat), device=device)
+
+        final_loss_per_heliostat = torch.empty(
+            len(samples_per_heliostat), device=device
+        )
         start_index = 0
         for i, number_of_samples in enumerate(samples_per_heliostat):
             if number_of_samples > 0:
-                heliostat_losses = all_losses[start_index:start_index + number_of_samples]
-                final_loss_per_heliostat[i] = torch.tensor(heliostat_losses, device=device).mean()
+                heliostat_losses = all_losses[
+                    start_index : start_index + number_of_samples
+                ]
+                final_loss_per_heliostat[i] = torch.tensor(
+                    heliostat_losses, device=device
+                ).mean()
             else:
-                final_loss_per_heliostat[i] = float('nan')
+                final_loss_per_heliostat[i] = float("nan")
             start_index += number_of_samples
 
         return final_loss_per_heliostat

@@ -35,7 +35,7 @@ class Regularizer:
     def __call__(
         self,
         original_surface_points: torch.Tensor,
-        original_surface_normals:torch.Tensor,
+        original_surface_normals: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
         device: torch.device | None = None,
@@ -174,11 +174,15 @@ class TotalVariationRegularizer(Regularizer):
         variation_losses = []
 
         for regularization_variable in [surface_points, surface_normals]:
-
-            number_of_surfaces, number_of_facets, number_of_surface_points_per_facet, _ = (
-                regularization_variable.shape
-            )
-            coordinates = regularization_variable[:, :, :, : index_mapping.z_coordinates]
+            (
+                number_of_surfaces,
+                number_of_facets,
+                number_of_surface_points_per_facet,
+                _,
+            ) = regularization_variable.shape
+            coordinates = regularization_variable[
+                :, :, :, : index_mapping.z_coordinates
+            ]
             z_values = regularization_variable[:, :, :, index_mapping.z_coordinates]
 
             if self.sigma is None:
@@ -249,13 +253,23 @@ class TotalVariationRegularizer(Regularizer):
                 weights = weights * valid_mask.type_as(weights)
                 variation_loss_sum = variation_loss_sum + (
                     weights * z_value_variations
-                ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
-                number_of_valid_neighbors = number_of_valid_neighbors + valid_mask.type_as(
-                    z_value_variations
-                ).sum(dim=(index_mapping.points_batch, index_mapping.z_value_variations))
+                ).sum(
+                    dim=(index_mapping.points_batch, index_mapping.z_value_variations)
+                )
+                number_of_valid_neighbors = (
+                    number_of_valid_neighbors
+                    + valid_mask.type_as(z_value_variations).sum(
+                        dim=(
+                            index_mapping.points_batch,
+                            index_mapping.z_value_variations,
+                        )
+                    )
+                )
 
             # Batched total variation losses.
-            variation_loss = variation_loss_sum / (number_of_valid_neighbors + self.epsilon)
+            variation_loss = variation_loss_sum / (
+                number_of_valid_neighbors + self.epsilon
+            )
             variation_loss_summed = variation_loss.sum(dim=self.reduction_dimensions)
             variation_losses.append(variation_loss_summed)
 
@@ -334,9 +348,15 @@ class IdealSurfaceRegularizer(Regularizer):
         rmse_points = torch.clamp(reduced_loss_points, min=1e-12)
 
         eps = 1e-8
-        original_normals_normed = original_surface_normals[:, :, :, :3] / (original_surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps)
-        normals_normed = surface_normals[:, :, :, :3] / (surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps)
+        original_normals_normed = original_surface_normals[:, :, :, :3] / (
+            original_surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps
+        )
+        normals_normed = surface_normals[:, :, :, :3] / (
+            surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps
+        )
 
-        loss_normals = (1 - torch.sum(normals_normed * original_normals_normed, dim=-1)).mean(dim=(1, 2))
-        
+        loss_normals = (
+            1 - torch.sum(normals_normed * original_normals_normed, dim=-1)
+        ).mean(dim=(1, 2))
+
         return rmse_points, loss_normals

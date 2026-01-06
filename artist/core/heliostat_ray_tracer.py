@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Iterator
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
-from artist.core import blocking
 import artist.util.index_mapping
+from artist.core import blocking
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
@@ -158,7 +158,9 @@ class RestrictedDistributedSampler(Sampler):
         if self.rank < self.number_of_active_ranks:
             # Distribute the remainder among the first few ranks.
             start = self.rank * self.samples_per_rank + min(self.rank, self.remainder)
-            end = start + self.samples_per_rank + (1 if self.rank < self.remainder else 0)
+            end = (
+                start + self.samples_per_rank + (1 if self.rank < self.remainder else 0)
+            )
             self.rank_indices = list(range(start, end))
         else:
             self.rank_indices = []
@@ -294,17 +296,27 @@ class HeliostatRayTracer:
         self.bitmap_resolution = bitmap_resolution
 
         # TODO
-        self.blocking_heliostat_surfaces = torch.cat([group.surface_points for group in self.scenario.heliostat_field.heliostat_groups])
+        self.blocking_heliostat_surfaces = torch.cat(
+            [
+                group.surface_points
+                for group in self.scenario.heliostat_field.heliostat_groups
+            ]
+        )
         blocking_heliostat_surfaces_active_list = []
         for group in self.scenario.heliostat_field.heliostat_groups:
             if group.active_heliostats_mask.sum() <= 0:
-                blocking_heliostat_surfaces_active_list.append(group.surface_points + group.positions.unsqueeze(1))
+                blocking_heliostat_surfaces_active_list.append(
+                    group.surface_points + group.positions.unsqueeze(1)
+                )
             if group.active_heliostats_mask.sum() > 0:
                 heliostat_mask = torch.cumsum(group.active_heliostats_mask, dim=0)
                 start_indices = heliostat_mask - group.active_heliostats_mask
-                blocking_heliostat_surfaces_active_list.append(group.active_surface_points[start_indices])
-        self.blocking_heliostat_surfaces_active = torch.cat(blocking_heliostat_surfaces_active_list)
-
+                blocking_heliostat_surfaces_active_list.append(
+                    group.active_surface_points[start_indices]
+                )
+        self.blocking_heliostat_surfaces_active = torch.cat(
+            blocking_heliostat_surfaces_active_list
+        )
 
     def get_sampler_indices(self) -> torch.Tensor:
         """
@@ -316,7 +328,10 @@ class HeliostatRayTracer:
             Indices of the distortions dataset that are assigned to this rank.
             Tensor of shape [number of samples assigned to the current rank].
         """
-        return torch.tensor(self.distortions_sampler.rank_indices, device=self.distortions_dataset.distortions_u.device)
+        return torch.tensor(
+            self.distortions_sampler.rank_indices,
+            device=self.distortions_dataset.distortions_u.device,
+        )
 
     def trace_rays(
         self,
@@ -374,10 +389,14 @@ class HeliostatRayTracer:
             reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
 
-        blocking_primitives_corners, blocking_primitives_spans, blocking_primitives_normals = blocking.create_blocking_primitives(
+        (
+            blocking_primitives_corners,
+            blocking_primitives_spans,
+            blocking_primitives_normals,
+        ) = blocking.create_blocking_primitives(
             blocking_heliostats_surface_points=self.blocking_heliostat_surfaces,
             blocking_heliostats_active_surface_points=self.blocking_heliostat_surfaces_active,
-            device=device
+            device=device,
         )
 
         flux_distributions = []
@@ -416,9 +435,15 @@ class HeliostatRayTracer:
                 )
             )
 
-            points_at_ray_origins = self.heliostat_group.active_surface_points[active_heliostats_mask_batch, None, :, :3].expand(-1, self.light_source.number_of_rays, -1, -1) 
-            number_of_heliostats, number_of_rays, number_of_points, _ = points_at_ray_origins.shape
-            ray_to_heliostat_mapping = torch.arange(number_of_heliostats, device=device).repeat_interleave(number_of_rays * number_of_points)
+            points_at_ray_origins = self.heliostat_group.active_surface_points[
+                active_heliostats_mask_batch, None, :, :3
+            ].expand(-1, self.light_source.number_of_rays, -1, -1)
+            number_of_heliostats, number_of_rays, number_of_points, _ = (
+                points_at_ray_origins.shape
+            )
+            ray_to_heliostat_mapping = torch.arange(
+                number_of_heliostats, device=device
+            ).repeat_interleave(number_of_rays * number_of_points)
 
             filtered_blocking_primitive_indices = blocking.blocking_filter_lbvh(
                 points_at_ray_origins=points_at_ray_origins,
@@ -430,15 +455,28 @@ class HeliostatRayTracer:
             )
 
             if filtered_blocking_primitive_indices.numel() == 0:
-                blocked = torch.zeros((number_of_heliostats, number_of_rays, number_of_points), device=device)
+                blocked = torch.zeros(
+                    (number_of_heliostats, number_of_rays, number_of_points),
+                    device=device,
+                )
             else:
                 blocked = blocking.compute_soft_ray_blocking(
-                    ray_origins=self.heliostat_group.active_surface_points[active_heliostats_mask_batch],
+                    ray_origins=self.heliostat_group.active_surface_points[
+                        active_heliostats_mask_batch
+                    ],
                     ray_directions=rays.ray_directions,
-                    blocking_primitives_corners=blocking_primitives_corners[filtered_blocking_primitive_indices],
-                    blocking_primitives_spans=blocking_primitives_spans[filtered_blocking_primitive_indices],
-                    blocking_primitives_normals=blocking_primitives_normals[filtered_blocking_primitive_indices],
-                    distances_to_target=torch.norm(intersections[..., :3] - points_at_ray_origins, dim=-1),
+                    blocking_primitives_corners=blocking_primitives_corners[
+                        filtered_blocking_primitive_indices
+                    ],
+                    blocking_primitives_spans=blocking_primitives_spans[
+                        filtered_blocking_primitive_indices
+                    ],
+                    blocking_primitives_normals=blocking_primitives_normals[
+                        filtered_blocking_primitive_indices
+                    ],
+                    distances_to_target=torch.norm(
+                        intersections[..., :3] - points_at_ray_origins, dim=-1
+                    ),
                     epsilon=1e-6,
                     softness=50.0,
                 )
@@ -452,11 +490,11 @@ class HeliostatRayTracer:
                 target_area_mask=target_area_mask[active_heliostats_mask_batch],
                 device=device,
             )
-            
+
             flux_distributions.append(batch_bitmaps)
 
         combined = torch.cat(flux_distributions, dim=0)
-       
+
         return combined
 
     def scatter_rays(
@@ -743,19 +781,23 @@ class HeliostatRayTracer:
             )
             & intersection_indices_2
         )
-        
+
         mask = final_intersection_indices.flatten()
 
         heliostat_indices = torch.repeat_interleave(
-            torch.arange(active_heliostats_mask.sum(), device=active_heliostats_mask.device),
-            total_intersections * self.heliostat_group.number_of_facets_per_heliostat
+            torch.arange(
+                active_heliostats_mask.sum(), device=active_heliostats_mask.device
+            ),
+            total_intersections * self.heliostat_group.number_of_facets_per_heliostat,
         )
 
         # Flux density maps for each active heliostat.
         bitmaps_per_heliostat = torch.zeros(
-            (active_heliostats_mask.sum(), 
-            self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-            self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+            (
+                active_heliostats_mask.sum(),
+                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
+                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
+            ),
             dtype=dx_intersections.dtype,
             device=device,
         )
@@ -776,7 +818,6 @@ class HeliostatRayTracer:
         )
 
         return bitmaps_per_heliostat
-
 
     def get_bitmaps_per_target(
         self,

@@ -1,32 +1,43 @@
-import os
 import pathlib
 
 import h5py
 import torch
-from matplotlib import pyplot as plt
 
 from artist import ARTIST_ROOT
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device, setup_distributed_environment
 
 
-def test_blocking(device: torch.device):  
+def test_blocking(device: torch.device) -> None:
+    """
+    Test all blocking methods in an integration test.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
     # Load the scenario.
     with h5py.File(
-        pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios/test_blocking.h5", "r",
+        pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios/test_blocking.h5",
+        "r",
     ) as scenario_file:
-
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             device=device,
         )
 
-    incident_ray_direction = torch.nn.functional.normalize(torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), dim=-1)
+    incident_ray_direction = torch.nn.functional.normalize(
+        torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), dim=-1
+    )
 
     heliostat_group = scenario.heliostat_field.heliostat_groups[0]
     heliostat_target_light_source_mapping = [
@@ -60,7 +71,7 @@ def test_blocking(device: torch.device):
     )
 
     scenario.set_number_of_rays(number_of_rays=200)
-    
+
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
@@ -83,6 +94,3 @@ def test_blocking(device: torch.device):
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(bitmaps_per_heliostat, expected, atol=5e-4, rtol=5e-4)
-
-
-

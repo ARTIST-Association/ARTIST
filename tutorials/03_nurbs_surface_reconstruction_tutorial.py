@@ -186,8 +186,12 @@ def create_surface_plots(name: str) -> None:
             temporary_points, temporary_normals = (
                 temporary_nurbs.calculate_surface_points_and_normals(
                     evaluation_points=evaluation_points,
-                    canting=heliostat_group.canting[heliostat_index].unsqueeze(index_mapping.heliostat_dimension),
-                    facet_translations=heliostat_group.facet_translations[heliostat_index].unsqueeze(index_mapping.heliostat_dimension),
+                    canting=heliostat_group.canting[heliostat_index].unsqueeze(
+                        index_mapping.heliostat_dimension
+                    ),
+                    facet_translations=heliostat_group.facet_translations[
+                        heliostat_index
+                    ].unsqueeze(index_mapping.heliostat_dimension),
                     device=device,
                 )
             )

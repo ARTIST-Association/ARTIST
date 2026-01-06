@@ -10,10 +10,10 @@ data_for_stral_dir: "./examples/field_optimizations/data_for_stral"
 minimum_number_of_measurements: 2
 kinematic_reconstruction_image_type: "flux"
 surface_reconstruction_image_type: "flux-centered"
-heliostats_for_plots: 
+heliostats_for_plots:
   - "AK54"
   - "AM55"
-  - "AM56" 
+  - "AM56"
 random_seed: 7
 device: "cuda"
 surface_reconstruction_optimization_configuration:

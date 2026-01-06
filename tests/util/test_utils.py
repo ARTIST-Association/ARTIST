@@ -1,11 +1,9 @@
 import math
-import pathlib
 
 import pytest
 import torch
 
-from artist import ARTIST_ROOT
-from artist.util import config_dictionary, utils
+from artist.util import utils
 
 
 @pytest.mark.parametrize(

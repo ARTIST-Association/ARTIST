@@ -147,9 +147,7 @@ class HeliostatGroup:
         self.active_surface_normals = torch.empty_like(
             self.surface_normals, device=device
         )
-        self.active_canting = torch.empty_like(
-            self.canting, device=device
-        )
+        self.active_canting = torch.empty_like(self.canting, device=device)
         self.active_facet_translations = torch.empty_like(
             self.facet_translations, device=device
         )

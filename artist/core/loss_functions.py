@@ -3,7 +3,7 @@ from typing import Any
 import torch
 
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, utils
+from artist.util import index_mapping, utils
 from artist.util.environment_setup import get_device
 
 
@@ -277,11 +277,7 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        device = get_device(device=kwargs["device"])
-
-        target_area_mask = kwargs["target_area_mask"]
-        
-        # TODO normalize 
+        # TODO normalize
         normalized_predictions = prediction
         normalized_ground_truth = ground_truth
 

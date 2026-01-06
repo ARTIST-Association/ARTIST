@@ -62,7 +62,6 @@ def create_fluxes(
         )
 
         if active_heliostats_mask.sum() > 0:
-
             measured_bitmaps.append(measured_flux)
 
             # Activate heliostats.

@@ -53,7 +53,7 @@ class Surface:
             control_points.append(facet_config.control_points)
 
         control_points = torch.stack(control_points)
-        
+
         self.nurbs_surface = NURBSSurfaces(
             degrees=degrees,
             control_points=control_points.unsqueeze(index_mapping.heliostat_dimension),
@@ -91,17 +91,11 @@ class Surface:
 
         evaluation_points = (
             utils.create_nurbs_evaluation_grid(
-                number_of_evaluation_points=number_of_points_per_facet, 
-                device=device
+                number_of_evaluation_points=number_of_points_per_facet, device=device
             )
             .unsqueeze(index_mapping.heliostat_dimension)
             .unsqueeze(index_mapping.facet_index_unbatched)
-            .expand(
-                1,
-                self.nurbs_surface.number_of_facets_per_surface,
-                -1,
-                -1
-            )
+            .expand(1, self.nurbs_surface.number_of_facets_per_surface, -1, -1)
         )
 
         if torch.all(self.nurbs_surface.control_points[..., 2] == 0):
@@ -111,7 +105,9 @@ class Surface:
             ) = self.nurbs_surface.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points,
                 canting=canting.unsqueeze(index_mapping.heliostat_dimension),
-                facet_translations=facet_translations.unsqueeze(index_mapping.heliostat_dimension),
+                facet_translations=facet_translations.unsqueeze(
+                    index_mapping.heliostat_dimension
+                ),
                 device=device,
             )
         else:

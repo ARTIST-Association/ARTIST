@@ -29,7 +29,7 @@ def plot_reconstruction_results(
     device = get_device(device)
 
     # Load results.
-    results_dicts: list[dict[str, dict[str, np.ndarray]]]= torch.load(
+    results_dicts: list[dict[str, dict[str, np.ndarray]]] = torch.load(
         results_file,
         weights_only=False,
         map_location=device,
@@ -43,14 +43,14 @@ def plot_reconstruction_results(
     axes = [fig.add_subplot(gs[i]) for i in range(18)]
 
     # Reference flux.
-    for i in range (num_surfaces):
+    for i in range(num_surfaces):
         reference_flux = results_dicts["reconstructed"]["measured_flux"][i]
         reference_flux_normalized = (reference_flux - reference_flux.min()) / (
             reference_flux.max() - reference_flux.min()
         )
-        axes[i%6+(i*5)].imshow(reference_flux.cpu().detach(), cmap="gray")
-        axes[i%6+(i*5)].set_title("Reference", fontsize=28)
-        axes[i%6+(i*5)].axis("off")
+        axes[i % 6 + (i * 5)].imshow(reference_flux.cpu().detach(), cmap="gray")
+        axes[i % 6 + (i * 5)].set_title("Reference", fontsize=28)
+        axes[i % 6 + (i * 5)].axis("off")
 
         # Ideal flux.
         ideal_flux = results_dicts["ideal"]["ideal_flux"][i]
@@ -60,37 +60,37 @@ def plot_reconstruction_results(
         rmse_ideal = torch.sqrt(
             torch.mean((reference_flux_normalized - ideal_flux_normalized) ** 2)
         )
-        axes[i%6+1+(i*5)].imshow(ideal_flux.cpu().detach(), cmap="gray")
-        axes[i%6+1+(i*5)].set_title("Ideal", fontsize=28)
-        axes[i%6+1+(i*5)].axis("off")
-        axes[i%6+1+(i*5)].text(
+        axes[i % 6 + 1 + (i * 5)].imshow(ideal_flux.cpu().detach(), cmap="gray")
+        axes[i % 6 + 1 + (i * 5)].set_title("Ideal", fontsize=28)
+        axes[i % 6 + 1 + (i * 5)].axis("off")
+        axes[i % 6 + 1 + (i * 5)].text(
             0.5,
             -0.05,
             f"RMSE(Ref, Ideal)={rmse_ideal:.4f}",
             ha="center",
             va="top",
-            transform=axes[i%6+1+(i*6)].transAxes,
+            transform=axes[i % 6 + 1 + (i * 6)].transAxes,
             fontsize=26,
         )
 
         # Reconstructed flux.
         reconstructed_flux = results_dicts["reconstructed"]["reconstructed_flux"][i]
-        reconstructed_flux_normalized = (reconstructed_flux - reconstructed_flux.min()) / (
-            reconstructed_flux.max() - reconstructed_flux.min()
-        )
+        reconstructed_flux_normalized = (
+            reconstructed_flux - reconstructed_flux.min()
+        ) / (reconstructed_flux.max() - reconstructed_flux.min())
         rmse_reconstructed = torch.sqrt(
             torch.mean((reference_flux_normalized - reconstructed_flux_normalized) ** 2)
         )
-        axes[i%6+2+(i*5)].imshow(reconstructed_flux.cpu().detach(), cmap="gray")
-        axes[i%6+2+(i*5)].set_title("Reconstructed", fontsize=28)
-        axes[i%6+2+(i*5)].axis("off")
-        axes[i%6+2+(i*5)].text(
+        axes[i % 6 + 2 + (i * 5)].imshow(reconstructed_flux.cpu().detach(), cmap="gray")
+        axes[i % 6 + 2 + (i * 5)].set_title("Reconstructed", fontsize=28)
+        axes[i % 6 + 2 + (i * 5)].axis("off")
+        axes[i % 6 + 2 + (i * 5)].text(
             0.5,
             -0.05,
             f"RMSE(Ref, Recon)={rmse_reconstructed:.4f}",
             ha="center",
             va="top",
-            transform=axes[i%6+2].transAxes,
+            transform=axes[i % 6 + 2].transAxes,
             fontsize=26,
         )
 
@@ -133,57 +133,92 @@ def plot_reconstruction_results(
             .detach()
         )
 
-        facet_points_flat_r = results_dicts["reconstructed"]["points"][:, :, :, :3].reshape(num_surfaces, -1, 3).cpu().detach()
+        facet_points_flat_r = (
+            results_dicts["reconstructed"]["points"][:, :, :, :3]
+            .reshape(num_surfaces, -1, 3)
+            .cpu()
+            .detach()
+        )
         facet_normals_flat_r = normals_r.reshape(num_surfaces, -1, 3).cpu().detach()
         x_r = facet_points_flat_r[:, :, 0]
         y_r = facet_points_flat_r[:, :, 1]
         cos_theta_r = facet_normals_flat_r @ reference_direction
-        angles_r =torch.clip( torch.arccos(torch.clip(cos_theta_r, -1.0, 1.0)),  -0.1, 0.1)
+        angles_r = torch.clip(
+            torch.arccos(torch.clip(cos_theta_r, -1.0, 1.0)), -0.1, 0.1
+        )
 
-        facet_points_flat_d = results_dicts["deflectometry"]["points"][:, :, :, :3].reshape(num_surfaces, -1, 3).cpu().detach()
+        facet_points_flat_d = (
+            results_dicts["deflectometry"]["points"][:, :, :, :3]
+            .reshape(num_surfaces, -1, 3)
+            .cpu()
+            .detach()
+        )
         facet_normals_flat_d = normals_d.reshape(num_surfaces, -1, 3).cpu().detach()
         x_d = facet_points_flat_d[:, :, 0]
         y_d = facet_points_flat_d[:, :, 1]
         cos_theta_d = facet_normals_flat_d @ reference_direction
-        angles_d = torch.clip( torch.arccos(torch.clip(cos_theta_d, -1.0, 1.0)),  -0.1, 0.1)
+        angles_d = torch.clip(
+            torch.arccos(torch.clip(cos_theta_d, -1.0, 1.0)), -0.1, 0.1
+        )
 
-        facet_points_flat_i = results_dicts["ideal_surface"]["points"][:, :, :, :3].reshape(num_surfaces, -1, 3)
+        facet_points_flat_i = results_dicts["ideal_surface"]["points"][
+            :, :, :, :3
+        ].reshape(num_surfaces, -1, 3)
         facet_normals_flat_i = normals_i.reshape(num_surfaces, -1, 3)
         x_i = facet_points_flat_i[:, :, 0]
         y_i = facet_points_flat_i[:, :, 1]
         cos_theta_i = facet_normals_flat_i @ reference_direction
-        angles_i =torch.clip( torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)),  -0.1, 0.1)
+        angles_i = torch.clip(
+            torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)), -0.1, 0.1
+        )
 
-        sc3 = axes[i%6+3+(i*5)].scatter(x_d[i], y_d[i], c=angles_d[i], cmap="viridis", s=20, vmin=0.0, vmax=0.006)
-        axes[i%6+3+(i*5)].set_title("Measured Angle Map", fontsize=16)
-        axes[i%6+3+(i*5)].set_aspect("equal", adjustable="box")
-        axes[i%6+3+(i*5)].axis("off")
+        sc3 = axes[i % 6 + 3 + (i * 5)].scatter(
+            x_d[i], y_d[i], c=angles_d[i], cmap="viridis", s=20, vmin=0.0, vmax=0.006
+        )
+        axes[i % 6 + 3 + (i * 5)].set_title("Measured Angle Map", fontsize=16)
+        axes[i % 6 + 3 + (i * 5)].set_aspect("equal", adjustable="box")
+        axes[i % 6 + 3 + (i * 5)].axis("off")
         cbar3 = fig.colorbar(
-            sc3, ax=axes[i%6+3+(i*5)], orientation="horizontal", fraction=0.046, pad=0.1
+            sc3,
+            ax=axes[i % 6 + 3 + (i * 5)],
+            orientation="horizontal",
+            fraction=0.046,
+            pad=0.1,
         )
         cbar3.set_label("Angle (rad)")
 
-        sc4 = axes[i%6+4+(i*5)].scatter(x_r[i], y_r[i], c=angles_r[i], cmap="viridis", s=20, vmin=0.0, vmax=0.006)
-        axes[i%6+4+(i*5)].set_title("Reconstructed Angle Map", fontsize=28)
-        axes[i%6+4+(i*5)].set_aspect("equal", adjustable="box")
-        axes[i%6+4+(i*5)].axis("off")
+        sc4 = axes[i % 6 + 4 + (i * 5)].scatter(
+            x_r[i], y_r[i], c=angles_r[i], cmap="viridis", s=20, vmin=0.0, vmax=0.006
+        )
+        axes[i % 6 + 4 + (i * 5)].set_title("Reconstructed Angle Map", fontsize=28)
+        axes[i % 6 + 4 + (i * 5)].set_aspect("equal", adjustable="box")
+        axes[i % 6 + 4 + (i * 5)].axis("off")
         cbar4 = fig.colorbar(
-            sc4, ax=axes[i%6+4+(i*5)], orientation="horizontal", fraction=0.046, pad=0.01
+            sc4,
+            ax=axes[i % 6 + 4 + (i * 5)],
+            orientation="horizontal",
+            fraction=0.046,
+            pad=0.01,
         )
         cbar4.set_label("Angle (rad)", fontsize=26)
         cbar4.ax.tick_params(labelsize=24)
-        
+
         loss_normals = (1 - torch.sum(normals_d[i] * normals_r[i], dim=-1)).reshape(-1)
-        sc5 = axes[i%6+5+(i*5)].scatter(x_r[i], y_r[i], c=loss_normals, cmap="viridis", s=20)
-        axes[i%6+5+(i*5)].set_title("Cosine Similarity", fontsize=28)
-        axes[i%6+5+(i*5)].set_aspect("equal", adjustable="box")
-        axes[i%6+5+(i*5)].axis("off")
+        sc5 = axes[i % 6 + 5 + (i * 5)].scatter(
+            x_r[i], y_r[i], c=loss_normals, cmap="viridis", s=20
+        )
+        axes[i % 6 + 5 + (i * 5)].set_title("Cosine Similarity", fontsize=28)
+        axes[i % 6 + 5 + (i * 5)].set_aspect("equal", adjustable="box")
+        axes[i % 6 + 5 + (i * 5)].axis("off")
         cbar5 = fig.colorbar(
-            sc5, ax=axes[i%6+5+(i*5)], orientation="horizontal", fraction=0.046, pad=0.01
+            sc5,
+            ax=axes[i % 6 + 5 + (i * 5)],
+            orientation="horizontal",
+            fraction=0.046,
+            pad=0.01,
         )
         cbar5.set_label("Angle (rad)", fontsize=26)
         cbar5.ax.tick_params(labelsize=24)
-
 
     plt.tight_layout()
     plt.savefig(plots_path, dpi=300, bbox_inches="tight")

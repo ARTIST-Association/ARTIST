@@ -14,6 +14,7 @@ from artist.util.environment_setup import get_device
 log = logging.getLogger(__name__)
 """A logger for the calibration data parser."""
 
+
 class CalibrationDataParser:
     """
     Abstract base class for all calibration data parsers.

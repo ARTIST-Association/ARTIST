@@ -72,15 +72,14 @@ def set_runtime_logger(
     level: int = logging.INFO,
 ) -> logging.Logger:
     """
-    Configure and return a shared runtime logger that logs execution times
-    of functions across scripts.
+    Configure and return a shared runtime logger that logs execution times of functions.
 
     Parameters
     ----------
     log_file : str | Path
         The file path to write runtime logs.
     level : int
-        The logging level (default: logging.INFO).
+        The logging level (default is logging.INFO).
 
     Returns
     -------
@@ -96,10 +95,12 @@ def set_runtime_logger(
         log_file.parent.mkdir(parents=True, exist_ok=True)
 
         file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(logging.Formatter(
-            "[%(asctime)s][%(name)s][%(levelname)s] - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        ))
+        file_handler.setFormatter(
+            logging.Formatter(
+                "[%(asctime)s][%(name)s][%(levelname)s] - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
         logger.addHandler(file_handler)
 
     return logger
@@ -107,18 +108,19 @@ def set_runtime_logger(
 
 def track_runtime(logger: logging.Logger):
     """
-    Decorator to log start, finish, and duration of function execution.
+    Track and log start, finish, and duration of function execution.
 
     Parameters
     ----------
     logger : logging.Logger
-        The runtime logger returned by `set_runtime_logger`.
+        The runtime logger.
 
     Returns
     -------
     Callable
         The decorated function with runtime tracking.
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -129,7 +131,12 @@ def track_runtime(logger: logging.Logger):
             duration = time.perf_counter() - start_time
             logger.info(f"{func_name} finished in {duration:.3f}s")
             return result
+
         return wrapper
+
     return decorator
 
-runtime_log = set_runtime_logger("/workVERLEIHNIX/mb/ARTIST/examples/field_optimizations/results/runtime_log.txt")
+
+runtime_log = set_runtime_logger(
+    "/workVERLEIHNIX/mb/ARTIST/examples/field_optimizations/results/runtime_log.txt"
+)

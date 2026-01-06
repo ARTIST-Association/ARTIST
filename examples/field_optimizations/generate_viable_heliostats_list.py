@@ -14,12 +14,14 @@ def find_viable_heliostats(
     kinematic_reconstruction_image_type: str,
     surface_reconstruction_image_type: str,
     heliostat_list: list[str] | None = None,
-) -> list[tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path], pathlib.Path]]:
+) -> list[
+    tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path], pathlib.Path]
+]:
     """
     Find heliostats that have at least a minimum number of valid calibration files.
 
     This function iterates through a data directory to find all heliostats having at least the minimum number of measurements
-    calibration files. All paths are collected, and a sorted list of the  heliostats is returned containing tuples including 
+    calibration files. All paths are collected, and a sorted list of the  heliostats is returned containing tuples including
     the heliostat name, path to the calibration file, and path to the flux images for surface and kinematic reconstruction.
 
     Parameters
@@ -33,7 +35,7 @@ def find_viable_heliostats(
     surface_reconstruction_image_type : str
         The type of calibration image to use for the surface reconstruction, i.e., ''flux'', or ''flux-centered''.
     heliostat_list : list[str] | None
-        An optional list of heliostat names, if included only these heliostats will be collected (default is None). 
+        An optional list of heliostat names, if included only these heliostats will be collected (default is None).
 
     Returns
     -------
@@ -55,7 +57,7 @@ def find_viable_heliostats(
     all_heliostats = (
         directory
         for directory in data_directory.iterdir()
-        if directory.is_dir() 
+        if directory.is_dir()
         and heliostat_name_pattern.match(directory.name)
         and (heliostat_list is None or directory.name in heliostat_list)
     )
@@ -101,10 +103,17 @@ def find_viable_heliostats(
                             / f"{file_stem}-{surface_reconstruction_image_type}.png"
                         )
 
-                        if kinematic_reconstruction_flux_image_path.exists() and surface_reconstruction_flux_image_path.exists():
+                        if (
+                            kinematic_reconstruction_flux_image_path.exists()
+                            and surface_reconstruction_flux_image_path.exists()
+                        ):
                             valid_calibration_files.append(calibration_file_path)
-                            flux_images_kinematic_reconstruction.append(kinematic_reconstruction_flux_image_path)
-                            flux_images_surface_reconstruction.append(surface_reconstruction_flux_image_path)
+                            flux_images_kinematic_reconstruction.append(
+                                kinematic_reconstruction_flux_image_path
+                            )
+                            flux_images_surface_reconstruction.append(
+                                surface_reconstruction_flux_image_path
+                            )
             except Exception as e:
                 print(f"Warning: Skipping {calibration_file_path} due to error: {e}")
 
@@ -113,7 +122,9 @@ def find_viable_heliostats(
                 (
                     heliostat_name,
                     valid_calibration_files[:minimum_number_of_measurements],
-                    flux_images_kinematic_reconstruction[:minimum_number_of_measurements],
+                    flux_images_kinematic_reconstruction[
+                        :minimum_number_of_measurements
+                    ],
                     flux_images_surface_reconstruction[:minimum_number_of_measurements],
                     properties_path,
                 )
@@ -182,13 +193,21 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_dir_default = config.get("data_dir", "./examples/field_optimizations/field_data")
-    results_dir_default = config.get("results_dir", "./examples/field_optimizations/results")
+    data_dir_default = config.get(
+        "data_dir", "./examples/field_optimizations/field_data"
+    )
+    results_dir_default = config.get(
+        "results_dir", "./examples/field_optimizations/results"
+    )
     minimum_number_of_measurements_default = config.get(
         "minimum_number_of_measurements", 4
     )
-    kinematic_reconstruction_image_type_default = config.get("kinematic_reconstruction_image_type", "flux")
-    surface_reconstruction_image_type_default = config.get("surface_reconstruction_image_type", "flux-centered")
+    kinematic_reconstruction_image_type_default = config.get(
+        "kinematic_reconstruction_image_type", "flux"
+    )
+    surface_reconstruction_image_type_default = config.get(
+        "surface_reconstruction_image_type", "flux-centered"
+    )
     heliostat_list_baseline_default = config.get("heliostat_list_baseline", None)
 
     parser.add_argument(
@@ -242,8 +261,8 @@ if __name__ == "__main__":
     data_dir = pathlib.Path(args.data_dir)
 
     for case in ["baseline", "full_field"]:
-        if case == "baseline": 
-            heliostat_list=args.heliostat_list_baseline
+        if case == "baseline":
+            heliostat_list = args.heliostat_list_baseline
         else:
             heliostat_list = None
 
@@ -252,11 +271,11 @@ if __name__ == "__main__":
             minimum_number_of_measurements=args.minimum_number_of_measurements,
             kinematic_reconstruction_image_type=args.kinematic_reconstruction_image_type,
             surface_reconstruction_image_type=args.surface_reconstruction_image_type,
-            heliostat_list=heliostat_list
+            heliostat_list=heliostat_list,
         )
 
         print(f"Selected {len(heliostat_data_list)} heliostats for the {case}:")
-        
+
         for (
             heliostat_name,
             calibration_paths,
@@ -274,8 +293,13 @@ if __name__ == "__main__":
                 "calibrations": [
                     str(calibration_path) for calibration_path in calibration_paths
                 ],
-                "kinematic_reconstruction_flux_images": [str(flux_path) for flux_path in kinematic_reconstruction_flux_paths],
-                "surface_reconstruction_flux_images": [str(flux_path) for flux_path in surface_reconstruction_flux_image_path],
+                "kinematic_reconstruction_flux_images": [
+                    str(flux_path) for flux_path in kinematic_reconstruction_flux_paths
+                ],
+                "surface_reconstruction_flux_images": [
+                    str(flux_path)
+                    for flux_path in surface_reconstruction_flux_image_path
+                ],
                 "properties": str(properties_path),
             }
             for heliostat_name, calibration_paths, kinematic_reconstruction_flux_paths, surface_reconstruction_flux_image_path, properties_path in heliostat_data_list
@@ -288,5 +312,5 @@ if __name__ == "__main__":
 
         with open(results_path, "w") as output_file:
             json.dump(serializable_data, output_file, indent=2)
-        
+
         print(f"Saved {len(serializable_data)} heliostat entries to {results_path}")

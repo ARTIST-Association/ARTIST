@@ -238,7 +238,9 @@ class MotorPositionsOptimizer:
 
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
-            lr=float(self.optimization_configuration[config_dictionary.initial_learning_rate]),
+            lr=float(
+                self.optimization_configuration[config_dictionary.initial_learning_rate]
+            ),
         )
 
         # Create a learning rate scheduler.
@@ -323,7 +325,9 @@ class MotorPositionsOptimizer:
                         config_dictionary.heliostat_group_world_size
                     ],
                     rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                    batch_size=self.optimization_configuration[config_dictionary.batch_size],
+                    batch_size=self.optimization_configuration[
+                        config_dictionary.batch_size
+                    ],
                     random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],
                     bitmap_resolution=self.bitmap_resolution,
                 )
@@ -371,7 +375,10 @@ class MotorPositionsOptimizer:
                     index_mapping.heliostat_dimension
                 ),
                 target_area_mask=torch.tensor([self.target_area_index], device=device),
-                reduction_dimensions=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+                reduction_dimensions=(
+                    index_mapping.batched_bitmap_e,
+                    index_mapping.batched_bitmap_u,
+                ),
                 device=device,
             )
 
@@ -389,22 +396,17 @@ class MotorPositionsOptimizer:
                 )
 
             # Early stopping when loss has reached a plateau.
-            if (
-                loss
-                < best_loss
-                - float(self.optimization_configuration[
-                    config_dictionary.early_stopping_delta
-                ])
+            if loss < best_loss - float(
+                self.optimization_configuration[config_dictionary.early_stopping_delta]
             ):
                 best_loss = loss
                 patience_counter = 0
             else:
                 patience_counter += 1
-            if (
-                patience_counter
-                >= float(self.optimization_configuration[
+            if patience_counter >= float(
+                self.optimization_configuration[
                     config_dictionary.early_stopping_patience
-                ])
+                ]
             ):
                 log.info(
                     f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."

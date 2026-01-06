@@ -117,7 +117,7 @@ def test_total_variation_regularizer(
         (
             torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]]]),
             torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 1.0, 3.0]]]]),
-            torch.tensor([[[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]]]),    
+            torch.tensor([[[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]]]),
             torch.tensor([[[[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]]]]),
             torch.tensor([0.3333]),
             torch.tensor([0.5]),
@@ -166,5 +166,9 @@ def test_ideal_surface_regularizer(
         device=device,
     )
 
-    torch.testing.assert_close(loss_points, expected_points.to(device), atol=5e-2, rtol=5e-2)
-    torch.testing.assert_close(loss_normals, expected_normals.to(device), atol=5e-2, rtol=5e-2)
+    torch.testing.assert_close(
+        loss_points, expected_points.to(device), atol=5e-2, rtol=5e-2
+    )
+    torch.testing.assert_close(
+        loss_normals, expected_normals.to(device), atol=5e-2, rtol=5e-2
+    )

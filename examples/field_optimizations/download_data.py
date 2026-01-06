@@ -59,8 +59,12 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./examples/field_optimizations/field_data")
-    metadata_root_default = config.get("metadata_root", "./examples/field_optimizations/")
+    data_dir_default = config.get(
+        "data_dir", "./examples/field_optimizations/field_data"
+    )
+    metadata_root_default = config.get(
+        "metadata_root", "./examples/field_optimizations/"
+    )
     metadata_file_name_default = config.get(
         "metadata_file_name", "calibration_metadata_all_heliostats.csv"
     )

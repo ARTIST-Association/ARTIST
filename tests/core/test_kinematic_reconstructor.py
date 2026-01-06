@@ -173,7 +173,10 @@ def test_kinematic_reconstructor(
 
         ddp_setup_for_testing[config_dictionary.device] = device
         ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
-        ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {0: [0], 1: [0]}
+        ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {
+            0: [0],
+            1: [0],
+        }
 
         if reconstruction_method == "invalid":
             with pytest.raises(ValueError) as exc_info:

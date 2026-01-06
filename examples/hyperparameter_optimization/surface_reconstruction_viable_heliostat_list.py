@@ -46,9 +46,9 @@ def find_heliostat_files(
     json_suffix_to_remove = (
         paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER.removesuffix(".json")
     )
-    
+
     for heliostat_name in list(heliostat_calibrations.keys()):
-    #heliostat_name = list(heliostat_calibrations.keys())
+        # heliostat_name = list(heliostat_calibrations.keys())
 
         heliostat_dir = data_directory / heliostat_name
 
@@ -92,7 +92,8 @@ def find_heliostat_files(
                             json_suffix_to_remove
                         )
                         flux_image_path = (
-                            calibration_dir / f"{file_stem}-{calibration_image_type}.png"
+                            calibration_dir
+                            / f"{file_stem}-{calibration_image_type}.png"
                         )
 
                         if flux_image_path.exists():
@@ -164,7 +165,9 @@ if __name__ == "__main__":
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
+    results_dir_default = config.get(
+        "results_dir", "./examples/hyperparameter_optimization/results"
+    )
     heliostat_for_reconstruction_default = config.get(
         "heliostat_for_reconstruction", {"AA39": [244862, 270398, 246213, 258959]}
     )

@@ -193,7 +193,10 @@ class SurfaceGenerator:
         epoch = 0
         while loss > tolerance and epoch <= max_epoch:
             points, normals = nurbs_surface.calculate_surface_points_and_normals(
-                evaluation_points=evaluation_points, canting=None, facet_translations=None, device=device
+                evaluation_points=evaluation_points,
+                canting=None,
+                facet_translations=None,
+                device=device,
             )
 
             optimizer.zero_grad()

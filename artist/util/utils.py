@@ -1,5 +1,3 @@
-from functools import wraps
-import time
 import torch
 import torch.nn.functional as functional
 
@@ -798,28 +796,55 @@ def create_ideal_canted_nurbs_control_points(
 
     return control_points
 
+
 def perform_canting(
-    canting,
-    data,
-    inverse=False,
-    device=None
-):
+    canting_angles: torch.Tensor,
+    data: torch.Tensor,
+    inverse: bool = False,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Perform canting (rotation) on data like surface points or surface normals.
+
+    Parameters
+    ----------
+    canting_angles torch.Tensor
+        Canting angles.
+        Tensor of shape [number_of_surfaces, number_of_facets, 2, 4].
+    data : torch.Tensor
+        Data to be canted.
+        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+    inverse : bool
+        Indicating the direction of the rotation. Use inverse=False for canting and inverse=True for decanting (default is False).
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        The (de-)canted data.
+        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+    """
     number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
     number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
-    rotation_matrix = torch.zeros((number_of_surfaces, number_of_facets_per_surface, 4, 4), device=device)
+    rotation_matrix = torch.zeros(
+        (number_of_surfaces, number_of_facets_per_surface, 4, 4), device=device
+    )
 
-    e = canting[:, :, index_mapping.e, :index_mapping.slice_fourth_dimension]
-    n = canting[:, :, index_mapping.n, :index_mapping.slice_fourth_dimension]
+    e = canting_angles[:, :, index_mapping.e, : index_mapping.slice_fourth_dimension]
+    n = canting_angles[:, :, index_mapping.n, : index_mapping.slice_fourth_dimension]
     u = torch.linalg.cross(e, n, dim=2)
-    
-    rotation_matrix[:, :, :index_mapping.slice_fourth_dimension, index_mapping.e] = torch.nn.functional.normalize(
-        e, dim=-1
+
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = (
+        torch.nn.functional.normalize(e, dim=-1)
     )
-    rotation_matrix[:, :, :index_mapping.slice_fourth_dimension, index_mapping.n] = torch.nn.functional.normalize(
-        n, dim=-1
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.n] = (
+        torch.nn.functional.normalize(n, dim=-1)
     )
-    rotation_matrix[:, :, :index_mapping.slice_fourth_dimension, index_mapping.u] = torch.nn.functional.normalize(
-        u, dim=-1
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
+        torch.nn.functional.normalize(u, dim=-1)
     )
 
     rotation_matrix[

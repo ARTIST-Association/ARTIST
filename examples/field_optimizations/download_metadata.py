@@ -32,7 +32,7 @@ if __name__ == "__main__":
         help="Path to the YAML configuration file.",
         default=default_config_path,
     )
-    
+
     # Parse the config argument first to load the configuration.
     args, unknown = parser.parse_known_args()
     config_path = pathlib.Path(args.config)

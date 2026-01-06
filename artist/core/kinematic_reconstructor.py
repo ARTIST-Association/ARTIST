@@ -214,9 +214,11 @@ class KinematicReconstructor:
                         heliostat_group.kinematic.rotation_deviation_parameters.requires_grad_(),
                         heliostat_group.kinematic.actuators.optimizable_parameters.requires_grad_(),
                     ],
-                    lr=float(self.optimization_configuration[
-                        config_dictionary.initial_learning_rate
-                    ]),
+                    lr=float(
+                        self.optimization_configuration[
+                            config_dictionary.initial_learning_rate
+                        ]
+                    ),
                 )
 
                 # Create a learning rate scheduler.
@@ -242,7 +244,10 @@ class KinematicReconstructor:
                     else self.optimization_configuration[config_dictionary.log_step]
                 )
                 while (
-                    loss > float(self.optimization_configuration[config_dictionary.tolerance])
+                    loss
+                    > float(
+                        self.optimization_configuration[config_dictionary.tolerance]
+                    )
                     and epoch
                     <= self.optimization_configuration[config_dictionary.max_epoch]
                 ):
@@ -269,7 +274,9 @@ class KinematicReconstructor:
                             config_dictionary.heliostat_group_world_size
                         ],
                         rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                        batch_size=self.optimization_configuration[config_dictionary.batch_size],
+                        batch_size=self.optimization_configuration[
+                            config_dictionary.batch_size
+                        ],
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
@@ -287,8 +294,12 @@ class KinematicReconstructor:
 
                     loss_per_sample = loss_definition(
                         prediction=flux_distributions,
-                        ground_truth=focal_spots_measured[sample_indices_for_local_rank],
-                        target_area_mask=target_area_mask[sample_indices_for_local_rank],
+                        ground_truth=focal_spots_measured[
+                            sample_indices_for_local_rank
+                        ],
+                        target_area_mask=target_area_mask[
+                            sample_indices_for_local_rank
+                        ],
                         reduction_dimensions=(index_mapping.focal_spots,),
                         device=device,
                     )
@@ -298,10 +309,12 @@ class KinematicReconstructor:
                     loss.backward()
 
                     reduce_gradients(
-                        parameters=[heliostat_group.kinematic.rotation_deviation_parameters,
-                                    heliostat_group.kinematic.actuators.optimizable_parameters],
+                        parameters=[
+                            heliostat_group.kinematic.rotation_deviation_parameters,
+                            heliostat_group.kinematic.actuators.optimizable_parameters,
+                        ],
                         process_group=self.ddp_setup["process_subgroup"],
-                        mean=True
+                        mean=True,
                     )
 
                     optimizer.step()
@@ -318,22 +331,19 @@ class KinematicReconstructor:
                         )
 
                     # Early stopping when loss has reached a plateau.
-                    if (
-                        loss
-                        < best_loss
-                        - float(self.optimization_configuration[
+                    if loss < best_loss - float(
+                        self.optimization_configuration[
                             config_dictionary.early_stopping_delta
-                        ])
+                        ]
                     ):
                         best_loss = loss
                         patience_counter = 0
                     else:
                         patience_counter += 1
-                    if (
-                        patience_counter
-                        >= float(self.optimization_configuration[
+                    if patience_counter >= float(
+                        self.optimization_configuration[
                             config_dictionary.early_stopping_patience
-                        ])
+                        ]
                     ):
                         log.info(
                             f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
@@ -346,7 +356,7 @@ class KinematicReconstructor:
                     local_loss_per_sample=loss_per_sample,
                     samples_per_heliostat=active_heliostats_mask,
                     ddp_setup=self.ddp_setup,
-                    device=device
+                    device=device,
                 )
 
                 source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][

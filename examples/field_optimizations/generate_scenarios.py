@@ -123,7 +123,7 @@ def generate_fitted_scenario(
 ) -> None:
     """
     Generate a deflectometry HDF5 scenario for the evaluation of the field optimizations.
-    
+
     Parameters
     ----------
     data_directory : pathlib.Path
@@ -176,7 +176,12 @@ def generate_fitted_scenario(
             deflectometry_file,
         )
         for heliostat_name in heliostat_names
-        if (deflectometry_file := find_latest_deflectometry_file(heliostat_name, data_directory)) is not None
+        if (
+            deflectometry_file := find_latest_deflectometry_file(
+                heliostat_name, data_directory
+            )
+        )
+        is not None
     ]
 
     # Fit the NURBS.
@@ -224,9 +229,9 @@ if __name__ == "__main__":
     """
     Generate scenarios for the field optimizations.
 
-    This will generate ideal scenarios for the baseline case and for the full-field. Additionally it will generate 
-    a fitted scenario with deflectometry data, containing only the heliostats from the baseline case which also have 
-    available deflectometry measurements. The deflectometry scenario is used for the evaluation plots. 
+    This will generate ideal scenarios for the baseline case and for the full-field. Additionally it will generate
+    a fitted scenario with deflectometry data, containing only the heliostats from the baseline case which also have
+    available deflectometry measurements. The deflectometry scenario is used for the evaluation plots.
 
     Parameters
     ----------
@@ -274,12 +279,18 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_dir_default = config.get("data_dir", "./examples/field_optimizations/field_data")
+    data_dir_default = config.get(
+        "data_dir", "./examples/field_optimizations/field_data"
+    )
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
-    results_dir_default = config.get("results_dir", "./examples/field_optimizations/results")
-    scenarios_dir_default = config.get("scenarios_dir", "./examples/field_optimizations/scenarios")
+    results_dir_default = config.get(
+        "results_dir", "./examples/field_optimizations/results"
+    )
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/field_optimizations/scenarios"
+    )
     heliostat_list_baseline_default = config.get("heliostat_list_baseline", None)
 
     parser.add_argument(
@@ -327,7 +338,9 @@ if __name__ == "__main__":
     tower_file = data_dir / args.tower_file_name
 
     for case in ["baseline", "full_field"]:
-        viable_heliostats_data = pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
+        viable_heliostats_data = (
+            pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
+        )
         if not viable_heliostats_data.exists():
             raise FileNotFoundError(
                 f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."

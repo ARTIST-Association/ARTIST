@@ -39,6 +39,7 @@ def reflect(
         * reflection_surface_normals
     )
 
+
 def line_plane_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
@@ -94,9 +95,9 @@ def line_plane_intersections(
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
     # unit normal vectors and the normalized ray-direction vectors, pointing from the planes to the sources.
     # This determines how much the rays align with the plane normals.
-    relative_intensities = (
-        -rays.ray_directions * plane_normals[:, None, None, :]
-    ).sum(dim=-1)
+    relative_intensities = (-rays.ray_directions * plane_normals[:, None, None, :]).sum(
+        dim=-1
+    )
 
     front_facing_mask = relative_intensities > epsilon
 
@@ -106,8 +107,7 @@ def line_plane_intersections(
     # Next, calculate the scalar distances along the ray directions from the ray origins to the intersection points on the planes.
     # This indicates how far the intersection points are along the rays' directions.
     numerator = (
-        (points_at_ray_origins - plane_centers[:, None, :])
-        * plane_normals[:, None, :]
+        (points_at_ray_origins - plane_centers[:, None, :]) * plane_normals[:, None, :]
     ).sum(dim=-1)[:, None, :]
 
     intersection_distances = torch.where(
@@ -117,8 +117,8 @@ def line_plane_intersections(
     )
 
     intersections = (
-        points_at_ray_origins[:, None, :, :] +
-        rays.ray_directions * intersection_distances[:, :, :, None]
+        points_at_ray_origins[:, None, :, :]
+        + rays.ray_directions * intersection_distances[:, :, :, None]
     )
 
     # Calculate the absolute intensities of the rays hitting the target planes.
@@ -128,8 +128,8 @@ def line_plane_intersections(
         dim=-1,
     )
 
-    distance_attenuations = (1.0 / (distances_to_plane_centers ** 2))[:, None, :]
-    
+    distance_attenuations = (1.0 / (distances_to_plane_centers**2))[:, None, :]
+
     absolute_intensities = (
         rays.ray_magnitudes * relative_intensities * distance_attenuations
     )
