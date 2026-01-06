@@ -91,7 +91,8 @@ def loss_per_heliostat(local_loss_per_sample, samples_per_heliostat, ddp_setup, 
 
     local_number_of_samples = torch.tensor([local_loss_per_sample.numel()], device=device)
     max_number_of_samples = local_number_of_samples.clone()
-    torch.distributed.all_reduce(max_number_of_samples, op= torch.distributed.ReduceOp.MAX, group=process_subgroup)
+    if torch.distributed.is_initialized():
+        torch.distributed.all_reduce(max_number_of_samples, op=torch.distributed.ReduceOp.MAX, group=process_subgroup)
     max_number_of_samples = max_number_of_samples.item()
 
     if local_loss_per_sample.numel() < max_number_of_samples:
@@ -101,7 +102,8 @@ def loss_per_heliostat(local_loss_per_sample, samples_per_heliostat, ddp_setup, 
         padded = local_loss_per_sample
     
     gathered = [torch.zeros_like(padded) for _ in range(world_size)]
-    torch.distributed.all_gather(gathered, padded, group=process_subgroup)
+    if torch.distributed.is_initialized():
+        torch.distributed.all_gather(gathered, padded, group=process_subgroup)
 
     if rank == 0:
         all_losses = []
