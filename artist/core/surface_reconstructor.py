@@ -399,9 +399,10 @@ class SurfaceReconstructor:
                     regularizer_loss_per_heliostat = torch.zeros(
                         [torch.nonzero(active_heliostats_mask).numel()], device=device
                     )
-                    if self.optimization_configuration[
-                        config_dictionary.regularizers
-                    ] is not None:
+                    if (
+                        self.optimization_configuration[config_dictionary.regularizers]
+                        is not None
+                    ):
                         for regularizer in self.optimization_configuration[
                             config_dictionary.regularizers
                         ]:
@@ -415,7 +416,9 @@ class SurfaceReconstructor:
                                 original_surface_normals=original_surface_normals[
                                     active_heliostats_mask > 0
                                 ],
-                                surface_points=new_surface_points[start_indices_heliostats],
+                                surface_points=new_surface_points[
+                                    start_indices_heliostats
+                                ],
                                 surface_normals=new_surface_normals[
                                     start_indices_heliostats
                                 ],
@@ -434,7 +437,8 @@ class SurfaceReconstructor:
                             exponent_normals = torch.clamp(
                                 alpha
                                 * torch.relu(
-                                    regularization_term_active_heliostats_normals - 2.2e-6
+                                    regularization_term_active_heliostats_normals
+                                    - 2.2e-6
                                 ),
                                 max=50.0,
                             )

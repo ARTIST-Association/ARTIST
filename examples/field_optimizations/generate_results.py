@@ -806,11 +806,36 @@ def create_surface_reconstruction_batches(
 
 
 def load_surfaces_from_file(
-    reconstructed_surface_path, scenario, number_of_surface_points_per_facet, device
-):
-    loaded_nurbs_control_points = torch.load(
-        reconstructed_surface_path, weights_only=False
-    )
+    surface_path: pathlib.Path,
+    scenario: Scenario,
+    number_of_surface_points_per_facet: torch.Tensor,
+    device: torch.device | None = None,
+) -> Scenario:
+    """
+    Load surface data from a file.
+
+    Parameter
+    ---------
+    surface_path : pathlib.Path
+        Path to the surface data.
+    scenario : Scenario
+        Scenario containing the rest of the data.
+    number_of_surface_points_per_facet : torch.Tensor
+        Number of surface points per facet to be loaded.
+        Tensor of shape [2].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    Scenario
+        The scenario overwritten with the loaded surface data.
+    """
+    device = get_device(device=device)
+
+    loaded_nurbs_control_points = torch.load(surface_path, weights_only=False)
     for heliostat_group, nurbs_control_points in zip(
         scenario.heliostat_field.heliostat_groups,
         loaded_nurbs_control_points,
@@ -861,8 +886,25 @@ def load_surfaces_from_file(
     return scenario
 
 
-def load_kinematics_from_file(reconstructed_kinematic_path, scenario):
-    loaded_kinematics = torch.load(reconstructed_kinematic_path, weights_only=False)
+def load_kinematics_from_file(
+    kinematic_path: pathlib.Path, scenario: Scenario
+) -> Scenario:
+    """
+    Load kinematic data from a file.
+
+    Parameter
+    ---------
+    kinematic_path : pathlib.Path
+        Path to the kinematic data.
+    scenario : Scenario
+        Scenario containing the rest of the data.
+
+    Returns
+    -------
+    Scenario
+        The scenario overwritten with the loaded kinematic data.
+    """
+    loaded_kinematics = torch.load(kinematic_path, weights_only=False)
     for heliostat_group, loaded_kinematic in zip(
         scenario.heliostat_field.heliostat_groups, loaded_kinematics
     ):
@@ -883,20 +925,10 @@ def ablation_study(
     baseline_target_area_index: int,
     baseline_aim_point: torch.Tensor,
     ablation_study_case: int,
-    data_mappings: dict[str, list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-    | None = None,
-    surface_reconstruction_optimization_configuration: dict[
-        str, int | float | str | dict[str, float | int]
-    ]
-    | None = None,
-    kinematic_reconstruction_optimization_configuration: dict[
-        str, int | float | str | dict[str, float | int]
-    ]
-    | None = None,
-    aimpoint_optimization_configuration: dict[
-        str, int | float | str | dict[str, float | int]
-    ]
-    | None = None,
+    data_mappings: dict[str, Any],
+    surface_reconstruction_optimization_configuration: dict[str, Any] | None = None,
+    kinematic_reconstruction_optimization_configuration: dict[str, Any] | None = None,
+    aimpoint_optimization_configuration: dict[str, Any] | None = None,
     target_distribution: torch.Tensor | None = None,
     data_for_stral_dir: pathlib.Path | None = None,
     device: torch.device | None = None,
@@ -942,7 +974,11 @@ def ablation_study(
     device = get_device(device=device)
 
     results_dir = results_path.parent
-    results_number = int(re.match(r"results_(\d+)\.pt", results_path.name).group(1))
+    results_number = (
+        int(m.group(1))
+        if (m := re.match(r"results_(\d+)\.pt", results_path.name))
+        else 0
+    )
     results_dict = cast(
         dict[str, dict[str, torch.Tensor]], torch.load(results_path, weights_only=False)
     )
@@ -993,7 +1029,7 @@ def ablation_study(
                     "A surface reconstruction viable for this case has been previously made. Loading the results."
                 )
                 scenario = load_surfaces_from_file(
-                    reconstructed_surface_path=reconstructed_surface_path,
+                    surface_path=reconstructed_surface_path,
                     number_of_surface_points_per_facet=number_of_surface_points_per_facet,
                     scenario=scenario,
                     device=device,
@@ -1061,7 +1097,7 @@ def ablation_study(
                     "A kinematic reconstruction viable for this case has been previously made. Loading the results."
                 )
                 scenario = load_kinematics_from_file(
-                    reconstructed_kinematic_path=reconstructed_kinematic_path,
+                    kinematic_path=reconstructed_kinematic_path,
                     scenario=scenario,
                 )
             else:
@@ -1174,7 +1210,24 @@ def ablation_study(
         )
 
 
-def create_heliostat_data_mappings(viable_heliostats_data, heliostats_for_plots):
+def create_heliostat_data_mappings(
+    viable_heliostats_data: pathlib.Path, heliostats_for_plots: list[str]
+) -> dict[str, Any]:
+    """
+    Create the data mappings for the heliostats in the different optimization tasks.
+
+    Parameters
+    ----------
+    viable_heliostats_data : pathlib.Path
+        Path to the viable heliostats list.
+    heliostats_for_plots : list[str]
+        List of all heliostats considered in the plots.
+
+    Returns
+    -------
+    dict[str, Any]
+        The mappings from heliostat name to data files and data parsers for each task.
+    """
     with open(viable_heliostats_data, "r") as f:
         viable_heliostats = json.load(f)
 
