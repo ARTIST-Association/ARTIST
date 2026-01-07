@@ -15,7 +15,6 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
-from artist.core.regularizers import IdealSurfaceRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -919,7 +918,7 @@ def ablation_study(
             config_dictionary.data_parser: data_parser,
             config_dictionary.heliostat_data_mapping: data_mappings["surface_plot"],
         }
-        batch_size = 30 #380
+        batch_size = 30  # 380
         data_surfaces = create_surface_reconstruction_batches(
             data_mappings["surface_reconstruction"], data_parser, batch_size
         )
@@ -1419,7 +1418,7 @@ def main() -> None:
         # )
         surface_reconstruction_optimization_configuration[
             config_dictionary.regularizers
-        ] = [] #= [ideal_surface_regularizer]
+        ] = []  # = [ideal_surface_regularizer]
 
         runtime_log.info(
             f"surface reconstruction: {surface_reconstruction_optimization_configuration}"

@@ -8,7 +8,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.kinematic_reconstructor import KinematicReconstructor
-from artist.core.loss_functions import FocalSpotLoss, Loss, VectorLoss
+from artist.core.loss_functions import FocalSpotLoss, Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
@@ -200,7 +200,7 @@ def test_kinematic_reconstructor(
                 reconstruction_method=reconstruction_method,
             )
 
-            loss_definition = (FocalSpotLoss(scenario=scenario))
+            loss_definition = FocalSpotLoss(scenario=scenario)
 
             # Reconstruct the kinematic.
             if not isinstance(data_parser, PaintCalibrationDataParser):

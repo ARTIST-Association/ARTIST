@@ -396,7 +396,7 @@ class MotorPositionsOptimizer:
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
 
-            # TODO 
+            # TODO
             # import matplotlib.pyplot as plt
             # plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
             # plt.savefig(f"test{epoch}.png")

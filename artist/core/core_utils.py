@@ -35,6 +35,7 @@ def scale_loss(
 
     return scaled_loss
 
+
 def reduce_gradients(parameters, process_group=None, mean=True):
     """
     Manually reduce gradients across all ranks.
@@ -50,7 +51,7 @@ def reduce_gradients(parameters, process_group=None, mean=True):
     """
     if not torch.distributed.is_initialized():
         return
-    
+
     world_size = torch.distributed.get_world_size(group=process_group)
     if world_size == 1:
         return
@@ -96,11 +97,15 @@ def loss_per_heliostat(
     process_subgroup = ddp_setup["process_subgroup"]
 
     if not torch.distributed.is_initialized() or world_size == 1:
-        final_loss_per_heliostat = torch.empty(len(samples_per_heliostat), device=device)
+        final_loss_per_heliostat = torch.empty(
+            len(samples_per_heliostat), device=device
+        )
         start_index = 0
         for i, number_of_samples in enumerate(samples_per_heliostat):
             if number_of_samples > 0:
-                heliostat_losses = local_loss_per_sample[start_index:start_index + number_of_samples]
+                heliostat_losses = local_loss_per_sample[
+                    start_index : start_index + number_of_samples
+                ]
                 final_loss_per_heliostat[i] = heliostat_losses.mean()
             else:
                 final_loss_per_heliostat[i] = float("nan")

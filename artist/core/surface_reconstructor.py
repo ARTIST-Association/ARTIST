@@ -484,7 +484,7 @@ class SurfaceReconstructor:
                         flux_loss_per_sample + regularization_term
                     )
 
-                    # Assumption: each heliostat has the same amount of samples, otherwise mean() does not work here. 
+                    # Assumption: each heliostat has the same amount of samples, otherwise mean() does not work here.
                     loss = local_loss_with_regularization.mean()
 
                     loss.backward()
