@@ -519,7 +519,7 @@ if __name__ == "__main__":
 
         plots_path.mkdir(parents=True, exist_ok=True)
 
-        results_path = pathlib.Path(args.results_dir) / case / "results_3.pt"
+        results_path = pathlib.Path(args.results_dir) / case / "results_0.pt"
 
         if not results_path.exists():
             raise FileNotFoundError(

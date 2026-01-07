@@ -27,6 +27,7 @@ surface_reconstruction_optimization_configuration:
   scheduler: "exponential"
   scheduler_parameters:
     gamma: 0.995
+  regularizers: []
 kinematic_reconstruction_optimization_configuration:
   initial_learning_rate: 8e-5
   tolerance: 0.0005
