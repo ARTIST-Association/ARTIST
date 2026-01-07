@@ -570,6 +570,7 @@ def kinematic_data(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
+            blocking_active=False,
             world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
             rank=ddp_setup[config_dictionary.heliostat_group_rank],
             batch_size=heliostat_group.number_of_active_heliostats,
@@ -719,6 +720,7 @@ def surface_data(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
+            blocking_active=False,
             world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
             rank=ddp_setup[config_dictionary.heliostat_group_rank],
             batch_size=heliostat_group.number_of_active_heliostats,
@@ -917,7 +919,7 @@ def ablation_study(
             config_dictionary.data_parser: data_parser,
             config_dictionary.heliostat_data_mapping: data_mappings["surface_plot"],
         }
-        batch_size = 380
+        batch_size = 30 #380
         data_surfaces = create_surface_reconstruction_batches(
             data_mappings["surface_reconstruction"], data_parser, batch_size
         )
@@ -1405,18 +1407,19 @@ def main() -> None:
             "surface_plot": heliostat_data_mapping_surface_plot,
         }
 
+        # TODO
         # Configure the optimizers and learning rate schedulers for all three optimization tasks.
-        ideal_surface_regularizer = IdealSurfaceRegularizer(
-            weight=0.4,
-            reduction_dimensions=(
-                index_mapping.facet_dimension,
-                index_mapping.points_dimension,
-                index_mapping.coordinates_dimension,
-            ),
-        )
+        # ideal_surface_regularizer = IdealSurfaceRegularizer(
+        #     weight=0.4,
+        #     reduction_dimensions=(
+        #         index_mapping.facet_dimension,
+        #         index_mapping.points_dimension,
+        #         index_mapping.coordinates_dimension,
+        #     ),
+        # )
         surface_reconstruction_optimization_configuration[
             config_dictionary.regularizers
-        ] = [ideal_surface_regularizer]
+        ] = [] #= [ideal_surface_regularizer]
 
         runtime_log.info(
             f"surface reconstruction: {surface_reconstruction_optimization_configuration}"
@@ -1586,6 +1589,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
     runtime_log.info("-----------------")
+    main()
     runtime_log.info("\n\n")

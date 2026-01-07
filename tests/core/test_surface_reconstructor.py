@@ -89,6 +89,7 @@ def test_surface_reconstructor(
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 5e-4,
         config_dictionary.max_epoch: 15,
+        config_dictionary.batch_size: 30,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
         config_dictionary.early_stopping_patience: 13,
@@ -147,6 +148,10 @@ def test_surface_reconstructor(
 
     ddp_setup_for_testing[config_dictionary.device] = device
     ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+    ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {
+        0: [0],
+        1: [0],
+    }
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -164,7 +169,7 @@ def test_surface_reconstructor(
     if not isinstance(data_parser, PaintCalibrationDataParser):
         with pytest.raises(NotImplementedError) as exc_info:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_definition=loss_definition, batch_size=10, device=device
+                loss_definition=loss_definition, device=device
             )
 
             assert "Must be overridden!" in str(exc_info.value)

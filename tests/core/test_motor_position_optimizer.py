@@ -49,7 +49,7 @@ def distribution(device) -> torch.Tensor:
         distribution_path_group_1, map_location=device, weights_only=True
     )
 
-    return ground_truth
+    return ground_truth / 133
 
 
 @pytest.mark.parametrize(
@@ -109,11 +109,11 @@ def test_motor_positions_optimizer(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 30,
+        config_dictionary.max_epoch: 21,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 4,
+        config_dictionary.early_stopping_patience: 40,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }

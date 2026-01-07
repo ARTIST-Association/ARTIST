@@ -35,7 +35,6 @@ def scale_loss(
 
     return scaled_loss
 
-
 def reduce_gradients(parameters, process_group=None, mean=True):
     """
     Manually reduce gradients across all ranks.
@@ -51,20 +50,22 @@ def reduce_gradients(parameters, process_group=None, mean=True):
     """
     if not torch.distributed.is_initialized():
         return
-
+    
     world_size = torch.distributed.get_world_size(group=process_group)
-    for param in parameters:
-        if param.grad is None:
-            continue
+    if world_size == 1:
+        return
 
-        grad = param.grad.data
+    with torch.no_grad():
+        for param in parameters:
+            if param.grad is None:
+                continue
 
-        torch.distributed.all_reduce(
-            grad, op=torch.distributed.ReduceOp.SUM, group=process_group
-        )
+            torch.distributed.all_reduce(
+                param.grad, op=torch.distributed.ReduceOp.SUM, group=process_group
+            )
 
-        if mean and world_size > 0:
-            grad /= world_size
+            if mean:
+                param.grad /= world_size
 
 
 def loss_per_heliostat(
@@ -94,16 +95,27 @@ def loss_per_heliostat(
     world_size = ddp_setup["heliostat_group_world_size"]
     process_subgroup = ddp_setup["process_subgroup"]
 
+    if not torch.distributed.is_initialized() or world_size == 1:
+        final_loss_per_heliostat = torch.empty(len(samples_per_heliostat), device=device)
+        start_index = 0
+        for i, number_of_samples in enumerate(samples_per_heliostat):
+            if number_of_samples > 0:
+                heliostat_losses = local_loss_per_sample[start_index:start_index + number_of_samples]
+                final_loss_per_heliostat[i] = heliostat_losses.mean()
+            else:
+                final_loss_per_heliostat[i] = float("nan")
+            start_index += number_of_samples
+        return final_loss_per_heliostat
+
     local_number_of_samples = torch.tensor(
         [local_loss_per_sample.numel()], device=device
     )
     max_number_of_samples = local_number_of_samples.clone()
-    if torch.distributed.is_initialized():
-        torch.distributed.all_reduce(
-            max_number_of_samples,
-            op=torch.distributed.ReduceOp.MAX,
-            group=process_subgroup,
-        )
+    torch.distributed.all_reduce(
+        max_number_of_samples,
+        op=torch.distributed.ReduceOp.MAX,
+        group=process_subgroup,
+    )
     max_number_of_samples = max_number_of_samples.item()
 
     if local_loss_per_sample.numel() < max_number_of_samples:
@@ -115,8 +127,7 @@ def loss_per_heliostat(
         padded = local_loss_per_sample
 
     gathered = [torch.zeros_like(padded) for _ in range(world_size)]
-    if torch.distributed.is_initialized():
-        torch.distributed.all_gather(gathered, padded, group=process_subgroup)
+    torch.distributed.all_gather(gathered, padded, group=process_subgroup)
 
     if rank == 0:
         all_losses = []

@@ -298,27 +298,28 @@ class HeliostatRayTracer:
         self.bitmap_resolution = bitmap_resolution
 
         # TODO
-        self.blocking_heliostat_surfaces = torch.cat(
-            [
-                group.surface_points
-                for group in self.scenario.heliostat_field.heliostat_groups
-            ]
-        )
-        blocking_heliostat_surfaces_active_list = []
-        for group in self.scenario.heliostat_field.heliostat_groups:
-            if group.active_heliostats_mask.sum() <= 0:
-                blocking_heliostat_surfaces_active_list.append(
-                    group.surface_points + group.positions.unsqueeze(1)
-                )
-            if group.active_heliostats_mask.sum() > 0:
-                heliostat_mask = torch.cumsum(group.active_heliostats_mask, dim=0)
-                start_indices = heliostat_mask - group.active_heliostats_mask
-                blocking_heliostat_surfaces_active_list.append(
-                    group.active_surface_points[start_indices]
-                )
-        self.blocking_heliostat_surfaces_active = torch.cat(
-            blocking_heliostat_surfaces_active_list
-        )
+        if self.blocking_active:
+            self.blocking_heliostat_surfaces = torch.cat(
+                [
+                    group.surface_points
+                    for group in self.scenario.heliostat_field.heliostat_groups
+                ]
+            )
+            blocking_heliostat_surfaces_active_list = []
+            for group in self.scenario.heliostat_field.heliostat_groups:
+                if group.active_heliostats_mask.sum() <= 0:
+                    blocking_heliostat_surfaces_active_list.append(
+                        group.surface_points + group.positions.unsqueeze(1)
+                    )
+                if group.active_heliostats_mask.sum() > 0:
+                    heliostat_mask = torch.cumsum(group.active_heliostats_mask, dim=0)
+                    start_indices = heliostat_mask - group.active_heliostats_mask
+                    blocking_heliostat_surfaces_active_list.append(
+                        group.active_surface_points[start_indices]
+                    )
+            self.blocking_heliostat_surfaces_active = torch.cat(
+                blocking_heliostat_surfaces_active_list
+            )
 
     def get_sampler_indices(self) -> torch.Tensor:
         """
@@ -391,15 +392,16 @@ class HeliostatRayTracer:
             reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
 
-        (
-            blocking_primitives_corners,
-            blocking_primitives_spans,
-            blocking_primitives_normals,
-        ) = blocking.create_blocking_primitives(
-            blocking_heliostats_surface_points=self.blocking_heliostat_surfaces,
-            blocking_heliostats_active_surface_points=self.blocking_heliostat_surfaces_active,
-            device=device,
-        )
+        if self.blocking_active:
+            (
+                blocking_primitives_corners,
+                blocking_primitives_spans,
+                blocking_primitives_normals,
+            ) = blocking.create_blocking_primitives(
+                blocking_heliostats_surface_points=self.blocking_heliostat_surfaces,
+                blocking_heliostats_active_surface_points=self.blocking_heliostat_surfaces_active,
+                device=device,
+            )
 
         flux_distributions = []
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):

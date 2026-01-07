@@ -202,9 +202,7 @@ class FocalSpotLoss(Loss):
 
         loss = torch.norm(focal_spot[:, :3] - ground_truth[:, :3], dim=1)
 
-        loss_reduced = loss.mean(dim=kwargs["reduction_dimensions"])
-
-        return loss_reduced
+        return loss
 
 
 class PixelLoss(Loss):

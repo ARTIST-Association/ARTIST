@@ -95,7 +95,7 @@ def create_blocking_primitives(
     return corners, spans, plane_normals
 
 
-@track_runtime(runtime_log)
+#@track_runtime(runtime_log)
 def compute_soft_ray_blocking(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
@@ -800,7 +800,7 @@ def ray_aabb_intersect(
     return entry_distance_to_aabb, exit_distance_to_aabb
 
 
-@track_runtime(runtime_log)
+#@track_runtime(runtime_log)
 @torch.no_grad()
 def blocking_filter_lbvh(
     points_at_ray_origins: torch.Tensor,

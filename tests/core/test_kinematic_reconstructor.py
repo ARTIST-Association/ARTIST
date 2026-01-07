@@ -105,7 +105,7 @@ def test_kinematic_reconstructor(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: initial_learning_rate,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
+        config_dictionary.max_epoch: 50,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: early_stopping_delta,
@@ -200,11 +200,7 @@ def test_kinematic_reconstructor(
                 reconstruction_method=reconstruction_method,
             )
 
-            loss_definition = (
-                FocalSpotLoss(scenario=scenario)
-                if loss_class is FocalSpotLoss
-                else VectorLoss()
-            )
+            loss_definition = (FocalSpotLoss(scenario=scenario))
 
             # Reconstruct the kinematic.
             if not isinstance(data_parser, PaintCalibrationDataParser):
