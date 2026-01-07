@@ -399,64 +399,67 @@ class SurfaceReconstructor:
                     regularizer_loss_per_heliostat = torch.zeros(
                         [torch.nonzero(active_heliostats_mask).numel()], device=device
                     )
-                    for regularizer in self.optimization_configuration[
+                    if self.optimization_configuration[
                         config_dictionary.regularizers
-                    ]:
-                        (
-                            regularization_term_active_heliostats_points,
-                            regularization_term_active_heliostats_normals,
-                        ) = regularizer(
-                            original_surface_points=original_surface_points[
+                    ] is not None:
+                        for regularizer in self.optimization_configuration[
+                            config_dictionary.regularizers
+                        ]:
+                            (
+                                regularization_term_active_heliostats_points,
+                                regularization_term_active_heliostats_normals,
+                            ) = regularizer(
+                                original_surface_points=original_surface_points[
+                                    active_heliostats_mask > 0
+                                ],
+                                original_surface_normals=original_surface_normals[
+                                    active_heliostats_mask > 0
+                                ],
+                                surface_points=new_surface_points[start_indices_heliostats],
+                                surface_normals=new_surface_normals[
+                                    start_indices_heliostats
+                                ],
+                                device=device,
+                            )
+
+                            # TODO
+                            alpha = regularizer.weight
+                            exponent_points = torch.clamp(
+                                alpha
+                                * torch.relu(
+                                    regularization_term_active_heliostats_points - 0.004
+                                ),
+                                max=50.0,
+                            )
+                            exponent_normals = torch.clamp(
+                                alpha
+                                * torch.relu(
+                                    regularization_term_active_heliostats_normals - 2.2e-6
+                                ),
+                                max=50.0,
+                            )
+                            scaled_loss_points = (
+                                regularization_term_active_heliostats_points
+                                * torch.exp(exponent_points)
+                            )
+                            scaled_loss_normals = (
+                                regularization_term_active_heliostats_normals
+                                * torch.exp(exponent_normals)
+                            )
+
+                            regularization_term_per_heliostat = torch.full(
+                                (active_heliostats_mask.shape[0],),
+                                float("inf"),
+                                device=device,
+                            )
+                            regularization_term_per_heliostat[
                                 active_heliostats_mask > 0
-                            ],
-                            original_surface_normals=original_surface_normals[
-                                active_heliostats_mask > 0
-                            ],
-                            surface_points=new_surface_points[start_indices_heliostats],
-                            surface_normals=new_surface_normals[
-                                start_indices_heliostats
-                            ],
-                            device=device,
-                        )
+                            ] = scaled_loss_points + scaled_loss_normals
 
-                        # TODO
-                        alpha = regularizer.weight
-                        exponent_points = torch.clamp(
-                            alpha
-                            * torch.relu(
-                                regularization_term_active_heliostats_points - 0.004
-                            ),
-                            max=50.0,
-                        )
-                        exponent_normals = torch.clamp(
-                            alpha
-                            * torch.relu(
-                                regularization_term_active_heliostats_normals - 2.2e-6
-                            ),
-                            max=50.0,
-                        )
-                        scaled_loss_points = (
-                            regularization_term_active_heliostats_points
-                            * torch.exp(exponent_points)
-                        )
-                        scaled_loss_normals = (
-                            regularization_term_active_heliostats_normals
-                            * torch.exp(exponent_normals)
-                        )
-
-                        regularization_term_per_heliostat = torch.full(
-                            (active_heliostats_mask.shape[0],),
-                            float("inf"),
-                            device=device,
-                        )
-                        regularization_term_per_heliostat[
-                            active_heliostats_mask > 0
-                        ] = scaled_loss_points + scaled_loss_normals
-
-                        regularizer_loss_per_heliostat = (
-                            regularizer_loss_per_heliostat
-                            + regularization_term_per_heliostat
-                        )
+                            regularizer_loss_per_heliostat = (
+                                regularizer_loss_per_heliostat
+                                + regularization_term_per_heliostat
+                            )
 
                     # Add regularization term per heliostat to loss per sample.
                     start_indices = torch.cat(
