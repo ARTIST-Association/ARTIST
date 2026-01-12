@@ -10,6 +10,7 @@ from artist.core.regularizers import (
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
+
 def test_base_regularizer(
     device: torch.device,
 ) -> None:
@@ -38,22 +39,38 @@ def test_base_regularizer(
 
 
 @pytest.fixture
-def control_points():
+def control_points(
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Fixture to generate flat, smooth, and irregular control point tensors.
-    Returns tensors in the format:
-        flat_points, smooth_points, irregular_points
-    Shapes: (4, 6, 6, 3)
+    Generate flat, smooth, and irregular control point tensors.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Returns
+    -------
+    torch.Tensor
+        Flat control points.
+        Tensor of shape [number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    torch.Tensor
+        Smooth control points.
+        Tensor of shape [number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    torch.Tensor
+        Irregular control points.
+        Tensor of shape [number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
     """
-    x = torch.linspace(0, 4 * 3.1415, 6)
-    y = torch.linspace(0, 4 * 3.1415, 6)
+    x = torch.linspace(0, 4 * 3.1415, 6, device=device)
+    y = torch.linspace(0, 4 * 3.1415, 6, device=device)
     x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
 
     x_expanded = x_grid.unsqueeze(0).expand(4, -1, -1)
     y_expanded = y_grid.unsqueeze(0).expand(4, -1, -1)
 
     # Flat surface
-    z_flat = torch.zeros_like(x_expanded)
+    z_flat = torch.zeros_like(x_expanded, device=device)
     flat_points = torch.stack([x_expanded, y_expanded, z_flat], dim=-1)
 
     # Smooth surface
@@ -61,19 +78,23 @@ def control_points():
     smooth_points = torch.stack([x_expanded, y_expanded, z_smooth], dim=-1)
 
     # Irregular surface
-    noise = torch.randn_like(z_smooth) * 0.5
-    z_irregular = z_smooth + noise
+    z_irregular = z_smooth * 5.0
     irregular_points = torch.stack([x_expanded, y_expanded, z_irregular], dim=-1)
 
     return flat_points, smooth_points, irregular_points
 
 
-def test_smoothness_regularizer(control_points):
+def test_smoothness_regularizer(
+    control_points: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    device: torch.device,
+) -> None:
     """
     Test the smoothness regularizer.
 
     Parameters
     ----------
+    control_points : tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        A fixture to retrieve the control points.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -95,18 +116,20 @@ def test_smoothness_regularizer(control_points):
 
     torch.testing.assert_close(
         loss,
-        torch.tensor([0.529724836349, 6.019106388092]),
+        torch.tensor([0.529724955559, 13.243123054504], device=device),
         atol=5e-4,
         rtol=5e-4,
     )
 
 
-def test_ideal_surface_regularizer(control_points):
+def test_ideal_surface_regularizer(control_points, device):
     """
     Test the ideal surface regularizer.
 
     Parameters
     ----------
+    control_points : tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        A fixture to retrieve the control points.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -128,7 +151,7 @@ def test_ideal_surface_regularizer(control_points):
 
     torch.testing.assert_close(
         loss,
-        torch.tensor([0.053332787007, 0.393994927406]),
+        torch.tensor([0.053332783282, 1.333319664001], device=device),
         atol=5e-4,
         rtol=5e-4,
     )

@@ -5,8 +5,7 @@ from typing import Any, cast
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import learning_rate_schedulers
-from artist.core import core_utils
+from artist.core import core_utils, learning_rate_schedulers
 from artist.core.core_utils import (
     loss_per_heliostat_distributed,
     reduce_gradients,
@@ -308,10 +307,12 @@ class KinematicReconstructor:
 
                     loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=loss_per_sample,
-                        nonzero_active_heliostats_mask=active_heliostats_mask[active_heliostats_mask > 0],
-                        device=device
+                        nonzero_active_heliostats_mask=active_heliostats_mask[
+                            active_heliostats_mask > 0
+                        ],
+                        device=device,
                     )
-                    
+
                     loss = loss_per_heliostat.mean()
 
                     loss.backward()

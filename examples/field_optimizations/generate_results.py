@@ -266,7 +266,9 @@ def save_heliostat_model(
             * heliostat_group.number_of_heliostats
         )
         data["axis_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
-        data["mirror_offsets"].extend(heliostat_group.kinematic.translation_deviation_parameters[:, 7].tolist())
+        data["mirror_offsets"].extend(
+            heliostat_group.kinematic.translation_deviation_parameters[:, 7].tolist()
+        )
         data["facet_translations"].extend(heliostat_group.facet_translations)
         data["canting_vectors"].extend(heliostat_group.canting)
         data["surface_points"].extend(
@@ -287,6 +289,7 @@ def save_heliostat_model(
         )
 
     torch.save(data, save_dir / f"reconstructed_heliostats_data_{results_number}.pt")
+
 
 def align_and_trace_rays(
     scenario: Scenario,
@@ -1022,7 +1025,10 @@ def ablation_study(
             heliostat_group.nurbs_degrees = nurbs_degree
 
         # Surface reconstruction.
-        if surface_reconstruction_optimization_configuration is not None:
+        if (
+            surface_reconstruction_optimization_configuration is not None
+            and data_mappings is not None
+        ):
             if reconstructed_surface_path.exists():
                 print(
                     "A surface reconstruction viable for this case has been previously made. Loading the results."
@@ -1090,7 +1096,10 @@ def ablation_study(
             )
 
         # Kinematic reconstruction.
-        if kinematic_reconstruction_optimization_configuration is not None:
+        if (
+            kinematic_reconstruction_optimization_configuration is not None
+            and data_mappings is not None
+        ):
             if reconstructed_kinematic_path.exists():
                 print(
                     "A kinematic reconstruction viable for this case has been previously made. Loading the results."
@@ -1391,7 +1400,6 @@ def main() -> None:
         "heliostats_for_plots", ["AK54", "AM55", "AM56"]
     )
 
-
     ideal_surface_regularizer = IdealSurfaceRegularizer(
         weight=1.0, reduction_dimensions=(1,)
     )
@@ -1411,7 +1419,9 @@ def main() -> None:
     aimpoint_optimization_configuration = config.get(
         "aimpoint_optimization_configuration", {}
     )
-    surface_reconstruction_optimization_configuration[config_dictionary.regularizers] = regularizers
+    surface_reconstruction_optimization_configuration[
+        config_dictionary.regularizers
+    ] = regularizers
 
     parser.add_argument(
         "--device",

@@ -7,7 +7,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
-from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
+from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -55,34 +55,24 @@ def test_surface_reconstructor(
     torch.cuda.manual_seed(7)
 
     scheduler_parameters = {
-        config_dictionary.min: 1e-4,
-        config_dictionary.reduce_factor: 0.9,
-        config_dictionary.patience: 100,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 20,
+        config_dictionary.min: 1e-6,
+        config_dictionary.reduce_factor: 0.8,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-4,
+        config_dictionary.cooldown: 5,
     }
 
     # Configure regularizers and their weights.
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3)
+        weight=1.0, reduction_dimensions=(1,)
     )
-    total_variation_regularizer_points = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
-        number_of_neighbors=64,
-        sigma=1e-3,
-    )
-    total_variation_regularizer_normals = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
-        number_of_neighbors=64,
-        sigma=1e-3,
+    smoothness_regularizer = SmoothnessRegularizer(
+        weight=1.0, reduction_dimensions=(1,)
     )
 
     regularizers = [
         ideal_surface_regularizer,
-        total_variation_regularizer_points,
-        total_variation_regularizer_normals,
+        smoothness_regularizer,
     ]
 
     optimization_configuration = {

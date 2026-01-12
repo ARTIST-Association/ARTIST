@@ -29,9 +29,14 @@ def focal_spot() -> torch.Tensor:
 
 
 @pytest.fixture
-def distribution(device) -> torch.Tensor:
+def distribution(device: torch.device) -> torch.Tensor:
     """
     Use a distribution as target in the loss function.
+
+    Parameters
+    ----------
+    device : torch.device
+        The device on which to initialize tensors.
 
     Returns
     -------

@@ -168,6 +168,27 @@ def mean_loss_per_heliostat(
     nonzero_active_heliostats_mask: torch.Tensor,
     device: torch.device | None = None,
 ) -> torch.Tensor:
+    """
+    Calculate the mean loss per heliostat from a loss per sample.
+
+    Parameters
+    ----------
+    loss_per_sample : torch.Tensor
+        Loss per sample.
+        Tensor of shape [number_of_samples].
+    nonzero_active_heliostats_mask : torch.Tensor
+        Mask of heliostats activated at least once.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        Loss per heliostat.
+        Tensor of shape [number_of_heliostats].
+    """
     device = get_device(device=device)
 
     indices = torch.repeat_interleave(

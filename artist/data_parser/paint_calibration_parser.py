@@ -252,7 +252,9 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
         total_samples = sum(replication_counter[name] for name in heliostat_names)
         calibration_replications = torch.tensor(
-            [replication_counter[name] for name in heliostat_names], dtype=torch.int32, device=device
+            [replication_counter[name] for name in heliostat_names],
+            dtype=torch.int32,
+            device=device,
         )
 
         target_area_mapping = torch.empty(
