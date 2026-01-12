@@ -6,8 +6,9 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
+from artist.core import core_utils
 from artist.core.core_utils import (
-    loss_per_heliostat,
+    loss_per_heliostat_distributed,
     reduce_gradients,
 )
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
@@ -305,8 +306,13 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    # Assumption: each heliostat has the same amount of samples, otherwise mean() does not work here.
-                    loss = loss_per_sample.mean()
+                    loss_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=loss_per_sample,
+                        nonzero_active_heliostats_mask=active_heliostats_mask[active_heliostats_mask > 0],
+                        device=device
+                    )
+                    
+                    loss = loss_per_heliostat.mean()
 
                     loss.backward()
 
@@ -361,7 +367,7 @@ class KinematicReconstructor:
 
                     epoch += 1
 
-                local_loss_per_heliostat = loss_per_heliostat(
+                local_loss_per_heliostat = loss_per_heliostat_distributed(
                     local_loss_per_sample=loss_per_sample,
                     samples_per_heliostat=active_heliostats_mask,
                     ddp_setup=self.ddp_setup,
