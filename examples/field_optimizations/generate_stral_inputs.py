@@ -66,8 +66,8 @@ def save_binp_from_artist_data(
 
     with open(output_path, "wb") as f:
         header_data = (
-            float(heliostat_position[0]),
             float(heliostat_position[1]),
+            float(-heliostat_position[0]),
             float(heliostat_position[2]),
             float(width),
             float(height),
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     heliostats_data_path = (
         pathlib.Path(args.data_for_stral_dir)
         / "baseline"
-        / "reconstructed_heliostats_data_9.pt"
+        / "reconstructed_heliostats_data_0.pt"
     )
 
     heliostats_data = torch.load(heliostats_data_path, weights_only=False)
