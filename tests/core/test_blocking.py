@@ -92,12 +92,6 @@ def test_blocking(device: torch.device) -> None:
         / f"bitmaps_{device.type}.pt"
     )
 
-    for i in range(bitmaps_per_heliostat.shape[0]):
-        import matplotlib.pyplot as plt
-
-        plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
-        plt.savefig(f"bitmap_{i}.png")
-
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(bitmaps_per_heliostat, expected, atol=5e-4, rtol=5e-4)
