@@ -69,7 +69,7 @@ def reduce_gradients(parameters, process_group=None, mean=True):
                 param.grad /= world_size
 
 
-def loss_per_heliostat(
+def loss_per_heliostat_distributed(
     local_loss_per_sample, samples_per_heliostat, ddp_setup, device=None
 ):
     """
@@ -161,3 +161,23 @@ def loss_per_heliostat(
         return final_loss_per_heliostat
     else:
         return None
+
+
+def mean_loss_per_heliostat(
+    loss_per_sample: torch.Tensor,
+    nonzero_active_heliostats_mask: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    device = get_device(device=device)
+
+    indices = torch.repeat_interleave(
+        torch.arange(nonzero_active_heliostats_mask.size(0), device=device),
+        nonzero_active_heliostats_mask,
+    )
+
+    sum_per_heliostat = torch.zeros(len(nonzero_active_heliostats_mask), device=device)
+    sum_per_heliostat.scatter_add_(0, indices, loss_per_sample)
+
+    mean_per_heliostat = sum_per_heliostat / nonzero_active_heliostats_mask
+
+    return mean_per_heliostat
