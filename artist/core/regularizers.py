@@ -34,10 +34,8 @@ class Regularizer:
 
     def __call__(
         self,
-        original_surface_points: torch.Tensor,
-        original_surface_normals: torch.Tensor,
-        surface_points: torch.Tensor,
-        surface_normals: torch.Tensor,
+        current_control_points: torch.Tensor,
+        original_control_points: torch.Tensor,
         device: torch.device | None = None,
         **kwargs: Any,
     ) -> torch.Tensor:
@@ -70,293 +68,115 @@ class Regularizer:
         raise NotImplementedError("Must be overridden!")
 
 
-class TotalVariationRegularizer(Regularizer):
+class SmoothnessRegularizer(Regularizer):
     """
-    A regularizer measuring the total variation in a surface.
+    A regularizer that penalizes high curvature in NURBS surfaces
+    by applying a discrete Laplacian on control points.
 
-    Attributes
-    ----------
-    weight : float
-        The weight of the regularization term.
-    reduction_dimensions : tuple[int]
-        The dimensions along which to reduce the regularization term.
-    surface : str
-        Specifies which part of a surface is regularized (either the surface points or the surface normals).
-    number_of_neighbors : int
-        The number of nearest neighbors to consider.
-    sigma : float | None
-        Determines how quickly the weight falls off as the distance increases.
-    batch_size : int
-        Used to process smaller batches of points instead of creating full distance matrices for all points.
-    epsilon : float
-        A small value used to prevent divisions by zero.
+    Encourages smooth, low-frequency deformations.
     """
 
-    def __init__(
-        self,
-        weight: float,
-        reduction_dimensions: tuple[int, ...],
-        number_of_neighbors: int = 20,
-        sigma: float | None = None,
-        batch_size: int = 512,
-        epsilon: float = 1e-8,
-    ) -> None:
-        """
-        Initialize the total variation regularizer.
-
-        Parameters
-        ----------
-        weight : float
-            The weight of the regularization term.
-        reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the regularization term.
-        surface : str
-            Specifies which part of a surface is regularized (either the surface points or the surface normals).
-        number_of_neighbors : int
-            The number of nearest neighbors to consider (default is 20).
-        sigma : float | None
-            Determines how quickly the weight falls off as the distance increases (default is None).
-        batch_size : int
-            Used to process smaller batches of points instead of creating full distance matrices for all points (default is 512).
-        epsilon : float
-            A small value used to prevent divisions by zero (default is 1e-8).
-        """
-        self.weight = weight
-        self.reduction_dimensions = reduction_dimensions
-        self.number_of_neighbors = number_of_neighbors
-        self.sigma = sigma
-        self.batch_size = batch_size
-        self.epsilon = epsilon
+    def __init__(self, weight: float, reduction_dimensions: tuple[int, ...] = (0, 1, 2)):
+        super().__init__(weight, reduction_dimensions)
 
     def __call__(
         self,
-        original_surface_points: torch.Tensor,
-        original_surface_normals: torch.Tensor,
-        surface_points: torch.Tensor,
-        surface_normals: torch.Tensor,
+        current_control_points: torch.Tensor,
+        original_control_points: torch.Tensor,
         device: torch.device | None = None,
         **kwargs: Any,
     ) -> torch.Tensor:
-        r"""
-        Compute the regularization.
-
-        This regularization suppresses the noise in the surface. It measures the noise in the surface by
-        taking absolute differences in the z-values of the provided points. This loss implementation
-        focuses on local smoothness by applying a Gaussian distance weight and thereby letting
-        closer points contribute more.
+        """
+        Compute the Laplacian regularization loss.
 
         Parameters
         ----------
-        original_surface_points : torch.Tensor
-            The original surface points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
         surface_points : torch.Tensor
-            The surface points of the predicted surface.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
-        surface_normals : torch.Tensor
-            The surface normals of the predicted surface.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
+            The NURBS control points or evaluated surface points.
+            Tensor of shape [number_of_surfaces, number_of_facets, number_of_surface_points, 4].
+            Only the first 3 coordinates (x,y,z) are used.
         device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-        \*\*kwargs : Any
-            Keyword arguments.
+            Torch device for computations.
 
         Returns
         -------
         torch.Tensor
-            The total variation loss for all provided surfaces.
-            Tensor of shape [number_of_surfaces].
+            Laplacian regularization loss per surface, shape [number_of_surfaces].
         """
-        device = get_device(device=device)
+        delta = current_control_points - original_control_points
 
-        variation_losses = []
+        # Pad delta to handle edges with replication
+        delta_padded = torch.nn.functional.pad(delta, (0, 0, 1, 1, 1, 1), mode='replicate')
 
-        for regularization_variable in [surface_points, surface_normals]:
-            (
-                number_of_surfaces,
-                number_of_facets,
-                number_of_surface_points_per_facet,
-                _,
-            ) = regularization_variable.shape
-            coordinates = regularization_variable[
-                :, :, :, : index_mapping.z_coordinates
-            ]
-            z_values = regularization_variable[:, :, :, index_mapping.z_coordinates]
+        # Compute 2D discrete Laplacian: L = 4*delta - (up + down + left + right)
+        L = (
+            4 * delta
+            - delta_padded[:, :, :-2, 1:-1, :]  # up
+            - delta_padded[:, :, 2:, 1:-1, :]   # down
+            - delta_padded[:, :, 1:-1, :-2, :]  # left
+            - delta_padded[:, :, 1:-1, 2:, :]   # right
+        )
 
-            if self.sigma is None:
-                coordinates_std = coordinates.std(dim=1).mean().item()
-                sigma = max(coordinates_std * 0.1, 1e-6)
-            else:
-                sigma = float(self.sigma + 1e-12)
+        laplacian_loss = (L ** 2).mean(dim=(2, 3, 4))
+        laplacian_loss = laplacian_loss.sum(dim=self.reduction_dimensions)
 
-            variation_loss_sum = torch.zeros(
-                (number_of_surfaces, number_of_facets), device=device
-            )
-            number_of_valid_neighbors = torch.zeros(
-                (number_of_surfaces, number_of_facets), device=device
-            )
+        laplacian_loss = self.weight * laplacian_loss
 
-            # Iterate over query points in batches to limit memory usage.
-            for start_index in range(
-                0, number_of_surface_points_per_facet, self.batch_size
-            ):
-                end_index = min(
-                    start_index + self.batch_size, number_of_surface_points_per_facet
-                )
-                number_of_points_in_batch = end_index - start_index
-
-                batch_coordinates = coordinates[:, :, start_index:end_index, :]
-                batch_z_values = z_values[:, :, start_index:end_index]
-
-                # Compute pairwise distances between the current batch coordinates and all coordinates and exclude identities.
-                distances = torch.cdist(batch_coordinates, coordinates)
-                rows = torch.arange(number_of_points_in_batch, device=device)
-                cols = (start_index + rows).to(device)
-                self_mask = torch.zeros_like(distances, dtype=torch.bool)
-                self_mask[:, :, rows, cols] = True
-                masked_distances = torch.where(
-                    self_mask, torch.full_like(distances, 1e9), distances
-                )
-
-                # Select the k-nearest neighbors (or fewer if the coordinate is near an edge).
-                number_of_neighbors_to_select = min(
-                    self.number_of_neighbors, number_of_surface_points_per_facet - 1
-                )
-                selected_distances, selected_indices = torch.topk(
-                    masked_distances,
-                    number_of_neighbors_to_select,
-                    largest=False,
-                    dim=index_mapping.neighboring_points,
-                )
-                valid_mask = selected_distances < 1e9
-
-                # Get all z_values of the selected neighbors and the absolute z_value_variations.
-                z_values_neighbors = torch.gather(
-                    z_values.unsqueeze(index_mapping.points_batch).expand(
-                        -1, -1, number_of_points_in_batch, -1
-                    ),
-                    3,
-                    selected_indices,
-                )
-                z_value_variations = torch.abs(
-                    batch_z_values.unsqueeze(index_mapping.z_value_variations)
-                    - z_values_neighbors
-                )
-                z_value_variations = z_value_variations * valid_mask.type_as(
-                    z_value_variations
-                )
-
-                # Accumulate weighted z_value_variations.
-                weights = torch.exp(-0.5 * (selected_distances / sigma) ** 2)
-                weights = weights * valid_mask.type_as(weights)
-                variation_loss_sum = variation_loss_sum + (
-                    weights * z_value_variations
-                ).sum(
-                    dim=(index_mapping.points_batch, index_mapping.z_value_variations)
-                )
-                number_of_valid_neighbors = (
-                    number_of_valid_neighbors
-                    + valid_mask.type_as(z_value_variations).sum(
-                        dim=(
-                            index_mapping.points_batch,
-                            index_mapping.z_value_variations,
-                        )
-                    )
-                )
-
-            # Batched total variation losses.
-            variation_loss = variation_loss_sum / (
-                number_of_valid_neighbors + self.epsilon
-            )
-            variation_loss_summed = variation_loss.sum(dim=self.reduction_dimensions)
-            variation_losses.append(variation_loss_summed)
-
-        return variation_losses[0], variation_losses[1]
+        return laplacian_loss
 
 
 class IdealSurfaceRegularizer(Regularizer):
     """
-    A regularizer measuring the difference between a predicted surface and the ideal.
-
-    Attributes
-    ----------
-    weight : float
-        The weight of the regularization term.
-    reduction_dimensions : tuple[int]
-        The dimensions along which to reduce the regularization term.
+    A regularizer that penalizes the deviation of NURBS control points
+    from the ideal surface. Encourages the optimized surface to stay
+    close to the reference geometry.
     """
 
-    def __init__(self, weight: float, reduction_dimensions: tuple[int, ...]) -> None:
+    def __init__(self, weight: float, reduction_dimensions: tuple[int, ...] = (0, 1)):
         """
-        Initialize the ideal surface regularizer.
+        Initialize the control-point deviation regularizer.
 
         Parameters
         ----------
         weight : float
-            The weight of the regularization term.
+            Weight of the regularization term.
         reduction_dimensions : tuple[int, ...]
-            The dimensions along which to reduce the regularization term.
+            Dimensions along which to reduce the loss (default: sum over surfaces and facets).
         """
-        self.weight = weight
-        self.reduction_dimensions = reduction_dimensions
+        super().__init__(weight, reduction_dimensions)
 
     def __call__(
         self,
-        original_surface_points: torch.Tensor,
-        original_surface_normals: torch.Tensor,
-        surface_points: torch.Tensor,
-        surface_normals: torch.Tensor,
+        current_control_points: torch.Tensor,
+        original_control_points: torch.Tensor,
         device: torch.device | None = None,
         **kwargs: Any,
     ) -> torch.Tensor:
-        r"""
-        Compute the regularization.
-
-        This regularization suppresses large changes in the control points positions. The real
-        surface is expected to be close to the ideal surface, therefore large changes are penalized.
+        """
+        Compute the L2 loss between current control points and ideal control points.
 
         Parameters
         ----------
         original_surface_points : torch.Tensor
-            The original surface points.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
+            The reference (ideal) control points.
+            Shape: [S, F, U, V, 3]
         surface_points : torch.Tensor
-            The surface points of the predicted surface.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 4].
-        surface_normals : torch.Tensor
-            The surface normals of the predicted surface.
-            Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_normals, 4].
+            The current control points being optimized.
+            Shape: [S, F, U, V, 3]
         device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-        \*\*kwargs : Any
-            Keyword arguments.
+            Device for computations.
 
         Returns
         -------
         torch.Tensor
-            The differences from the predicted surfaces to the ideal surfaces.
-            Tensor of shape [number_of_surfaces].
+            L2 deviation loss per surface.
         """
-        loss_function = torch.nn.MSELoss(reduction="none")
+        delta = current_control_points - original_control_points
+        delta_squared = delta ** 2
 
-        loss_points = loss_function(original_surface_points, surface_points)
-        reduced_loss_points = loss_points.mean(dim=self.reduction_dimensions)
-        rmse_points = torch.clamp(reduced_loss_points, min=1e-12)
+        # Regularization per facet.
+        per_facet_loss = delta_squared.mean(dim=(2, 3, 4))
+        loss = per_facet_loss.sum(dim=self.reduction_dimensions)
 
-        eps = 1e-8
-        original_normals_normed = original_surface_normals[:, :, :, :3] / (
-            original_surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps
-        )
-        normals_normed = surface_normals[:, :, :, :3] / (
-            surface_normals[:, :, :, :3].norm(dim=-1, keepdim=True) + eps
-        )
-
-        loss_normals = (
-            1 - torch.sum(normals_normed * original_normals_normed, dim=-1)
-        ).mean(dim=(1, 2))
-
-        return rmse_points, loss_normals
+        loss = self.weight * loss
+        return loss
