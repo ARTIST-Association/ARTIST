@@ -15,6 +15,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
+from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -265,7 +266,7 @@ def save_heliostat_model(
             * heliostat_group.number_of_heliostats
         )
         data["axis_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
-        data["mirror_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
+        data["mirror_offsets"].extend(heliostat_group.kinematic.translation_deviation_parameters[:, 7].tolist())
         data["facet_translations"].extend(heliostat_group.facet_translations)
         data["canting_vectors"].extend(heliostat_group.canting)
         data["surface_points"].extend(
@@ -287,8 +288,6 @@ def save_heliostat_model(
 
     torch.save(data, save_dir / f"reconstructed_heliostats_data_{results_number}.pt")
 
-
-@track_runtime(runtime_log)
 def align_and_trace_rays(
     scenario: Scenario,
     ddp_setup: dict[str, Any],
@@ -925,7 +924,7 @@ def ablation_study(
     baseline_target_area_index: int,
     baseline_aim_point: torch.Tensor,
     ablation_study_case: int,
-    data_mappings: dict[str, Any],
+    data_mappings: dict[str, Any] | None = None,
     surface_reconstruction_optimization_configuration: dict[str, Any] | None = None,
     kinematic_reconstruction_optimization_configuration: dict[str, Any] | None = None,
     aimpoint_optimization_configuration: dict[str, Any] | None = None,
@@ -1392,6 +1391,17 @@ def main() -> None:
         "heliostats_for_plots", ["AK54", "AM55", "AM56"]
     )
 
+
+    ideal_surface_regularizer = IdealSurfaceRegularizer(
+        weight=1.0, reduction_dimensions=(1,)
+    )
+    smoothness_regularizer = SmoothnessRegularizer(
+        weight=1.0, reduction_dimensions=(1,)
+    )
+    regularizers = [
+        ideal_surface_regularizer,
+        smoothness_regularizer,
+    ]
     surface_reconstruction_optimization_configuration = config.get(
         "surface_reconstruction_optimization_configuration", {}
     )
@@ -1401,6 +1411,7 @@ def main() -> None:
     aimpoint_optimization_configuration = config.get(
         "aimpoint_optimization_configuration", {}
     )
+    surface_reconstruction_optimization_configuration[config_dictionary.regularizers] = regularizers
 
     parser.add_argument(
         "--device",
@@ -1519,7 +1530,7 @@ def main() -> None:
         )
         target_distribution = results_dict["homogeneous_distribution"]
 
-        # Logging
+        # Logging.
         runtime_log.info(
             f"Number of heliostats: {len(data_mappings['kinematic_reconstruction']['heliostat_data_mapping'])}"
         )
@@ -1543,53 +1554,53 @@ def main() -> None:
         # 7. Surface: reconstructed     Kinematic: reconstructed    Aim Points: center
         # 8. Surface: reconstructed     Kinematic: reconstructed    Aim Points: optimized
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=1,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=1,
+        #     device=device,
+        # )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=2,
-            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-            target_distribution=target_distribution,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=2,
+        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+        #     target_distribution=target_distribution,
+        #     device=device,
+        # )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=3,
-            data_mappings=data_mappings,
-            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=3,
+        #     data_mappings=data_mappings,
+        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+        #     device=device,
+        # )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=4,
-            data_mappings=data_mappings,
-            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-            target_distribution=target_distribution,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=4,
+        #     data_mappings=data_mappings,
+        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+        #     target_distribution=target_distribution,
+        #     device=device,
+        # )
 
         ablation_study(
             scenario_path=scenario_path_ideal,
