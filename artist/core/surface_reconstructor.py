@@ -404,7 +404,7 @@ class SurfaceReconstructor:
                     flux_loss = flux_loss_per_heliostat.mean()
                     regularizer_loss = regularizer_loss_per_heliostat.mean()
 
-                    # Gradient-norm balancing
+                    # Gradient-norm balancing.
                     if (
                         regularizer_loss.requires_grad
                         and regularizer_loss.item() != 0.0
@@ -423,7 +423,7 @@ class SurfaceReconstructor:
                         lambda_0 = 0.1
                         # tau = 20.0
                         lambda_reg = (g_data.norm() / (g_reg.norm() + 1e-8)).detach()
-                        # continuation / annealing
+                        # continuation / annealing.
                         lambda_reg = (
                             lambda_0
                             * torch.tensor(

@@ -339,13 +339,6 @@ class KinematicReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
-                    # TODO
-                    # if epoch == 49 or epoch == 50:
-                    #     import matplotlib.pyplot as plt
-                    #     for i in range(3):
-                    #         plt.imshow(flux_distributions[i].cpu().detach(), cmap="gray")
-                    #         plt.savefig(f"test{i}_e{epoch}.png")
-
                     # Early stopping when loss has reached a plateau.
                     if loss < best_loss - float(
                         self.optimization_configuration[

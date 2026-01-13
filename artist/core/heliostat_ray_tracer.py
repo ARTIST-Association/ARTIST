@@ -151,15 +151,15 @@ class RestrictedDistributedSampler(Sampler):
         self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
 
         # Compute how many samples each active rank gets.
-        self.samples_per_rank = self.number_of_samples // self.number_of_active_ranks
-        self.remainder = self.number_of_samples % self.number_of_active_ranks
+        self.number_of_samples_per_rank = self.number_of_samples // self.number_of_active_ranks
+        remainder = self.number_of_samples % self.number_of_active_ranks
 
         # Determine start and end index for this rank.
         if self.rank < self.number_of_active_ranks:
             # Distribute the remainder among the first few ranks.
-            start = self.rank * self.samples_per_rank + min(self.rank, self.remainder)
+            start = self.rank * self.number_of_samples_per_rank + min(self.rank, remainder)
             end = (
-                start + self.samples_per_rank + (1 if self.rank < self.remainder else 0)
+                start + self.number_of_samples_per_rank + (1 if self.rank < remainder else 0)
             )
             self.rank_indices = list(range(start, end))
         else:
@@ -187,12 +187,14 @@ class HeliostatRayTracer:
         The scenario used to perform ray tracing.
     heliostat_group : HeliostatGroup
         The selected heliostat group containing active heliostats.
+    blocking_active : bool
+        Indicates wether blocking is activated.
     world_size : int
         The world size i.e., the overall number of processes.
     rank : int
         The rank, i.e., individual process ID.
     batch_size : int
-        The amount of samples (Heliostats) processed parallel within a single rank.
+        The amount of samples (heliostats) processed in parallel within a single rank.
     light_source : LightSource
         The light source emitting the traced rays.
     distortions_dataset : DistortionsDataset
@@ -204,9 +206,17 @@ class HeliostatRayTracer:
     bitmap_resolution : int
         The resolution of the bitmap in both directions.
         Tensor of shape [2].
+    blocking_heliostat_surfaces : torch.Tensor
+        The heliostat surfaces considered during blocking calculations.
+        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+    blocking_heliostat_surfaces_active : torch.Tensor
+        The aligned heliostat surfaces considered during blocking calculations.
+        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
 
     Methods
     -------
+    get_sampler_indices()
+        Get the indices assigned to the current rank by the distributed sampler.
     trace_rays()
         Perform heliostat ray tracing.
     scatter_rays()
@@ -297,7 +307,6 @@ class HeliostatRayTracer:
 
         self.bitmap_resolution = bitmap_resolution
 
-        # TODO
         if self.blocking_active:
             self.blocking_heliostat_surfaces = torch.cat(
                 [
@@ -323,7 +332,7 @@ class HeliostatRayTracer:
 
     def get_sampler_indices(self) -> torch.Tensor:
         """
-        Return the indices assigned to the current rank by the distributed sampler.
+        Get the indices assigned to the current rank by the distributed sampler.
 
         Returns
         -------
@@ -341,6 +350,7 @@ class HeliostatRayTracer:
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
         target_area_mask: torch.Tensor,
+        ray_extinction_factor: float = 0.0,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -348,8 +358,9 @@ class HeliostatRayTracer:
 
         Scatter the rays according to the distortions, calculate the intersections with the target planes,
         and sample the resulting bitmaps on the target areas. The bitmaps are generated separately for each
-        active heliostat and can be accessed individually or they can be combined to get the total flux
-        density distribution for all heliostats on all target areas.
+        active heliostat and are accessed individually.
+        If blocking is activated in the ``HeliostatRayTracer``, rays that are blocked by other heliostats are 
+        filtered out.
 
         Parameters
         ----------
@@ -363,6 +374,8 @@ class HeliostatRayTracer:
         target_area_mask : torch.Tensor
             The indices of the target areas for each active heliostat.
             Tensor of shape [number_of_active_heliostats].
+        ray_extinction_factor : float
+            Amount of global ray extinction, responsible for shading (default is 0.0 -> no shading).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -397,8 +410,7 @@ class HeliostatRayTracer:
                 blocking_primitives_corners,
                 blocking_primitives_spans,
                 blocking_primitives_normals,
-            ) = blocking.create_blocking_primitives(
-                blocking_heliostats_surface_points=self.blocking_heliostat_surfaces,
+            ) = blocking.create_blocking_primitives_rectangles_by_index(
                 blocking_heliostats_active_surface_points=self.blocking_heliostat_surfaces_active,
                 device=device,
             )
@@ -439,7 +451,7 @@ class HeliostatRayTracer:
                 )
             )
 
-            # Set blocked to all zeros indicates that there is no blocking at all in the scene.
+            # The variable blocked is all zeros if there is no blocking at all in the scene.
             # If blocking was activated in the HeliostatRaytracer, blocking will be computed.
             number_of_heliostats, number_of_rays, number_of_points, _ = (
                 intersections.shape
@@ -487,7 +499,7 @@ class HeliostatRayTracer:
                         softness=50.0,
                     )
 
-            intensities = absolute_intensities * (1 - blocked)
+            intensities = absolute_intensities * (1 - blocked) *  (1 - ray_extinction_factor)
 
             batch_bitmaps = self.sample_bitmaps(
                 intersections=intersections,

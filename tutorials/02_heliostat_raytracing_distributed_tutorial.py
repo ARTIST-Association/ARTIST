@@ -20,7 +20,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -40,17 +40,24 @@ with setup_distributed_environment(
             device=device,
         )
 
+        # Set a ray extinction factor responsible for global shading of rays.
+        ray_extinction_factor = 0.5
+
         # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
         # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
         # If no mapping is provided, all heliostats are selected, and they will all receive the default incident ray direction
         # from a sun positioned directly in the south and they will all be raytraced on the first target found in your scenario.
         heliostat_target_light_source_mapping = None
         # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-        # heliostat_target_light_source_mapping = [
-        #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
-        #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
-        #     (...)
-        # ]
+        heliostat_target_light_source_mapping = [
+            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+            ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+            ("AA31", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+            ("AC43", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ]
 
     bitmap_resolution = torch.tensor([256, 256])
 
@@ -99,6 +106,22 @@ with setup_distributed_environment(
             aim_points=scenario.target_areas.centers[target_area_mask],
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
+            device=device,
+        )
+    
+    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
+        ddp_setup[config_dictionary.rank]
+    ]:
+        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
+        (
+            active_heliostats_mask,
+            target_area_mask,
+            incident_ray_directions,
+        ) = scenario.index_mapping(
+            heliostat_group=heliostat_group,
+            string_mapping=heliostat_target_light_source_mapping,
             device=device,
         )
 

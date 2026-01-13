@@ -34,9 +34,9 @@ class NURBSSurfaces(torch.nn.Module):
 
     Methods
     -------
-    calculate_knot_vector()
+    calculate_uniform_knot_vectors()
         Calculate the knot vectors for all surfaces in one direction.
-    find_span()
+    find_spans()
         Determine the knot spans in one direction.
     basis_functions_and_derivatives()
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.

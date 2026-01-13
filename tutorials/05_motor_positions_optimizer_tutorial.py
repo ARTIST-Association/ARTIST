@@ -55,7 +55,18 @@ def create_flux_plot_before_optimization() -> None:
             active_heliostats_mask=active_heliostats_mask,
             device=device,
         )
-
+    
+    for heliostat_group_index, heliostat_group in enumerate(
+        scenario.heliostat_field.heliostat_groups
+    ):
+        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                single_incident_ray_direction=incident_ray_direction,
+                single_target_area_index=target_area_index,
+                device=device,
+            )
+        )
         # Create a ray tracer.
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
@@ -122,6 +133,17 @@ def create_flux_plot_after_optimization() -> None:
             device=device,
         )
 
+    for heliostat_group_index, heliostat_group in enumerate(
+        scenario.heliostat_field.heliostat_groups
+    ):
+        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                single_incident_ray_direction=incident_ray_direction,
+                single_target_area_index=target_area_index,
+                device=device,
+            )
+        )
         # Create a ray tracer.
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
@@ -164,7 +186,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
@@ -225,6 +247,7 @@ with setup_distributed_environment(
         config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 30,
+        config_dictionary.batch_size: 50,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 100,

@@ -22,7 +22,7 @@ class SurfaceGenerator:
         Tensor of shape [2].
     degrees : torch.Tensor
         Degree of the NURBS along each direction of each 2D facet.
-            Tensor of shape [2].
+        Tensor of shape [2].
 
     Methods
     -------

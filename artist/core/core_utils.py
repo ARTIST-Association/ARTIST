@@ -3,39 +3,6 @@ import torch
 from artist.util.environment_setup import get_device
 
 
-def scale_loss(
-    loss: torch.Tensor, reference: torch.Tensor, weight: float
-) -> torch.Tensor:
-    """
-    Scale one loss so that its weighted contribution is a ratio of the reference loss.
-
-    Parameters
-    ----------
-    loss : torch.Tensor
-        The loss to be scaled.
-        Tensor of shape [1].
-    reference : torch.Tensor
-        The reference loss.
-        Tensor of shape [1].
-    weight : float
-        The weight or ratio used for the scaling.
-
-    Returns
-    -------
-    torch.Tensor
-        The scaled loss.
-        Tensor of shape [1].
-    """
-    epsilon = 1e-12
-    scale = (reference * weight) / (loss + epsilon)
-    scaled_loss = loss * scale
-
-    inf_mask = torch.isinf(loss)
-    scaled_loss[inf_mask] = loss[inf_mask]
-
-    return scaled_loss
-
-
 def reduce_gradients(parameters, process_group=None, mean=True):
     """
     Manually reduce gradients across all ranks.

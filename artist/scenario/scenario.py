@@ -36,6 +36,8 @@ class Scenario:
 
     Methods
     -------
+    get_number_of_heliostat_groups_from_hdf5()
+        Get the number of heliostat groups to initiate distributed setup from the HDF5 scenario file.
     load_scenario_from_hdf5()
         Class method to load the scenario from an HDF5 file.
     index_mapping()

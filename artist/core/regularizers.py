@@ -195,7 +195,6 @@ class IdealSurfaceRegularizer(Regularizer):
         delta = current_control_points - original_control_points
         delta_squared = delta**2
 
-        # Regularization per facet.
         per_facet_loss = delta_squared.mean(dim=(2, 3, 4))
         loss = per_facet_loss.sum(dim=self.reduction_dimensions)
 

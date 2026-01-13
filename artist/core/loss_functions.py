@@ -116,7 +116,7 @@ class VectorLoss(Loss):
 
 class FocalSpotLoss(Loss):
     """
-    A loss defined as the elementwise squared distance (Euclidean distance) between predicted focal spots and the ground truth.
+    A loss defined as euclidean distance between the predicted focal spot coordinate and the ground truth coordinate.
 
     Attributes
     ----------
@@ -170,7 +170,7 @@ class FocalSpotLoss(Loss):
         Returns
         -------
         torch.Tensor
-            The summed MSE focal spot loss reduced along the specified dimensions.
+            The focal spot loss.
             Tensor of shape [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
@@ -207,7 +207,7 @@ class FocalSpotLoss(Loss):
 
 class PixelLoss(Loss):
     """
-    A loss defined as the elementwise squared distance (Euclidean distance) between each pixel of predicted bitmaps and the ground truth.
+    A loss defined as the elementwise squared error between each pixel of predicted bitmaps and the ground truth.
 
     Attributes
     ----------
@@ -275,7 +275,7 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        # TODO normalize
+        # TODO normalize, reduction and docstring
         normalized_predictions = prediction
         normalized_ground_truth = ground_truth
 
@@ -358,7 +358,6 @@ class KLDivergenceLoss(Loss):
         if prediction.min() < 0:
             prediction = prediction - prediction.min()
 
-        # Normalize.
         eps = 1e-12
         ground_truth_distributions = torch.nn.functional.normalize(
             ground_truth,
@@ -421,8 +420,8 @@ class AngleLoss(Loss):
             The summed loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
-        cos_sim = self.loss_function(prediction, ground_truth)
+        cosine_similarity = self.loss_function(prediction, ground_truth)
 
-        loss = 1.0 - cos_sim
+        loss = 1.0 - cosine_similarity
 
         return loss

@@ -316,7 +316,10 @@ class MotorPositionsOptimizer:
                     ],
                     device=device,
                 )
-
+                
+            for heliostat_group_index in self.ddp_setup[
+                config_dictionary.groups_to_ranks_mapping
+            ][rank]:
                 # Create a ray tracer.
                 ray_tracer = HeliostatRayTracer(
                     scenario=self.scenario,
@@ -395,11 +398,6 @@ class MotorPositionsOptimizer:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
-
-            # TODO
-            # import matplotlib.pyplot as plt
-            # plt.imshow(flux_distribution_on_target.cpu().detach(), cmap="gray")
-            # plt.savefig(f"test{epoch}.png")
 
             # Early stopping when loss has reached a plateau.
             if loss < best_loss - float(
