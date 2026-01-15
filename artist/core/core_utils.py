@@ -75,7 +75,7 @@ def loss_per_heliostat_distributed(
                 ]
                 final_loss_per_heliostat[i] = heliostat_losses.mean()
             else:
-                final_loss_per_heliostat[i] = float("nan")
+                final_loss_per_heliostat[i] = float("inf")
             start_index += number_of_samples
         return final_loss_per_heliostat
 
@@ -122,7 +122,7 @@ def loss_per_heliostat_distributed(
                     heliostat_losses, device=device
                 ).mean()
             else:
-                final_loss_per_heliostat[i] = float("nan")
+                final_loss_per_heliostat[i] = float("inf")
             start_index += number_of_samples
 
         return final_loss_per_heliostat
@@ -132,7 +132,7 @@ def loss_per_heliostat_distributed(
 
 def mean_loss_per_heliostat(
     loss_per_sample: torch.Tensor,
-    nonzero_active_heliostats_mask: torch.Tensor,
+    number_of_samples_per_heliostat: int, 
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -143,8 +143,8 @@ def mean_loss_per_heliostat(
     loss_per_sample : torch.Tensor
         Loss per sample.
         Tensor of shape [number_of_samples].
-    nonzero_active_heliostats_mask : torch.Tensor
-        Mask of heliostats activated at least once.
+    number_of_samples_per_heliostat : int
+        Number of samples per heliostat.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -158,14 +158,11 @@ def mean_loss_per_heliostat(
     """
     device = get_device(device=device)
 
-    indices = torch.repeat_interleave(
-        torch.arange(nonzero_active_heliostats_mask.size(0), device=device),
-        nonzero_active_heliostats_mask,
-    )
+    number_of_chunks = int(loss_per_sample.numel() // number_of_samples_per_heliostat)
+    loss_per_sample = loss_per_sample[:number_of_chunks * number_of_samples_per_heliostat]
 
-    sum_per_heliostat = torch.zeros(len(nonzero_active_heliostats_mask), device=device)
-    sum_per_heliostat.scatter_add_(0, indices, loss_per_sample)
+    loss_reshaped = loss_per_sample.view(number_of_chunks, number_of_samples_per_heliostat)
 
-    mean_per_heliostat = sum_per_heliostat / nonzero_active_heliostats_mask
+    mean_loss_per_heliostat = loss_reshaped.mean(dim=1)
 
-    return mean_per_heliostat
+    return mean_loss_per_heliostat
