@@ -116,8 +116,8 @@ class RestrictedDistributedSampler(Sampler):
         The rank of the current process.
     number_of_active_ranks : int
         The number of processes that will receive data.
-    number_of_samples_per_rank : int
-        The number of samples per rank.
+    rank_indices : int
+        The indices corresponding to the ranks assigned samples.
 
     See Also
     --------
@@ -126,6 +126,7 @@ class RestrictedDistributedSampler(Sampler):
 
     def __init__(
         self,
+        number_of_active_heliostats: int,
         number_of_samples: int,
         world_size: int = 1,
         rank: int = 0,
@@ -135,6 +136,8 @@ class RestrictedDistributedSampler(Sampler):
 
         Parameters
         ----------
+        number_of_active_heliostats : int
+            Number of active heliostats.
         number_of_samples : int
             The length of the dataset or total number of samples.
         world_size : int
@@ -146,22 +149,20 @@ class RestrictedDistributedSampler(Sampler):
         self.number_of_samples = number_of_samples
         self.world_size = world_size
         self.rank = rank
+        self.number_of_active_ranks = min(number_of_active_heliostats, world_size)
+        self.rank_indices = []
 
-        # Adjust num_replicas if dataset is smaller than world_size.
-        self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
-
-        # Compute how many samples each active rank gets.
-        self.number_of_samples_per_rank = self.number_of_samples // self.number_of_active_ranks
-        remainder = self.number_of_samples % self.number_of_active_ranks
-
-        # Determine start and end index for this rank.
         if self.rank < self.number_of_active_ranks:
-            # Distribute the remainder among the first few ranks.
-            start = self.rank * self.number_of_samples_per_rank + min(self.rank, remainder)
-            end = (
-                start + self.number_of_samples_per_rank + (1 if self.rank < remainder else 0)
-            )
-            self.rank_indices = list(range(start, end))
+            chunk_size = number_of_samples // number_of_active_heliostats
+            indices = []
+
+            for chunk_idx in range(number_of_active_heliostats):
+                if chunk_idx % self.number_of_active_ranks == self.rank:
+                    start = chunk_idx * chunk_size
+                    end = start + chunk_size
+                    indices.extend(range(start, end))
+
+            self.rank_indices = indices
         else:
             self.rank_indices = []
 
@@ -293,6 +294,7 @@ class HeliostatRayTracer:
         )
         # Create restricted distributed sampler.
         self.distortions_sampler = RestrictedDistributedSampler(
+            number_of_active_heliostats=(self.heliostat_group.active_heliostats_mask > 0).sum(),
             number_of_samples=len(self.distortions_dataset),
             world_size=self.world_size,
             rank=self.rank,
