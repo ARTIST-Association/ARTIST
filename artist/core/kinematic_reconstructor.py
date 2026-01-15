@@ -266,7 +266,7 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    # Create a parallelized ray tracer.
+                    # Create a parallelized ray tracer. Blocking is always deactivated for this reconstruction.
                     ray_tracer = HeliostatRayTracer(
                         scenario=self.scenario,
                         heliostat_group=heliostat_group,
@@ -305,26 +305,17 @@ class KinematicReconstructor:
                         device=device,
                     )
 
+                    number_of_samples_per_heliostat = int(heliostat_group.active_heliostats_mask.sum() / (heliostat_group.active_heliostats_mask > 0).sum())
+
                     loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=loss_per_sample,
-                        nonzero_active_heliostats_mask=active_heliostats_mask[
-                            active_heliostats_mask > 0
-                        ],
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                         device=device,
                     )
 
                     loss = loss_per_heliostat.mean()
 
                     loss.backward()
-
-                    reduce_gradients(
-                        parameters=[
-                            heliostat_group.kinematic.rotation_deviation_parameters,
-                            heliostat_group.kinematic.actuators.optimizable_parameters,
-                        ],
-                        process_group=self.ddp_setup["process_subgroup"],
-                        mean=True,
-                    )
 
                     optimizer.step()
                     if isinstance(
