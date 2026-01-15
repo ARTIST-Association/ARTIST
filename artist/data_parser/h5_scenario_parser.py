@@ -640,20 +640,26 @@ def linear_actuators(
         )
 
     # For all linear actuators in the rigid body kinematic:
-    # Adapt initial angle of actuator number one according to kinematic initial orientation.
-    # ARTIST always expects heliostats to be initially oriented to the south [0.0, -1.0, 0.0] (in ENU).
-    # The first actuator always rotates along the east-axis.
-    # Since the actuator coordinate system is relative to the heliostat orientation, the initial angle
-    # of actuator number one needs to be transformed accordingly.
+    # Adapt the initial angle of actuator number one according to the initial surface orientation.
+    # - ARTIST always expects heliostats to be initially oriented to the south -> artist_standard_orientation = [0.0, -1.0, 0.0] (in ENU).
+    # - The first actuator rotates along the east-axis.
+    # - The "initial angle" of the actuator is a relative angle: it defines the actuator's initial angle relative to the physical geometry of the surface.
+    # - Surfaces in ARTIST are always provided oriented upwards ([0, 0, 1]), even if the initial orientation in a database deviates.
+    #       -> The surface points and normals are always sampled from a model (converted nurbs from deflectometry or ideal nurbs) that lays 
+    #          flat on the ground, i.e., the surface normals are always pointing upwards [0.0, 0.0, 1.0]. 
+    # - The final orientation needs to be computed correctly from the surface orientation and the relative actuator initial angle. 
+    # - To ensure final orientations remain consistent, first the rotation from the standard orientation (ARTIST: south) to the actual surface 
+    #   orientation is computed (rotation from south (ARTIST) to up (surfaces). This rotation is projected along the
+    #   rotation axis of the first actuator (east-axis) and added to the initial angle. This compensates for the different orientations of the sampled 
+    #   surfaces and the relative turning axis of the first actuator.
+    surface_orientation = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
+    artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
+    axis, angle = utils.rotation_angle_and_axis(artist_standard_orientation, surface_orientation)
+    delta_angle = axis[0] * angle
+    
     actuator_parameters_optimizable[
         index_mapping.actuator_initial_angle, index_mapping.actuator_one_index
-    ] = utils.transform_initial_angle(
-        initial_angle=actuator_parameters_optimizable[
-            index_mapping.actuator_initial_angle, index_mapping.actuator_one_index
-        ].unsqueeze(0),
-        initial_orientation=initial_orientation,
-        device=device,
-    )
+    ] += delta_angle
 
     return actuator_parameters_non_optimizable, actuator_parameters_optimizable
 

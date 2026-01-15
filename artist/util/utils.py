@@ -442,90 +442,48 @@ def decompose_rotations(
     return theta_components[:, 0], theta_components[:, 1], theta_components[:, 2]
 
 
-def angle_between_vectors(
-    vector_1: torch.Tensor, vector_2: torch.Tensor
-) -> torch.Tensor:
+def rotation_angle_and_axis(
+    from_orientation: torch.Tensor, 
+    to_orientation: torch.Tensor, 
+    device: torch.device | None = None
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Calculate the angle between two vectors.
-
+    Compute the rotation axis and angle between to orientations.
+    
     Parameters
     ----------
-    vector_1 : torch.Tensor
-        The first vector.
-    vector_2 : torch.Tensor
-        The second vector.
-
-    Return
-    ------
-    torch.Tensor
-        The angle between the input vectors.
-    """
-    dot_product = torch.dot(vector_1, vector_2)
-
-    norm_u = torch.norm(vector_1)
-    norm_v = torch.norm(vector_2)
-
-    angle = dot_product / (norm_u * norm_v)
-
-    angle = torch.clamp(angle, -1.0, 1.0)
-
-    angle = torch.acos(angle)
-
-    return angle
-
-
-def transform_initial_angle(
-    initial_angle: torch.Tensor,
-    initial_orientation: torch.Tensor,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Compute the transformed angle of an initial angle in a rotated coordinate system.
-
-    This function accounts for a known offset, the initial angle, in the
-    initial orientation vector. The offset represents a rotation around the
-    east-axis. When the coordinate system is rotated to align
-    the initial orientation with the ``ARTIST`` standard orientation, the axis for
-    the offset rotation also changes. This function calculates the equivalent
-    transformed angle for the offset in the rotated coordinate system.
-
-    Parameters
-    ----------
-    initial_angle : torch.Tensor
-        The initial angle, or offset along the east-axis.
-    initial_orientation : torch.Tensor
-        The initial orientation of the coordinate system.
+    from_orientation : torch.Tensor
+        The original orientation.
+        Tensor of shape [4].
+    to_orientation : torch.Tensor
+        The rotated orientation.
+        Tensor of shape [4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
-
+    
     Returns
     -------
     torch.Tensor
-        The transformed angle in the rotated coordinate system.
+        The rotation axis.
+        Tensor of shape [3].
+    torch.Tensor
+        The angle of the rotation.
+        Tensor of shape [1].
     """
     device = get_device(device=device)
 
-    # ARTIST is oriented towards the south ([0.0, -1.0, 0.0]) ENU.
-    artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
+    from_orientation = from_orientation[:3] / torch.norm(from_orientation[:3])
+    to_orientation = to_orientation[:3] / torch.norm(to_orientation[:3])
 
-    # Apply the rotation by the initial angle to the initial orientation.
-    initial_orientation_with_offset = initial_orientation @ rotate_e(
-        e=initial_angle,
-        device=device,
-    ).squeeze(index_mapping.unbatched_tensor_values)
-
-    # Compute the transformed angle relative to the reference orientation.
-    transformed_initial_angle = angle_between_vectors(
-        initial_orientation[: index_mapping.slice_fourth_dimension],
-        initial_orientation_with_offset[: index_mapping.slice_fourth_dimension],
-    ) - angle_between_vectors(
-        initial_orientation[: index_mapping.slice_fourth_dimension],
-        artist_standard_orientation[: index_mapping.slice_fourth_dimension],
-    )
-
-    return transformed_initial_angle
+    axis = torch.linalg.cross(from_orientation, to_orientation)
+    axis_norm = torch.norm(axis)
+    if axis_norm < 1e-6:
+        return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(0.0, device=device)
+    axis = axis / axis_norm
+    angle = torch.acos(torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0))
+    return axis, angle
 
 
 def get_center_of_mass(
