@@ -316,7 +316,7 @@ class MotorPositionsOptimizer:
                     ],
                     device=device,
                 )
-                
+
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
             ][rank]:
@@ -387,6 +387,17 @@ class MotorPositionsOptimizer:
             )
 
             loss.backward()
+
+            # Reduce gradients across all ranks (global process group)
+            if self.ddp_setup[config_dictionary.is_distributed]:
+                for param_group in optimizer.param_groups:
+                    for param in param_group["params"]:
+                        if param.grad is not None:
+                            torch.distributed.all_reduce(
+                                param.grad, op=torch.distributed.ReduceOp.SUM
+                            )
+                            # Average the gradients
+                            param.grad /= self.ddp_setup[config_dictionary.world_size]
 
             optimizer.step()
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):

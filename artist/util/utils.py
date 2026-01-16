@@ -443,13 +443,13 @@ def decompose_rotations(
 
 
 def rotation_angle_and_axis(
-    from_orientation: torch.Tensor, 
-    to_orientation: torch.Tensor, 
-    device: torch.device | None = None
+    from_orientation: torch.Tensor,
+    to_orientation: torch.Tensor,
+    device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Compute the rotation axis and angle between to orientations.
-    
+
     Parameters
     ----------
     from_orientation : torch.Tensor
@@ -462,7 +462,7 @@ def rotation_angle_and_axis(
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
-    
+
     Returns
     -------
     torch.Tensor
@@ -480,9 +480,13 @@ def rotation_angle_and_axis(
     axis = torch.linalg.cross(from_orientation, to_orientation)
     axis_norm = torch.norm(axis)
     if axis_norm < 1e-6:
-        return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(0.0, device=device)
+        return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(
+            0.0, device=device
+        )
     axis = axis / axis_norm
-    angle = torch.acos(torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0))
+    angle = torch.acos(
+        torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
+    )
     return axis, angle
 
 

@@ -20,7 +20,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -39,9 +39,8 @@ with setup_distributed_environment(
             scenario_file=scenario_file,
             device=device,
         )
-
-        # Set a ray extinction factor responsible for global shading of rays.
-        ray_extinction_factor = 0.5
+        # Set a ray extinction factor responsible for global shading of rays (0.0 -> no global shading, 1.0 -> full global shading).
+        ray_extinction_factor = 0.0
 
         # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
         # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
@@ -49,15 +48,11 @@ with setup_distributed_environment(
         # from a sun positioned directly in the south and they will all be raytraced on the first target found in your scenario.
         heliostat_target_light_source_mapping = None
         # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-        heliostat_target_light_source_mapping = [
-            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-            ("AA28", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-            ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-            ("AA31", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-            ("AC43", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        ]
+        # heliostat_target_light_source_mapping = [
+        #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+        #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+        #     (...)
+        # ]
 
     bitmap_resolution = torch.tensor([256, 256])
 
@@ -73,12 +68,8 @@ with setup_distributed_environment(
     # Since each individual heliostat group has individual kinematic and actuator types, they must be
     # processed separately. If a distributed environment exists, they can be processed in parallel,
     # otherwise each heliostat group results will be computed sequentially.
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
-    ]:
-        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
-            heliostat_group_index
-        ]
+    # For blocking to work correctly, all heliostat groups have to be aligned before any group can be raytraced.
+    for heliostat_group_alignment in scenario.heliostat_field.heliostat_groups:
         # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
         # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
         # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
@@ -88,7 +79,7 @@ with setup_distributed_environment(
             target_area_mask,
             incident_ray_directions,
         ) = scenario.index_mapping(
-            heliostat_group=heliostat_group,
+            heliostat_group=heliostat_group_alignment,
             string_mapping=heliostat_target_light_source_mapping,
             device=device,
         )
@@ -97,18 +88,19 @@ with setup_distributed_environment(
         # For each index 0 indicates a deactivated heliostat and 1 an activated one.
         # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
         # It is a tensor of shape [number_of_heliostats_in_group].
-        heliostat_group.activate_heliostats(
+        heliostat_group_alignment.activate_heliostats(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         # Align heliostats.
-        heliostat_group.align_surfaces_with_incident_ray_directions(
+        heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.target_areas.centers[target_area_mask],
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
         )
-    
+
+    # Raytracing happens only on one device for each group.
     for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
         ddp_setup[config_dictionary.rank]
     ]:
@@ -129,6 +121,7 @@ with setup_distributed_environment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
+            blocking_active=False,
             world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
             rank=ddp_setup[config_dictionary.heliostat_group_rank],
             batch_size=heliostat_group.number_of_active_heliostats,
@@ -144,20 +137,22 @@ with setup_distributed_environment(
             device=device,
         )
 
+        sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
         # Plot the bitmaps of each single heliostat.
-        for heliostat_index in range(bitmaps_per_heliostat.shape[0]):
-            plt.imshow(
-                bitmaps_per_heliostat[heliostat_index].cpu().detach(), cmap="gray"
-            )
+        for i in range(bitmaps_per_heliostat.shape[0]):
+            expanded_names = [
+                name
+                for name, m in zip(heliostat_group.names, active_heliostats_mask)
+                for _ in range(m)
+            ]
+            plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
             plt.axis("off")
             plt.title(
-                f"Heliostat: {heliostat_group.names[heliostat_index]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']}"
+                f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_mask[i]]}"
             )
             plt.savefig(
-                f"bitmap_of_heliostat_{heliostat_group.names[heliostat_index]}_in_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}.png"
+                f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
             )
-
-        sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
 
         # Get the flux distributions per target.
         bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
@@ -167,19 +162,6 @@ with setup_distributed_environment(
         )
 
         combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
-
-        # Plot the combined bitmaps of heliostats on the same target.
-        for target_area_index in range(scenario.target_areas.number_of_target_areas):
-            plt.imshow(
-                bitmaps_per_target[target_area_index].cpu().detach(), cmap="gray"
-            )
-            plt.axis("off")
-            plt.title(
-                f"Target area: {scenario.target_areas.names[target_area_index]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']}"
-            )
-            plt.savefig(
-                f"combined_bitmap_on_{scenario.target_areas.names[target_area_index]}_from_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}.png"
-            )
 
     # It is possible to skip this nested reduction step. The reduction within the outer process group would take
     # care of it but to see how the nested process group it is nice to look at the intermediate reduction results.
@@ -201,7 +183,7 @@ with setup_distributed_environment(
                 f"Reduced within group, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
             )
             plt.savefig(
-                f"reduced_bitmap_on_{scenario.target_areas.names[target_area_index]}_on_rank_{ddp_setup['rank']}.png"
+                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.target_areas.names[target_area_index]}.png"
             )
 
     if ddp_setup[config_dictionary.is_distributed]:
@@ -209,16 +191,16 @@ with setup_distributed_environment(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
 
-        # Plot the final combined bitmaps of heliostats on the same target fully reduced.
-        for target_area_index in range(scenario.target_areas.number_of_target_areas):
-            plt.imshow(
-                combined_bitmaps_per_target[target_area_index].cpu().detach(),
-                cmap="gray",
-            )
-            plt.axis("off")
-            plt.title(
-                f"Final bitmap, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
-            )
-            plt.savefig(
-                f"final_reduced_bitmap_on_{scenario.target_areas.names[target_area_index]}_on_rank_{ddp_setup['rank']}.png"
-            )
+    # Plot the final combined bitmaps of heliostats on the same target fully reduced.
+    for target_area_index in range(scenario.target_areas.number_of_target_areas):
+        plt.imshow(
+            combined_bitmaps_per_target[target_area_index].cpu().detach(),
+            cmap="gray",
+        )
+        plt.axis("off")
+        plt.title(
+            f"Final bitmap, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+        )
+        plt.savefig(
+            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.target_areas.names[target_area_index]}.png"
+        )

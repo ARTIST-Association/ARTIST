@@ -6,10 +6,6 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import core_utils, learning_rate_schedulers
-from artist.core.core_utils import (
-    loss_per_heliostat_distributed,
-    reduce_gradients,
-)
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
@@ -305,7 +301,10 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    number_of_samples_per_heliostat = int(heliostat_group.active_heliostats_mask.sum() / (heliostat_group.active_heliostats_mask > 0).sum())
+                    number_of_samples_per_heliostat = int(
+                        heliostat_group.active_heliostats_mask.sum()
+                        / (heliostat_group.active_heliostats_mask > 0).sum()
+                    )
 
                     loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=loss_per_sample,
@@ -352,23 +351,23 @@ class KinematicReconstructor:
 
                     epoch += 1
 
-                local_loss_per_heliostat = loss_per_heliostat_distributed(
-                    local_loss_per_sample=loss_per_sample,
-                    samples_per_heliostat=active_heliostats_mask,
-                    ddp_setup=self.ddp_setup,
-                    device=device,
+                local_indices = (
+                    sample_indices_for_local_rank[::number_of_samples_per_heliostat]
+                    // number_of_samples_per_heliostat
                 )
 
-                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
-                    heliostat_group_index
-                ]
+                global_active_indices = torch.nonzero(
+                    active_heliostats_mask != 0, as_tuple=True
+                )[0]
 
-                if rank == source[index_mapping.first_rank_from_group]:
-                    final_loss_per_heliostat[
-                        final_loss_start_indices[
-                            heliostat_group_index
-                        ] : final_loss_start_indices[heliostat_group_index + 1]
-                    ] = local_loss_per_heliostat
+                rank_active_indices_global = global_active_indices[local_indices]
+
+                final_indices = (
+                    rank_active_indices_global
+                    + final_loss_start_indices[heliostat_group_index]
+                )
+
+                final_loss_per_heliostat[final_indices] = loss_per_heliostat
 
                 log.info(f"Rank: {rank}, Kinematic reconstructed.")
 

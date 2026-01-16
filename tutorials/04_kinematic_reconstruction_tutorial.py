@@ -82,6 +82,7 @@ def create_fluxes(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
+                blocking_active=False,
                 batch_size=heliostat_group.number_of_active_heliostats,
                 bitmap_resolution=torch.tensor([256, 256], device=device),
             )
@@ -247,8 +248,8 @@ with setup_distributed_environment(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: 0.0005,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 500,
-        config_dictionary.batch_size: 2,
+        config_dictionary.max_epoch: 100,
+        config_dictionary.batch_size: 50,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 300,

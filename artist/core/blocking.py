@@ -143,18 +143,28 @@ def create_blocking_primitives_rectangles_by_index(
     """
     device = get_device(device=device)
 
-    number_of_surfaces, number_of_surface_points, _ = blocking_heliostats_active_surface_points.shape
+    number_of_surfaces, number_of_surface_points, _ = (
+        blocking_heliostats_active_surface_points.shape
+    )
 
     corners = torch.zeros((number_of_surfaces, 4, 4), device=device)
 
     # Lower left.
-    corners[:, 0] = blocking_heliostats_active_surface_points[:, int(number_of_surface_points / 2)]
+    corners[:, 0] = blocking_heliostats_active_surface_points[
+        :, int(number_of_surface_points / 2)
+    ]
     # Lower right.
-    corners[:, 3] = blocking_heliostats_active_surface_points[:, int(number_of_surface_points - math.sqrt(number_of_surface_points / 4))]
+    corners[:, 3] = blocking_heliostats_active_surface_points[
+        :, int(number_of_surface_points - math.sqrt(number_of_surface_points / 4))
+    ]
     # Upper right.
-    corners[:, 2] = blocking_heliostats_active_surface_points[:, int((number_of_surface_points / 2) - 1)]
+    corners[:, 2] = blocking_heliostats_active_surface_points[
+        :, int((number_of_surface_points / 2) - 1)
+    ]
     # Upper left.
-    corners[:, 1] = blocking_heliostats_active_surface_points[:, int(math.sqrt(number_of_surface_points / 4) - 1)]
+    corners[:, 1] = blocking_heliostats_active_surface_points[
+        :, int(math.sqrt(number_of_surface_points / 4) - 1)
+    ]
 
     spans = torch.zeros((number_of_surfaces, 2, 4), device=device)
     spans[:, 0] = corners[:, 1] - corners[:, 0]
@@ -165,6 +175,7 @@ def create_blocking_primitives_rectangles_by_index(
     )
 
     return corners, spans, plane_normals
+
 
 # @track_runtime(runtime_log)
 def compute_soft_ray_blocking(
@@ -361,8 +372,8 @@ def morton_codes(
     """
     device = get_device(device=device)
 
-    # The 10 bits per axis should not be changed. 10 bits per axis means 1024 discrete positions along 
-    # each dimension and 30 bits in total. This is the maximum amount of bits per axis fitting into a 
+    # The 10 bits per axis should not be changed. 10 bits per axis means 1024 discrete positions along
+    # each dimension and 30 bits in total. This is the maximum amount of bits per axis fitting into a
     # single 32-bit integer and is enough even for scenes with more than hundred thousand blocking planes.
     bits = 10
 
@@ -393,7 +404,7 @@ def morton_codes(
     xx = expand_bits(xi)
     # Spread with additional shift to the left for y.
     yy = expand_bits(yi) << 1
-    # Spread with 2 additional shifts to the left for z.  
+    # Spread with 2 additional shifts to the left for z.
     zz = expand_bits(zi) << 2
 
     code = (xx | yy | zz).to(torch.int64)

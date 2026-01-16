@@ -154,7 +154,7 @@ class RestrictedDistributedSampler(Sampler):
 
         if self.rank < self.number_of_active_ranks:
             chunk_size = number_of_samples // number_of_active_heliostats
-            indices = []
+            indices: list[int] = []
 
             for chunk_idx in range(number_of_active_heliostats):
                 if chunk_idx % self.number_of_active_ranks == self.rank:
@@ -294,7 +294,9 @@ class HeliostatRayTracer:
         )
         # Create restricted distributed sampler.
         self.distortions_sampler = RestrictedDistributedSampler(
-            number_of_active_heliostats=(self.heliostat_group.active_heliostats_mask > 0).sum(),
+            number_of_active_heliostats=(
+                self.heliostat_group.active_heliostats_mask > 0
+            ).sum(),
             number_of_samples=len(self.distortions_dataset),
             world_size=self.world_size,
             rank=self.rank,
@@ -361,7 +363,7 @@ class HeliostatRayTracer:
         Scatter the rays according to the distortions, calculate the intersections with the target planes,
         and sample the resulting bitmaps on the target areas. The bitmaps are generated separately for each
         active heliostat and are accessed individually.
-        If blocking is activated in the ``HeliostatRayTracer``, rays that are blocked by other heliostats are 
+        If blocking is activated in the ``HeliostatRayTracer``, rays that are blocked by other heliostats are
         filtered out.
 
         Parameters
@@ -501,7 +503,9 @@ class HeliostatRayTracer:
                         softness=50.0,
                     )
 
-            intensities = absolute_intensities * (1 - blocked) *  (1 - ray_extinction_factor)
+            intensities = (
+                absolute_intensities * (1 - blocked) * (1 - ray_extinction_factor)
+            )
 
             batch_bitmaps = self.sample_bitmaps(
                 intersections=intersections,

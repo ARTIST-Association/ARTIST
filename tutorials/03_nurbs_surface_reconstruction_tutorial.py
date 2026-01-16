@@ -5,7 +5,6 @@ import h5py
 import torch
 from matplotlib import pyplot as plt
 
-from artist import ARTIST_ROOT
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
@@ -18,16 +17,13 @@ from artist.util import config_dictionary, index_mapping, set_logger_config, uti
 from artist.util.environment_setup import get_device, setup_distributed_environment
 from artist.util.nurbs import NURBSSurfaces
 
-torch.autograd.set_detect_anomaly(True)
-
-
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 337 for the tutorial code.
+# Skip to line 343 for the tutorial code.
 #############################################################################################################
 
 
@@ -355,39 +351,41 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file and specify the configuration.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_ideal.h5"
-)
-base_path_data = "/workVERLEIHNIX/share/PAINT/"
-heliostat_names_reconstruction = ["AA31", "AA39"]
-heliostat_names_plots = ["AA31", "AA39"]
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+base_path_data = "base/path/data"
+heliostat_names_reconstruction = ["heliostat_1"]
+heliostat_names_plots = ["heliostat_1", "..."]
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "AA39",
+        "heliostat_name_1",
         [
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-calibration-properties_1.json",
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-calibration-properties_2.json",
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
         ],
         [
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-flux-centered_1.png",
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA39-flux-centered_2.png",
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
         ],
     ),
     (
-        "AA31",
+        "heliostat_name_2",
         [
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/field_data/AA31-calibration-properties_1.json"
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
         ],
-        [pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux-centered_1.png"],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
     ),
+    # ...
 ]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
@@ -423,7 +421,7 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             change_number_of_control_points_per_facet=torch.tensor(
-                [7, 7], device=device
+                [17, 17], device=device
             ),
             device=device,
         )
@@ -462,7 +460,7 @@ with setup_distributed_environment(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 1e-5,
-        config_dictionary.max_epoch: 50,
+        config_dictionary.max_epoch: 200,
         config_dictionary.batch_size: 30,
         config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: 1e-4,

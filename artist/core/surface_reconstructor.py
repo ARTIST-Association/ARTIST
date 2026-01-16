@@ -146,14 +146,14 @@ class SurfaceReconstructor:
             torch.inf,
             device=device,
         )
-        # final_loss_start_indices = torch.cat(
-        #     [
-        #         torch.tensor([0], device=device),
-        #         self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(
-        #             index_mapping.heliostat_dimension
-        #         ),
-        #     ]
-        # )
+        final_loss_start_indices = torch.cat(
+            [
+                torch.tensor([0], device=device),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(
+                    index_mapping.heliostat_dimension
+                ),
+            ]
+        )
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping
@@ -184,25 +184,6 @@ class SurfaceReconstructor:
             )
 
             if active_heliostats_mask.sum() > 0:
-                # Activate heliostats.
-                heliostat_group.activate_heliostats(
-                    active_heliostats_mask=active_heliostats_mask, device=device
-                )
-
-                # Get the start indices for the separate heliostats in the active_-properties-tensors that contain heliostat duplicates for each sample.
-                nonzero_active_heliostats_mask = active_heliostats_mask[
-                    active_heliostats_mask > 0
-                ]
-                start_indices_heliostats = torch.cumsum(
-                    torch.cat(
-                        [
-                            torch.tensor([0], device=device),
-                            nonzero_active_heliostats_mask[:-1],
-                        ]
-                    ),
-                    dim=index_mapping.heliostat_dimension,
-                )
-
                 # Create NURBS evaluation points.
                 evaluation_points = (
                     utils.create_nurbs_evaluation_grid(
@@ -212,7 +193,7 @@ class SurfaceReconstructor:
                     .unsqueeze(index_mapping.heliostat_dimension)
                     .unsqueeze(index_mapping.facet_index_unbatched)
                     .expand(
-                        heliostat_group.number_of_active_heliostats,
+                        active_heliostats_mask.sum(),
                         heliostat_group.number_of_facets_per_heliostat,
                         -1,
                         -1,
@@ -314,7 +295,7 @@ class SurfaceReconstructor:
                         device=device,
                     )
 
-                    # Create a parallelized ray tracer.
+                    # Create a parallelized ray tracer. Blocking is always deactivated for this reconstruction.
                     ray_tracer = HeliostatRayTracer(
                         scenario=self.scenario,
                         heliostat_group=heliostat_group,
@@ -373,16 +354,26 @@ class SurfaceReconstructor:
                         device=device,
                     )
 
+                    number_of_samples_per_heliostat = int(
+                        heliostat_group.active_heliostats_mask.sum()
+                        / (heliostat_group.active_heliostats_mask > 0).sum()
+                    )
+
                     flux_loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=flux_loss_per_sample,
-                        nonzero_active_heliostats_mask=nonzero_active_heliostats_mask,
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                         device=device,
                     )
 
                     # Include regularization terms.
-                    regularizer_loss_per_heliostat = torch.zeros(
-                        [torch.nonzero(active_heliostats_mask).numel()], device=device
+                    regularizer_loss_per_heliostat = torch.zeros_like(
+                        flux_loss_per_heliostat, device=device
                     )
+                    local_indices = (
+                        sample_indices_for_local_rank[::number_of_samples_per_heliostat]
+                        // number_of_samples_per_heliostat
+                    )
+
                     if (
                         self.optimization_configuration[config_dictionary.regularizers]
                         is not None
@@ -392,9 +383,11 @@ class SurfaceReconstructor:
                         ]:
                             regularization_term_active_heliostats = regularizer(
                                 current_control_points=heliostat_group.active_nurbs_control_points[
-                                    start_indices_heliostats
+                                    ::number_of_samples_per_heliostat
+                                ][local_indices],
+                                original_control_points=original_control_points[
+                                    local_indices
                                 ],
-                                original_control_points=original_control_points,
                                 device=device,
                             )
                             regularizer_loss_per_heliostat += (
@@ -421,9 +414,7 @@ class SurfaceReconstructor:
                         )[0]
 
                         lambda_0 = 0.1
-                        # tau = 20.0
                         lambda_reg = (g_data.norm() / (g_reg.norm() + 1e-8)).detach()
-                        # continuation / annealing.
                         lambda_reg = (
                             lambda_0
                             * torch.tensor(
@@ -439,8 +430,6 @@ class SurfaceReconstructor:
                             )
                             * lambda_reg
                         )
-
-                        # lambda_reg = lambda_0 * torch.exp(torch.tensor(-epoch/tau, device=device)) * lambda_reg
                     else:
                         lambda_reg = torch.tensor(0.0, device=device)
 
@@ -451,12 +440,6 @@ class SurfaceReconstructor:
 
                     total_loss = total_loss_per_heliostat.mean()
                     total_loss.backward()
-
-                    core_utils.reduce_gradients(
-                        parameters=[heliostat_group.nurbs_control_points],
-                        process_group=self.ddp_setup["process_subgroup"],
-                        mean=True,
-                    )
 
                     # Keep the surfaces in their original geometric shape by locking the control points on the outer edges.
                     optimizer.param_groups[index_mapping.optimizer_param_group_0][
@@ -505,32 +488,18 @@ class SurfaceReconstructor:
 
                     epoch += 1
 
-                final_loss_per_heliostat = torch.full(
-                    (active_heliostats_mask.shape[0],),
-                    float("inf"),
-                    device=device,
+                global_active_indices = torch.nonzero(
+                    active_heliostats_mask != 0, as_tuple=True
+                )[0]
+
+                rank_active_indices_global = global_active_indices[local_indices]
+
+                final_indices = (
+                    rank_active_indices_global
+                    + final_loss_start_indices[heliostat_group_index]
                 )
-                final_loss_per_heliostat[active_heliostats_mask > 0] = (
-                    total_loss_per_heliostat
-                )
 
-                # local_loss_per_heliostat = core_utils.loss_per_heliostat_distributed(
-                #     local_loss_per_sample=local_loss_with_regularization,
-                #     samples_per_heliostat=active_heliostats_mask,
-                #     ddp_setup=self.ddp_setup,
-                #     device=device,
-                # )
-
-                # source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
-                #     heliostat_group_index
-                # ]
-
-                # if rank == source[index_mapping.first_rank_from_group]:
-                #     final_loss_per_heliostat[
-                #         final_loss_start_indices[
-                #             heliostat_group_index
-                #         ] : final_loss_start_indices[heliostat_group_index + 1]
-                #     ] = local_loss_per_heliostat
+                final_loss_per_heliostat[final_indices] = total_loss_per_heliostat
 
                 log.info(f"Rank: {rank}, Surfaces reconstructed.")
 
