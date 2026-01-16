@@ -303,8 +303,8 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
-    plots_dir_default = config.get("plots_dir", "./plots")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    plots_dir_default = config.get("plots_dir", "./examples/paint_plots/plots")
     number_of_points_to_plot_default = config.get("number_of_points_to_plot", 100)
     random_seed_default = config.get("random_seed", 7)
 

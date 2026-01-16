@@ -1564,53 +1564,53 @@ def main() -> None:
         # 7. Surface: reconstructed     Kinematic: reconstructed    Aim Points: center
         # 8. Surface: reconstructed     Kinematic: reconstructed    Aim Points: optimized
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_path=results_path,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=1,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_path=results_path,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=1,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_path=results_path,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=2,
-        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-        #     target_distribution=target_distribution,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_path=results_path,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=2,
+            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+            target_distribution=target_distribution,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_path=results_path,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=3,
-        #     data_mappings=data_mappings,
-        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_path=results_path,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=3,
+            data_mappings=data_mappings,
+            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+            device=device,
+        )
 
-        # ablation_study(
-        #     scenario_path=scenario_path_ideal,
-        #     results_path=results_path,
-        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
-        #     baseline_target_area_index=baseline_target_area_index,
-        #     baseline_aim_point=baseline_aim_point,
-        #     ablation_study_case=4,
-        #     data_mappings=data_mappings,
-        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-        #     target_distribution=target_distribution,
-        #     device=device,
-        # )
+        ablation_study(
+            scenario_path=scenario_path_ideal,
+            results_path=results_path,
+            baseline_incident_ray_direction=baseline_incident_ray_direction,
+            baseline_target_area_index=baseline_target_area_index,
+            baseline_aim_point=baseline_aim_point,
+            ablation_study_case=4,
+            data_mappings=data_mappings,
+            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+            target_distribution=target_distribution,
+            device=device,
+        )
 
         ablation_study(
             scenario_path=scenario_path_ideal,

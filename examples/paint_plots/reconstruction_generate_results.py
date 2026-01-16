@@ -91,7 +91,8 @@ def generate_reconstruction_results(
         optimization_configuration = {
             config_dictionary.initial_learning_rate: 0.0001,
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 1000,
+            config_dictionary.max_epoch: 100,
+            config_dictionary.batch_size: 100,
             config_dictionary.log_step: 50,
             config_dictionary.early_stopping_delta: 1e-6,
             config_dictionary.early_stopping_patience: 4000,
@@ -192,8 +193,10 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/paint_plots/scenarios"
+    )
 
     parser.add_argument(
         "--device",
