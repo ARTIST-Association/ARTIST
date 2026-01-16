@@ -55,7 +55,6 @@ def plot_kinematic_reconstruction(
         )
         plt.close(fig)
 
-    # TODO loss is MSE, for RMSE i need to take the sqrt, for euclidean rmse sqrt(3* MSE)?
     for index, case in enumerate(["ablation_study_case_3", "ablation_study_case_7"]):
         losses = (
             results[case]["kinematic_reconstruction_loss_per_heliostat"].detach().cpu()

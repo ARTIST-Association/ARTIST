@@ -275,7 +275,6 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        # TODO normalize, reduction and docstring
         normalized_predictions = prediction
         normalized_ground_truth = ground_truth
 

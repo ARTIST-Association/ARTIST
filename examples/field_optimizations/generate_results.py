@@ -756,57 +756,6 @@ def surface_data(
     return data_for_plots
 
 
-def create_surface_reconstruction_batches(
-    heliostat_data: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    data_parser: CalibrationDataParser,
-    batch_size: int,
-) -> list[
-    dict[
-        str,
-        CalibrationDataParser
-        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    ]
-]:
-    """
-    Create batches of data for the surface reconstruction to avoid out of memory errors.
-
-    Parameters
-    ----------
-    heliostat_data : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-        Data mappings including heliostat names and their calibration files, for surface reconstruction.
-    data_parser : CalibrationDataParser
-        Data parser for the calibration data files.
-    batch_size : int
-        Number of measurements in one batch.
-
-    Returns
-    -------
-    list[dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]]:
-        Batches of surfaces reconstruction data in a list.
-    """
-    if heliostat_data is None:
-        return []
-
-    data_surfaces: list[
-        dict[
-            str,
-            CalibrationDataParser
-            | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-        ]
-    ] = []
-
-    for i in range(0, len(heliostat_data), batch_size):
-        batch = heliostat_data[i : i + batch_size]
-        data_surfaces.append(
-            {
-                config_dictionary.data_parser: data_parser,
-                config_dictionary.heliostat_data_mapping: batch,
-            }
-        )
-
-    return data_surfaces
-
-
 def load_surfaces_from_file(
     surface_path: pathlib.Path,
     scenario: Scenario,
@@ -942,10 +891,8 @@ def ablation_study(
     ----------
     scenario_path : pathlib.Path
         Path to the scenario being used.
-    results_dir : pathlib.Path
+    results_path : pathlib.Path
         Path to where the results are saved.
-    results_number : int
-        The current, incremented results number.
     baseline_incident_ray_direction : torch.Tensor
         Incident ray direction of the baseline measurement.
     baseline_target_area_index : int
@@ -1006,7 +953,6 @@ def ablation_study(
     ) as ddp_setup:
         device = ddp_setup[config_dictionary.device]
 
-        # TODO
         number_of_surface_points_per_facet = torch.tensor([40, 40], device=device)
         number_of_control_points_per_facet = torch.tensor([7, 7], device=device)
         number_of_rays_surface_reconstruction = 50
@@ -1337,24 +1283,7 @@ def create_heliostat_data_mappings(
 
 @track_runtime(runtime_log)
 def main() -> None:
-    """
-    Generate field optimization results and save them.
-
-    This script performs ... TODO
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    data_dir : str
-        Path to the data directory.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to the directory for the results.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
+    """Generate field optimization results and save them."""
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
