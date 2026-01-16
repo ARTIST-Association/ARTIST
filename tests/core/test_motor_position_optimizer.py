@@ -54,7 +54,7 @@ def distribution(device: torch.device) -> torch.Tensor:
         distribution_path_group_1, map_location=device, weights_only=True
     )
 
-    return ground_truth / 133
+    return ground_truth
 
 
 @pytest.mark.parametrize(

@@ -224,6 +224,14 @@ def test_kinematic_reconstructor(
                         / f"{reconstruction_method}_{str(early_stopping_delta).replace('.', '')}_group_{index}_{device.type}.pt"
                     )
 
+                    torch.save(
+                        {
+                            "rotation_deviations": heliostat_group.kinematic.rotation_deviation_parameters,
+                            "optimizable_parameters": heliostat_group.kinematic.actuators.optimizable_parameters,
+                        },
+                        expected_path,
+                    )
+
                     expected = torch.load(
                         expected_path, map_location=device, weights_only=True
                     )

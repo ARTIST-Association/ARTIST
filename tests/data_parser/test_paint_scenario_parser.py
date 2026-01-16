@@ -129,12 +129,12 @@ def test_extract_paint_tower_measurements(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -250,12 +250,12 @@ def test_extract_paint_heliostats_ideal_surface(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -397,12 +397,12 @@ def test_extract_paint_heliostats_fitted_surface(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -423,12 +423,12 @@ def test_extract_paint_heliostats_fitted_surface(
             ],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
