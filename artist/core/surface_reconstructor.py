@@ -50,6 +50,10 @@ class SurfaceReconstructor:
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
 
+    Note
+    ----
+    Each heliostat selected for reconstruction needs to have the same amount of samples as all others.
+
     Methods
     -------
     reconstruct_surfaces()

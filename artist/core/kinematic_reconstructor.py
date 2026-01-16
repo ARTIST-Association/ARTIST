@@ -40,6 +40,10 @@ class KinematicReconstructor:
     reconstruction_method : str
         The reconstruction method. Currently only reconstruction via ray tracing is available.
 
+    Note
+    ----
+    Each heliostat selected for reconstruction needs to have the same amount of samples as all others.
+
     Methods
     -------
     reconstruct_kinematic()
