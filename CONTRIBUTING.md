@@ -122,18 +122,29 @@ as shown below. Do not include attributes and methods of the parent class explic
      Sphinx autoapi will automatically generate links to the parent class documentation.
 
 
-6. **Commit Changes**: Commit your changes with a clear and concise commit message that describes what you have changed.
+6. **Test Changes**: Test all existing and added functionality.
+    * ``ARTIST`` uses ``pytest`` for running the test suite. If you followed all of the above steps correctly, you already have the project and all dependencies installed. All of our tests are located in the ``tests/`` directory. Please also add your tests into the ``tests/`` directory.
+    * To run all tests execute:
+        ```bash
+        pytest tests/
+        ```
+    * To run the tests with coverage:
+        ```bash
+        pytest --cov=artist tests/
+        ```
+
+7. **Commit Changes**: Commit your changes with a clear and concise commit message that describes what you have changed.
    Example:
    ```bash
    git commit -m "add rotation control for heliostat"
    ```
 
-7. **Push Changes**: Push your changes to your fork on GitHub:
+8. **Push Changes**: Push your changes to your fork on GitHub:
    ```bash
    git push origin features/your-feature-name
    ```
 
-8. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request. Resolve possible merge conflicts with the current main branch.
+9. **Open a Pull Request**: Go to the [original repository](https://github.com/ARTIST-Association/ARTIST.git) and click the "New Pull Request" button. Follow the guidelines in the template to submit your pull request. Resolve possible merge conflicts with the current main branch.
 
 ## Code of Conduct
 

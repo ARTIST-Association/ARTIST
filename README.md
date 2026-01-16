@@ -99,6 +99,9 @@ The ``ARTIST`` documentation includes:
 Check out our [contribution guidelines](CONTRIBUTING.md) if you are interested in contributing to the `ARTIST` project :fire:.
 Please also carefully check our [code of conduct](CODE_OF_CONDUCT.md) :blue_heart:.
 
+## How to test our software
+For detailed instructions on testing, please refer to point 6 of the [contribution guidelines](CONTRIBUTING.md).
+
 ## Acknowledgments
 This work is supported by the [Helmholtz AI](https://www.helmholtz.ai/) platform grant.
 
