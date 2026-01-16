@@ -25,7 +25,7 @@ def create_blocking_primitives_rectangle(
     0 | 1
 
     Assumptions:
-    - The heliostat is rectangular
+    - The heliostat is rectangular.
     - The heliostat is oriented to the south if it is not aligned.
 
     Parameters
