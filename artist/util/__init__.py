@@ -137,6 +137,4 @@ def track_runtime(logger: logging.Logger):
     return decorator
 
 
-runtime_log = set_runtime_logger(
-    "/workVERLEIHNIX/mb/ARTIST/examples/field_optimizations/results/runtime_log.txt"
-)
+runtime_log = set_runtime_logger("./runtime_log.txt")
