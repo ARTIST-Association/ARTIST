@@ -3,6 +3,7 @@ import warnings
 
 import torch
 
+from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 
@@ -13,7 +14,7 @@ def create_blocking_primitives_rectangle(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Create a representation of the heliostat blocking planes.
+    Create a representation of a rectangular heliostat blocking plane, by interpolating its corner points.
 
     The blocking plane for rectangular heliostats is represented by its four
     corner points, and its normal vector. The corner points are indexed
@@ -102,7 +103,7 @@ def create_blocking_primitives_rectangles_by_index(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Create a representation of the heliostat blocking planes.
+    Create a representation of a rectangular heliostat blocking plane, by the known indices of its corner points.
 
     The blocking plane for rectangular heliostats is represented by its four
     corner points, and its normal vector. The corner points are indexed
@@ -177,8 +178,7 @@ def create_blocking_primitives_rectangles_by_index(
     return corners, spans, plane_normals
 
 
-# @track_runtime(runtime_log)
-def compute_soft_ray_blocking(
+def soft_ray_blocking_mask(
     ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
     blocking_primitives_corners: torch.Tensor,
@@ -189,8 +189,10 @@ def compute_soft_ray_blocking(
     softness: float = 50.0,
 ) -> torch.Tensor:
     r"""
-    Calculate ray plane intersections and the distances of the intersection from the ray origin.
+    Compute a mask indicating which rays are blocked, using a soft, differentiable approach.
 
+    Calculate ray plane intersections and the distances of the intersection from the ray origin.
+    Depending on the intersections and the distances, rays are blocked if they cannot reach the target.
     The blocking is made differentiable by using sigmoid functions to approximate binary transitions
     with soft boundaries.
     For each ray and each blocking plane the intersection point and distance is computed by solving the
@@ -344,13 +346,16 @@ def morton_codes(
     coordinates: torch.Tensor, epsilon: float = 1e-6, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Map 3D points to a single integer.
+    Map 3D points to a single integer value corresponding to its Morton Code.
 
     Spatially nearby points have similar Morton codes. Morton codes are also sometimes referred to as
     Z-order curve codes. They are computed by bit-interleaving the binary representations of the 3D
     x, y, z coordinates.
     The padding around the bounding boxes is necessary to avoid divisions by zero and integer
     overflows. The relative padding scales with the field size.
+
+    Reference: Morton, G.M. (1966) A Computer Oriented Geodetic Data Base and a New Technique in File
+    Sequencing. IBM Ltd., Ottawa.
 
     Parameters
     ----------
@@ -552,7 +557,10 @@ def build_linear_bounding_volume_hierarchies(
     blocking_primitives_corners: torch.Tensor, device: torch.device | None = None
 ) -> dict[str, torch.Tensor]:
     """
-    Build linear bounding volume heirachies (LBVHs) (based on implementation by Karras).
+    Build linear bounding volume heirachies (LBVHs).
+
+    Reference: Tero Karras. Maximizing Parallelism in the Construction of BVHs, Octrees, and k‑d Trees.
+    In Proceedings of the Fourth ACM SIGGRAPH / Eurographics Symposium on High‑Performance Graphics (HPG 2012)
 
     Parameters
     ----------
@@ -579,12 +587,20 @@ def build_linear_bounding_volume_hierarchies(
 
     if number_of_blocking_primitives == 0:
         return {
-            "left": torch.empty((0,), dtype=torch.int32, device=device),
-            "right": torch.empty((0,), dtype=torch.int32, device=device),
-            "aabb_min": torch.empty((0, 3), device=device),
-            "aabb_max": torch.empty((0, 3), device=device),
-            "is_leaf": torch.empty((0,), dtype=torch.bool, device=device),
-            "primitive_index": torch.empty((0,), dtype=torch.int32, device=device),
+            config_dictionary.left_node: torch.empty(
+                (0,), dtype=torch.int32, device=device
+            ),
+            config_dictionary.right_node: torch.empty(
+                (0,), dtype=torch.int32, device=device
+            ),
+            config_dictionary.aabb_min: torch.empty((0, 3), device=device),
+            config_dictionary.aabb_max: torch.empty((0, 3), device=device),
+            config_dictionary.is_leaf: torch.empty(
+                (0,), dtype=torch.bool, device=device
+            ),
+            config_dictionary.primitive_index: torch.empty(
+                (0,), dtype=torch.int32, device=device
+            ),
         }
 
     # Compute sorted Morton code representations for each blocking primitive.
@@ -830,12 +846,12 @@ def build_linear_bounding_volume_hierarchies(
             aabb_max[node] = torch.max(aabb_max[leaf_nodes_slice], dim=0).values
 
     return {
-        "left": left,
-        "right": right,
-        "aabb_min": aabb_min,
-        "aabb_max": aabb_max,
-        "is_leaf": is_leaf,
-        "primitive_index": primitive_index,
+        config_dictionary.left_node: left,
+        config_dictionary.right_node: right,
+        config_dictionary.aabb_min: aabb_min,
+        config_dictionary.aabb_max: aabb_max,
+        config_dictionary.is_leaf: is_leaf,
+        config_dictionary.primitive_index: primitive_index,
     }
 
 
@@ -881,9 +897,8 @@ def ray_aabb_intersect(
     return entry_distance_to_aabb, exit_distance_to_aabb
 
 
-# @track_runtime(runtime_log)
 @torch.no_grad()
-def blocking_filter_lbvh(
+def lbvh_filter_blocking_planes(
     points_at_ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
     blocking_primitives_corners: torch.Tensor,
@@ -927,12 +942,12 @@ def blocking_filter_lbvh(
         blocking_primitives_corners=blocking_primitives_corners, device=device
     )
 
-    left = lbvh["left"]
-    right = lbvh["right"]
-    aabb_min = lbvh["aabb_min"]
-    aabb_max = lbvh["aabb_max"]
-    is_leaf = lbvh["is_leaf"]
-    primitive_index = lbvh["primitive_index"]
+    left = lbvh[config_dictionary.left_node]
+    right = lbvh[config_dictionary.right_node]
+    aabb_min = lbvh[config_dictionary.aabb_min]
+    aabb_max = lbvh[config_dictionary.aabb_max]
+    is_leaf = lbvh[config_dictionary.is_leaf]
+    primitive_index = lbvh[config_dictionary.primitive_index]
 
     ray_origins = points_at_ray_origins.reshape(-1, 3)
     ray_directions = ray_directions.reshape(-1, 3)

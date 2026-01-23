@@ -472,17 +472,21 @@ class HeliostatRayTracer:
                     number_of_heliostats, device=device
                 ).repeat_interleave(number_of_rays * number_of_points)
 
-                filtered_blocking_primitive_indices = blocking.blocking_filter_lbvh(
-                    points_at_ray_origins=points_at_ray_origins,
-                    ray_directions=rays.ray_directions[..., :3],
-                    blocking_primitives_corners=blocking_primitives_corners[..., :3],
-                    ray_to_heliostat_mapping=ray_to_heliostat_mapping,
-                    max_stack_size=128,
-                    device=device,
+                filtered_blocking_primitive_indices = (
+                    blocking.lbvh_filter_blocking_planes(
+                        points_at_ray_origins=points_at_ray_origins,
+                        ray_directions=rays.ray_directions[..., :3],
+                        blocking_primitives_corners=blocking_primitives_corners[
+                            ..., :3
+                        ],
+                        ray_to_heliostat_mapping=ray_to_heliostat_mapping,
+                        max_stack_size=128,
+                        device=device,
+                    )
                 )
 
                 if filtered_blocking_primitive_indices.numel() > 0:
-                    blocked = blocking.compute_soft_ray_blocking(
+                    blocked = blocking.soft_ray_blocking_mask(
                         ray_origins=self.heliostat_group.active_surface_points[
                             active_heliostats_mask_batch
                         ],
