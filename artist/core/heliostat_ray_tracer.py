@@ -189,7 +189,7 @@ class HeliostatRayTracer:
     heliostat_group : HeliostatGroup
         The selected heliostat group containing active heliostats.
     blocking_active : bool
-        Indicates wether blocking is activated.
+        Indicates whether blocking is activated.
     world_size : int
         The world size i.e., the overall number of processes.
     rank : int
