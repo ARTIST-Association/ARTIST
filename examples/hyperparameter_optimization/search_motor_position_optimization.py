@@ -8,8 +8,6 @@ import re
 import warnings
 from functools import partial
 
-import paint.util.paint_mappings as paint_mappings
-
 import h5py
 import torch
 import yaml
@@ -18,12 +16,7 @@ from propulate import Propulator
 from propulate.utils import get_default_propagator, set_logger_config
 
 from artist.core import loss_functions
-from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
-from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
-from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
@@ -78,7 +71,9 @@ def motor_position_optimizer_for_hpo(
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
-            change_number_of_control_points_per_facet=torch.tensor([7, 7], device=device),
+            change_number_of_control_points_per_facet=torch.tensor(
+                [7, 7], device=device
+            ),
             device=device,
         )
 
@@ -208,9 +203,15 @@ if __name__ == "__main__":
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
-    scenarios_dir_default = config.get("scenarios_dir", "./examples/hyperparameter_optimization/scenarios")
-    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
-    propulate_logs_dir_default = config.get("propulate_logs_dir", "./examples/hyperparameter_optimization/logs")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"
+    )
+    results_dir_default = config.get(
+        "results_dir", "./examples/hyperparameter_optimization/results"
+    )
+    propulate_logs_dir_default = config.get(
+        "propulate_logs_dir", "./examples/hyperparameter_optimization/logs"
+    )
     parameter_ranges_default = config.get(
         "parameter_ranges_motor_positions",
         {
@@ -273,9 +274,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "ideal_scenario_500.h5"
-    )
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_500.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
@@ -300,13 +299,16 @@ if __name__ == "__main__":
     reconstruction_parameter_ranges = {}
     for key, value in args.parameter_ranges_motor_positions.items():
         if all(isinstance(x, (int, float)) for x in value):
-            if all(isinstance(x, int) or (isinstance(x, float) and x.is_integer()) for x in value):
+            if all(
+                isinstance(x, int) or (isinstance(x, float) and x.is_integer())
+                for x in value
+            ):
                 tuple_range = tuple(int(x) for x in value)
             else:
                 tuple_range = tuple(float(x) for x in value)
         else:
             tuple_range = tuple(value)
-         
+
         reconstruction_parameter_ranges[key] = tuple_range
 
     # Set up evolutionary operator.
@@ -362,7 +364,10 @@ if __name__ == "__main__":
     parameters_dict = {}
 
     for key, value in data_dict.items():
-        if isinstance(value, str) and re.fullmatch(r"[+-]?\d+(\.\d+)?[eE][+-]?\d+", value) is not None:
+        if (
+            isinstance(value, str)
+            and re.fullmatch(r"[+-]?\d+(\.\d+)?[eE][+-]?\d+", value) is not None
+        ):
             parameters_dict[key] = float(value)
         else:
             parameters_dict[key] = value

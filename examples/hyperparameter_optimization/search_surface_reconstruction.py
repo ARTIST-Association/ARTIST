@@ -8,8 +8,6 @@ import re
 import warnings
 from functools import partial
 
-import paint.util.paint_mappings as paint_mappings
-
 import h5py
 import torch
 import yaml
@@ -18,7 +16,6 @@ from propulate import Propulator
 from propulate.utils import get_default_propagator, set_logger_config
 
 from artist.core import loss_functions
-from artist.core.kinematic_reconstructor import KinematicReconstructor
 from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
@@ -164,7 +161,7 @@ def surface_reconstructor_for_hpo(
         config_dictionary.early_stopping_window: 10,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
-        config_dictionary.regularizers: regularizers
+        config_dictionary.regularizers: regularizers,
     }
 
     # Create the surface reconstructor.
@@ -248,9 +245,15 @@ if __name__ == "__main__":
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
-    scenarios_dir_default = config.get("scenarios_dir", "./examples/hyperparameter_optimization/scenarios")
-    results_dir_default = config.get("results_dir", "./examples/hyperparameter_optimization/results")
-    propulate_logs_dir_default = config.get("propulate_logs_dir", "./examples/hyperparameter_optimization/logs")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"
+    )
+    results_dir_default = config.get(
+        "results_dir", "./examples/hyperparameter_optimization/results"
+    )
+    propulate_logs_dir_default = config.get(
+        "propulate_logs_dir", "./examples/hyperparameter_optimization/logs"
+    )
     parameter_ranges_default = config.get(
         "parameter_ranges_surface",
         {
@@ -320,9 +323,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "ideal_scenario_10.h5"
-    )
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_10.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
@@ -344,9 +345,7 @@ if __name__ == "__main__":
     seed = 7
     rng = random.Random(seed + comm.rank)
 
-    viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats.json"
-    )
+    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
             f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
@@ -368,13 +367,16 @@ if __name__ == "__main__":
     reconstruction_parameter_ranges = {}
     for key, value in args.parameter_ranges_surface.items():
         if all(isinstance(x, (int, float)) for x in value):
-            if all(isinstance(x, int) or (isinstance(x, float) and x.is_integer()) for x in value):
+            if all(
+                isinstance(x, int) or (isinstance(x, float) and x.is_integer())
+                for x in value
+            ):
                 tuple_range = tuple(int(x) for x in value)
             else:
                 tuple_range = tuple(float(x) for x in value)
         else:
             tuple_range = tuple(value)
-         
+
         reconstruction_parameter_ranges[key] = tuple_range
 
     # Set up evolutionary operator.
@@ -431,7 +433,10 @@ if __name__ == "__main__":
     parameters_dict = {}
 
     for key, value in data_dict.items():
-        if isinstance(value, str) and re.fullmatch(r"[+-]?\d+(\.\d+)?[eE][+-]?\d+", value) is not None:
+        if (
+            isinstance(value, str)
+            and re.fullmatch(r"[+-]?\d+(\.\d+)?[eE][+-]?\d+", value) is not None
+        ):
             parameters_dict[key] = float(value)
         else:
             parameters_dict[key] = value
