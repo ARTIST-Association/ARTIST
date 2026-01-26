@@ -11,7 +11,7 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, runtime_log, track_runtime
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -96,7 +96,6 @@ class KinematicReconstructor:
                 f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
             )
 
-    @track_runtime(runtime_log)
     def reconstruct_kinematic(
         self,
         loss_definition: Loss,
@@ -233,10 +232,22 @@ class KinematicReconstructor:
                     ],
                 )
 
+                # Set up early stopping.
+                early_stopper = learning_rate_schedulers.EarlyStopping(
+                    window_size=self.optimization_configuration[
+                        config_dictionary.early_stopping_window
+                    ],
+                    patience=self.optimization_configuration[
+                        config_dictionary.early_stopping_patience
+                    ],
+                    min_improvement=self.optimization_configuration[
+                        config_dictionary.early_stopping_delta
+                    ],
+                    relative=True,
+                )
+
                 # Start the optimization.
                 loss = torch.inf
-                best_loss = torch.inf
-                patience_counter = 0
                 epoch = 0
                 log_step = (
                     self.optimization_configuration[config_dictionary.max_epoch]
@@ -333,24 +344,11 @@ class KinematicReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
-                    # Early stopping when loss has reached a plateau.
-                    if loss < best_loss - float(
-                        self.optimization_configuration[
-                            config_dictionary.early_stopping_delta
-                        ]
-                    ):
-                        best_loss = loss
-                        patience_counter = 0
-                    else:
-                        patience_counter += 1
-                    if patience_counter >= float(
-                        self.optimization_configuration[
-                            config_dictionary.early_stopping_patience
-                        ]
-                    ):
-                        log.info(
-                            f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
-                        )
+                    # Early stopping when loss did not improve since a predefined number of epochs.
+                    stop = early_stopper.step(loss)
+
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
                         break
 
                     epoch += 1

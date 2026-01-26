@@ -14,8 +14,6 @@ from artist.scenario.scenario import Scenario
 from artist.util import (
     config_dictionary,
     index_mapping,
-    runtime_log,
-    track_runtime,
     utils,
 )
 from artist.util.environment_setup import get_device
@@ -114,7 +112,6 @@ class SurfaceReconstructor:
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.bitmap_resolution = bitmap_resolution.to(device)
 
-    @track_runtime(runtime_log)
     def reconstruct_surfaces(
         self,
         loss_definition: Loss,
@@ -204,9 +201,10 @@ class SurfaceReconstructor:
                     )
                 )
 
-                original_control_points = heliostat_group.nurbs_control_points[
-                    active_heliostats_mask > 0
-                ].clone()
+                with torch.no_grad():
+                    original_control_points = heliostat_group.nurbs_control_points[
+                        active_heliostats_mask > 0
+                    ].clone()
 
                 # Create the optimizer.
                 optimizer = torch.optim.Adam(
@@ -230,23 +228,38 @@ class SurfaceReconstructor:
                     ],
                 )
 
+                # Set up early stopping.
+                early_stopper = learning_rate_schedulers.EarlyStopping(
+                    window_size=self.optimization_configuration[
+                        config_dictionary.early_stopping_window
+                    ],
+                    patience=self.optimization_configuration[
+                        config_dictionary.early_stopping_patience
+                    ],
+                    min_improvement=self.optimization_configuration[
+                        config_dictionary.early_stopping_delta
+                    ],
+                    relative=True,
+                )
+
                 # Start the optimization.
                 loss = torch.inf
-                best_loss = torch.inf
-                patience_counter = 0
                 epoch = 0
                 log_step = (
                     self.optimization_configuration[config_dictionary.max_epoch]
                     if self.optimization_configuration[config_dictionary.log_step] == 0
                     else self.optimization_configuration[config_dictionary.log_step]
                 )
+                max_epoch = torch.tensor(
+                    [self.optimization_configuration[config_dictionary.max_epoch]],
+                    device=device,
+                )
                 while (
                     loss
                     > float(
                         self.optimization_configuration[config_dictionary.tolerance]
                     )
-                    and epoch
-                    <= self.optimization_configuration[config_dictionary.max_epoch]
+                    and epoch <= max_epoch
                 ):
                     optimizer.zero_grad()
 
@@ -418,22 +431,9 @@ class SurfaceReconstructor:
                         )[0]
 
                         lambda_0 = 0.1
-                        lambda_reg = (g_data.norm() / (g_reg.norm() + 1e-8)).detach()
-                        lambda_reg = (
-                            lambda_0
-                            * torch.tensor(
-                                [
-                                    (
-                                        epoch
-                                        / self.optimization_configuration[
-                                            config_dictionary.max_epoch
-                                        ]
-                                    )
-                                ],
-                                device=device,
-                            )
-                            * lambda_reg
-                        )
+                        ratio = g_data.norm() / (g_reg.norm() + 1e-8)
+                        ratio = ratio.clamp(min=0.1, max=10.0)
+                        lambda_reg = lambda_0 * (epoch / max_epoch) * ratio.detach()
                     else:
                         lambda_reg = torch.tensor(0.0, device=device)
 
@@ -470,24 +470,11 @@ class SurfaceReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
-                    # Early stopping when loss has reached a plateau.
-                    if total_loss < best_loss - float(
-                        self.optimization_configuration[
-                            config_dictionary.early_stopping_delta
-                        ]
-                    ):
-                        best_loss = total_loss
-                        patience_counter = 0
-                    else:
-                        patience_counter += 1
-                    if patience_counter >= float(
-                        self.optimization_configuration[
-                            config_dictionary.early_stopping_patience
-                        ]
-                    ):
-                        log.info(
-                            f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
-                        )
+                    # Early stopping when loss did not improve since a predefined number of epochs.
+                    stop = early_stopper.step(loss)
+
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
                         break
 
                     epoch += 1

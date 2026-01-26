@@ -9,7 +9,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, runtime_log, track_runtime
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -99,7 +99,6 @@ class MotorPositionsOptimizer:
         self.ground_truth = ground_truth
         self.bitmap_resolution = bitmap_resolution.to(device)
 
-    @track_runtime(runtime_log)
     def optimize(
         self,
         loss_definition: Loss,
@@ -255,10 +254,22 @@ class MotorPositionsOptimizer:
             ],
         )
 
+        # Set up early stopping.
+        early_stopper = learning_rate_schedulers.EarlyStopping(
+            window_size=self.optimization_configuration[
+                config_dictionary.early_stopping_window
+            ],
+            patience=self.optimization_configuration[
+                config_dictionary.early_stopping_patience
+            ],
+            min_improvement=self.optimization_configuration[
+                config_dictionary.early_stopping_delta
+            ],
+            relative=True,
+        )
+
         # Start the optimization.
         loss = torch.inf
-        best_loss = torch.inf
-        patience_counter = 0
         epoch = 0
         log_step = (
             self.optimization_configuration[config_dictionary.max_epoch]
@@ -373,7 +384,7 @@ class MotorPositionsOptimizer:
                     op=torch.distributed.ReduceOp.SUM,
                 )
 
-            loss = loss_definition(
+            flux_loss = loss_definition(
                 prediction=total_flux.unsqueeze(index_mapping.heliostat_dimension),
                 ground_truth=self.ground_truth.unsqueeze(
                     index_mapping.heliostat_dimension
@@ -385,6 +396,10 @@ class MotorPositionsOptimizer:
                 ),
                 device=device,
             )
+
+            lambda_flux = 1e-4
+            flux_integral = total_flux.sum()
+            loss = flux_loss - lambda_flux * flux_integral
 
             loss.backward()
 
@@ -410,22 +425,11 @@ class MotorPositionsOptimizer:
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
 
-            # Early stopping when loss has reached a plateau.
-            if loss < best_loss - float(
-                self.optimization_configuration[config_dictionary.early_stopping_delta]
-            ):
-                best_loss = loss
-                patience_counter = 0
-            else:
-                patience_counter += 1
-            if patience_counter >= float(
-                self.optimization_configuration[
-                    config_dictionary.early_stopping_patience
-                ]
-            ):
-                log.info(
-                    f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
-                )
+            # Early stopping when loss did not improve since a predefined number of epochs.
+            stop = early_stopper.step(loss)
+
+            if stop:
+                log.info(f"Early stopping at epoch {epoch}.")
                 break
 
             epoch += 1
