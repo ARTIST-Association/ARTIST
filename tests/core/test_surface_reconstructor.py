@@ -16,17 +16,16 @@ from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "loss_class, data_parser, early_stopping_delta",
+    "loss_class, data_parser",
     [
-        (KLDivergenceLoss, PaintCalibrationDataParser(), 1e-4),
-        (PixelLoss, PaintCalibrationDataParser(), 1e-4),
-        (PixelLoss, CalibrationDataParser(), 1e-4),
+        (KLDivergenceLoss, PaintCalibrationDataParser()),
+        (PixelLoss, PaintCalibrationDataParser()),
+        (PixelLoss, CalibrationDataParser()),
     ],
 )
 def test_surface_reconstructor(
     loss_class: Loss,
     data_parser: CalibrationDataParser | PaintCalibrationDataParser,
-    early_stopping_delta: float,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
@@ -39,8 +38,6 @@ def test_surface_reconstructor(
         The loss class.
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
-    early_stopping_delta : float
-        The minimum required improvement to prevent early stopping.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -81,8 +78,9 @@ def test_surface_reconstructor(
         config_dictionary.max_epoch: 15,
         config_dictionary.batch_size: 30,
         config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 13,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 20,
+        config_dictionary.early_stopping_window: 10,
         config_dictionary.scheduler: config_dictionary.reduce_on_plateau,
         config_dictionary.scheduler_parameters: scheduler_parameters,
         config_dictionary.regularizers: regularizers,

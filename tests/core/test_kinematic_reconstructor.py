@@ -8,7 +8,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.kinematic_reconstructor import KinematicReconstructor
-from artist.core.loss_functions import FocalSpotLoss, Loss
+from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
@@ -19,32 +19,26 @@ set_logger_config()
 
 
 @pytest.mark.parametrize(
-    "reconstruction_method, initial_learning_rate, loss_class, data_parser, early_stopping_delta, centroid_extraction_method, scheduler",
+    "reconstruction_method, initial_learning_rate, data_parser, centroid_extraction_method, scheduler",
     [
         (
             config_dictionary.kinematic_reconstruction_raytracing,
             0.005,
-            FocalSpotLoss,
             PaintCalibrationDataParser(),
-            1e-4,
             paint_mappings.UTIS_KEY,
             config_dictionary.exponential,
         ),
         (
             config_dictionary.kinematic_reconstruction_raytracing,
             0.005,
-            FocalSpotLoss,
             PaintCalibrationDataParser(),
-            1.0,
             "invalid",
             config_dictionary.reduce_on_plateau,
         ),
         (
             "invalid",
             0.005,
-            FocalSpotLoss,
             PaintCalibrationDataParser(),
-            1.0,
             "invalid",
             config_dictionary.reduce_on_plateau,
         ),
@@ -53,9 +47,7 @@ set_logger_config()
 def test_kinematic_reconstructor(
     reconstruction_method: str,
     initial_learning_rate: float,
-    loss_class: Loss,
     data_parser: CalibrationDataParser,
-    early_stopping_delta: float,
     centroid_extraction_method: str,
     scheduler: str,
     ddp_setup_for_testing: dict[str, Any],
@@ -70,12 +62,8 @@ def test_kinematic_reconstructor(
         The name of the reconstruction method.
     initial_learning_rate : float
         The initial learning rate.
-    loss_class : Loss
-        The loss class.
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
-    early_stopping_delta : float
-        The minimum required improvement to prevent early stopping.
     centroid_extraction_method : str
         The method used to extract the focal spot centroids.
     scheduler : str
@@ -108,8 +96,9 @@ def test_kinematic_reconstructor(
         config_dictionary.max_epoch: 50,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 80,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 20,
+        config_dictionary.early_stopping_window: 10,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
@@ -221,15 +210,7 @@ def test_kinematic_reconstructor(
                     expected_path = (
                         pathlib.Path(ARTIST_ROOT)
                         / "tests/data/expected_reconstructed_kinematic_parameters"
-                        / f"{reconstruction_method}_{str(early_stopping_delta).replace('.', '')}_group_{index}_{device.type}.pt"
-                    )
-
-                    torch.save(
-                        {
-                            "rotation_deviations": heliostat_group.kinematic.rotation_deviation_parameters,
-                            "optimizable_parameters": heliostat_group.kinematic.actuators.optimizable_parameters,
-                        },
-                        expected_path,
+                        / f"{reconstruction_method}_group_{index}_{device.type}.pt"
                     )
 
                     expected = torch.load(

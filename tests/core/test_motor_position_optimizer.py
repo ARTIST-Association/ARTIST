@@ -58,16 +58,15 @@ def distribution(device: torch.device) -> torch.Tensor:
 
 
 @pytest.mark.parametrize(
-    "loss_class, ground_truth_fixture_name, early_stopping_delta, scheduler",
+    "loss_class, ground_truth_fixture_name, scheduler",
     [
-        (FocalSpotLoss, "focal_spot", 1e-4, config_dictionary.cyclic),
-        (KLDivergenceLoss, "distribution", 1.0, config_dictionary.reduce_on_plateau),
+        (FocalSpotLoss, "focal_spot", config_dictionary.cyclic),
+        (KLDivergenceLoss, "distribution", config_dictionary.reduce_on_plateau),
     ],
 )
 def test_motor_positions_optimizer(
     loss_class: Loss,
     ground_truth_fixture_name: torch.Tensor,
-    early_stopping_delta: float,
     scheduler: str,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: dict[str, Any],
@@ -82,8 +81,6 @@ def test_motor_positions_optimizer(
         The loss class.
     ground_truth_fixture_name : str
         A fixture to retrieve the ground truth.
-    early_stopping_delta : float
-        The minimum required improvement to prevent early stopping.
     scheduler : str
         The scheduler to be used.
     request : pytest.FixtureRequest
@@ -117,8 +114,9 @@ def test_motor_positions_optimizer(
         config_dictionary.max_epoch: 21,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 40,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 20,
+        config_dictionary.early_stopping_window: 10,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
