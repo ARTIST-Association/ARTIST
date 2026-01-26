@@ -655,7 +655,9 @@ def linear_actuators(
     surface_orientation = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
     artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
     axis, angle = utils.rotation_angle_and_axis(
-        artist_standard_orientation, surface_orientation
+        from_orientation=artist_standard_orientation,
+        to_orientation=surface_orientation,
+        device=device,
     )
     delta_angle = axis[0] * angle
 
