@@ -30,7 +30,6 @@ from artist.util import (
     utils,
 )
 from artist.util.environment_setup import get_device, setup_distributed_environment
-from artist.util.nurbs import NURBSSurfaces
 
 set_logger_config()
 torch.manual_seed(7)
@@ -597,7 +596,6 @@ def surface_data(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ],
-    number_of_surface_points_per_facet: torch.Tensor,
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
@@ -659,46 +657,6 @@ def surface_data(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
-        evaluation_points = (
-            utils.create_nurbs_evaluation_grid(
-                number_of_evaluation_points=number_of_surface_points_per_facet,
-                device=device,
-            )
-            .unsqueeze(index_mapping.heliostat_dimension)
-            .unsqueeze(index_mapping.facet_index_unbatched)
-            .expand(
-                heliostat_group.number_of_active_heliostats,
-                heliostat_group.number_of_facets_per_heliostat,
-                -1,
-                -1,
-            )
-        )
-        nurbs_surfaces = NURBSSurfaces(
-            degrees=heliostat_group.nurbs_degrees,
-            control_points=heliostat_group.nurbs_control_points[
-                active_heliostats_mask == 1
-            ],
-            device=device,
-        )
-        (
-            surface_points,
-            surface_normals,
-        ) = nurbs_surfaces.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points,
-            canting=heliostat_group.canting[active_heliostats_mask == 1],
-            facet_translations=heliostat_group.facet_translations[
-                active_heliostats_mask == 1
-            ],
-            device=device,
-        )
-
-        heliostat_group.active_surface_points = surface_points.reshape(
-            active_heliostats_mask.sum(), -1, 4
-        )
-        heliostat_group.active_surface_normals = surface_normals.reshape(
-            active_heliostats_mask.sum(), -1, 4
-        )
-
         heliostat_group.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.target_areas.centers[target_area_mask],
             incident_ray_directions=incident_ray_directions,
@@ -747,94 +705,13 @@ def surface_data(
             data_for_plots[heliostat] = {
                 "measured_flux": measured_fluxes[index],
                 "artist_flux": cropped_flux_distributions[index],
-                "surface_points": surface_points[index],
-                "surface_normals": surface_normals[index],
+                "surface_points": heliostat_group.active_surface_points[index],
+                "surface_normals": heliostat_group.active_surface_normals[index],
                 "canting": heliostat_group.active_canting[index],
                 "facet_translations": heliostat_group.active_facet_translations[index],
             }
 
     return data_for_plots
-
-
-def load_surfaces_from_file(
-    surface_path: pathlib.Path,
-    scenario: Scenario,
-    number_of_surface_points_per_facet: torch.Tensor,
-    device: torch.device | None = None,
-) -> Scenario:
-    """
-    Load surface data from a file.
-
-    Parameter
-    ---------
-    surface_path : pathlib.Path
-        Path to the surface data.
-    scenario : Scenario
-        Scenario containing the rest of the data.
-    number_of_surface_points_per_facet : torch.Tensor
-        Number of surface points per facet to be loaded.
-        Tensor of shape [2].
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    Scenario
-        The scenario overwritten with the loaded surface data.
-    """
-    device = get_device(device=device)
-
-    loaded_nurbs_control_points = torch.load(surface_path, weights_only=False)
-    for heliostat_group, nurbs_control_points in zip(
-        scenario.heliostat_field.heliostat_groups,
-        loaded_nurbs_control_points,
-    ):
-        heliostat_group.nurbs_control_points = nurbs_control_points
-        evaluation_points = (
-            utils.create_nurbs_evaluation_grid(
-                number_of_evaluation_points=number_of_surface_points_per_facet,
-                device=device,
-            )
-            .unsqueeze(index_mapping.heliostat_dimension)
-            .unsqueeze(index_mapping.facet_index_unbatched)
-            .expand(
-                heliostat_group.number_of_heliostats,
-                heliostat_group.number_of_facets_per_heliostat,
-                -1,
-                -1,
-            )
-        )
-        nurbs_surfaces = NURBSSurfaces(
-            degrees=heliostat_group.nurbs_degrees,
-            control_points=heliostat_group.nurbs_control_points,
-            device=device,
-        )
-        (
-            new_surface_points,
-            new_surface_normals,
-        ) = nurbs_surfaces.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points,
-            canting=heliostat_group.canting,
-            facet_translations=heliostat_group.facet_translations,
-            device=device,
-        )
-        heliostat_group.surface_points = new_surface_points.reshape(
-            heliostat_group.active_surface_points.shape[
-                index_mapping.heliostat_dimension
-            ],
-            -1,
-            4,
-        )
-        heliostat_group.surface_normals = new_surface_normals.reshape(
-            heliostat_group.active_surface_normals.shape[
-                index_mapping.heliostat_dimension
-            ],
-            -1,
-            4,
-        )
-    return scenario
 
 
 def load_kinematics_from_file(
@@ -953,9 +830,9 @@ def ablation_study(
     ) as ddp_setup:
         device = ddp_setup[config_dictionary.device]
 
-        number_of_surface_points_per_facet = torch.tensor([40, 40], device=device)
-        number_of_control_points_per_facet = torch.tensor([7, 7], device=device)
-        number_of_rays_surface_reconstruction = 50
+        number_of_surface_points_per_facet = torch.tensor([50, 50], device=device)
+        number_of_control_points_per_facet = torch.tensor([6, 6], device=device)
+        number_of_rays_surface_reconstruction = 120
         number_of_rays = 4
         nurbs_degree = torch.tensor([3, 3], device=device)
 
@@ -975,66 +852,86 @@ def ablation_study(
             surface_reconstruction_optimization_configuration is not None
             and data_mappings is not None
         ):
+            # Save original surface data.
+            surface_data_before = surface_data(
+                scenario=scenario,
+                ddp_setup=ddp_setup,
+                heliostat_data=data_mappings["surface_plot"],
+                device=device,
+            )
             if reconstructed_surface_path.exists():
                 print(
                     "A surface reconstruction viable for this case has been previously made. Loading the results."
                 )
-                scenario = load_surfaces_from_file(
-                    surface_path=reconstructed_surface_path,
-                    number_of_surface_points_per_facet=number_of_surface_points_per_facet,
-                    scenario=scenario,
-                    device=device,
+                reconstructed_nurbs_control_points = torch.load(
+                    reconstructed_surface_path, weights_only=False
                 )
             else:
-                # Save original surface data.
-                surface_data_before = surface_data(
-                    scenario=scenario,
-                    ddp_setup=ddp_setup,
-                    heliostat_data=data_mappings["surface_plot"],
-                    number_of_surface_points_per_facet=number_of_surface_points_per_facet,
-                    device=device,
-                )
                 # Reconstruct surfaces.
                 scenario.set_number_of_rays(
                     number_of_rays=number_of_rays_surface_reconstruction
                 )
-                surface_reconstructor = SurfaceReconstructor(
-                    ddp_setup=ddp_setup,
-                    scenario=scenario,
-                    data=data_mappings["surface_reconstruction"],
-                    optimization_configuration=surface_reconstruction_optimization_configuration,
-                    number_of_surface_points=number_of_surface_points_per_facet,
-                    bitmap_resolution=torch.tensor([256, 256], device=device),
-                    device=device,
-                )
-                surface_reconstruction_final_loss_per_heliostat = (
-                    surface_reconstructor.reconstruct_surfaces(
+                surface_reconstruction_final_loss_per_heliostat = []
+                data_surfaces = []
+                batch_size = 33
+                heliostat_data = data_mappings["surface_reconstruction"][
+                    config_dictionary.heliostat_data_mapping
+                ]
+
+                for i in range(0, len(heliostat_data), batch_size):
+                    batch = heliostat_data[i : i + batch_size]
+                    data_surfaces.append(
+                        {
+                            config_dictionary.data_parser: data_mappings[
+                                "surface_reconstruction"
+                            ][config_dictionary.data_parser],
+                            config_dictionary.heliostat_data_mapping: batch,
+                        }
+                    )
+
+                for data in data_surfaces:
+                    surface_reconstructor = SurfaceReconstructor(
+                        ddp_setup=ddp_setup,
+                        scenario=scenario,
+                        data=data,
+                        optimization_configuration=surface_reconstruction_optimization_configuration,
+                        number_of_surface_points=number_of_surface_points_per_facet,
+                        bitmap_resolution=torch.tensor([256, 256], device=device),
+                        device=device,
+                    )
+                    losses_surfaces = surface_reconstructor.reconstruct_surfaces(
                         loss_definition=KLDivergenceLoss(), device=device
                     )
-                )
-                if ddp_setup["is_distributed"]:
-                    torch.distributed.barrier()
-                # Save reconstructed surface data.
-                surface_data_after = surface_data(
-                    scenario=scenario,
-                    ddp_setup=ddp_setup,
-                    heliostat_data=data_mappings["surface_plot"],
-                    number_of_surface_points_per_facet=number_of_surface_points_per_facet,
-                    device=device,
-                )
-                merged_data_surface = merge_data(
-                    unoptimized_data=surface_data_before,
-                    optimized_data=surface_data_after,
-                )
-                results_dict["surface_reconstruction"] = merged_data_surface
+                    surface_reconstruction_final_loss_per_heliostat.append(
+                        losses_surfaces
+                    )
+                    if ddp_setup["is_distributed"]:
+                        torch.distributed.barrier()
+
+                reconstructed_nurbs_control_points = [
+                    heliostat_group.nurbs_control_points.detach()
+                    for heliostat_group in scenario.heliostat_field.heliostat_groups
+                ]
                 # Save reconstructed surfaces.
                 torch.save(
-                    [
-                        heliostat_group.nurbs_control_points.detach()
-                        for heliostat_group in scenario.heliostat_field.heliostat_groups
-                    ],
-                    reconstructed_surface_path,
+                    reconstructed_nurbs_control_points, reconstructed_surface_path
                 )
+
+            scenario.heliostat_field.update_surfaces(reconstructed_nurbs_control_points)
+
+            # Save reconstructed surface data.
+            surface_data_after = surface_data(
+                scenario=scenario,
+                ddp_setup=ddp_setup,
+                heliostat_data=data_mappings["surface_plot"],
+                device=device,
+            )
+            merged_data_surface = merge_data(
+                unoptimized_data=surface_data_before,
+                optimized_data=surface_data_after,
+            )
+            results_dict["surface_reconstruction"] = merged_data_surface
+
             # Inform kinematic reconstruction, that surfaces have been reconstructed.
             reconstructed_kinematic_path = (
                 results_dir
@@ -1185,7 +1082,10 @@ def create_heliostat_data_mappings(
     with open(viable_heliostats_data, "r") as f:
         viable_heliostats = json.load(f)
 
-    data_parser = PaintCalibrationDataParser(
+    data_parser_2 = PaintCalibrationDataParser(
+        sample_limit=2, centroid_extraction_method=paint_mappings.UTIS_KEY
+    )
+    data_parser_4 = PaintCalibrationDataParser(
         sample_limit=4, centroid_extraction_method=paint_mappings.UTIS_KEY
     )
 
@@ -1206,7 +1106,7 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser,
+        config_dictionary.data_parser: data_parser_2,
         config_dictionary.heliostat_data_mapping: path_mapping_kinematic_plot,
     }
 
@@ -1226,7 +1126,7 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser,
+        config_dictionary.data_parser: data_parser_2,
         config_dictionary.heliostat_data_mapping: path_mapping_kinematic_reconstruction,
     }
 
@@ -1247,7 +1147,7 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser,
+        config_dictionary.data_parser: data_parser_4,
         config_dictionary.heliostat_data_mapping: path_mapping_surface_plot,
     }
 
@@ -1267,7 +1167,7 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser,
+        config_dictionary.data_parser: data_parser_4,
         config_dictionary.heliostat_data_mapping: path_mapping_surface_reconstruction,
     }
 
@@ -1330,7 +1230,7 @@ def main() -> None:
     )
 
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=1.0, reduction_dimensions=(1,)
+        weight=0.2, reduction_dimensions=(1,)
     )
     smoothness_regularizer = SmoothnessRegularizer(
         weight=1.0, reduction_dimensions=(1,)
@@ -1493,15 +1393,15 @@ def main() -> None:
         # 7. Surface: reconstructed     Kinematic: reconstructed    Aim Points: center
         # 8. Surface: reconstructed     Kinematic: reconstructed    Aim Points: optimized
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=1,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=1,
+        #     device=device,
+        # )
 
         ablation_study(
             scenario_path=scenario_path_ideal,
@@ -1515,57 +1415,57 @@ def main() -> None:
             device=device,
         )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=3,
-            data_mappings=data_mappings,
-            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=3,
+        #     data_mappings=data_mappings,
+        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+        #     device=device,
+        # )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=4,
-            data_mappings=data_mappings,
-            kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
-            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-            target_distribution=target_distribution,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=4,
+        #     data_mappings=data_mappings,
+        #     kinematic_reconstruction_optimization_configuration=kinematic_reconstruction_optimization_configuration,
+        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+        #     target_distribution=target_distribution,
+        #     device=device,
+        # )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=5,
-            data_mappings=data_mappings,
-            surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=5,
+        #     data_mappings=data_mappings,
+        #     surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
+        #     device=device,
+        # )
 
-        ablation_study(
-            scenario_path=scenario_path_ideal,
-            results_path=results_path,
-            baseline_incident_ray_direction=baseline_incident_ray_direction,
-            baseline_target_area_index=baseline_target_area_index,
-            baseline_aim_point=baseline_aim_point,
-            ablation_study_case=6,
-            data_mappings=data_mappings,
-            surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
-            aimpoint_optimization_configuration=aimpoint_optimization_configuration,
-            target_distribution=target_distribution,
-            device=device,
-        )
+        # ablation_study(
+        #     scenario_path=scenario_path_ideal,
+        #     results_path=results_path,
+        #     baseline_incident_ray_direction=baseline_incident_ray_direction,
+        #     baseline_target_area_index=baseline_target_area_index,
+        #     baseline_aim_point=baseline_aim_point,
+        #     ablation_study_case=6,
+        #     data_mappings=data_mappings,
+        #     surface_reconstruction_optimization_configuration=surface_reconstruction_optimization_configuration,
+        #     aimpoint_optimization_configuration=aimpoint_optimization_configuration,
+        #     target_distribution=target_distribution,
+        #     device=device,
+        # )
 
         ablation_study(
             scenario_path=scenario_path_ideal,
@@ -1599,5 +1499,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     runtime_log.info("-----------------")
+    torch.autograd.set_detect_anomaly(True)
     main()
     runtime_log.info("\n\n")

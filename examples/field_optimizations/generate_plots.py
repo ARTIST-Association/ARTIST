@@ -32,35 +32,49 @@ def plot_kinematic_reconstruction(
             "kinematic_reconstruction_reconstructed_surface",
         ]
     ):
+        cmap = "inferno"
         number_of_heliostats = len(results[reconstruction])
-        fig, axes = plt.subplots(number_of_heliostats, 3, figsize=(15, 15))
+
+        fig, axes = plt.subplots(number_of_heliostats, 3, figsize=(15, 13))
+        plt.subplots_adjust(wspace=0.1, hspace=0.0, left=0.25)
+
+        axes[0, 0].set_title("Calibration Flux", fontsize=24)
+        axes[0, 1].set_title("Ideal\nKinematic", fontsize=24)
+        axes[0, 2].set_title("Reconstructed\nKinematic", fontsize=24)
+
         for flux_index, heliostat_name in enumerate(results[reconstruction]):
             flux_data = results[reconstruction][heliostat_name]["fluxes"].cpu().detach()
-            axes[flux_index, 0].imshow(flux_data[0], cmap="inferno")
-            axes[flux_index, 0].set_title("Calibration Flux")
-            axes[flux_index, 0].axis("off")
 
-            axes[flux_index, 1].imshow(flux_data[1], cmap="inferno")
-            axes[flux_index, 1].set_title("Kinematic not reconstructed")
-            axes[flux_index, 1].axis("off")
+            axes[flux_index, 0].imshow(flux_data[0], cmap=cmap)
+            axes[flux_index, 1].imshow(flux_data[1], cmap=cmap)
+            axes[flux_index, 2].imshow(flux_data[2], cmap=cmap)
 
-            axes[flux_index, 2].imshow(flux_data[2], cmap="inferno")
-            axes[flux_index, 2].set_title("Kinematic reconstructed")
-            axes[flux_index, 2].axis("off")
+            axes[flux_index, 0].set_ylabel(
+                heliostat_name,
+                rotation=0,
+                ha="right",
+                va="center",
+                fontsize=30,
+            )
 
-        plt.savefig(
-            save_dir / f"results_kinematic_reconstruction_fluxes_{i}.png",
-            bbox_inches="tight",
-            pad_inches=1,
-        )
-        plt.close(fig)
+    for ax in axes.flat:
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+    plt.savefig(
+        save_dir / f"results_kinematic_reconstruction_fluxes_{i}.png",
+        pad_inches=0.1,
+    )
+    plt.close(fig)
 
     for index, case in enumerate(["ablation_study_case_3", "ablation_study_case_7"]):
         losses = (
             results[case]["kinematic_reconstruction_loss_per_heliostat"].detach().cpu()
         )
 
-        fig, ax = plt.subplots(1, figsize=(12, 6))
+        fig, ax = plt.subplots(1, figsize=(12, 5))
 
         ax.hist(losses, bins=50, edgecolor="black", alpha=0.7, density=True)
         mean_val = losses.mean()
@@ -79,15 +93,14 @@ def plot_kinematic_reconstruction(
             linewidth=1.5,
             label=f"Median = {median_val:.3f}",
         )
-        ax.set_title("Histogram Losses")
-        ax.set_xlabel("Loss")
-        ax.set_ylabel("Count")
+        ax.set_title("Kinematic Reconstruction Losses", fontsize=24)
+        ax.set_xlabel("Loss [m]", fontsize=24)
+        ax.set_ylabel("Count", fontsize=24)
         ax.legend()
 
         plt.tight_layout()
         plt.savefig(
             save_dir / f"results_kinematic_reconstruction_errors_{index}.png",
-            bbox_inches="tight",
             pad_inches=1,
         )
 
@@ -130,26 +143,68 @@ def plot_surface_reconstruction(
 
         reference_direction = torch.tensor([0.0, 0.0, 1.0], device=torch.device("cpu"))
         canting = heliostat_data["canting"].cpu().detach()
-        # deflectometry_uncanted_fitted = utils.perform_canting(
-        #     canting_angles=canting.expand(2, -1, -1, -1),
-        #     data=results["deflectometry_fitted"][heliostat_name]
-        #     .reshape(2, 4, -1, 4)
-        #     .cpu()
-        #     .detach(),
-        #     inverse=True,
-        #     device=torch.device("cpu"),
-        # )
+
+        # Process original deflectometry data.
         deflectometry_original = (
             results["deflectometry_original"][heliostat_name].cpu().detach()
         )
-        ones = torch.ones(2, 4, 80762, 1, device=torch.device("cpu"))
-        deflectometry_original = torch.cat((deflectometry_original, ones), dim=-1)
+        ones = torch.ones_like(deflectometry_original, device=torch.device("cpu"))
+        deflectometry_original = torch.cat(
+            (deflectometry_original, ones[..., 0, None]), dim=-1
+        )
         deflectometry_uncanted_original = utils.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=deflectometry_original,
             inverse=True,
             device=torch.device("cpu"),
         )
+        deflectometry_points_original = deflectometry_uncanted_original[
+            0, :, :, :3
+        ].reshape(-1, 3)
+        deflectometry_normals_original = torch.nn.functional.normalize(
+            deflectometry_uncanted_original[1, :, :, :3], dim=-1
+        ).reshape(-1, 3)
+        cos_theta_deflectometry_original = (
+            deflectometry_normals_original @ reference_direction
+        )
+        angles_deflectometry_original = torch.clip(
+            torch.arccos(torch.clip(cos_theta_deflectometry_original, -1.0, 1.0)),
+            -0.1,
+            0.1,
+        )
+        sc3 = axes[index, 3].scatter(
+            x=deflectometry_points_original[:, 0],
+            y=deflectometry_points_original[:, 1],
+            c=deflectometry_points_original[:, 2],
+            cmap="inferno",
+            vmin=0.0345,
+            vmax=0.036,
+        )
+        axes[index, 3].set_title("Deflectometry Points original")
+        axes[index, 3].axis("off")
+        axes[index, 3].set_aspect("equal", adjustable="box")
+        cbar3 = fig.colorbar(
+            sc3, ax=axes[index, 3], orientation="horizontal", fraction=0.046, pad=0.1
+        )
+        cbar3.set_label("m")
+
+        sc4 = axes[index, 4].scatter(
+            x=deflectometry_points_original[:, 0],
+            y=deflectometry_points_original[:, 1],
+            c=angles_deflectometry_original,
+            cmap="inferno",
+            vmin=0.0,
+            vmax=0.005,
+        )
+        axes[index, 4].set_title("Deflectometry normals")
+        axes[index, 4].axis("off")
+        axes[index, 4].set_aspect("equal", adjustable="box")
+        cbar4 = fig.colorbar(
+            sc4, ax=axes[index, 4], orientation="horizontal", fraction=0.046, pad=0.1
+        )
+        cbar4.set_label("Angle (rad)")
+
+        # Process reconstructed data.
         points_uncanted = utils.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=heliostat_data["surface_points"].cpu().detach(),
@@ -162,147 +217,45 @@ def plot_surface_reconstruction(
             inverse=True,
             device=torch.device("cpu"),
         )
-
-        # deflectometry_normals_fitted = torch.nn.functional.normalize(
-        #     deflectometry_uncanted_fitted[1, :, :, :3], dim=-1
-        # ).reshape(-1, 3)
-        deflectometry_normals_original = torch.nn.functional.normalize(
-            deflectometry_uncanted_original[1, :, :, :3], dim=-1
-        ).reshape(-1, 3)
-        # ideal_normals = torch.nn.functional.normalize(
-        #     normals_uncanted[0, :, :, :3], dim=-1
-        # ).reshape(-1, 3)
+        reconstructed_points = points_uncanted[1, :, :, :3].reshape(-1, 3)
         reconstructed_normals = torch.nn.functional.normalize(
             normals_uncanted[1, :, :, :3], dim=-1
         ).reshape(-1, 3)
-        # deflectometry_points_fitted = deflectometry_uncanted_fitted[
-        #     0, :, :, :3
-        # ].reshape(-1, 3)
-        deflectometry_points_original = deflectometry_uncanted_original[
-            0, :, :, :3
-        ].reshape(-1, 3)
-        # ideal_points = points_uncanted[0, :, :, :3].reshape(-1, 3)
-        reconstructed_points = points_uncanted[1, :, :, :3].reshape(-1, 3)
-
-        # cos_theta_d_fitted = deflectometry_normals_fitted @ reference_direction
-        # angles_d_fitted = torch.clip(
-        #     torch.arccos(torch.clip(cos_theta_d_fitted, -1.0, 1.0)), -0.1, 0.1
-        # )
-        cos_theta_d_original = deflectometry_normals_original @ reference_direction
-        angles_d_original = torch.clip(
-            torch.arccos(torch.clip(cos_theta_d_original, -1.0, 1.0)), -0.1, 0.1
+        cos_theta_reconstructed = reconstructed_normals @ reference_direction
+        angles_reconstructed = torch.clip(
+            torch.arccos(torch.clip(cos_theta_reconstructed, -1.0, 1.0)), -0.1, 0.1
         )
-        # cos_theta_i = ideal_normals @ reference_direction
-        # angles_i = torch.clip(
-        #     torch.arccos(torch.clip(cos_theta_i, -1.0, 1.0)), -0.1, 0.1
-        # )
-        cos_theta_r = reconstructed_normals @ reference_direction
-        angles_r = torch.clip(
-            torch.arccos(torch.clip(cos_theta_r, -1.0, 1.0)), -0.1, 0.1
-        )
-
-        # sc3 = axes[index, 3].scatter(x=deflectometry_points_fitted[:, 0], y=deflectometry_points_fitted[:, 1], c=angles_d_fitted, cmap="inferno", vmin=0.0, vmax=0.005)
-        # axes[index, 3].set_title("Deflectometry normals fitted")
-        # axes[index, 3].axis("off")
-        # axes[index, 3].set_aspect("equal", adjustable="box")
-        # cbar3 = fig.colorbar(
-        #     sc3, ax=axes[index, 3], orientation="horizontal", fraction=0.046, pad=0.1
-        # )
-        # cbar3.set_label("Angle (rad)")
-
-        sc3 = axes[index, 3].scatter(
-            x=deflectometry_points_original[:, 0],
-            y=deflectometry_points_original[:, 1],
-            c=angles_d_original,
-            cmap="inferno",
-            vmin=0.0,
-            vmax=0.005,
-        )
-        axes[index, 3].set_title("Deflectometry normals original")
-        axes[index, 3].axis("off")
-        axes[index, 3].set_aspect("equal", adjustable="box")
-        cbar3 = fig.colorbar(
-            sc3, ax=axes[index, 3], orientation="horizontal", fraction=0.046, pad=0.1
-        )
-        cbar3.set_label("Angle (rad)")
-
-        sc4 = axes[index, 4].scatter(
+        sc5 = axes[index, 5].scatter(
             x=reconstructed_points[:, 0],
             y=reconstructed_points[:, 1],
-            c=angles_r,
+            c=reconstructed_points[:, 2],
             cmap="inferno",
-            vmin=0.0,
-            vmax=0.005,
+            vmin=0.0345,
+            vmax=0.036,
         )
-        axes[index, 4].set_title("Reconstructed normals")
-        axes[index, 4].axis("off")
-        axes[index, 4].set_aspect("equal", adjustable="box")
-        cbar4 = fig.colorbar(
-            sc4, ax=axes[index, 4], orientation="horizontal", fraction=0.046, pad=0.1
-        )
-        cbar4.set_label("Angle (rad)")
-
-        # loss_normals = (1 - torch.sum(deflectometry_normals * reconstructed_normals, dim=-1)).reshape(-1)
-        # sc5 = axes[index, 5].scatter(deflectometry_points[:, 0], deflectometry_points[:, 1], c=loss_normals, cmap="inferno", vmin=-0.00001, vmax=0.00001)
-        # axes[index, 5].set_title("Cosine Similarity")
-        # axes[index, 5].set_aspect("equal", adjustable="box")
-        # axes[index, 5].axis("off")
-        # cbar5 = fig.colorbar(
-        #     sc5, ax=axes[index, 5], orientation="horizontal", fraction=0.046, pad=0.1
-        # )
-        # cbar5.set_label("difference")
-        # cbar5.ax.tick_params(labelsize=24)
-
-        # sc6 = axes[index, 6].scatter(x=deflectometry_points_fitted[:, 0], y=deflectometry_points_fitted[:, 1], c=deflectometry_points_fitted[:, 2], cmap="inferno", vmin=0.033, vmax=0.0375)
-        # axes[index, 6].set_title("Deflectometry Points fitted")
-        # axes[index, 6].axis("off")
-        # axes[index, 6].set_aspect("equal", adjustable="box")
-        # cbar6 = fig.colorbar(
-        #     sc6, ax=axes[index, 6], orientation="horizontal", fraction=0.046, pad=0.1
-        # )
-        # cbar6.set_label("m")
-
-        sc5 = axes[index, 5].scatter(
-            x=deflectometry_points_original[:, 0],
-            y=deflectometry_points_original[:, 1],
-            c=deflectometry_points_original[:, 2],
-            cmap="inferno",
-            vmin=reconstructed_points[:, 2].min(),
-            vmax=reconstructed_points[:, 2].max(),
-        )
-        axes[index, 5].set_title("Deflectometry Points original")
+        axes[index, 5].set_title("Reconstructed Surface (Points)")
         axes[index, 5].axis("off")
         axes[index, 5].set_aspect("equal", adjustable="box")
         cbar5 = fig.colorbar(
             sc5, ax=axes[index, 5], orientation="horizontal", fraction=0.046, pad=0.1
         )
         cbar5.set_label("m")
-        cbar5.set_ticks(
-            torch.linspace(
-                reconstructed_points[:, 2].min(), reconstructed_points[:, 2].max(), 6
-            )
-        )
 
         sc6 = axes[index, 6].scatter(
             x=reconstructed_points[:, 0],
             y=reconstructed_points[:, 1],
-            c=reconstructed_points[:, 2],
+            c=angles_reconstructed,
             cmap="inferno",
-            vmin=reconstructed_points[:, 2].min(),
-            vmax=reconstructed_points[:, 2].max(),
+            vmin=0.0,
+            vmax=0.005,
         )
-        axes[index, 6].set_title("Reconstructed Surface (Points)")
+        axes[index, 6].set_title("Reconstructed normals")
         axes[index, 6].axis("off")
         axes[index, 6].set_aspect("equal", adjustable="box")
         cbar6 = fig.colorbar(
             sc6, ax=axes[index, 6], orientation="horizontal", fraction=0.046, pad=0.1
         )
-        cbar6.set_label("m")
-        cbar6.set_ticks(
-            torch.linspace(
-                reconstructed_points[:, 2].min(), reconstructed_points[:, 2].max(), 6
-            )
-        )
+        cbar6.set_label("Angle (rad)")
 
     plt.tight_layout()
     plt.savefig(
@@ -518,7 +471,7 @@ if __name__ == "__main__":
 
         plots_path.mkdir(parents=True, exist_ok=True)
 
-        results_path = pathlib.Path(args.results_dir) / case / "results_0.pt"
+        results_path = pathlib.Path(args.results_dir) / case / "results.pt"
 
         if not results_path.exists():
             raise FileNotFoundError(
