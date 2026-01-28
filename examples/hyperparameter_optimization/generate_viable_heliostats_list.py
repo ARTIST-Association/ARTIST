@@ -132,7 +132,7 @@ if __name__ == "__main__":
     Generate list of viable heliostats for the hyperparameter optimizations.
 
     This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the optimization process. 
+    the optimization process.
 
     Parameters
     ----------
@@ -257,8 +257,7 @@ if __name__ == "__main__":
                 str(flux_path) for flux_path in kinematic_reconstruction_flux_paths
             ],
             "surface_reconstruction_flux_images": [
-                str(flux_path)
-                for flux_path in surface_reconstruction_flux_image_path
+                str(flux_path) for flux_path in surface_reconstruction_flux_image_path
             ],
             "properties": str(properties_path),
         }
