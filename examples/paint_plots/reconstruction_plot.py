@@ -41,11 +41,11 @@ def plot_error_distribution(
 
     # Convert losses to list.
     helios_losses_in_meters = [
-        math.sqrt(data[paint_mappings.HELIOS_KEY])
+        data[paint_mappings.HELIOS_KEY]
         for data in reconstruction_results.values()
     ]
     utis_losses_in_meters = [
-        math.sqrt(data[paint_mappings.UTIS_KEY])
+        data[paint_mappings.UTIS_KEY]
         for data in reconstruction_results.values()
     ]
     x_max = max(utis_losses_in_meters + helios_losses_in_meters)
@@ -168,11 +168,11 @@ def plot_error_against_distance(
     # Load as lists.
     positions_list = [data["Position"] for data in reconstruction_results.values()]
     helios_loss_list_in_meters = [
-        math.sqrt(data[paint_mappings.HELIOS_KEY])
+        data[paint_mappings.HELIOS_KEY]
         for data in reconstruction_results.values()
     ]
     utis_loss_list_in_meters = [
-        math.sqrt(data[paint_mappings.UTIS_KEY])
+        data[paint_mappings.UTIS_KEY]
         for data in reconstruction_results.values()
     ]
 
@@ -239,7 +239,7 @@ def plot_error_against_distance(
         label="UTIS Trend",
     )
 
-    ax.set_xlabel("\\textbf{Heliostat Distance from Tower} \n{m}")
+    ax.set_xlabel("\\textbf{Heliostat Distance from Tower} \n{meter}")
     ax.set_ylabel("\\textbf{Mean Pointing Error} \n{meter}")
     ax.grid(True)
     ax.legend(fontsize=8, loc="upper right", ncol=2)
