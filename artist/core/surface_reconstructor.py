@@ -511,6 +511,8 @@ class SurfaceReconstructor:
 
             log.info(f"Rank: {rank}, synchronized after surface reconstruction.")
 
+        self.scenario.heliostat_field.update_surfaces(device=device)
+
         return final_loss_per_heliostat
 
     @staticmethod

@@ -454,7 +454,6 @@ class HeliostatField:
 
     def update_surfaces(
         self,
-        nurbs_control_points: torch.Tensor,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -462,9 +461,6 @@ class HeliostatField:
 
         Parameter
         ---------
-        nurbs_control_points : torch.Tensor
-            New nurbs control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -472,9 +468,7 @@ class HeliostatField:
         """
         device = get_device(device=device)
 
-        for heliostat_group, new_control_points in zip(
-            self.heliostat_groups, nurbs_control_points
-        ):
+        for heliostat_group in self.heliostat_groups:
             number_of_surface_points_per_facet = int(
                 math.sqrt(
                     heliostat_group.surface_points.shape[1]
@@ -503,7 +497,7 @@ class HeliostatField:
             )
             nurbs_surfaces = NURBSSurfaces(
                 degrees=heliostat_group.nurbs_degrees,
-                control_points=new_control_points,
+                control_points=heliostat_group.nurbs_control_points.detach(),
                 device=device,
             )
             (
@@ -519,9 +513,9 @@ class HeliostatField:
                 heliostat_group.surface_points.shape[0],
                 -1,
                 4,
-            )
+            ).detach()
             heliostat_group.surface_normals = new_surface_normals.reshape(
                 heliostat_group.surface_points.shape[0],
                 -1,
                 4,
-            )
+            ).detach()
