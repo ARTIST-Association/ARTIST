@@ -4,6 +4,7 @@ import logging
 import pathlib
 import pickle
 import random
+import re
 import warnings
 from functools import partial
 
@@ -13,7 +14,6 @@ import yaml
 from mpi4py import MPI
 from propulate import Propulator
 from propulate.utils import get_default_propagator, set_logger_config
-from sympy import re
 
 from artist.core import loss_functions
 from artist.core.kinematic_reconstructor import KinematicReconstructor
