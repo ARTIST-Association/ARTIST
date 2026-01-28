@@ -307,7 +307,7 @@ if __name__ == "__main__":
             print(f"Scenario not found. Generating a new one at {scenario_path}...")
             generate_ideal_scenario(
                 scenario_path=scenario_path,
-                tower_file=tower_file,
+                tower_file_path=tower_file,
                 heliostat_properties_list=heliostat_properties_list,
                 number_of_heliostats=case,
                 device=device,
