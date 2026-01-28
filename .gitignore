@@ -170,6 +170,7 @@ cython_debug/
 .json
 .csv
 .vscode/settings.json
+runtime_log.txt
 examples/paint_plots/data/
 examples/paint_plots/plots/
 examples/paint_plots/results/
