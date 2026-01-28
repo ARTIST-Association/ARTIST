@@ -112,8 +112,7 @@ def generate_reconstruction_results(
                 | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
             ] = {
                 config_dictionary.data_parser: PaintCalibrationDataParser(
-                    sample_limit=3,
-                    centroid_extraction_method=centroid
+                    sample_limit=3, centroid_extraction_method=centroid
                 ),
                 config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
             }

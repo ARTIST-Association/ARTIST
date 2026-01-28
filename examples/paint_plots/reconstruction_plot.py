@@ -1,5 +1,4 @@
 import argparse
-import math
 import pathlib
 import warnings
 from typing import Any
@@ -41,12 +40,10 @@ def plot_error_distribution(
 
     # Convert losses to list.
     helios_losses_in_meters = [
-        data[paint_mappings.HELIOS_KEY]
-        for data in reconstruction_results.values()
+        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
     ]
     utis_losses_in_meters = [
-        data[paint_mappings.UTIS_KEY]
-        for data in reconstruction_results.values()
+        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
     ]
     x_max = max(utis_losses_in_meters + helios_losses_in_meters)
     x_vals = np.linspace(0, x_max, 100)
@@ -168,12 +165,10 @@ def plot_error_against_distance(
     # Load as lists.
     positions_list = [data["Position"] for data in reconstruction_results.values()]
     helios_loss_list_in_meters = [
-        data[paint_mappings.HELIOS_KEY]
-        for data in reconstruction_results.values()
+        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
     ]
     utis_loss_list_in_meters = [
-        data[paint_mappings.UTIS_KEY]
-        for data in reconstruction_results.values()
+        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
     ]
 
     # Convert to arrays for plotting.
