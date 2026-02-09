@@ -84,7 +84,7 @@ class LightSource:
             The number of points on the heliostat from which rays are reflected.
         number_of_facets : int
             The number of facets for each heliostat (default: 4).
-        number_of_heliostats : int
+        number_of_active_heliostats : int
             The number of heliostats in the scenario (default: 1).
         random_seed : int
             The random seed to enable result replication (default: 7).
