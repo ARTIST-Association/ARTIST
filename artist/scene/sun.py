@@ -213,7 +213,7 @@ class Sun(LightSource):
     def get_distortions(
         self,
         number_of_points: int,
-        number_of_heliostats: int,
+        number_of_active_heliostats: int,
         random_seed: int = 7,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -240,7 +240,7 @@ class Sun(LightSource):
 
         distortions_u, distortions_e = self.distribution.sample(
             (
-                number_of_heliostats,
+                number_of_active_heliostats,
                 self.number_of_rays,
                 number_of_points,
             ),

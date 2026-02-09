@@ -69,7 +69,7 @@ class LightSource:
     def get_distortions(
         self,
         number_of_points: int,
-        number_of_heliostats: int,
+        number_of_active_heliostats: int,
         random_seed: int = 7,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
