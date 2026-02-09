@@ -293,11 +293,12 @@ class KLDivergenceLoss(Loss):
         A torch module implementing a loss.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, normalize: bool = True) -> None:
         """Initialize the Kullback-Leibler divergence loss."""
         super().__init__(
             loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
         )
+        self.normalize = normalize
 
     def __call__(
         self,
@@ -358,18 +359,22 @@ class KLDivergenceLoss(Loss):
             prediction = prediction - prediction.min()
 
         eps = 1e-12
-        ground_truth_distributions = torch.nn.functional.normalize(
-            ground_truth,
-            p=1,
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-            eps=eps,
-        )
-        predicted_distributions = torch.nn.functional.normalize(
-            prediction,
-            p=1,
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-            eps=eps,
-        )
+        if self.normalize:
+            ground_truth_distributions = torch.nn.functional.normalize(
+                ground_truth,
+                p=1,
+                dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+                eps=eps,
+            )
+            predicted_distributions = torch.nn.functional.normalize(
+                prediction,
+                p=1,
+                dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+                eps=eps,
+            )
+        else:
+            ground_truth_distributions = ground_truth
+            predicted_distributions = prediction
 
         loss = self.loss_function(
             torch.log(predicted_distributions + eps),
