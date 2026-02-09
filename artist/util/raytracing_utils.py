@@ -121,17 +121,8 @@ def line_plane_intersections(
         + rays.ray_directions * intersection_distances[:, :, :, None]
     )
 
-    # Calculate the absolute intensities of the rays hitting the target planes.
-    # Use the inverse-square law for distance attenuations from the heliostats to target planes.
-    distances_to_plane_centers = torch.norm(
-        points_at_ray_origins - plane_centers[:, None, :],
-        dim=-1,
-    )
-
-    distance_attenuations = (1.0 / (distances_to_plane_centers**2))[:, None, :]
-
     absolute_intensities = (
-        rays.ray_magnitudes * relative_intensities * distance_attenuations
+        rays.ray_magnitudes * relative_intensities
     )
 
     absolute_intensities = absolute_intensities * front_facing_mask
