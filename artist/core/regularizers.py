@@ -9,24 +9,19 @@ class Regularizer:
 
     Attributes
     ----------
-    weight : float
-        The weight of the regularization term.
     reduction_dimensions : tuple[int, ...]
         The dimensions along which to reduce the regularization term.
     """
 
-    def __init__(self, weight: float, reduction_dimensions: tuple[int, ...]) -> None:
+    def __init__(self, reduction_dimensions: tuple[int, ...]) -> None:
         """
         Initialize the base regularizer.
 
         Parameters
         ----------
-        weight : float
-            The weight of the regularization term.
         reduction_dimensions : tuple[int, ...]
             The dimensions along which to reduce the regularization term.
         """
-        self.weight = weight
         self.reduction_dimensions = reduction_dimensions
 
     def __call__(
@@ -74,18 +69,16 @@ class SmoothnessRegularizer(Regularizer):
     :class:`Regularizer` : Reference to the parent class.
     """
 
-    def __init__(self, weight: float, reduction_dimensions: tuple[int, ...]) -> None:
+    def __init__(self, reduction_dimensions: tuple[int, ...]) -> None:
         """
         Initialize the regularizer.
 
         Parameters
         ----------
-        weight : float
-            Weight of the regularization term.
         reduction_dimensions : tuple[int, ...]
             Dimensions along which to reduce the loss.
         """
-        super().__init__(weight, reduction_dimensions)
+        super().__init__(reduction_dimensions)
 
     def __call__(
         self,
@@ -137,8 +130,6 @@ class SmoothnessRegularizer(Regularizer):
         laplacian_loss = (laplace**2).mean(dim=(2, 3, 4))
         laplacian_loss = laplacian_loss.sum(dim=self.reduction_dimensions)
 
-        laplacian_loss = self.weight * laplacian_loss
-
         return laplacian_loss
 
 
@@ -151,18 +142,16 @@ class IdealSurfaceRegularizer(Regularizer):
     :class:`Regularizer` : Reference to the parent class.
     """
 
-    def __init__(self, weight: float, reduction_dimensions: tuple[int, ...]) -> None:
+    def __init__(self, reduction_dimensions: tuple[int, ...]) -> None:
         """
         Initialize the regularizer.
 
         Parameters
         ----------
-        weight : float
-            Weight of the regularization term.
         reduction_dimensions : tuple[int, ...]
             Dimensions along which to reduce the loss.
         """
-        super().__init__(weight, reduction_dimensions)
+        super().__init__(reduction_dimensions)
 
     def __call__(
         self,
@@ -198,5 +187,4 @@ class IdealSurfaceRegularizer(Regularizer):
         per_facet_loss = delta_squared.mean(dim=(2, 3, 4))
         loss = per_facet_loss.sum(dim=self.reduction_dimensions)
 
-        loss = self.weight * loss
         return loss
