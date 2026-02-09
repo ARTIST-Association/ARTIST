@@ -64,6 +64,10 @@ class VectorLoss(Loss):
     ----------
     loss_function : torch.nn.Module
         A torch module implementing a loss.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self) -> None:
@@ -124,6 +128,10 @@ class FocalSpotLoss(Loss):
         A torch module implementing a loss.
     scenario : Scenario
         The scenario.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self, scenario: Scenario) -> None:
@@ -215,6 +223,10 @@ class PixelLoss(Loss):
         A torch module implementing a loss.
     scenario : Scenario
         The scenario.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self, scenario: Scenario) -> None:
@@ -291,10 +303,23 @@ class KLDivergenceLoss(Loss):
     ----------
     loss_function : torch.nn.Module
         A torch module implementing a loss.
+    normalize : bool
+        Flag indicating whether distributions are to be normalized or not. 
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self, normalize: bool = True) -> None:
-        """Initialize the Kullback-Leibler divergence loss."""
+        """
+        Initialize the Kullback-Leibler divergence loss.
+        
+        Parameters
+        ----------
+        normalize : bool
+            Flag indicating whether distributions are to be normalized or not (default is True). 
+        """
         super().__init__(
             loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
         )
@@ -392,6 +417,10 @@ class AngleLoss(Loss):
     ----------
     loss_function : torch.nn.Module
         A torch module implementing a loss.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self) -> None:
