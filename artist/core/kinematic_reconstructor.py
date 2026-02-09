@@ -331,6 +331,8 @@ class KinematicReconstructor:
 
                     loss.backward()
 
+                    torch.nn.utils.clip_grad_norm_([heliostat_group.kinematic.rotation_deviation_parameters, heliostat_group.kinematic.actuators.optimizable_parameters], max_norm=1.0)
+
                     optimizer.step()
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
