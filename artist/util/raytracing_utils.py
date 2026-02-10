@@ -121,9 +121,7 @@ def line_plane_intersections(
         + rays.ray_directions * intersection_distances[:, :, :, None]
     )
 
-    absolute_intensities = (
-        rays.ray_magnitudes * relative_intensities
-    )
+    absolute_intensities = rays.ray_magnitudes * relative_intensities
 
     absolute_intensities = absolute_intensities * front_facing_mask
 

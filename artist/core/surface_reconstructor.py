@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import LRScheduler
 from artist.core import core_utils, learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
+from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
@@ -70,6 +71,7 @@ class SurfaceReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
+        constraint_parameters: dict[str, Any],
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         device: torch.device | None = None,
@@ -109,8 +111,11 @@ class SurfaceReconstructor:
         self.scenario = scenario
         self.data = data
         self.optimization_configuration = optimization_configuration
+        self.constraint_parameters = constraint_parameters
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.bitmap_resolution = bitmap_resolution.to(device)
+
+        self.epsilon = 1e-12
 
     def reconstruct_surfaces(
         self,
@@ -242,6 +247,27 @@ class SurfaceReconstructor:
                     relative=True,
                 )
 
+                energy_per_flux_reference = torch.zeros_like(active_heliostats_mask)
+                initial_lambda_energy = self.constraint_parameters[
+                    config_dictionary.initial_lambda_energy
+                ]
+                lambda_energy = torch.full_like(
+                    active_heliostats_mask,
+                    initial_lambda_energy,
+                    dtype=torch.float32,
+                    device=device,
+                )
+                rho_energy = self.constraint_parameters[config_dictionary.rho_energy]
+                energy_tolerance = self.constraint_parameters[
+                    config_dictionary.energy_tolerance
+                ]
+                weight_smoothness = self.constraint_parameters[
+                    config_dictionary.weight_smoothness
+                ]
+                weight_ideal_surface = self.constraint_parameters[
+                    config_dictionary.weight_ideal_surface
+                ]
+
                 # Start the optimization.
                 loss = torch.inf
                 epoch = 0
@@ -339,6 +365,14 @@ class SurfaceReconstructor:
                     )
 
                     sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+                    number_of_samples_per_heliostat = int(
+                        heliostat_group.active_heliostats_mask.sum()
+                        / (heliostat_group.active_heliostats_mask > 0).sum()
+                    )
+                    local_indices = (
+                        sample_indices_for_local_rank[::number_of_samples_per_heliostat]
+                        // number_of_samples_per_heliostat
+                    )
 
                     cropped_flux_distributions = (
                         utils.crop_flux_distributions_around_center(
@@ -355,7 +389,7 @@ class SurfaceReconstructor:
                         )
                     )
 
-                    # Loss comparing the predicted flux and the target flux.
+                    # Flux loss.
                     flux_loss_per_sample = loss_definition(
                         prediction=cropped_flux_distributions,
                         ground_truth=measured_flux_distributions[
@@ -370,27 +404,41 @@ class SurfaceReconstructor:
                         ),
                         device=device,
                     )
-
-                    number_of_samples_per_heliostat = int(
-                        heliostat_group.active_heliostats_mask.sum()
-                        / (heliostat_group.active_heliostats_mask > 0).sum()
-                    )
-
                     flux_loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=flux_loss_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                         device=device,
                     )
 
-                    # Include regularization terms.
-                    regularizer_loss_per_heliostat = torch.zeros_like(
-                        flux_loss_per_heliostat, device=device
+                    # Augmented Lagrangian.
+                    if epoch == 0:
+                        energy_per_flux_reference = cropped_flux_distributions.sum(
+                            dim=(1, 2)
+                        ).detach()
+                    g_energy = (
+                        cropped_flux_distributions.sum(dim=(1, 2))
+                        - energy_per_flux_reference
+                    ) / (energy_per_flux_reference + self.epsilon)
+                    energy_constraint = torch.minimum(
+                        g_energy + energy_tolerance, torch.zeros_like(g_energy)
                     )
-                    local_indices = (
-                        sample_indices_for_local_rank[::number_of_samples_per_heliostat]
-                        // number_of_samples_per_heliostat
+                    energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=energy_constraint,
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                        device=device,
+                    )
+                    constraint = (
+                        lambda_energy.detach() * energy_constraint_per_heliostat
+                        + 0.5 * rho_energy * energy_constraint_per_heliostat**2
                     )
 
+                    # Regularization terms.
+                    smoothness_loss_per_heliostat = torch.zeros_like(
+                        flux_loss_per_heliostat, device=device
+                    )
+                    ideal_surface_loss_per_heliostat = torch.zeros_like(
+                        flux_loss_per_heliostat, device=device
+                    )
                     if (
                         self.optimization_configuration[config_dictionary.regularizers]
                         is not None
@@ -407,39 +455,30 @@ class SurfaceReconstructor:
                                 ],
                                 device=device,
                             )
-                            regularizer_loss_per_heliostat += (
-                                regularization_term_active_heliostats
-                            )
-
-                    flux_loss = flux_loss_per_heliostat.mean()
-                    regularizer_loss = regularizer_loss_per_heliostat.mean()
-
-                    # Gradient-norm balancing.
-                    if (
-                        regularizer_loss.requires_grad
-                        and regularizer_loss.item() != 0.0
-                    ):
-                        g_data = torch.autograd.grad(
-                            flux_loss,
-                            heliostat_group.active_nurbs_control_points,
-                            retain_graph=True,
-                        )[0]
-                        g_reg = torch.autograd.grad(
-                            regularizer_loss,
-                            heliostat_group.active_nurbs_control_points,
-                            retain_graph=True,
-                        )[0]
-
-                        lambda_0 = 0.1
-                        ratio = g_data.norm() / (g_reg.norm() + 1e-8)
-                        ratio = ratio.clamp(min=0.1, max=10.0)
-                        lambda_reg = lambda_0 * (epoch / max_epoch) * ratio.detach()
-                    else:
-                        lambda_reg = torch.tensor(0.0, device=device)
+                            if isinstance(regularizer, SmoothnessRegularizer):
+                                smoothness_loss_per_heliostat = (
+                                    regularization_term_active_heliostats
+                                )
+                            if isinstance(regularizer, IdealSurfaceRegularizer):
+                                ideal_surface_loss_per_heliostat = (
+                                    regularization_term_active_heliostats
+                                )
+                    alpha = (
+                        weight_smoothness
+                        * flux_loss_per_heliostat.mean()
+                        / (smoothness_loss_per_heliostat.mean() + self.epsilon)
+                    )
+                    beta = (
+                        weight_ideal_surface
+                        * flux_loss_per_heliostat.mean()
+                        / (ideal_surface_loss_per_heliostat.mean() + self.epsilon)
+                    )
 
                     total_loss_per_heliostat = (
                         flux_loss_per_heliostat
-                        + lambda_reg * regularizer_loss_per_heliostat
+                        + constraint
+                        + alpha * smoothness_loss_per_heliostat
+                        + beta * ideal_surface_loss_per_heliostat
                     )
 
                     total_loss = total_loss_per_heliostat.mean()
@@ -465,10 +504,38 @@ class SurfaceReconstructor:
                     else:
                         scheduler.step()
 
+                    with torch.no_grad():
+                        lambda_energy += (
+                            rho_energy * energy_constraint_per_heliostat.detach()
+                        )
+                        lambda_energy.clamp_(min=0.0)
+
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
                         )
+
+                    # if rank == 0 and epoch % 10 == 0:
+                    #     fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
+
+                    #     for i in range(cropped_flux_distributions.shape[0]):
+                    #         # Compute min/max across the pair for shared color scale
+                    #         vmin = min(cropped_flux_distributions[i].detach().min(), measured_flux_distributions[i].detach().min()).item()
+                    #         vmax = max(cropped_flux_distributions[i].detach().max(), measured_flux_distributions[i].detach().max()).item()
+
+                    #         im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
+                    #         axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
+                    #         axes[i, 0].axis('off')
+
+                    #         im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
+                    #         axes[i, 1].set_title(f"Ground Truth {i}")
+                    #         axes[i, 1].axis('off')
+
+                    #         # Shared colorbar for the pair
+                    #         #fig.colorbar(im1, ax=axes[i, :], orientation='vertical', fraction=0.05)
+
+                    #         plt.tight_layout()
+                    #         plt.savefig(f"epoch_{epoch}")
 
                     # Early stopping when loss did not improve since a predefined number of epochs.
                     stop = early_stopper.step(loss)

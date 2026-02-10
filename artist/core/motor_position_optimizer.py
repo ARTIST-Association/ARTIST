@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.loss_functions import Loss
+from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping
@@ -51,9 +51,11 @@ class MotorPositionsOptimizer:
         ddp_setup: dict[str, Any],
         scenario: Scenario,
         optimization_configuration: dict[str, Any],
+        constraint_parameters: dict[str, Any],
         incident_ray_direction: torch.Tensor,
         target_area_index: int,
         ground_truth: torch.Tensor,
+        dni: float,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         device: torch.device | None = None,
     ) -> None:
@@ -94,10 +96,14 @@ class MotorPositionsOptimizer:
         self.ddp_setup = ddp_setup
         self.scenario = scenario
         self.optimization_configuration = optimization_configuration
+        self.constraint_parameters = constraint_parameters
         self.incident_ray_direction = incident_ray_direction
         self.target_area_index = target_area_index
         self.ground_truth = ground_truth
+        self.dni = dni
         self.bitmap_resolution = bitmap_resolution.to(device)
+
+        self.epsilon = 1e-12
 
     def optimize(
         self,
@@ -167,6 +173,8 @@ class MotorPositionsOptimizer:
         target_area_masks_all_groups = []
         incident_ray_directions_all_groups = []
 
+        heliostat_surface_areas = []
+
         for group_index, group in enumerate(
             self.scenario.heliostat_field.heliostat_groups
         ):
@@ -235,6 +243,11 @@ class MotorPositionsOptimizer:
                 )
             )
 
+            # Calculate surface area of all heliostats in the group.
+            canting_norm = (torch.norm(group.canting[0], dim=1)[0])[:2]
+            dimensions = (canting_norm * 4) + 0.02
+            heliostat_surface_areas.append(dimensions[0] * dimensions[1])
+
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
             lr=float(
@@ -268,6 +281,12 @@ class MotorPositionsOptimizer:
             relative=True,
         )
 
+        lambda_energy = None
+        rho_energy = self.constraint_parameters["rho_energy"]
+        max_flux_density = self.constraint_parameters["max_flux_density"]
+        rho_pixel = self.constraint_parameters["rho_pixel"]
+        lambda_lr = self.constraint_parameters["lambda_lr"]
+
         # Start the optimization.
         loss = torch.inf
         epoch = 0
@@ -293,7 +312,7 @@ class MotorPositionsOptimizer:
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
             ][rank]:
-                heliostat_group: HeliostatGroup = (
+                heliostat_alignment_group: HeliostatGroup = (
                     self.scenario.heliostat_field.heliostat_groups[
                         heliostat_group_index
                     ]
@@ -305,14 +324,14 @@ class MotorPositionsOptimizer:
                         "params"
                     ][heliostat_group_index]
                 )
-                heliostat_group.kinematic.motor_positions = (
+                heliostat_alignment_group.kinematic.motor_positions = (
                     initial_motor_positions_all_groups[heliostat_group_index]
                     + motor_positions_normalized
                     * scales_all_groups[heliostat_group_index]
                 )
 
                 # Activate heliostats.
-                heliostat_group.activate_heliostats(
+                heliostat_alignment_group.activate_heliostats(
                     active_heliostats_mask=active_heliostats_masks_all_groups[
                         heliostat_group_index
                     ],
@@ -320,8 +339,8 @@ class MotorPositionsOptimizer:
                 )
 
                 # Align heliostats.
-                heliostat_group.align_surfaces_with_motor_positions(
-                    motor_positions=heliostat_group.kinematic.active_motor_positions,
+                heliostat_alignment_group.align_surfaces_with_motor_positions(
+                    motor_positions=heliostat_alignment_group.kinematic.active_motor_positions,
                     active_heliostats_mask=active_heliostats_masks_all_groups[
                         heliostat_group_index
                     ],
@@ -331,6 +350,22 @@ class MotorPositionsOptimizer:
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
             ][rank]:
+                heliostat_group: HeliostatGroup = (
+                    self.scenario.heliostat_field.heliostat_groups[
+                        heliostat_group_index
+                    ]
+                )
+
+                # Calculate ray magnitude.
+                power_single_heliostat = (
+                    self.dni * heliostat_surface_areas[heliostat_group_index]
+                )
+                rays_per_heliostat = (
+                    heliostat_group.surface_points.shape[1]
+                    * self.scenario.light_sources.light_source_list[0].number_of_rays
+                )
+                ray_magnitude = power_single_heliostat / rays_per_heliostat
+
                 # Create a ray tracer.
                 ray_tracer = HeliostatRayTracer(
                     scenario=self.scenario,
@@ -345,6 +380,7 @@ class MotorPositionsOptimizer:
                     ],
                     random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],
                     bitmap_resolution=self.bitmap_resolution,
+                    ray_magnitude=ray_magnitude,
                 )
 
                 # Perform heliostat-based ray tracing.
@@ -384,6 +420,7 @@ class MotorPositionsOptimizer:
                     op=torch.distributed.ReduceOp.SUM,
                 )
 
+            # Flux loss.
             flux_loss = loss_definition(
                 prediction=total_flux.unsqueeze(index_mapping.heliostat_dimension),
                 ground_truth=self.ground_truth.unsqueeze(
@@ -397,9 +434,38 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            lambda_flux = 1e-4
-            flux_integral = total_flux.sum()
-            loss = flux_loss - lambda_flux * flux_integral
+            if isinstance(loss_definition, FocalSpotLoss):
+                loss = flux_loss
+
+            if isinstance(loss_definition, KLDivergenceLoss):
+                # Augmented Lagrangian energy integral.
+                energy_integral_prediction = total_flux.sum()
+                energy_integral_target = self.ground_truth.sum()
+                g_energy = torch.relu(
+                    (energy_integral_target - energy_integral_prediction)
+                    / (energy_integral_target + self.epsilon)
+                )
+                # Regularizer, maximum allowable flux density.
+                pixel_violation = (total_flux - max_flux_density) / (
+                    max_flux_density + self.epsilon
+                )
+                pixel_violation = torch.clamp(pixel_violation, min=0.0)
+                pixel_constraint_loss = rho_pixel * (pixel_violation**2).mean()
+
+                if lambda_energy is None:
+                    lambda_energy = torch.clamp(
+                        flux_loss.detach() / (g_energy + 1e-12), min=1.0
+                    )
+                loss = (
+                    flux_loss
+                    + lambda_energy * g_energy
+                    + 0.5 * rho_energy * (g_energy**2)
+                    + pixel_constraint_loss
+                )
+                with torch.no_grad():
+                    lambda_energy = torch.clamp(
+                        lambda_energy + lambda_lr * g_energy.detach(), min=0.0
+                    )
 
             loss.backward()
 

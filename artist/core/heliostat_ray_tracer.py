@@ -35,7 +35,7 @@ class DistortionsDataset(Dataset):
         self,
         light_source: LightSource,
         number_of_points_per_heliostat: int,
-        number_of_heliostats: int,
+        number_of_active_heliostats: int,
         random_seed: int = 7,
     ) -> None:
         """
@@ -53,14 +53,14 @@ class DistortionsDataset(Dataset):
             The light source used to model the distortions.
         number_of_points_per_heliostat : int
             The number of points on the heliostats for which distortions are created.
-        number_of_heliostats : int
-            The number of heliostats in the scenario.
+        number_of_active_heliostats : int
+            The number of active heliostats in the scenario.
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         """
         self.distortions_u, self.distortions_e = light_source.get_distortions(
             number_of_points=number_of_points_per_heliostat,
-            number_of_heliostats=number_of_heliostats,
+            number_of_active_heliostats=number_of_active_heliostats,
             random_seed=random_seed,
         )
 
@@ -108,14 +108,6 @@ class RestrictedDistributedSampler(Sampler):
 
     Attributes
     ----------
-    number_of_samples : int
-        The number of samples in the dataset.
-    world_size : int
-        The world size or total number of processes.
-    rank : int
-        The rank of the current process.
-    number_of_active_ranks : int
-        The number of processes that will receive data.
     rank_indices : int
         The indices corresponding to the ranks assigned samples.
 
@@ -126,8 +118,8 @@ class RestrictedDistributedSampler(Sampler):
 
     def __init__(
         self,
-        number_of_active_heliostats: int,
         number_of_samples: int,
+        number_of_active_heliostats: int,
         world_size: int = 1,
         rank: int = 0,
     ) -> None:
@@ -136,30 +128,29 @@ class RestrictedDistributedSampler(Sampler):
 
         Parameters
         ----------
+        number_of_samples : int
+            Length of the dataset or total number of samples.
         number_of_active_heliostats : int
             Number of active heliostats.
-        number_of_samples : int
-            The length of the dataset or total number of samples.
         world_size : int
-            The world size or total number of processes (default is 1).
+            World size or total number of processes (default is 1).
         rank : int
-            The rank of the current process (default is 0).
+            Rank of the current process (default is 0).
         """
         super().__init__()
-        self.number_of_samples = number_of_samples
-        self.world_size = world_size
-        self.rank = rank
-        self.number_of_active_ranks = min(number_of_active_heliostats, world_size)
+        number_of_active_ranks = min(number_of_active_heliostats, world_size)
         self.rank_indices = []
 
-        if self.rank < self.number_of_active_ranks:
-            chunk_size = number_of_samples // number_of_active_heliostats
+        if rank < number_of_active_ranks:
+            number_of_samples_per_heliostat = (
+                number_of_samples // number_of_active_heliostats
+            )
             indices: list[int] = []
 
-            for chunk_idx in range(number_of_active_heliostats):
-                if chunk_idx % self.number_of_active_ranks == self.rank:
-                    start = chunk_idx * chunk_size
-                    end = start + chunk_size
+            for index in range(number_of_active_heliostats):
+                if index % number_of_active_ranks == rank:
+                    start = index * number_of_samples_per_heliostat
+                    end = start + number_of_samples_per_heliostat
                     indices.extend(range(start, end))
 
             self.rank_indices = indices
@@ -207,6 +198,8 @@ class HeliostatRayTracer:
     bitmap_resolution : int
         The resolution of the bitmap in both directions.
         Tensor of shape [2].
+    ray_magnitude : float
+        Magnitude of each single ray.
     blocking_heliostat_surfaces : torch.Tensor
         The heliostat surfaces considered during blocking calculations.
         Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
@@ -243,6 +236,7 @@ class HeliostatRayTracer:
                 artist.util.index_mapping.bitmap_resolution,
             ]
         ),
+        ray_magnitude: float = 1.0,
     ) -> None:
         """
         Initialize the heliostat ray tracer.
@@ -259,6 +253,8 @@ class HeliostatRayTracer:
             The scenario used to perform ray tracing.
         heliostat_group : HeliostatGroup
             The selected heliostat group containing active heliostats.
+        blocking_active : bool
+            Flag indicating whether blocking is activated (default is True).
         world_size : int
             The world size i.e., the overall number of processes (default is 1).
         rank : int
@@ -270,6 +266,8 @@ class HeliostatRayTracer:
         bitmap_resolution : torch.Tensor
             The resolution of the bitmap in both directions. (default is torch.tensor([256,256])).
             Tensor of shape [2].
+        ray_magnitude : float
+            Magnitude of each single ray (default is 1.0).
         """
         self.scenario = scenario
         self.heliostat_group = heliostat_group
@@ -289,15 +287,15 @@ class HeliostatRayTracer:
             number_of_points_per_heliostat=self.heliostat_group.active_surface_points.shape[
                 index_mapping.number_of_surface_points_dimension
             ],
-            number_of_heliostats=self.heliostat_group.number_of_active_heliostats,
+            number_of_active_heliostats=self.heliostat_group.number_of_active_heliostats,
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
         self.distortions_sampler = RestrictedDistributedSampler(
+            number_of_samples=len(self.distortions_dataset),
             number_of_active_heliostats=(
                 self.heliostat_group.active_heliostats_mask > 0
             ).sum(),
-            number_of_samples=len(self.distortions_dataset),
             world_size=self.world_size,
             rank=self.rank,
         )
@@ -310,6 +308,7 @@ class HeliostatRayTracer:
         )
 
         self.bitmap_resolution = bitmap_resolution
+        self.ray_magnitude = ray_magnitude
 
         if self.blocking_active:
             self.blocking_heliostat_surfaces = torch.cat(
@@ -379,7 +378,7 @@ class HeliostatRayTracer:
             The indices of the target areas for each active heliostat.
             Tensor of shape [number_of_active_heliostats].
         ray_extinction_factor : float
-            Amount of global ray extinction, responsible for shading (default is 0.0 -> no shading).
+            Amount of global ray extinction, responsible for shading (default is 0.0 -> no extinction).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -571,8 +570,10 @@ class HeliostatRayTracer:
 
         return Rays(
             ray_directions=scattered_rays,
-            ray_magnitudes=torch.ones(
-                scattered_rays.shape[: index_mapping.ray_directions], device=device
+            ray_magnitudes=torch.full(
+                (scattered_rays.shape[: index_mapping.ray_directions]),
+                self.ray_magnitude,
+                device=device,
             ),
         )
 
