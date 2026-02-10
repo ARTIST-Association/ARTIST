@@ -201,7 +201,7 @@ def create_surface_plots(name: str) -> None:
                 surface_points=temporary_points[index_mapping.first_heliostat],
                 surface_normals=temporary_normals[index_mapping.first_heliostat],
                 reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
-                name=f"{name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}_heliostat_{heliostat_index}",
+                name=f"{name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}_heliostat_{heliostat_group.names[heliostat_index]}",
             )
 
 
@@ -421,7 +421,7 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
             change_number_of_control_points_per_facet=torch.tensor(
-                [17, 17], device=device
+                [7, 7], device=device
             ),
             device=device,
         )
@@ -431,12 +431,8 @@ with setup_distributed_environment(
     # Another possibility would be the pixel loss:
     # loss_definition = PixelLoss(scenario=scenario)
 
-    ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=1.0, reduction_dimensions=(1,)
-    )
-    smoothness_regularizer = SmoothnessRegularizer(
-        weight=1.0, reduction_dimensions=(1,)
-    )
+    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
 
     regularizers = [
         ideal_surface_regularizer,
@@ -446,7 +442,7 @@ with setup_distributed_environment(
     # Configure the learning rate scheduler. The example scheduler parameter dict includes
     # example parameters for all three possible schedulers.
     scheduler = (
-        config_dictionary.reduce_on_plateau
+        config_dictionary.exponential
     )  # exponential, cyclic or reduce_on_plateau
     scheduler_parameters = {
         config_dictionary.min: 1e-6,
@@ -454,6 +450,7 @@ with setup_distributed_environment(
         config_dictionary.patience: 10,
         config_dictionary.threshold: 1e-4,
         config_dictionary.cooldown: 5,
+        config_dictionary.gamma: 0.99,
     }
 
     # Set optimizer parameters.
@@ -464,10 +461,20 @@ with setup_distributed_environment(
         config_dictionary.batch_size: 30,
         config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 50,
+        config_dictionary.early_stopping_patience: 100,
+        config_dictionary.early_stopping_window: 100,
         config_dictionary.scheduler: config_dictionary.reduce_on_plateau,
         config_dictionary.scheduler_parameters: scheduler_parameters,
         config_dictionary.regularizers: regularizers,
+    }
+
+    # Reconstruction parameters.
+    constraint_parameters = {
+        config_dictionary.initial_lambda_energy: 0.1,
+        config_dictionary.rho_energy: 1.0,
+        config_dictionary.energy_tolerance: 0.01,
+        config_dictionary.weight_smoothness: 0.005,
+        config_dictionary.weight_ideal_surface: 0.005,
     }
 
     scenario.set_number_of_rays(number_of_rays=170)
@@ -492,6 +499,7 @@ with setup_distributed_environment(
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
+        constraint_parameters=constraint_parameters,
         bitmap_resolution=resolution,
         device=device,
     )
