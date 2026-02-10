@@ -5,7 +5,10 @@ import re
 import warnings
 
 import paint.util.paint_mappings as paint_mappings
+import torch
 import yaml
+
+from artist.util.environment_setup import get_device
 
 
 def find_viable_heliostats(
@@ -13,6 +16,8 @@ def find_viable_heliostats(
     minimum_number_of_measurements: int,
     kinematic_reconstruction_image_type: str,
     surface_reconstruction_image_type: str,
+    excluded_heliostats: set[str],
+    require_deflectometry_surface: bool = False,
 ) -> list[
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path], pathlib.Path]
 ]:
@@ -59,6 +64,17 @@ def find_viable_heliostats(
 
     for heliostat_directory in sorted(all_heliostats):
         heliostat_name = heliostat_directory.name
+
+        if heliostat_name in excluded_heliostats:
+            continue
+
+        if require_deflectometry_surface:
+            deflectometry_dir = heliostat_directory / paint_mappings.SAVE_DEFLECTOMETRY
+            pattern = f"{heliostat_name}-filled*.h5"
+            deflectometry_files = sorted(deflectometry_dir.glob(pattern))
+
+            if not deflectometry_files:
+                continue
 
         properties_path = (
             heliostat_directory
@@ -116,13 +132,16 @@ def find_viable_heliostats(
             found_heliostats.append(
                 (
                     heliostat_name,
-                    valid_calibration_files,
-                    flux_images_kinematic_reconstruction,
-                    flux_images_surface_reconstruction,
+                    valid_calibration_files[-minimum_number_of_measurements:],
+                    flux_images_kinematic_reconstruction[
+                        -minimum_number_of_measurements:
+                    ],
+                    flux_images_surface_reconstruction[
+                        -minimum_number_of_measurements:
+                    ],
                     properties_path,
                 )
             )
-        print(f"Added heliostat {heliostat_name}")
 
     return sorted(found_heliostats, key=lambda x: x[0])
 
@@ -193,6 +212,9 @@ if __name__ == "__main__":
     surface_reconstruction_image_type_default = config.get(
         "surface_reconstruction_image_type", "flux-centered"
     )
+    excluded_heliostats_default = config.get(
+        "excluded_heliostats_for_reconstruction", ["AA39"]
+    )
 
     parser.add_argument(
         "--device",
@@ -232,44 +254,62 @@ if __name__ == "__main__":
         choices=["flux", "flux-centered"],
         default=surface_reconstruction_image_type_default,
     )
+    parser.add_argument(
+        "--excluded_heliostats_for_reconstruction",
+        type=str,
+        help="Heliostat names to exclude.",
+        nargs="+",
+        default=excluded_heliostats_default,
+    )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-
+    device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
+    number_measurements = args.minimum_number_of_measurements
+    excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
-    heliostat_data_list = find_viable_heliostats(
-        data_directory=data_dir,
-        minimum_number_of_measurements=args.minimum_number_of_measurements,
-        kinematic_reconstruction_image_type=args.kinematic_reconstruction_image_type,
-        surface_reconstruction_image_type=args.surface_reconstruction_image_type,
-    )
+    for case in ["kinematic", "surface"]:
+        if case == "kinematic":
+            require_deflectometry_surface = False
+        if case == "surface":
+            require_deflectometry_surface = True
 
-    print(f"Selected {len(heliostat_data_list)} heliostats.")
+        heliostat_data_list = find_viable_heliostats(
+            data_directory=data_dir,
+            minimum_number_of_measurements=number_measurements,
+            kinematic_reconstruction_image_type=args.kinematic_reconstruction_image_type,
+            surface_reconstruction_image_type=args.surface_reconstruction_image_type,
+            excluded_heliostats=excluded_heliostats,
+            require_deflectometry_surface=require_deflectometry_surface,
+        )
 
-    serializable_data = [
-        {
-            "name": heliostat_name,
-            "calibrations": [
-                str(calibration_path) for calibration_path in calibration_paths
-            ],
-            "kinematic_reconstruction_flux_images": [
-                str(flux_path) for flux_path in kinematic_reconstruction_flux_paths
-            ],
-            "surface_reconstruction_flux_images": [
-                str(flux_path) for flux_path in surface_reconstruction_flux_image_path
-            ],
-            "properties": str(properties_path),
-        }
-        for heliostat_name, calibration_paths, kinematic_reconstruction_flux_paths, surface_reconstruction_flux_image_path, properties_path in heliostat_data_list
-    ]
+        print(f"Selected {len(heliostat_data_list)} heliostats.")
 
-    results_path = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+        serializable_data = [
+            {
+                "name": heliostat_name,
+                "calibrations": [
+                    str(calibration_path) for calibration_path in calibration_paths
+                ],
+                "kinematic_reconstruction_flux_images": [
+                    str(flux_path) for flux_path in kinematic_reconstruction_flux_paths
+                ],
+                "surface_reconstruction_flux_images": [
+                    str(flux_path)
+                    for flux_path in surface_reconstruction_flux_image_path
+                ],
+                "properties": str(properties_path),
+            }
+            for heliostat_name, calibration_paths, kinematic_reconstruction_flux_paths, surface_reconstruction_flux_image_path, properties_path in heliostat_data_list
+        ]
 
-    if not results_path.parent.is_dir():
-        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path = pathlib.Path(args.results_dir) / f"viable_heliostats_{case}.json"
 
-    with open(results_path, "w") as output_file:
-        json.dump(serializable_data, output_file, indent=2)
+        if not results_path.parent.is_dir():
+            results_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"Saved {len(serializable_data)} heliostat entries to {results_path}")
+        with open(results_path, "w") as output_file:
+            json.dump(serializable_data, output_file, indent=2)
+
+        print(f"Saved {len(serializable_data)} heliostat entries to {results_path}")

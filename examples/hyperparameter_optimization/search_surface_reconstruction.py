@@ -76,7 +76,11 @@ def surface_reconstructor_for_hpo(
     # For parameter combinations with too many rays directly return a default loss,
     # to avoid running such combination as they cause "out of memory" errors.
     total_number_of_rays = (
-        params["number_of_surface_points"] * 2 * 4 * params["number_of_rays"] * 4
+        params["number_of_surface_points"]
+        * 2
+        * 4
+        * params["number_of_rays"]
+        * params["sample_limit"]
     )
     if total_number_of_rays >= 1500000:
         loss = 987987
@@ -137,12 +141,8 @@ def surface_reconstructor_for_hpo(
         config_dictionary.gamma: params["gamma"],
     }
 
-    ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=params["ideal_regularizer_weight"], reduction_dimensions=(1,)
-    )
-    smoothness_regularizer = SmoothnessRegularizer(
-        weight=params["smoothness_regularizer_weight"], reduction_dimensions=(1,)
-    )
+    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
 
     regularizers = [
         ideal_surface_regularizer,
@@ -164,12 +164,21 @@ def surface_reconstructor_for_hpo(
         config_dictionary.regularizers: regularizers,
     }
 
+    constraint_parameters = {
+        config_dictionary.initial_lambda_energy: 0.1,
+        config_dictionary.rho_energy: 1.0,
+        config_dictionary.energy_tolerance: 0.01,
+        config_dictionary.weight_smoothness: 0.005,
+        config_dictionary.weight_ideal_surface: 0.005,
+    }
+
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
         ddp_setup=ddp_setup,
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
+        constraint_parameters=constraint_parameters,
         number_of_surface_points=number_of_surface_points_per_facet,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
@@ -272,8 +281,6 @@ if __name__ == "__main__":
             "threshold": [1e-6, 1e-3],
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
-            "ideal_regularizer_weight": [0.0, 1.0],
-            "smoothness_regularizer_weight": [0.0, 1.0],
         },
     )
 
@@ -323,7 +330,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_10.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_surface.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
@@ -345,7 +352,9 @@ if __name__ == "__main__":
     seed = 7
     rng = random.Random(seed + comm.rank)
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    viable_heliostats_data = (
+        pathlib.Path(args.results_dir) / "viable_heliostats_surface.json"
+    )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
             f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
@@ -362,6 +371,19 @@ if __name__ == "__main__":
             [pathlib.Path(p) for p in item["surface_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
+        if item["name"]
+        in [
+            "AC38",
+            "BD38",
+            "AE34",
+            "BG65",
+            "AK26",
+            "AK17",
+            "BA43",
+            "AZ28",
+            "AP51",
+            "AP35",
+        ]
     ]
 
     reconstruction_parameter_ranges: dict[
@@ -384,7 +406,7 @@ if __name__ == "__main__":
             reconstruction_parameter_ranges[key] = str_tuple
 
     # Set up evolutionary operator.
-    num_generations = 400
+    num_generations = 100
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,

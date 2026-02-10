@@ -78,6 +78,7 @@ def kinematic_reconstructor_for_hpo(
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file,
+            number_of_surface_points_per_facet=torch.tensor([5, 5], device=device),
             device=device,
         )
 
@@ -85,8 +86,8 @@ def kinematic_reconstructor_for_hpo(
     scenario.set_number_of_rays(number_of_rays=4)
 
     data_parser = PaintCalibrationDataParser(
-        sample_limit=int(params["sample_limit"]),
-        centroid_extraction_method=str(params["centroid_extraction_method"]),
+        sample_limit=2,
+        centroid_extraction_method="UTIS",
     )
     data: dict[
         str,
@@ -113,8 +114,8 @@ def kinematic_reconstructor_for_hpo(
     optimization_configuration = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 150,
-        config_dictionary.batch_size: 1000,
+        config_dictionary.max_epoch: 60,
+        config_dictionary.batch_size: 945,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 15,
@@ -216,16 +217,14 @@ if __name__ == "__main__":
     parameter_ranges_default = config.get(
         "parameter_ranges_kinematic",
         {
-            "sample_limit": [2, 8],
-            "centroid_extraction_method": ["UTIS", "HeliOS"],
-            "initial_learning_rate": [1e-7, 1e-2],
+            "initial_learning_rate": [1e-9, 1e-2],
             "scheduler": ["exponential", "reduce_on_plateau", "cyclic"],
-            "min_learning_rate": [1e-9, 1e-6],
+            "min_learning_rate": [1e-12, 1e-6],
             "max_learning_rate": [1e-4, 1e-2],
             "step_size_up": [100, 500],
             "reduce_factor": [0.05, 0.5],
             "patience": [3, 50],
-            "threshold": [1e-6, 1e-3],
+            "threshold": [1e-6, 1e-2],
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
         },
@@ -277,7 +276,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_100.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematic.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -299,7 +298,9 @@ if __name__ == "__main__":
     seed = 7
     rng = random.Random(seed + comm.rank)
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    viable_heliostats_data = (
+        pathlib.Path(args.results_dir) / "viable_heliostats_kinematic.json"
+    )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
             f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``generate_viable_heliostat_list.py`` script to generate this list, or adjust the file path and try again."
@@ -338,7 +339,7 @@ if __name__ == "__main__":
             reconstruction_parameter_ranges[key] = str_tuple
 
     # Set up evolutionary operator.
-    num_generations = 400
+    num_generations = 200
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,
@@ -371,7 +372,7 @@ if __name__ == "__main__":
         debug=2,
     )
     propulator.summarize(
-        top_n=50,
+        top_n=20,
         debug=2,
     )
 

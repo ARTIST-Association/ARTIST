@@ -106,6 +106,13 @@ def motor_position_optimizer_for_hpo(
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
 
+    constraint_parameters = {
+        config_dictionary.rho_energy: 1.0,
+        config_dictionary.max_flux_density: 3,
+        config_dictionary.rho_pixel: 1.0,
+        config_dictionary.lambda_lr: 0.1,
+    }
+
     # Random, somewhere in the south-west.
     baseline_incident_ray_direction = torch.nn.functional.normalize(
         torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
@@ -132,9 +139,11 @@ def motor_position_optimizer_for_hpo(
         ddp_setup=ddp_setup,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
+        constraint_parameters=constraint_parameters,
         incident_ray_direction=baseline_incident_ray_direction,
         target_area_index=target_area_index,
         ground_truth=target_distribution,
+        dni=500,
         bitmap_resolution=torch.tensor([256, 256]),
         device=device,
     )

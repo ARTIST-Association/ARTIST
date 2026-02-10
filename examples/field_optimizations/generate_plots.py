@@ -471,7 +471,7 @@ if __name__ == "__main__":
 
         plots_path.mkdir(parents=True, exist_ok=True)
 
-        results_path = pathlib.Path(args.results_dir) / case / "results.pt"
+        results_path = pathlib.Path(args.results_dir) / case / f"results_{2}.pt"
 
         if not results_path.exists():
             raise FileNotFoundError(
@@ -485,8 +485,8 @@ if __name__ == "__main__":
             map_location=device,
         )
 
-        plot_aim_point_optimization(results=results, save_dir=plots_path)
+        # plot_aim_point_optimization(results=results, save_dir=plots_path)
 
-        plot_kinematic_reconstruction(results=results, save_dir=plots_path)
+        # plot_kinematic_reconstruction(results=results, save_dir=plots_path)
 
         plot_surface_reconstruction(results=results, save_dir=plots_path)
