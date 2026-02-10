@@ -27,7 +27,7 @@ def test_base_regularizer(
     AssertionError
         If test does not complete as expected.
     """
-    base_regularizer = Regularizer(weight=1.0, reduction_dimensions=(1,))
+    base_regularizer = Regularizer(reduction_dimensions=(1,))
 
     with pytest.raises(NotImplementedError) as exc_info:
         base_regularizer(
@@ -106,7 +106,6 @@ def test_smoothness_regularizer(
     flat_points, smooth_points, irregular_points = control_points
 
     smoothness_regularizer = SmoothnessRegularizer(
-        weight=1.0,
         reduction_dimensions=(1,),
     )
     loss = smoothness_regularizer(
@@ -141,7 +140,6 @@ def test_ideal_surface_regularizer(control_points, device):
     flat_points, smooth_points, irregular_points = control_points
 
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=1.0,
         reduction_dimensions=(1,),
     )
     loss = ideal_surface_regularizer(

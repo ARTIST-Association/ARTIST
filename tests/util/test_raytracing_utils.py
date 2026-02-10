@@ -222,7 +222,7 @@ def target_area_mask(
             "target_area_2",
             torch.tensor([[[2.0, 2.0, 2.0, 1.0]]]),
             torch.tensor([[[[0.7273, -0.5455, 0.7273, 1.0]]]]),
-            torch.tensor([[[0.458333343267]]]),
+            torch.tensor([[[5.500000000000]]]),
         ),
         (  # Multiple intersections with multiple rays.
             (
@@ -246,7 +246,7 @@ def target_area_mask(
             torch.tensor(
                 [[[[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, -2.0, 0.0, 1.0]]]]
             ),
-            torch.tensor([[[1.0000, 1.0000, 0.0833]]]),
+            torch.tensor([[[1.0000, 1.0000, 1.0000]]]),
         ),
     ],
     indirect=["rays"],
@@ -272,11 +272,9 @@ def test_line_plane_intersection(
         The target area mask.
     rays : Rays
         The rays with directions and magnitudes.
-    plane_normal_vectors : torch.Tensor
-        The normal vectors of the plane being considered for the intersection.
-    plane_center : torch.Tensor
-        The center of the plane being considered for the intersection.
-    points_at_ray_origin : torch.Tensor
+    target_areas_fixture : str
+        Name of fixture to get target areas.
+    points_at_ray_origins : torch.Tensor
         The surface points of the ray origin.
     expected_intersections : torch.Tensor
         The expected intersections between the rays and the plane.

@@ -3,11 +3,54 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.core.heliostat_ray_tracer import HeliostatRayTracer, RestrictedDistributedSampler
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.scenario.scenario import Scenario
 
+@pytest.mark.parametrize(
+    "number_of_samples, number_of_heliostats, world_size, indices_per_rank",
+    [
+        (12, 4, 1, [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]]),
+        (12, 4, 2, [[0, 1, 2, 6, 7, 8], [3, 4, 5, 9, 10, 11]]),
+        (12, 4, 3, [[0, 1, 2, 9, 10, 11], [3, 4, 5], [6, 7, 8]]),
+        (12, 4, 4, [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]]),
+        (4, 1, 3, [[0, 1, 2, 3], [], []]),
+        (4, 2, 3, [[0, 1], [2, 3], []]),
+    ],
+)
+def test_distributed_sampler(
+    number_of_samples: int,
+    number_of_heliostats: int,
+    world_size: int,
+    indices_per_rank: list[list[int]]
+) -> None:
+    """
+    number_of_samples : int
+        Number of samples to distribute among ranks.
+    number_of_heliostats : int
+        Number of heliostats.
+    world_size : int
+        Total number of processes.
+    indices_per_rank : list[list[int]]
+        Expected indices for each available rank.
+    
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    for rank in range(world_size): 
+        sampler = RestrictedDistributedSampler(
+            number_of_samples=number_of_samples,
+            number_of_active_heliostats=number_of_heliostats,
+            world_size=world_size,
+            rank = rank
+        )
+        indices = list(sampler)
+
+        assert indices == indices_per_rank[rank]
+    
 
 @pytest.fixture()
 def mock_scenario() -> Scenario:
@@ -58,7 +101,7 @@ def test_trace_rays_unaligned_heliostats_error(
         A mocked scenario.
     active_heliostats_mask_scenario : torch.Tensor
         The active heliostats mask defined in the scenario.
-    active_heliostat_mask : torch.Tensor
+    active_heliostats_mask : torch.Tensor
         The active heliostats mask given to the trace rays method.
     expected : str
         The expected error message.

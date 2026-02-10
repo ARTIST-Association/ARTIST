@@ -140,7 +140,7 @@ def test_nurbs(device: torch.device) -> None:
     torch.testing.assert_close(points, canted_and_translated, atol=1e-2, rtol=1e-2)
 
 
-def test_find_span(device: torch.device):
+def test_find_span(device: torch.device) -> None:
     """
     Test the find span method for non uniform knot vectors.
 

@@ -23,7 +23,7 @@ def focal_spot() -> torch.Tensor:
         The desired focal spot.
         Tensor of shape [4].
     """
-    ground_truth = torch.tensor([1.1493, -0.5030, 57.0474, 1.0000])
+    ground_truth = torch.tensor([1.0, -0.5030, 56.0, 1.0000])
 
     return ground_truth
 
@@ -44,29 +44,31 @@ def distribution(device: torch.device) -> torch.Tensor:
         The desired distribution.
         Tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     """
-    distribution_path_group_1 = (
+    path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_optimized_motor_positions"
         / "distribution.pt"
     )
 
     ground_truth = torch.load(
-        distribution_path_group_1, map_location=device, weights_only=True
+        path, map_location=device, weights_only=True
     )
 
-    return ground_truth
+    return ground_truth * 19400
 
 
 @pytest.mark.parametrize(
-    "loss_class, ground_truth_fixture_name, scheduler",
+    "loss_class, ground_truth_fixture_name, early_stopping_window, scheduler",
     [
-        (FocalSpotLoss, "focal_spot", config_dictionary.cyclic),
-        (KLDivergenceLoss, "distribution", config_dictionary.reduce_on_plateau),
+        (FocalSpotLoss, "focal_spot", 50, config_dictionary.cyclic),
+        (KLDivergenceLoss, "distribution", 50, config_dictionary.reduce_on_plateau),
+        (KLDivergenceLoss, "distribution", 10, config_dictionary.reduce_on_plateau),
     ],
 )
 def test_motor_positions_optimizer(
     loss_class: Loss,
-    ground_truth_fixture_name: torch.Tensor,
+    ground_truth_fixture_name: str,
+    early_stopping_window: int,
     scheduler: str,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: dict[str, Any],
@@ -81,6 +83,8 @@ def test_motor_positions_optimizer(
         The loss class.
     ground_truth_fixture_name : str
         A fixture to retrieve the ground truth.
+    early_stopping_window : int
+        Number of epochs used to estimate loss trend.
     scheduler : str
         The scheduler to be used.
     request : pytest.FixtureRequest
@@ -109,16 +113,23 @@ def test_motor_positions_optimizer(
     }
 
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-5,
+        config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 21,
+        config_dictionary.max_epoch: 50,
         config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 20,
-        config_dictionary.early_stopping_window: 10,
+        config_dictionary.log_step: 1,
+        config_dictionary.early_stopping_delta: 1.0,
+        config_dictionary.early_stopping_patience: 2,
+        config_dictionary.early_stopping_window: early_stopping_window,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
+    }
+
+    constraint_parameters = {
+        config_dictionary.rho_energy: 1.0,
+        config_dictionary.max_flux_density: 3,
+        config_dictionary.rho_pixel: 1.0,
+        config_dictionary.lambda_lr: 0.1,
     }
 
     scenario_path = (
@@ -139,9 +150,11 @@ def test_motor_positions_optimizer(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
+        constraint_parameters=constraint_parameters,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
         ground_truth=request.getfixturevalue(ground_truth_fixture_name).to(device),
+        dni = 800,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
@@ -161,7 +174,7 @@ def test_motor_positions_optimizer(
         expected_path = (
             pathlib.Path(ARTIST_ROOT)
             / "tests/data/expected_optimized_motor_positions"
-            / f"{ground_truth_fixture_name}_group_{index}_{device.type}.pt"
+            / f"{ground_truth_fixture_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
         )
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)
@@ -169,6 +182,6 @@ def test_motor_positions_optimizer(
         torch.testing.assert_close(
             heliostat_group.kinematic.motor_positions,
             expected,
-            atol=5e-3,
-            rtol=5e-3,
+            atol=5e-4,
+            rtol=5e-4,
         )

@@ -14,41 +14,57 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 
-# Set up logger.
-set_logger_config()
-
 
 @pytest.mark.parametrize(
-    "reconstruction_method, initial_learning_rate, data_parser, centroid_extraction_method, scheduler",
+    "reconstruction_method, data_parser, centroid_extraction_method, early_stopping_window, scheduler",
     [
+        # Test normal behavior.
         (
             config_dictionary.kinematic_reconstruction_raytracing,
-            0.005,
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
+            50,
             config_dictionary.exponential,
         ),
+        # Test early stopping.
         (
             config_dictionary.kinematic_reconstruction_raytracing,
-            0.005,
             PaintCalibrationDataParser(),
-            "invalid",
+            paint_mappings.UTIS_KEY,
+            10,
             config_dictionary.reduce_on_plateau,
         ),
+        # Test invalid centroid extraction.
         (
-            "invalid",
-            0.005,
+            config_dictionary.kinematic_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             "invalid",
+            10,
+            config_dictionary.reduce_on_plateau,
+        ),
+        # Test invalid reconstruction method.
+        (
+            "invalid",
+            PaintCalibrationDataParser(),
+            paint_mappings.UTIS_KEY,
+            10,
+            config_dictionary.reduce_on_plateau,
+        ),
+        # Test invalid parser.
+        (
+            config_dictionary.kinematic_reconstruction_raytracing,
+            CalibrationDataParser(),
+            paint_mappings.UTIS_KEY,
+            10,
             config_dictionary.reduce_on_plateau,
         ),
     ],
 )
 def test_kinematic_reconstructor(
     reconstruction_method: str,
-    initial_learning_rate: float,
     data_parser: CalibrationDataParser,
     centroid_extraction_method: str,
+    early_stopping_window: int,
     scheduler: str,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
@@ -60,12 +76,12 @@ def test_kinematic_reconstructor(
     ----------
     reconstruction_method : str
         The name of the reconstruction method.
-    initial_learning_rate : float
-        The initial learning rate.
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
     centroid_extraction_method : str
         The method used to extract the focal spot centroids.
+    early_stopping_window : int
+        Early stopping window size.
     scheduler : str
         The scheduler to be used.
     ddp_setup_for_testing : dict[str, Any]
@@ -82,7 +98,7 @@ def test_kinematic_reconstructor(
     torch.cuda.manual_seed(7)
 
     scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
+        config_dictionary.gamma: 0.99,
         config_dictionary.min: 1e-4,
         config_dictionary.reduce_factor: 0.9,
         config_dictionary.patience: 100,
@@ -91,14 +107,14 @@ def test_kinematic_reconstructor(
     }
 
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: initial_learning_rate,
+        config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 50,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 20,
-        config_dictionary.early_stopping_window: 10,
+        config_dictionary.early_stopping_delta: 1.0,
+        config_dictionary.early_stopping_patience: 2,
+        config_dictionary.early_stopping_window: early_stopping_window,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }
@@ -126,9 +142,12 @@ def test_kinematic_reconstructor(
             "AA31",
             [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_1.json"
+                / "tests/data/field_data/AA31-calibration-properties_1.json",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-calibration-properties_2.json"
             ],
-            [pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png"],
+            [pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png",
+             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_2.png"],
         ),
     ]
 
@@ -210,7 +229,7 @@ def test_kinematic_reconstructor(
                     expected_path = (
                         pathlib.Path(ARTIST_ROOT)
                         / "tests/data/expected_reconstructed_kinematic_parameters"
-                        / f"{reconstruction_method}_group_{index}_{device.type}.pt"
+                        / f"group_{index}_{early_stopping_window}_{device.type}.pt"
                     )
 
                     expected = torch.load(
@@ -226,6 +245,6 @@ def test_kinematic_reconstructor(
                     torch.testing.assert_close(
                         heliostat_group.kinematic.actuators.optimizable_parameters,
                         expected["optimizable_parameters"],
-                        atol=6e-2,
-                        rtol=7e-1,
+                        atol=5e-4,
+                        rtol=5e-4,
                     )

@@ -424,7 +424,7 @@ def test_blocking_integration(device: torch.device) -> None:
     torch.testing.assert_close(bitmaps_per_heliostat, expected, atol=5e-4, rtol=5e-4)
 
 
-def test_ray_extinction(device) -> None:
+def test_ray_extinction(device: torch.device) -> None:
     """
     Test the ray extinction.
 
