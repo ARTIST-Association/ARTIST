@@ -4,7 +4,6 @@ from typing import Any
 import paint.util.paint_mappings as paint_mappings
 import pytest
 import torch
-from _pytest.monkeypatch import MonkeyPatch
 
 from artist import ARTIST_ROOT
 from artist.data_parser import paint_scenario_parser

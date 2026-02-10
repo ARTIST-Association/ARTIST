@@ -5,7 +5,6 @@ from pytest_mock import MockerFixture
 
 from artist.scene.light_source import LightSource
 
-
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
@@ -38,6 +37,7 @@ def test_load_light_source_from_hdf5(
         )
     assert "Must be overridden!" in str(exc_info.value)
 
+
 def test_light_source_distortions() -> None:
     """
     Test the abstract light source distortions.
@@ -50,8 +50,5 @@ def test_light_source_distortions() -> None:
     light_source = LightSource(number_of_rays=4)
 
     with pytest.raises(NotImplementedError) as exc_info:
-        light_source.get_distortions(
-            number_of_points=40,
-            number_of_active_heliostats=5
-        )
+        light_source.get_distortions(number_of_points=40, number_of_active_heliostats=5)
     assert "Must be overridden!" in str(exc_info.value)

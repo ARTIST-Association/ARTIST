@@ -12,7 +12,7 @@ from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
+from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
@@ -144,10 +144,12 @@ def test_kinematic_reconstructor(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA31-calibration-properties_1.json",
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_2.json"
+                / "tests/data/field_data/AA31-calibration-properties_2.json",
             ],
-            [pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png",
-             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_2.png"],
+            [
+                pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png",
+                pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_2.png",
+            ],
         ),
     ]
 

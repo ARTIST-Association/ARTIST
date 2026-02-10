@@ -3,10 +3,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer, RestrictedDistributedSampler
+from artist.core.heliostat_ray_tracer import (
+    HeliostatRayTracer,
+    RestrictedDistributedSampler,
+)
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.scenario.scenario import Scenario
+
 
 @pytest.mark.parametrize(
     "number_of_samples, number_of_heliostats, world_size, indices_per_rank",
@@ -23,9 +27,11 @@ def test_distributed_sampler(
     number_of_samples: int,
     number_of_heliostats: int,
     world_size: int,
-    indices_per_rank: list[list[int]]
+    indices_per_rank: list[list[int]],
 ) -> None:
     """
+    Test the distributed sampler.
+
     number_of_samples : int
         Number of samples to distribute among ranks.
     number_of_heliostats : int
@@ -34,23 +40,23 @@ def test_distributed_sampler(
         Total number of processes.
     indices_per_rank : list[list[int]]
         Expected indices for each available rank.
-    
+
     Raises
     ------
     AssertionError
         If test does not complete as expected.
     """
-    for rank in range(world_size): 
+    for rank in range(world_size):
         sampler = RestrictedDistributedSampler(
             number_of_samples=number_of_samples,
             number_of_active_heliostats=number_of_heliostats,
             world_size=world_size,
-            rank = rank
+            rank=rank,
         )
         indices = list(sampler)
 
         assert indices == indices_per_rank[rank]
-    
+
 
 @pytest.fixture()
 def mock_scenario() -> Scenario:

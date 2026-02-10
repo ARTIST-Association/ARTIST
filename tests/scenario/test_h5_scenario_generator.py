@@ -84,7 +84,7 @@ def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
         (pathlib.Path("scenario.h5")),
         (pathlib.Path("scenario")),
         (pathlib.Path("scenario.txt")),
-        ("invalid")
+        ("invalid"),
     ],
 )
 def test_generate_scenario(
@@ -125,7 +125,7 @@ def test_generate_scenario(
         with pytest.raises(FileNotFoundError) as exc_info:
             with h5py.File(save_name, "r") as f:
                 pass
-        assert "No such file or directory"  in str(exc_info.value)
+        assert "No such file or directory" in str(exc_info.value)
 
     else:
         with h5py.File(save_name, "r") as f:

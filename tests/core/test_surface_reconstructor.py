@@ -18,7 +18,12 @@ from artist.util import config_dictionary
 @pytest.mark.parametrize(
     "loss_class, early_stopping_window, data_parser, scheduler",
     [
-        (KLDivergenceLoss, 40, PaintCalibrationDataParser(), config_dictionary.reduce_on_plateau),
+        (
+            KLDivergenceLoss,
+            40,
+            PaintCalibrationDataParser(),
+            config_dictionary.reduce_on_plateau,
+        ),
         (PixelLoss, 20, PaintCalibrationDataParser(), config_dictionary.cyclic),
         (PixelLoss, 10, CalibrationDataParser(), config_dictionary.cyclic),
     ],
@@ -68,12 +73,8 @@ def test_surface_reconstructor(
     }
 
     # Configure regularizers.
-    ideal_surface_regularizer = IdealSurfaceRegularizer(
-        reduction_dimensions=(1,)
-    )
-    smoothness_regularizer = SmoothnessRegularizer(
-        reduction_dimensions=(1,)
-    )
+    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
 
     regularizers = [
         ideal_surface_regularizer,
@@ -130,7 +131,7 @@ def test_surface_reconstructor(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA31-calibration-properties_1.json",
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_2.json"
+                / "tests/data/field_data/AA31-calibration-properties_2.json",
             ],
             [
                 pathlib.Path(ARTIST_ROOT)
@@ -152,9 +153,11 @@ def test_surface_reconstructor(
 
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, 
-            change_number_of_control_points_per_facet=torch.tensor([7, 7], device=device),
-            device=device
+            scenario_file=scenario_file,
+            change_number_of_control_points_per_facet=torch.tensor(
+                [7, 7], device=device
+            ),
+            device=device,
         )
 
     ddp_setup_for_testing[config_dictionary.device] = device

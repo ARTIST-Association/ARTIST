@@ -50,9 +50,7 @@ def distribution(device: torch.device) -> torch.Tensor:
         / "distribution.pt"
     )
 
-    ground_truth = torch.load(
-        path, map_location=device, weights_only=True
-    )
+    ground_truth = torch.load(path, map_location=device, weights_only=True)
 
     return ground_truth * 19400
 
@@ -154,7 +152,7 @@ def test_motor_positions_optimizer(
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
         ground_truth=request.getfixturevalue(ground_truth_fixture_name).to(device),
-        dni = 800,
+        dni=800,
         bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
