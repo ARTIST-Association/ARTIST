@@ -251,8 +251,8 @@ class SurfaceReconstructor:
                 initial_lambda_energy = self.constraint_parameters[
                     config_dictionary.initial_lambda_energy
                 ]
-                lambda_energy = torch.full_like(
-                    active_heliostats_mask,
+                lambda_energy = torch.full(
+                    (torch.count_nonzero(active_heliostats_mask).item(),),
                     initial_lambda_energy,
                     dtype=torch.float32,
                     device=device,
@@ -514,28 +514,6 @@ class SurfaceReconstructor:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
                         )
-
-                    # if rank == 0 and epoch % 10 == 0:
-                    #     fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
-
-                    #     for i in range(cropped_flux_distributions.shape[0]):
-                    #         # Compute min/max across the pair for shared color scale
-                    #         vmin = min(cropped_flux_distributions[i].detach().min(), measured_flux_distributions[i].detach().min()).item()
-                    #         vmax = max(cropped_flux_distributions[i].detach().max(), measured_flux_distributions[i].detach().max()).item()
-
-                    #         im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
-                    #         axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
-                    #         axes[i, 0].axis('off')
-
-                    #         im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
-                    #         axes[i, 1].set_title(f"Ground Truth {i}")
-                    #         axes[i, 1].axis('off')
-
-                    #         # Shared colorbar for the pair
-                    #         #fig.colorbar(im1, ax=axes[i, :], orientation='vertical', fraction=0.05)
-
-                    #         plt.tight_layout()
-                    #         plt.savefig(f"epoch_{epoch}")
 
                     # Early stopping when loss did not improve since a predefined number of epochs.
                     stop = early_stopper.step(loss)
