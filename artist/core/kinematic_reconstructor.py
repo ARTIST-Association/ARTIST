@@ -35,8 +35,10 @@ class KinematicReconstructor:
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         The data parser and the mapping of heliostat name and calibration data.
-    optimization_configuration : dict[str, Any]
-        The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+    optimizer_dict : dict[str, Any]
+        The parameters for the optimization.
+    scheduler_dict : dict[str, Any]
+        The parameters for the scheduler.
     reconstruction_method : str
         The reconstruction method. Currently only reconstruction via ray tracing is available.
 

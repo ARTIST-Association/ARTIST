@@ -31,6 +31,10 @@ class SurfaceReconstructor:
     The surface reconstructor learns a surface representation from measured flux density
     distributions. The optimizable parameters for this optimization process are the
     NURBS control points.
+    The reconstruction loss is defined by the loss between the flux density predictions and measurements.
+    Further, the reconstruction is constrained by energy constraints to preserve energy in the reconstructed
+    surfaces. There are also optional regularizers to keep the NURBS control points close to the ideal
+    surface and smooth.
 
     Attributes
     ----------
@@ -40,11 +44,17 @@ class SurfaceReconstructor:
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         The data parser and the mapping of heliostat name and calibration data.
-    optimization_configuration : dict[str, Any]
-        The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+    optimizer_dict : dict[str, Any]
+        The parameters for the optimization.
+    scheduler_dict : dict[str, Any]
+        The parameters for the scheduler.
+    constraint_dict : dict[str, Any]
+        The parameters for the constraints.
     number_of_surface_points : torch.Tensor
         The number of surface points of the reconstructed surfaces.
         Tensor of shape [2].
+    epsilon : float
+        A small value.
     bitmap_resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
@@ -88,13 +98,15 @@ class SurfaceReconstructor:
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
-            The parameters for the optimizer, learning rate scheduler and early stopping.
+            The parameters for the optimizer, learning rate scheduler, early stopping and constraints.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces (default is torch.tensor([50,50])).
             Tensor of shape [2].
         bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during reconstruction (default is torch.tensor([256,256])).
             Tensor of shape [2].
+        epsilon : float | None
+            A small value (default is 1e-12).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate

@@ -20,14 +20,22 @@ class MotorPositionsOptimizer:
     """
     An optimizer used to find optimal motor positions for the heliostats.
 
+    The optimization loss is defined by the loss between the combined predicted and target
+    flux densities. Additionally there is one constraint that maximizes the flux integral and
+    one that constraints the maximum pixel intensity (maximum allowed flux density).
+
     Attributes
     ----------
     ddp_setup : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
-    optimization_configuration : dict[str, Any]
-        The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+    optimizer_dict : dict[str, Any]
+        The parameters for the optimization.
+    scheduler_dict : dict[str, Any]
+        The parameters for the scheduler.
+    constraint_dict : dict[str, Any]
+        The parameters for the constraints.
     incident_ray_direction : torch.Tensor
         The incident ray direction during the optimization.
         Tensor of shape [4].
@@ -36,9 +44,13 @@ class MotorPositionsOptimizer:
     ground_truth : torch.Tensor
         The desired focal spot or distribution.
         Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
+    dni : float
+        Direct normal irradiance in W/m^2.
     bitmap_resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
+    epsilon : float
+        A small value.
 
     Methods
     -------
@@ -78,9 +90,13 @@ class MotorPositionsOptimizer:
         ground_truth : torch.Tensor
             The desired focal spot or distribution.
             Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
+        dni : float
+            Direct normal irradiance in W/m^2.
         bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during optimization (default is torch.tensor([256,256])).
             Tensor of shape [2].
+        epsilon : float | None
+            A small value (default is 1e-12).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
