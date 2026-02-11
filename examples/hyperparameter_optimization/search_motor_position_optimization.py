@@ -35,9 +35,9 @@ def motor_position_optimizer_for_hpo(
     Parameters
     ----------
     params : dict[str, float]
-        Combination of reconstruction parameters.
+        Combination of optimization parameters.
     scenario_path : pathlib.Path
-        Path to the surface reconstruction scenario.
+        Path to the scenario.
 
     Returns
     -------
@@ -80,8 +80,18 @@ def motor_position_optimizer_for_hpo(
     # Set number of rays.
     scenario.set_number_of_rays(number_of_rays=5)
 
-    scheduler = params["scheduler"]
-    scheduler_parameters = {
+    optimizer_dict = {
+        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 100,
+        config_dictionary.batch_size: 250,
+        config_dictionary.log_step: 0,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 15,
+        config_dictionary.early_stopping_window: 10,
+    }
+    scheduler_dict = {
+        config_dictionary.scheduler_type: params["scheduler"],
         config_dictionary.min: params["min_learning_rate"],
         config_dictionary.max: params["max_learning_rate"],
         config_dictionary.step_size_up: params["step_size_up"],
@@ -91,26 +101,16 @@ def motor_position_optimizer_for_hpo(
         config_dictionary.cooldown: params["cooldown"],
         config_dictionary.gamma: params["gamma"],
     }
-
-    # Set optimizer parameters.
-    optimization_configuration = {
-        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
-        config_dictionary.batch_size: 250,
-        config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
-        config_dictionary.early_stopping_window: 10,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
-    }
-
-    constraint_parameters = {
+    constraint_dict = {
         config_dictionary.rho_energy: 1.0,
         config_dictionary.max_flux_density: 3,
         config_dictionary.rho_pixel: 1.0,
         config_dictionary.lambda_lr: 0.1,
+    }
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
+        config_dictionary.constraints: constraint_dict,
     }
 
     # Random, somewhere in the south-west.
@@ -132,19 +132,17 @@ def motor_position_optimizer_for_hpo(
     )
     eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
-    target_distribution = eu_trapezoid / eu_trapezoid.sum()
+    target_distribution = (eu_trapezoid / eu_trapezoid.sum()) * 10000000
 
     # Create the surface reconstructor.
     motor_positions_optimizer = MotorPositionsOptimizer(
         ddp_setup=ddp_setup,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
-        constraint_parameters=constraint_parameters,
         incident_ray_direction=baseline_incident_ray_direction,
         target_area_index=target_area_index,
         ground_truth=target_distribution,
         dni=500,
-        bitmap_resolution=torch.tensor([256, 256]),
         device=device,
     )
     loss = motor_positions_optimizer.optimize(
@@ -283,7 +281,9 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_500.h5"
+    scenario_file = (
+        pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_surface.h5"
+    )
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."

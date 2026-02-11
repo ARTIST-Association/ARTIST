@@ -1,14 +1,12 @@
 import argparse
 import json
 import pathlib
-import random
 import warnings
 from typing import Any, cast
 
 import h5py
 import torch
 import yaml
-from sklearn.cluster import KMeans
 
 from artist.core import loss_functions
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
@@ -24,63 +22,6 @@ from artist.util.environment_setup import get_device, setup_distributed_environm
 set_logger_config()
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
-
-
-def find_heliostats(
-    scenario: Scenario,
-    number_of_heliostats: int,
-    random_seed: int = 7,
-) -> list[str]:
-    """
-    Select heliostats evenly but randomly distributed around the tower.
-
-    Parameters
-    ----------
-    heliostat_properties_list : list[tuple[str, pathlib.Path]]
-        List of heliostat names and paths.
-    power_plant_position : torch.Tensor
-        Tower position in WGS84.
-        Tensor of shape [3].
-    number_of_heliostats : int
-        Number of heliostats to select.
-    random_seed : int
-        Random seed for reproducibility (default is 7).
-
-    Returns
-    -------
-    list[str]
-        Selected heliostats.
-    """
-    random.seed(random_seed)
-
-    names = scenario.heliostat_field.heliostat_groups[0].names
-    positions = scenario.heliostat_field.heliostat_groups[0].positions[:, :2]
-
-    features = positions.cpu().numpy()
-
-    kmeans = KMeans(
-        n_clusters=number_of_heliostats,
-        random_state=random_seed,
-        n_init="auto",
-    )
-    labels = kmeans.fit_predict(features)
-
-    selected_indices = []
-    for cluster_id in range(number_of_heliostats):
-        cluster_members = [i for i, label in enumerate(labels) if label == cluster_id]
-        if cluster_members:
-            selected_indices.append(random.choice(cluster_members))
-
-    if len(selected_indices) < number_of_heliostats:
-        remaining = list(set(range(len(names))) - set(selected_indices))
-        random.shuffle(remaining)
-        selected_indices.extend(
-            remaining[: number_of_heliostats - len(selected_indices)]
-        )
-
-    selected_heliostats = [names[i] for i in selected_indices]
-
-    return selected_heliostats
 
 
 def merge_data(
@@ -275,11 +216,7 @@ def generate_reconstruction_results(
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematic reconstruction in ``ARTIST`` and save results.
-
-    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
-    focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
-    for plotting later.
+    Perform surface reconstruction in ``ARTIST`` and save results.
 
     Parameters
     ----------
@@ -288,6 +225,8 @@ def generate_reconstruction_results(
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Data mapping for each heliostat, containing a list of tuples with the heliostat name, the path to the calibration
         properties file, and the path to the flux images.
+    hyperparameters : dict[str, Any]
+        Optimized hyperparameters.
     device : torch.device | None
         Device used for optimization and tensor allocations.
 
@@ -365,27 +304,7 @@ def generate_reconstruction_results(
                 device=device,
             )
 
-        scheduler = hyperparameters["scheduler"]
-        scheduler_parameters = {
-            config_dictionary.gamma: hyperparameters["gamma"],
-            config_dictionary.min: hyperparameters["min_learning_rate"],
-            config_dictionary.max: hyperparameters["max_learning_rate"],
-            config_dictionary.step_size_up: hyperparameters["step_size_up"],
-            config_dictionary.reduce_factor: hyperparameters["reduce_factor"],
-            config_dictionary.patience: hyperparameters["patience"],
-            config_dictionary.threshold: hyperparameters["threshold"],
-            config_dictionary.cooldown: hyperparameters["cooldown"],
-        }
-
-        ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
-        smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-
-        regularizers = [
-            ideal_surface_regularizer,
-            smoothness_regularizer,
-        ]
-
-        optimization_configuration = {
+        optimizer_dict = {
             config_dictionary.initial_learning_rate: hyperparameters[
                 "initial_learning_rate"
             ],
@@ -396,19 +315,37 @@ def generate_reconstruction_results(
             config_dictionary.early_stopping_delta: 1e-4,
             config_dictionary.early_stopping_patience: 150,
             config_dictionary.early_stopping_window: 150,
-            config_dictionary.scheduler: scheduler,
-            config_dictionary.scheduler_parameters: scheduler_parameters,
-            config_dictionary.regularizers: regularizers,
         }
-
-        constraint_parameters = {
+        scheduler_dict = {
+            config_dictionary.scheduler_type: hyperparameters["scheduler"],
+            config_dictionary.gamma: hyperparameters["gamma"],
+            config_dictionary.min: hyperparameters["min_learning_rate"],
+            config_dictionary.max: hyperparameters["max_learning_rate"],
+            config_dictionary.step_size_up: hyperparameters["step_size_up"],
+            config_dictionary.reduce_factor: hyperparameters["reduce_factor"],
+            config_dictionary.patience: hyperparameters["patience"],
+            config_dictionary.threshold: hyperparameters["threshold"],
+            config_dictionary.cooldown: hyperparameters["cooldown"],
+        }
+        ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+        smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
+        regularizers = [
+            ideal_surface_regularizer,
+            smoothness_regularizer,
+        ]
+        constraint_dict = {
+            config_dictionary.regularizers: regularizers,
             config_dictionary.initial_lambda_energy: 0.1,
             config_dictionary.rho_energy: 1.0,
             config_dictionary.energy_tolerance: 0.01,
             config_dictionary.weight_smoothness: 0.005,
             config_dictionary.weight_ideal_surface: 0.005,
         }
-
+        optimization_configuration = {
+            config_dictionary.optimization: optimizer_dict,
+            config_dictionary.scheduler: scheduler_dict,
+            config_dictionary.constraints: constraint_dict,
+        }
         data: dict[
             str,
             CalibrationDataParser
@@ -451,7 +388,6 @@ def generate_reconstruction_results(
             scenario=scenario,
             data=data,
             optimization_configuration=optimization_configuration,
-            constraint_parameters=constraint_parameters,
             number_of_surface_points=number_of_surface_points_per_facet,
             bitmap_resolution=torch.tensor([256, 256], device=device),
             device=device,
@@ -499,10 +435,7 @@ def generate_reconstruction_results(
 
 if __name__ == "__main__":
     """
-    Perform the hyperparameter search for the kinematic reconstruction and save the results.
-
-    This script executes the hyperparameter search with ``propulate`` and saves the result for
-    further inspection.
+    Generate results with the optimized parameters.
 
     Parameters
     ----------
@@ -518,10 +451,6 @@ if __name__ == "__main__":
         Path to where the results will be saved.
     scenarios_dir : str
         Path to the directory containing the scenarios.
-    propulate_logs_dir : str
-        Path to the directory where propulate will write log messages.
-    parameter_ranges_kinematic : dict[str, int | float]
-        The reconstruction parameters.
     """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
@@ -629,9 +558,7 @@ if __name__ == "__main__":
         device=device,
     )
 
-    results_path = (
-        pathlib.Path(args.results_dir) / "surface_reconstruction_results_2.pt"
-    )
+    results_path = pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)
 

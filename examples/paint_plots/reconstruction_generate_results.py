@@ -74,9 +74,20 @@ def generate_reconstruction_results(
             config_dictionary.kinematic_reconstruction_raytracing
         )
 
+        # Configure the optimization.
+        optimizer_dict = {
+            config_dictionary.initial_learning_rate: 1e-3,
+            config_dictionary.tolerance: 0,
+            config_dictionary.max_epoch: 1000,
+            config_dictionary.batch_size: 500,
+            config_dictionary.log_step: 50,
+            config_dictionary.early_stopping_delta: 1e-6,
+            config_dictionary.early_stopping_patience: 4000,
+            config_dictionary.early_stopping_window: 1000,
+        }
         # Configure the learning rate scheduler.
-        scheduler = config_dictionary.exponential
-        scheduler_parameters = {
+        scheduler_dict = {
+            config_dictionary.scheduler_type: config_dictionary.exponential,
             config_dictionary.gamma: 0.999,
             config_dictionary.min: 1e-5,
             config_dictionary.max: 1e-2,
@@ -86,19 +97,10 @@ def generate_reconstruction_results(
             config_dictionary.threshold: 1e-3,
             config_dictionary.cooldown: 10,
         }
-
-        # Set optimization parameters.
+        # Combine configurations.
         optimization_configuration = {
-            config_dictionary.initial_learning_rate: 1e-3,
-            config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 1000,
-            config_dictionary.batch_size: 500,
-            config_dictionary.log_step: 50,
-            config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.early_stopping_window: 1000,
-            config_dictionary.scheduler: scheduler,
-            config_dictionary.scheduler_parameters: scheduler_parameters,
+            config_dictionary.optimization: optimizer_dict,
+            config_dictionary.scheduler: scheduler_dict,
         }
 
         for centroid in [paint_mappings.UTIS_KEY, paint_mappings.HELIOS_KEY]:

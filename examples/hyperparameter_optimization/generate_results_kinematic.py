@@ -200,10 +200,6 @@ def generate_reconstruction_results(
     """
     Perform kinematic reconstruction in ``ARTIST`` and save results.
 
-    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
-    focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
-    for plotting later.
-
     Parameters
     ----------
     scenario_path : pathlib.Path
@@ -211,6 +207,8 @@ def generate_reconstruction_results(
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Data mapping for each heliostat, containing a list of tuples with the heliostat name, the path to the calibration
         properties file, and the path to the flux images.
+    hyperparameters : dict[str, Any]
+        Optimized hyperparameters.
     device : torch.device | None
         Device used for optimization and tensor allocations.
 
@@ -252,19 +250,7 @@ def generate_reconstruction_results(
             config_dictionary.kinematic_reconstruction_raytracing
         )
 
-        scheduler = hyperparameters["scheduler"]
-        scheduler_parameters = {
-            config_dictionary.gamma: hyperparameters["gamma"],
-            config_dictionary.min: hyperparameters["min_learning_rate"],
-            config_dictionary.max: hyperparameters["max_learning_rate"],
-            config_dictionary.step_size_up: hyperparameters["step_size_up"],
-            config_dictionary.reduce_factor: hyperparameters["reduce_factor"],
-            config_dictionary.patience: hyperparameters["patience"],
-            config_dictionary.threshold: hyperparameters["threshold"],
-            config_dictionary.cooldown: hyperparameters["cooldown"],
-        }
-
-        optimization_configuration = {
+        optimizer_dict = {
             config_dictionary.initial_learning_rate: hyperparameters[
                 "initial_learning_rate"
             ],
@@ -275,8 +261,21 @@ def generate_reconstruction_results(
             config_dictionary.early_stopping_delta: 1e-6,
             config_dictionary.early_stopping_patience: 4000,
             config_dictionary.early_stopping_window: 1000,
-            config_dictionary.scheduler: scheduler,
-            config_dictionary.scheduler_parameters: scheduler_parameters,
+        }
+        scheduler_dict = {
+            config_dictionary.scheduler_type: hyperparameters["scheduler"],
+            config_dictionary.gamma: hyperparameters["gamma"],
+            config_dictionary.min: hyperparameters["min_learning_rate"],
+            config_dictionary.max: hyperparameters["max_learning_rate"],
+            config_dictionary.step_size_up: hyperparameters["step_size_up"],
+            config_dictionary.reduce_factor: hyperparameters["reduce_factor"],
+            config_dictionary.patience: hyperparameters["patience"],
+            config_dictionary.threshold: hyperparameters["threshold"],
+            config_dictionary.cooldown: hyperparameters["cooldown"],
+        }
+        optimization_configuration = {
+            config_dictionary.optimization: optimizer_dict,
+            config_dictionary.scheduler: scheduler_dict,
         }
 
         data: dict[
@@ -350,10 +349,7 @@ def generate_reconstruction_results(
 
 if __name__ == "__main__":
     """
-    Perform the hyperparameter search for the kinematic reconstruction and save the results.
-
-    This script executes the hyperparameter search with ``propulate`` and saves the result for
-    further inspection.
+    Generate results with the optimized parameters.
 
     Parameters
     ----------
@@ -369,10 +365,6 @@ if __name__ == "__main__":
         Path to where the results will be saved.
     scenarios_dir : str
         Path to the directory containing the scenarios.
-    propulate_logs_dir : str
-        Path to the directory where propulate will write log messages.
-    parameter_ranges_kinematic : dict[str, int | float]
-        The reconstruction parameters.
     """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent

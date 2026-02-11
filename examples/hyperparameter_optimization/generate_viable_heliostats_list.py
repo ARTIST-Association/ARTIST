@@ -38,6 +38,10 @@ def find_viable_heliostats(
         The type of calibration image to use for the kinematic reconstruction, i.e., ''flux'', or ''flux-centered''.
     surface_reconstruction_image_type : str
         The type of calibration image to use for the surface reconstruction, i.e., ''flux'', or ''flux-centered''.
+    excluded_heliostats : set[str]
+        Excluded heliostats.
+    require_deflectometry_surface : bool
+        Flag indicating whether deflectometry files need to be available (default is False).
 
     Returns
     -------

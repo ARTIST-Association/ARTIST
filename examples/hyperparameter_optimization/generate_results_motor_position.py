@@ -1,4 +1,5 @@
 import argparse
+import json
 import pathlib
 import warnings
 from typing import Any
@@ -24,6 +25,7 @@ def data_for_flux_plots(
     incident_ray_direction: torch.Tensor,
     target_area_index: int,
     dni: float,
+    id: str,
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
@@ -33,10 +35,15 @@ def data_for_flux_plots(
     ----------
     scenario : Scenario
         The scenario.
-    ddp_setup : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
-    heliostat_data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-        Heliostat and calibration measurement data.
+    incident_ray_direction : torch.Tensor
+        The incident ray direction during the optimization.
+        Tensor of shape [4].
+    target_area_index : int
+        The index of the target used for the optimization.
+    dni : float
+        Direct normal irradiance in W/m^2.
+    id : str
+        Identifier fluxes.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -59,32 +66,6 @@ def data_for_flux_plots(
         device=device,
     )
     heliostat_surface_areas = []
-
-    for heliostat_group in scenario.heliostat_field.heliostat_groups:
-        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
-            scenario.index_mapping(
-                heliostat_group=heliostat_group,
-                single_incident_ray_direction=incident_ray_direction,
-                single_target_area_index=target_area_index,
-                device=device,
-            )
-        )
-
-        heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask, device=device
-        )
-
-        heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            device=device,
-        )
-
-        canting_norm = (torch.norm(heliostat_group.canting[0], dim=1)[0])[:2]
-        dimensions = (canting_norm * 4) + 0.02
-        heliostat_surface_areas.append(dimensions[0] * dimensions[1])
-
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
@@ -97,85 +78,26 @@ def data_for_flux_plots(
             )
         )
 
-        # Calculate ray magnitude.
-        power_single_heliostat = dni * heliostat_surface_areas[heliostat_group_index]
-        rays_per_heliostat = (
-            heliostat_group.surface_points.shape[1]
-            * scenario.light_sources.light_source_list[0].number_of_rays
-        )
-        ray_magnitude = power_single_heliostat / rays_per_heliostat
-
-        # Create a ray tracer.
-        ray_tracer = HeliostatRayTracer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            blocking_active=True,
-            batch_size=100,
-            bitmap_resolution=bitmap_resolution,
-            ray_magnitude=ray_magnitude,
-        )
-
-        # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
-            incident_ray_directions=incident_ray_directions,
+        # Activate heliostats.
+        heliostat_group.activate_heliostats(
             active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
             device=device,
         )
 
-        flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
-            bitmaps_per_heliostat=bitmaps_per_heliostat,
-            target_area_mask=target_area_mask,
-            device=device,
-        )[target_area_index]
-
-        total_flux += flux_distribution_on_target
-
-    print(f"Total flux integral before: {total_flux.sum()}")
-
-    return total_flux
-
-
-def create_flux_plot_after_optimization(
-    scenario: Scenario,
-    incident_ray_direction: torch.Tensor,
-    target_area_index: int,
-    dni: float,
-    device: torch.device | None = None,
-) -> dict[str, dict[str, torch.Tensor]]:
-    """Create data to plot the heliostat fluxes."""
-    device = get_device(device)
-
-    bitmap_resolution = torch.tensor([256, 256], device=device)
-
-    total_flux = torch.zeros(
-        (
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            bitmap_resolution[index_mapping.unbatched_bitmap_u],
-        ),
-        device=device,
-    )
-    heliostat_surface_areas = []
-
-    for heliostat_group in scenario.heliostat_field.heliostat_groups:
-        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
-            scenario.index_mapping(
-                heliostat_group=heliostat_group,
-                single_incident_ray_direction=incident_ray_direction,
-                single_target_area_index=target_area_index,
+        # Align Heliostats.
+        if id == "before":
+            heliostat_group.align_surfaces_with_incident_ray_directions(
+                aim_points=scenario.target_areas.centers[target_area_mask],
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
-        )
-
-        heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask, device=device
-        )
-
-        heliostat_group.align_surfaces_with_motor_positions(
-            motor_positions=heliostat_group.kinematic.active_motor_positions,
-            active_heliostats_mask=active_heliostats_mask,
-            device=device,
-        )
+        elif id == "after":
+            heliostat_group.align_surfaces_with_motor_positions(
+                motor_positions=heliostat_group.kinematic.active_motor_positions,
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
 
         canting_norm = (torch.norm(heliostat_group.canting[0], dim=1)[0])[:2]
         dimensions = (canting_norm * 4) + 0.02
@@ -236,6 +158,7 @@ def generate_reconstruction_results(
     target_area_index: int,
     target_distribution: torch.Tensor,
     dni: float,
+    hyperparameters: dict[str, Any],
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
@@ -249,9 +172,18 @@ def generate_reconstruction_results(
     ----------
     scenario_path : pathlib.Path
         Path to reconstruction scenario.
-    heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-        Data mapping for each heliostat, containing a list of tuples with the heliostat name, the path to the calibration
-        properties file, and the path to the flux images.
+    incident_ray_direction : torch.Tensor
+        The incident ray direction during the optimization.
+        Tensor of shape [4].
+    target_area_index : int
+        The index of the target used for the optimization.
+    target_distribution : torch.Tensor
+        The desired focal spot or distribution.
+        Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
+    dni : float
+        Direct normal irradiance in W/m^2.
+    hyperparameters : dict[str, Any]
+        Optimized hyperparameters.
     device : torch.device | None
         Device used for optimization and tensor allocations.
 
@@ -277,44 +209,45 @@ def generate_reconstruction_results(
             )
 
         scenario.set_number_of_rays(number_of_rays=3)
-
-        scheduler = config_dictionary.cyclic
-        scheduler_parameters = {
-            config_dictionary.gamma: 9e-1,
-            config_dictionary.min: 1e-9,
-            config_dictionary.max: 1e-2,
-            config_dictionary.step_size_up: 438,
-            config_dictionary.reduce_factor: 2.59e-1,
-            config_dictionary.patience: 17,
-            config_dictionary.threshold: 1e-6,
-            config_dictionary.cooldown: 4,
-        }
-
-        optimization_configuration = {
-            config_dictionary.initial_learning_rate: 5e-4,
-            config_dictionary.tolerance: 0.0005,
-            config_dictionary.max_epoch: 10,
+        optimizer_dict = {
+            config_dictionary.initial_learning_rate: hyperparameters[
+                "initial_learning_rate"
+            ],
+            config_dictionary.tolerance: 0,
+            config_dictionary.max_epoch: 3,
             config_dictionary.batch_size: 100,
             config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
-            config_dictionary.early_stopping_patience: 15,
-            config_dictionary.early_stopping_window: 10,
-            config_dictionary.scheduler: scheduler,
-            config_dictionary.scheduler_parameters: scheduler_parameters,
+            config_dictionary.early_stopping_patience: 150,
+            config_dictionary.early_stopping_window: 150,
         }
-
-        constraint_parameters = {
+        scheduler_dict = {
+            config_dictionary.scheduler_type: hyperparameters["scheduler"],
+            config_dictionary.gamma: hyperparameters["gamma"],
+            config_dictionary.min: hyperparameters["min_learning_rate"],
+            config_dictionary.max: hyperparameters["max_learning_rate"],
+            config_dictionary.step_size_up: hyperparameters["step_size_up"],
+            config_dictionary.reduce_factor: hyperparameters["reduce_factor"],
+            config_dictionary.patience: hyperparameters["patience"],
+            config_dictionary.threshold: hyperparameters["threshold"],
+            config_dictionary.cooldown: hyperparameters["cooldown"],
+        }
+        constraint_dict = {
             config_dictionary.rho_energy: 1.0,
-            config_dictionary.max_flux_density: 3,
+            config_dictionary.max_flux_density: 300,
             config_dictionary.rho_pixel: 1.0,
             config_dictionary.lambda_lr: 0.1,
+        }
+        optimization_configuration = {
+            config_dictionary.optimization: optimizer_dict,
+            config_dictionary.scheduler: scheduler_dict,
+            config_dictionary.constraints: constraint_dict,
         }
 
         motor_positions_optimizer = MotorPositionsOptimizer(
             ddp_setup=ddp_setup,
             scenario=scenario,
             optimization_configuration=optimization_configuration,
-            constraint_parameters=constraint_parameters,
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             ground_truth=target_distribution,
@@ -328,6 +261,7 @@ def generate_reconstruction_results(
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             dni=dni,
+            id="before",
             device=device,
         )
 
@@ -335,11 +269,12 @@ def generate_reconstruction_results(
             loss_definition=loss_functions.KLDivergenceLoss(), device=device
         )
 
-        flux_after = create_flux_plot_after_optimization(
+        flux_after = data_for_flux_plots(
             scenario=scenario,
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             dni=dni,
+            id="after",
             device=device,
         )
 
@@ -355,10 +290,7 @@ def generate_reconstruction_results(
 
 if __name__ == "__main__":
     """
-    Perform the hyperparameter search for the kinematic reconstruction and save the results.
-
-    This script executes the hyperparameter search with ``propulate`` and saves the result for
-    further inspection.
+    Generate results with the optimized parameters.
 
     Parameters
     ----------
@@ -374,10 +306,6 @@ if __name__ == "__main__":
         Path to where the results will be saved.
     scenarios_dir : str
         Path to the directory containing the scenarios.
-    propulate_logs_dir : str
-        Path to the directory where propulate will write log messages.
-    parameter_ranges_kinematic : dict[str, int | float]
-        The reconstruction parameters.
     """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
@@ -477,12 +405,16 @@ if __name__ == "__main__":
 
     target_distribution = (eu_trapezoid / eu_trapezoid.sum()) * 2810000.00
 
+    with open(results_dir / "hpo_results_motor_positions.json", "r") as file:
+        hyperparameters = json.load(file)
+
     optimization_results = generate_reconstruction_results(
         scenario_path=scenario_file,
         incident_ray_direction=incident_ray_direction,
         target_area_index=target_area_index,
         target_distribution=target_distribution,
         dni=dni,
+        hyperparameters=hyperparameters,
         device=device,
     )
 

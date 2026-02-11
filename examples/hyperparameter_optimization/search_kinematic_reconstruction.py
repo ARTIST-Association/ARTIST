@@ -33,16 +33,16 @@ def kinematic_reconstructor_for_hpo(
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ) -> float:
     """
-    Set up a surface reconstructor used in a hyperparameter search.
+    Set up a kinematic reconstructor used in a hyperparameter search.
 
     Parameters
     ----------
     params : dict[str, float]
         Combination of reconstruction parameters.
     scenario_path : pathlib.Path
-        Path to the surface reconstruction scenario.
+        Path to the kinematic reconstruction scenario.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-        Data mapping from heliostat to calibration files used to reconstruct the surfaces.
+        Data mapping from heliostat to calibration files used to reconstruct the kinematic.
 
     Returns
     -------
@@ -97,9 +97,18 @@ def kinematic_reconstructor_for_hpo(
         config_dictionary.data_parser: data_parser,
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
-
-    scheduler = params["scheduler"]
-    scheduler_parameters = {
+    optimizer_dict = {
+        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 60,
+        config_dictionary.batch_size: 945,
+        config_dictionary.log_step: 0,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 15,
+        config_dictionary.early_stopping_window: 10,
+    }
+    scheduler_dict = {
+        config_dictionary.scheduler_type: params["scheduler"],
         config_dictionary.min: params["min_learning_rate"],
         config_dictionary.max: params["max_learning_rate"],
         config_dictionary.step_size_up: params["step_size_up"],
@@ -109,19 +118,9 @@ def kinematic_reconstructor_for_hpo(
         config_dictionary.cooldown: params["cooldown"],
         config_dictionary.gamma: params["gamma"],
     }
-
-    # Set optimizer parameters.
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 60,
-        config_dictionary.batch_size: 945,
-        config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
-        config_dictionary.early_stopping_window: 10,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
     }
 
     # Create the kinematic reconstructor.

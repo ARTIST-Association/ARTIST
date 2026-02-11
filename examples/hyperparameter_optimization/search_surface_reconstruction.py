@@ -129,8 +129,18 @@ def surface_reconstructor_for_hpo(
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
-    scheduler = params["scheduler"]
-    scheduler_parameters = {
+    optimizer_dict = {
+        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
+        config_dictionary.tolerance: 0.0005,
+        config_dictionary.max_epoch: 150,
+        config_dictionary.batch_size: params["sample_limit"],
+        config_dictionary.log_step: 0,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 15,
+        config_dictionary.early_stopping_window: 10,
+    }
+    scheduler_dict = {
+        config_dictionary.scheduler_type: params["scheduler"],
         config_dictionary.min: params["min_learning_rate"],
         config_dictionary.max: params["max_learning_rate"],
         config_dictionary.step_size_up: params["step_size_up"],
@@ -140,36 +150,24 @@ def surface_reconstructor_for_hpo(
         config_dictionary.cooldown: params["cooldown"],
         config_dictionary.gamma: params["gamma"],
     }
-
     ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
     smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-
     regularizers = [
         ideal_surface_regularizer,
         smoothness_regularizer,
     ]
-
-    # Set optimizer parameters.
-    optimization_configuration = {
-        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 150,
-        config_dictionary.batch_size: params["sample_limit"],
-        config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
-        config_dictionary.early_stopping_window: 10,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
+    constraint_dict = {
         config_dictionary.regularizers: regularizers,
-    }
-
-    constraint_parameters = {
         config_dictionary.initial_lambda_energy: 0.1,
         config_dictionary.rho_energy: 1.0,
         config_dictionary.energy_tolerance: 0.01,
         config_dictionary.weight_smoothness: 0.005,
         config_dictionary.weight_ideal_surface: 0.005,
+    }
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
+        config_dictionary.constraints: constraint_dict,
     }
 
     # Create the surface reconstructor.
@@ -178,9 +176,7 @@ def surface_reconstructor_for_hpo(
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        constraint_parameters=constraint_parameters,
         number_of_surface_points=number_of_surface_points_per_facet,
-        bitmap_resolution=torch.tensor([256, 256], device=device),
         device=device,
     )
 

@@ -227,7 +227,7 @@ def generate_fitted_scenario(
         Path to where the scenarios will be saved.
     tower_file_path : pathlib.Path
         Path to the tower data file.
-    heliostat_names : list[str]
+    selected_heliostats_list : list[tuple[str, pathlib.Path]],
         List of heliostat names to include in the scenario.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -324,8 +324,8 @@ if __name__ == "__main__":
     """
     Generate scenarios for the hyperparameter optimizations.
 
-    This will generate ideal surface scenarios for the hyperparameter searches. Scenarios
-    with different amounts of heliostats will be generated.
+    This will generate ideal surface scenarios for the hyperparameter searches.
+    For the surface evaluation a deflectometry scenario will also be created.
 
     Parameters
     ----------
