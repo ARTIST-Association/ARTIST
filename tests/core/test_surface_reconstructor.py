@@ -62,26 +62,7 @@ def test_surface_reconstructor(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scheduler_parameters = {
-        config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.8,
-        config_dictionary.patience: 10,
-        config_dictionary.threshold: 1e-4,
-        config_dictionary.cooldown: 5,
-    }
-
-    # Configure regularizers.
-    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
-    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-
-    regularizers = [
-        ideal_surface_regularizer,
-        smoothness_regularizer,
-    ]
-
-    optimization_configuration = {
+    optimizer_dict = {
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 5e-4,
         config_dictionary.max_epoch: 50,
@@ -90,18 +71,35 @@ def test_surface_reconstructor(
         config_dictionary.early_stopping_delta: 1.0,
         config_dictionary.early_stopping_patience: 2,
         config_dictionary.early_stopping_window: early_stopping_window,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
-        config_dictionary.regularizers: regularizers,
     }
-
-    # Reconstruction constraint parameters.
-    constraint_parameters = {
+    scheduler_dict = {
+        config_dictionary.scheduler_type: scheduler,
+        config_dictionary.min: 1e-6,
+        config_dictionary.max: 1e-3,
+        config_dictionary.step_size_up: 500,
+        config_dictionary.reduce_factor: 0.8,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-4,
+        config_dictionary.cooldown: 5,
+    }
+    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
+    regularizers = [
+        ideal_surface_regularizer,
+        smoothness_regularizer,
+    ]
+    constraint_dict = {
+        config_dictionary.regularizers: regularizers,
         config_dictionary.initial_lambda_energy: 0.1,
         config_dictionary.rho_energy: 1.0,
         config_dictionary.energy_tolerance: 0.01,
         config_dictionary.weight_smoothness: 0.005,
         config_dictionary.weight_ideal_surface: 0.005,
+    }
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
+        config_dictionary.constraints: constraint_dict,
     }
 
     scenario_path = (
@@ -173,7 +171,6 @@ def test_surface_reconstructor(
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        constraint_parameters=constraint_parameters,
         device=device,
     )
 

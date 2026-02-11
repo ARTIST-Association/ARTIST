@@ -100,7 +100,8 @@ def test_motor_positions_optimizer(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scheduler_parameters = {
+    scheduler_dict = {
+        config_dictionary.scheduler_type: scheduler,
         config_dictionary.min: 1e-3,
         config_dictionary.max: 2e-3,
         config_dictionary.step_size_up: 100,
@@ -109,8 +110,7 @@ def test_motor_positions_optimizer(
         config_dictionary.threshold: 1e-3,
         config_dictionary.cooldown: 20,
     }
-
-    optimization_configuration = {
+    optimizer_dict = {
         config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 50,
@@ -119,17 +119,19 @@ def test_motor_positions_optimizer(
         config_dictionary.early_stopping_delta: 1.0,
         config_dictionary.early_stopping_patience: 2,
         config_dictionary.early_stopping_window: early_stopping_window,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
     }
-
-    constraint_parameters = {
+    constraint_dict = {
         config_dictionary.rho_energy: 1.0,
         config_dictionary.max_flux_density: 3,
         config_dictionary.rho_pixel: 1.0,
         config_dictionary.lambda_lr: 0.1,
     }
-
+    # Combine configurations.
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
+        config_dictionary.constraints: constraint_dict,
+    }
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/scenarios/test_scenario_paint_four_heliostats.h5"
@@ -148,7 +150,6 @@ def test_motor_positions_optimizer(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
-        constraint_parameters=constraint_parameters,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         target_area_index=1,
         ground_truth=request.getfixturevalue(ground_truth_fixture_name).to(device),

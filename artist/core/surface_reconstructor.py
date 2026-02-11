@@ -71,9 +71,9 @@ class SurfaceReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        constraint_parameters: dict[str, Any],
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
+        epsilon: float | None = 1e-12,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -110,12 +110,12 @@ class SurfaceReconstructor:
         self.ddp_setup = ddp_setup
         self.scenario = scenario
         self.data = data
-        self.optimization_configuration = optimization_configuration
-        self.constraint_parameters = constraint_parameters
+        self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
+        self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
+        self.constraint_dict = optimization_configuration[config_dictionary.constraints]
         self.number_of_surface_points = number_of_surface_points.to(device)
         self.bitmap_resolution = bitmap_resolution.to(device)
-
-        self.epsilon = 1e-12
+        self.epsilon = epsilon
 
     def reconstruct_surfaces(
         self,
@@ -215,56 +215,46 @@ class SurfaceReconstructor:
                 optimizer = torch.optim.Adam(
                     [heliostat_group.nurbs_control_points.requires_grad_()],
                     lr=float(
-                        self.optimization_configuration[
-                            config_dictionary.initial_learning_rate
-                        ]
+                        self.optimizer_dict[config_dictionary.initial_learning_rate]
                     ),
                 )
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
                     learning_rate_schedulers,
-                    self.optimization_configuration[config_dictionary.scheduler],
+                    self.scheduler_dict[config_dictionary.scheduler_type],
                 )
                 scheduler: LRScheduler = scheduler_fn(
-                    optimizer=optimizer,
-                    parameters=self.optimization_configuration[
-                        config_dictionary.scheduler_parameters
-                    ],
+                    optimizer=optimizer, parameters=self.scheduler_dict
                 )
 
                 # Set up early stopping.
                 early_stopper = learning_rate_schedulers.EarlyStopping(
-                    window_size=self.optimization_configuration[
+                    window_size=self.optimizer_dict[
                         config_dictionary.early_stopping_window
                     ],
-                    patience=self.optimization_configuration[
+                    patience=self.optimizer_dict[
                         config_dictionary.early_stopping_patience
                     ],
-                    min_improvement=self.optimization_configuration[
+                    min_improvement=self.optimizer_dict[
                         config_dictionary.early_stopping_delta
                     ],
                     relative=True,
                 )
 
                 energy_per_flux_reference = torch.zeros_like(active_heliostats_mask)
-                initial_lambda_energy = self.constraint_parameters[
+                initial_lambda_energy = self.constraint_dict[
                     config_dictionary.initial_lambda_energy
                 ]
-                lambda_energy = torch.full(
-                    (torch.count_nonzero(active_heliostats_mask).item(),),
-                    initial_lambda_energy,
-                    dtype=torch.float32,
-                    device=device,
-                )
-                rho_energy = self.constraint_parameters[config_dictionary.rho_energy]
-                energy_tolerance = self.constraint_parameters[
+                lambda_energy = None
+                rho_energy = self.constraint_dict[config_dictionary.rho_energy]
+                energy_tolerance = self.constraint_dict[
                     config_dictionary.energy_tolerance
                 ]
-                weight_smoothness = self.constraint_parameters[
+                weight_smoothness = self.constraint_dict[
                     config_dictionary.weight_smoothness
                 ]
-                weight_ideal_surface = self.constraint_parameters[
+                weight_ideal_surface = self.constraint_dict[
                     config_dictionary.weight_ideal_surface
                 ]
 
@@ -272,19 +262,16 @@ class SurfaceReconstructor:
                 loss = torch.inf
                 epoch = 0
                 log_step = (
-                    self.optimization_configuration[config_dictionary.max_epoch]
-                    if self.optimization_configuration[config_dictionary.log_step] == 0
-                    else self.optimization_configuration[config_dictionary.log_step]
+                    self.optimizer_dict[config_dictionary.max_epoch]
+                    if self.optimizer_dict[config_dictionary.log_step] == 0
+                    else self.optimizer_dict[config_dictionary.log_step]
                 )
                 max_epoch = torch.tensor(
-                    [self.optimization_configuration[config_dictionary.max_epoch]],
+                    [self.optimizer_dict[config_dictionary.max_epoch]],
                     device=device,
                 )
                 while (
-                    loss
-                    > float(
-                        self.optimization_configuration[config_dictionary.tolerance]
-                    )
+                    loss > float(self.optimizer_dict[config_dictionary.tolerance])
                     and epoch <= max_epoch
                 ):
                     optimizer.zero_grad()
@@ -347,9 +334,7 @@ class SurfaceReconstructor:
                             config_dictionary.heliostat_group_world_size
                         ],
                         rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                        batch_size=self.optimization_configuration[
-                            config_dictionary.batch_size
-                        ],
+                        batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
@@ -427,6 +412,13 @@ class SurfaceReconstructor:
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                         device=device,
                     )
+                    if lambda_energy is None:
+                        lambda_energy = torch.full_like(
+                            energy_constraint_per_heliostat,
+                            initial_lambda_energy,
+                            dtype=torch.float32,
+                            device=device,
+                        )
                     constraint = (
                         lambda_energy.detach() * energy_constraint_per_heliostat
                         + 0.5 * rho_energy * energy_constraint_per_heliostat**2
@@ -439,11 +431,8 @@ class SurfaceReconstructor:
                     ideal_surface_loss_per_heliostat = torch.zeros_like(
                         flux_loss_per_heliostat, device=device
                     )
-                    if (
-                        self.optimization_configuration[config_dictionary.regularizers]
-                        is not None
-                    ):
-                        for regularizer in self.optimization_configuration[
+                    if self.constraint_dict[config_dictionary.regularizers] is not None:
+                        for regularizer in self.constraint_dict[
                             config_dictionary.regularizers
                         ]:
                             regularization_term_active_heliostats = regularizer(

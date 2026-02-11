@@ -85,7 +85,9 @@ class KinematicReconstructor:
         self.ddp_setup = ddp_setup
         self.scenario = scenario
         self.data = data
-        self.optimization_configuration = optimization_configuration
+        self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
+        self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
+
         if (
             reconstruction_method
             == config_dictionary.kinematic_reconstruction_raytracing
@@ -214,33 +216,28 @@ class KinematicReconstructor:
                         heliostat_group.kinematic.actuators.optimizable_parameters.requires_grad_(),
                     ],
                     lr=float(
-                        self.optimization_configuration[
-                            config_dictionary.initial_learning_rate
-                        ]
+                        self.optimizer_dict[config_dictionary.initial_learning_rate]
                     ),
                 )
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
                     learning_rate_schedulers,
-                    self.optimization_configuration[config_dictionary.scheduler],
+                    self.scheduler_dict[config_dictionary.scheduler_type],
                 )
                 scheduler: LRScheduler = scheduler_fn(
-                    optimizer=optimizer,
-                    parameters=self.optimization_configuration[
-                        config_dictionary.scheduler_parameters
-                    ],
+                    optimizer=optimizer, parameters=self.scheduler_dict
                 )
 
                 # Set up early stopping.
                 early_stopper = learning_rate_schedulers.EarlyStopping(
-                    window_size=self.optimization_configuration[
+                    window_size=self.optimizer_dict[
                         config_dictionary.early_stopping_window
                     ],
-                    patience=self.optimization_configuration[
+                    patience=self.optimizer_dict[
                         config_dictionary.early_stopping_patience
                     ],
-                    min_improvement=self.optimization_configuration[
+                    min_improvement=self.optimizer_dict[
                         config_dictionary.early_stopping_delta
                     ],
                     relative=True,
@@ -250,17 +247,13 @@ class KinematicReconstructor:
                 loss = torch.inf
                 epoch = 0
                 log_step = (
-                    self.optimization_configuration[config_dictionary.max_epoch]
-                    if self.optimization_configuration[config_dictionary.log_step] == 0
-                    else self.optimization_configuration[config_dictionary.log_step]
+                    self.optimizer_dict[config_dictionary.max_epoch]
+                    if self.optimizer_dict[config_dictionary.log_step] == 0
+                    else self.optimizer_dict[config_dictionary.log_step]
                 )
                 while (
-                    loss
-                    > float(
-                        self.optimization_configuration[config_dictionary.tolerance]
-                    )
-                    and epoch
-                    <= self.optimization_configuration[config_dictionary.max_epoch]
+                    loss > float(self.optimizer_dict[config_dictionary.tolerance])
+                    and epoch <= self.optimizer_dict[config_dictionary.max_epoch]
                 ):
                     optimizer.zero_grad()
 
@@ -286,9 +279,7 @@ class KinematicReconstructor:
                             config_dictionary.heliostat_group_world_size
                         ],
                         rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                        batch_size=self.optimization_configuration[
-                            config_dictionary.batch_size
-                        ],
+                        batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],

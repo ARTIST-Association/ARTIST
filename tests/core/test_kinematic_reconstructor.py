@@ -97,7 +97,8 @@ def test_kinematic_reconstructor(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scheduler_parameters = {
+    scheduler_dict = {
+        config_dictionary.scheduler_type: scheduler,
         config_dictionary.gamma: 0.99,
         config_dictionary.min: 1e-4,
         config_dictionary.reduce_factor: 0.9,
@@ -105,8 +106,7 @@ def test_kinematic_reconstructor(
         config_dictionary.threshold: 1e-3,
         config_dictionary.cooldown: 20,
     }
-
-    optimization_configuration = {
+    optimizer_dict = {
         config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
         config_dictionary.max_epoch: 50,
@@ -115,8 +115,10 @@ def test_kinematic_reconstructor(
         config_dictionary.early_stopping_delta: 1.0,
         config_dictionary.early_stopping_patience: 2,
         config_dictionary.early_stopping_window: early_stopping_window,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
+    }
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
     }
 
     scenario_path = (

@@ -51,12 +51,12 @@ class MotorPositionsOptimizer:
         ddp_setup: dict[str, Any],
         scenario: Scenario,
         optimization_configuration: dict[str, Any],
-        constraint_parameters: dict[str, Any],
         incident_ray_direction: torch.Tensor,
         target_area_index: int,
         ground_truth: torch.Tensor,
         dni: float,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
+        epsilon: float | None = 1e-12,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -95,15 +95,15 @@ class MotorPositionsOptimizer:
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
-        self.optimization_configuration = optimization_configuration
-        self.constraint_parameters = constraint_parameters
+        self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
+        self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
+        self.constraint_dict = optimization_configuration[config_dictionary.constraints]
         self.incident_ray_direction = incident_ray_direction
         self.target_area_index = target_area_index
         self.ground_truth = ground_truth
         self.dni = dni
         self.bitmap_resolution = bitmap_resolution.to(device)
-
-        self.epsilon = 1e-12
+        self.epsilon = epsilon
 
     def optimize(
         self,
@@ -250,54 +250,43 @@ class MotorPositionsOptimizer:
 
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
-            lr=float(
-                self.optimization_configuration[config_dictionary.initial_learning_rate]
-            ),
+            lr=float(self.optimizer_dict[config_dictionary.initial_learning_rate]),
         )
 
         # Create a learning rate scheduler.
         scheduler_fn = getattr(
             learning_rate_schedulers,
-            self.optimization_configuration[config_dictionary.scheduler],
+            self.scheduler_dict[config_dictionary.scheduler_type],
         )
         scheduler: LRScheduler = scheduler_fn(
-            optimizer=optimizer,
-            parameters=self.optimization_configuration[
-                config_dictionary.scheduler_parameters
-            ],
+            optimizer=optimizer, parameters=self.scheduler_dict
         )
 
         # Set up early stopping.
         early_stopper = learning_rate_schedulers.EarlyStopping(
-            window_size=self.optimization_configuration[
-                config_dictionary.early_stopping_window
-            ],
-            patience=self.optimization_configuration[
-                config_dictionary.early_stopping_patience
-            ],
-            min_improvement=self.optimization_configuration[
-                config_dictionary.early_stopping_delta
-            ],
+            window_size=self.optimizer_dict[config_dictionary.early_stopping_window],
+            patience=self.optimizer_dict[config_dictionary.early_stopping_patience],
+            min_improvement=self.optimizer_dict[config_dictionary.early_stopping_delta],
             relative=True,
         )
 
         lambda_energy = None
-        rho_energy = self.constraint_parameters["rho_energy"]
-        max_flux_density = self.constraint_parameters["max_flux_density"]
-        rho_pixel = self.constraint_parameters["rho_pixel"]
-        lambda_lr = self.constraint_parameters["lambda_lr"]
+        rho_energy = self.constraint_dict[config_dictionary.rho_energy]
+        max_flux_density = self.constraint_dict[config_dictionary.max_flux_density]
+        rho_pixel = self.constraint_dict[config_dictionary.rho_pixel]
+        lambda_lr = self.constraint_dict[config_dictionary.lambda_lr]
 
         # Start the optimization.
         loss = torch.inf
         epoch = 0
         log_step = (
-            self.optimization_configuration[config_dictionary.max_epoch]
-            if self.optimization_configuration[config_dictionary.log_step] == 0
-            else self.optimization_configuration[config_dictionary.log_step]
+            self.optimizer_dict[config_dictionary.max_epoch]
+            if self.optimizer_dict[config_dictionary.log_step] == 0
+            else self.optimizer_dict[config_dictionary.log_step]
         )
         while (
-            loss > float(self.optimization_configuration[config_dictionary.tolerance])
-            and epoch <= self.optimization_configuration[config_dictionary.max_epoch]
+            loss > float(self.optimizer_dict[config_dictionary.tolerance])
+            and epoch <= self.optimizer_dict[config_dictionary.max_epoch]
         ):
             optimizer.zero_grad()
 
@@ -375,9 +364,7 @@ class MotorPositionsOptimizer:
                         config_dictionary.heliostat_group_world_size
                     ],
                     rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                    batch_size=self.optimization_configuration[
-                        config_dictionary.batch_size
-                    ],
+                    batch_size=self.optimizer_dict[config_dictionary.batch_size],
                     random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],
                     bitmap_resolution=self.bitmap_resolution,
                     ray_magnitude=ray_magnitude,
@@ -396,12 +383,12 @@ class MotorPositionsOptimizer:
                     ],
                     device=device,
                 )
-
+                sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                     bitmaps_per_heliostat=flux_distributions,
                     target_area_mask=target_area_masks_all_groups[
                         heliostat_group_index
-                    ],
+                    ][sample_indices_for_local_rank],
                     device=device,
                 )[self.target_area_index]
 
