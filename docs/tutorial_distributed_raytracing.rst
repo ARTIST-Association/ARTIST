@@ -73,7 +73,7 @@ To map each heliostat with its designated target area and incident ray direction
 
 .. code-block::
 
-    # heliostat_target_light_source_mapping = [
+    heliostat_target_light_source_mapping = [
         ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
         ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
         (...)
