@@ -253,6 +253,7 @@ with setup_distributed_environment(
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
         config_dictionary.early_stopping_patience: 300,
+        config_dictionary.early_stopping_window: 300,
         config_dictionary.scheduler: scheduler,
         config_dictionary.scheduler_parameters: scheduler_parameters,
     }

@@ -484,6 +484,22 @@ class SurfaceReconstructor:
                     total_loss = total_loss_per_heliostat.mean()
                     total_loss.backward()
 
+                    if self.ddp_setup[config_dictionary.is_nested]:
+                        # Reduce gradients within each heliostat group.
+                        for param_group in optimizer.param_groups:
+                            for param in param_group["params"]:
+                                if param.grad is not None:
+                                    torch.distributed.all_reduce(
+                                        param.grad,
+                                        op=torch.distributed.ReduceOp.SUM,
+                                        group=self.ddp_setup[
+                                            config_dictionary.process_subgroup
+                                        ],
+                                    )
+                                    param.grad /= self.ddp_setup[
+                                        config_dictionary.heliostat_group_world_size
+                                    ]
+
                     # Keep the surfaces in their original geometric shape by locking the control points on the outer edges.
                     optimizer.param_groups[index_mapping.optimizer_param_group_0][
                         "params"

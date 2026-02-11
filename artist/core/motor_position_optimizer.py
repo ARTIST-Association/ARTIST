@@ -397,13 +397,6 @@ class MotorPositionsOptimizer:
                     device=device,
                 )
 
-                if self.ddp_setup[config_dictionary.is_nested]:
-                    flux_distributions = torch.distributed.nn.functional.all_reduce(
-                        flux_distributions,
-                        group=self.ddp_setup[config_dictionary.process_subgroup],
-                        op=torch.distributed.ReduceOp.SUM,
-                    )
-
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                     bitmaps_per_heliostat=flux_distributions,
                     target_area_mask=target_area_masks_all_groups[

@@ -331,11 +331,31 @@ class KinematicReconstructor:
 
                     loss.backward()
 
+                    if self.ddp_setup[config_dictionary.is_nested]:
+                        # Reduce gradients within each heliostat group.
+                        for param_group in optimizer.param_groups:
+                            for param in param_group["params"]:
+                                if param.grad is not None:
+                                    param.grad = (
+                                        torch.distributed.nn.functional.all_reduce(
+                                            param.grad,
+                                            op=torch.distributed.ReduceOp.SUM,
+                                            group=self.ddp_setup[
+                                                config_dictionary.process_subgroup
+                                            ],
+                                        )
+                                    )
+                                    param.grad /= self.ddp_setup[
+                                        config_dictionary.heliostat_group_world_size
+                                    ]
+
                     torch.nn.utils.clip_grad_norm_(
-                        [
-                            heliostat_group.kinematic.rotation_deviation_parameters,
-                            heliostat_group.kinematic.actuators.optimizable_parameters,
-                        ],
+                        [heliostat_group.kinematic.rotation_deviation_parameters],
+                        max_norm=1.0,
+                    )
+
+                    torch.nn.utils.clip_grad_norm_(
+                        [heliostat_group.kinematic.actuators.optimizable_parameters],
                         max_norm=1.0,
                     )
 
