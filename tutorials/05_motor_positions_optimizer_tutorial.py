@@ -81,6 +81,7 @@ def create_flux_plot(id: str) -> None:
             heliostat_group=heliostat_group,
             batch_size=heliostat_group.number_of_active_heliostats,
             bitmap_resolution=torch.tensor([256, 256], device=device),
+            dni=dni,
         )
 
         # Perform heliostat-based ray tracing.

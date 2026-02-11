@@ -236,7 +236,7 @@ class HeliostatRayTracer:
                 artist.util.index_mapping.bitmap_resolution,
             ]
         ),
-        ray_magnitude: float = 1.0,
+        dni: float | None = None,
     ) -> None:
         """
         Initialize the heliostat ray tracer.
@@ -266,8 +266,8 @@ class HeliostatRayTracer:
         bitmap_resolution : torch.Tensor
             The resolution of the bitmap in both directions. (default is torch.tensor([256,256])).
             Tensor of shape [2].
-        ray_magnitude : float
-            Magnitude of each single ray (default is 1.0).
+        dni : float | None
+            Direct normal irradiance in W/m^2 (default is None -> ray magnitude = 1.0).
         """
         self.scenario = scenario
         self.heliostat_group = heliostat_group
@@ -308,7 +308,6 @@ class HeliostatRayTracer:
         )
 
         self.bitmap_resolution = bitmap_resolution
-        self.ray_magnitude = ray_magnitude
 
         if self.blocking_active:
             self.blocking_heliostat_surfaces = torch.cat(
@@ -332,6 +331,21 @@ class HeliostatRayTracer:
             self.blocking_heliostat_surfaces_active = torch.cat(
                 blocking_heliostat_surfaces_active_list
             )
+
+        if dni is not None:
+            # Calculate surface area per heliostat.
+            canting_norm = (torch.norm(self.heliostat_group.canting[0], dim=1)[0])[:2]
+            dimensions = (canting_norm * 4) + 0.02
+            heliostat_surface_area = dimensions[0] * dimensions[1]
+            # Calculate ray magnitude.
+            power_single_heliostat = dni * heliostat_surface_area
+            rays_per_heliostat = (
+                self.heliostat_group.surface_points.shape[1]
+                * self.scenario.light_sources.light_source_list[0].number_of_rays
+            )
+            self.ray_magnitude = power_single_heliostat / rays_per_heliostat
+        else:
+            self.ray_magnitude = 1.0
 
     def get_sampler_indices(self) -> torch.Tensor:
         """

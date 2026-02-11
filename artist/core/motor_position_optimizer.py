@@ -189,8 +189,6 @@ class MotorPositionsOptimizer:
         target_area_masks_all_groups = []
         incident_ray_directions_all_groups = []
 
-        heliostat_surface_areas = []
-
         for group_index, group in enumerate(
             self.scenario.heliostat_field.heliostat_groups
         ):
@@ -258,11 +256,6 @@ class MotorPositionsOptimizer:
                     torch.zeros_like(initial_motor_positions, device=device)
                 )
             )
-
-            # Calculate surface area of all heliostats in the group.
-            canting_norm = (torch.norm(group.canting[0], dim=1)[0])[:2]
-            dimensions = (canting_norm * 4) + 0.02
-            heliostat_surface_areas.append(dimensions[0] * dimensions[1])
 
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
@@ -361,16 +354,6 @@ class MotorPositionsOptimizer:
                     ]
                 )
 
-                # Calculate ray magnitude.
-                power_single_heliostat = (
-                    self.dni * heliostat_surface_areas[heliostat_group_index]
-                )
-                rays_per_heliostat = (
-                    heliostat_group.surface_points.shape[1]
-                    * self.scenario.light_sources.light_source_list[0].number_of_rays
-                )
-                ray_magnitude = power_single_heliostat / rays_per_heliostat
-
                 # Create a ray tracer.
                 ray_tracer = HeliostatRayTracer(
                     scenario=self.scenario,
@@ -383,7 +366,7 @@ class MotorPositionsOptimizer:
                     batch_size=self.optimizer_dict[config_dictionary.batch_size],
                     random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],
                     bitmap_resolution=self.bitmap_resolution,
-                    ray_magnitude=ray_magnitude,
+                    dni=self.dni,
                 )
 
                 # Perform heliostat-based ray tracing.

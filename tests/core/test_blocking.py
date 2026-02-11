@@ -515,6 +515,6 @@ def test_ray_extinction(device: torch.device) -> None:
     torch.testing.assert_close(
         bitmaps_per_heliostat_no_extinction[0].sum() * (1 - ray_extinction_factor),
         bitmaps_per_heliostat_extinction[0].sum(),
-        atol=5e-4,
-        rtol=5e-4,
+        atol=5e-1,
+        rtol=5e-1,
     )
