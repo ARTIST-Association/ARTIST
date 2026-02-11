@@ -190,11 +190,40 @@ heliostat_data_mapping = [
 # Or if you have a directory with downloaded data use this code to create a mapping.
 # heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
 #     base_path="base/path/data",
-#     heliostat_names=["heliostat_1", "..."],
+#     heliostat_names=["heliostat_1"],
 #     number_of_measurements=5,
 #     image_variant="flux",
 #     randomize=True,
 # )
+
+# Configure the optimization.
+optimizer_dict = {
+    config_dictionary.initial_learning_rate: 0.0005,
+    config_dictionary.tolerance: 0.0005,
+    config_dictionary.max_epoch: 100,
+    config_dictionary.batch_size: 50,
+    config_dictionary.log_step: 3,
+    config_dictionary.early_stopping_delta: 1e-4,
+    config_dictionary.early_stopping_patience: 300,
+    config_dictionary.early_stopping_window: 300,
+}
+# Configure the learning rate scheduler.
+scheduler_dict = {
+    config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
+    config_dictionary.gamma: 0.9,
+    config_dictionary.min: 1e-6,
+    config_dictionary.max: 1e-3,
+    config_dictionary.step_size_up: 500,
+    config_dictionary.reduce_factor: 0.0001,
+    config_dictionary.patience: 50,
+    config_dictionary.threshold: 1e-3,
+    config_dictionary.cooldown: 10,
+}
+# Combine configurations.
+optimization_configuration = {
+    config_dictionary.optimization: optimizer_dict,
+    config_dictionary.scheduler: scheduler_dict,
+}
 
 data_parser = PaintCalibrationDataParser(
     sample_limit=50, centroid_extraction_method=paint_mappings.UTIS_KEY
@@ -227,36 +256,6 @@ with setup_distributed_environment(
         scenario = Scenario.load_scenario_from_hdf5(
             scenario_file=scenario_file, device=device
         )
-
-    # Configure the learning rate scheduler. The example scheduler parameter dict includes
-    # example parameters for all three possible schedulers.
-    scheduler = (
-        config_dictionary.reduce_on_plateau
-    )  # exponential, cyclic or reduce_on_plateau
-    scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
-        config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.0001,
-        config_dictionary.patience: 50,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 10,
-    }
-
-    # Set optimization parameters.
-    optimization_configuration = {
-        config_dictionary.initial_learning_rate: 0.0005,
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
-        config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 3,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 300,
-        config_dictionary.early_stopping_window: 300,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
-    }
 
     bitmaps_before, _ = create_fluxes(
         data_parser=data_parser_plots,

@@ -397,6 +397,52 @@ heliostat_data_mapping = [
 #     randomize=True,
 # )
 
+# Configure the optimization.
+optimizer_dict = {
+    config_dictionary.initial_learning_rate: 1e-4,
+    config_dictionary.tolerance: 1e-5,
+    config_dictionary.max_epoch: 30,
+    config_dictionary.batch_size: 30,
+    config_dictionary.log_step: 1,
+    config_dictionary.early_stopping_delta: 1e-4,
+    config_dictionary.early_stopping_patience: 100,
+    config_dictionary.early_stopping_window: 100,
+}
+# Configure the learning rate scheduler.
+scheduler_dict = {
+    config_dictionary.scheduler_type: config_dictionary.exponential,
+    config_dictionary.gamma: 0.99,
+    config_dictionary.min: 1e-6,
+    config_dictionary.max: 1e-2,
+    config_dictionary.step_size_up: 100,
+    config_dictionary.reduce_factor: 0.5,
+    config_dictionary.patience: 10,
+    config_dictionary.threshold: 1e-4,
+    config_dictionary.cooldown: 5,
+}
+# Configure the regularizers.
+ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
+regularizers = [
+    ideal_surface_regularizer,
+    smoothness_regularizer,
+]
+# Configure the regularizers and constraints.
+constraint_dict = {
+    config_dictionary.regularizers: regularizers,
+    config_dictionary.weight_smoothness: 0.005,
+    config_dictionary.weight_ideal_surface: 0.005,
+    config_dictionary.initial_lambda_energy: 0.1,
+    config_dictionary.rho_energy: 1.0,
+    config_dictionary.energy_tolerance: 0.01,
+}
+# Combine configurations.
+optimization_configuration = {
+    config_dictionary.optimization: optimizer_dict,
+    config_dictionary.scheduler: scheduler_dict,
+    config_dictionary.constraints: constraint_dict,
+}
+
 # Create dict for the data parser and the heliostat_data_mapping.
 data: dict[
     str,
@@ -431,56 +477,10 @@ with setup_distributed_environment(
     # Another possibility would be the pixel loss:
     # loss_definition = PixelLoss(scenario=scenario)
 
-    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
-    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-
-    regularizers = [
-        ideal_surface_regularizer,
-        smoothness_regularizer,
-    ]
-
-    # Configure the learning rate scheduler. The example scheduler parameter dict includes
-    # example parameters for all three possible schedulers.
-    scheduler = (
-        config_dictionary.exponential
-    )  # exponential, cyclic or reduce_on_plateau
-    scheduler_parameters = {
-        config_dictionary.min: 1e-6,
-        config_dictionary.reduce_factor: 0.5,
-        config_dictionary.patience: 10,
-        config_dictionary.threshold: 1e-4,
-        config_dictionary.cooldown: 5,
-        config_dictionary.gamma: 0.99,
-    }
-
-    # Set optimizer parameters.
-    optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-4,
-        config_dictionary.tolerance: 1e-5,
-        config_dictionary.max_epoch: 200,
-        config_dictionary.batch_size: 30,
-        config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 100,
-        config_dictionary.early_stopping_window: 100,
-        config_dictionary.scheduler: config_dictionary.reduce_on_plateau,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
-        config_dictionary.regularizers: regularizers,
-    }
-
-    # Reconstruction parameters.
-    constraint_parameters = {
-        config_dictionary.initial_lambda_energy: 0.1,
-        config_dictionary.rho_energy: 1.0,
-        config_dictionary.energy_tolerance: 0.01,
-        config_dictionary.weight_smoothness: 0.005,
-        config_dictionary.weight_ideal_surface: 0.005,
-    }
-
     scenario.set_number_of_rays(number_of_rays=170)
     resolution = torch.tensor([256, 256], device=device)
 
-    # Visualize the ideal surfaces and flux distributions from ideal heliostats.
+    # Visualize the surfaces and flux distributions from the initial heliostats.
     number_of_plots_per_heliostat = 2
     create_surface_plots(name="ideal")
     create_flux_plots(
@@ -499,8 +499,6 @@ with setup_distributed_environment(
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        constraint_parameters=constraint_parameters,
-        bitmap_resolution=resolution,
         device=device,
     )
 
@@ -512,7 +510,7 @@ with setup_distributed_environment(
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
 
-# Visualize the results (reconstructed surfaces and flux distributions from reconstructed heliostats).
+# Visualize the surfaces and flux distributions from the reconstructed heliostats.
 create_surface_plots(name="reconstructed")
 create_flux_plots(
     heliostat_names=heliostat_names_plots,
