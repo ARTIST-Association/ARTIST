@@ -65,7 +65,7 @@ def data_for_flux_plots(
         ),
         device=device,
     )
-    heliostat_surface_areas = []
+
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
@@ -99,10 +99,6 @@ def data_for_flux_plots(
                 device=device,
             )
 
-        canting_norm = (torch.norm(heliostat_group.canting[0], dim=1)[0])[:2]
-        dimensions = (canting_norm * 4) + 0.02
-        heliostat_surface_areas.append(dimensions[0] * dimensions[1])
-
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
@@ -115,14 +111,6 @@ def data_for_flux_plots(
             )
         )
 
-        # Calculate ray magnitude.
-        power_single_heliostat = dni * heliostat_surface_areas[heliostat_group_index]
-        rays_per_heliostat = (
-            heliostat_group.surface_points.shape[1]
-            * scenario.light_sources.light_source_list[0].number_of_rays
-        )
-        ray_magnitude = power_single_heliostat / rays_per_heliostat
-
         # Create a ray tracer.
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
@@ -130,7 +118,7 @@ def data_for_flux_plots(
             blocking_active=True,
             batch_size=100,
             bitmap_resolution=bitmap_resolution,
-            ray_magnitude=ray_magnitude,
+            dni=dni,
         )
 
         # Perform heliostat-based ray tracing.
