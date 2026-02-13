@@ -631,6 +631,10 @@ class HeliostatRayTracer:
         """
         device = get_device(device=device)
 
+        num_heliostats = active_heliostats_mask.sum()
+        bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
+        bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
+
         plane_widths = (
             self.scenario.target_areas.dimensions[target_area_mask][
                 :, index_mapping.target_area_width
@@ -663,39 +667,29 @@ class HeliostatRayTracer:
             intersections.shape[index_mapping.number_rays_per_point]
             * intersections.shape[index_mapping.surface_points]
         )
-        absolute_intensities = absolute_intensities.reshape(-1, total_intersections)
 
-        # Determine the x- and y-positions of the intersections with the target areas, scaled to the bitmap resolutions.
-        dx_intersections = (
+        # Determine the e- and u-positions of the intersections with the target areas, scaled to the bitmap resolutions.
+        # Here we decide that the bottom left corner of the 2D bitmap is the origin of the flux image that is computed.
+        target_intersections_e = (
             intersections[:, :, :, index_mapping.e] + plane_widths / 2 - plane_centers_e
         )
-        dy_intersections = (
+        target_intersections_u = (
             intersections[:, :, :, index_mapping.u]
             + plane_heights / 2
             - plane_centers_u
         )
 
-        # Selection of valid intersection indices within the bounds of the target areas or within a little boundary outside the target areas.
-        intersection_indices_1 = (
-            (-1 <= dx_intersections)
-            & (dx_intersections < plane_widths + 1)
-            & (-1 <= dy_intersections)
-            & (dy_intersections < plane_heights + 1)
-        )
+        # target_intersections_e and target_intersections_u contain intersection coordinates ranging from 0 to target_area.plane_e/_u.
+        # bitmap_intersections_e and bitmap_intersections_u contain those intersection coordinates scaled to a range from 0 to bitmap_resolution_e/_u - 1.
+        # We scale to bitmap_width - 1 and bitmap_height - 1, because the indices start at 0 and end at bitmap_width - 1 or bitmap_height - 1
+        bitmap_intersections_e = (
+            target_intersections_e / plane_widths * (bitmap_width - 1)
+        ).reshape(-1, total_intersections)
+        bitmap_intersections_u = (
+            target_intersections_u / plane_heights * (bitmap_height - 1)
+        ).reshape(-1, total_intersections)
 
-        # dx_intersections and dy_intersections contain intersection coordinates ranging from 0 to target_area.plane_e/_u.
-        # x_intersections and y_intersections contain those intersection coordinates scaled to a range from 0 to bitmap_resolution_e/_u.
-        # Additionally a mask is applied, only the intersections where intersection_indices == True are kept, the tensors are flattened.
-        x_intersections = (
-            dx_intersections
-            / plane_widths
-            * self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
-        ).reshape(-1, total_intersections)
-        y_intersections = (
-            dy_intersections
-            / plane_heights
-            * self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
-        ).reshape(-1, total_intersections)
+        absolute_intensities = absolute_intensities.reshape(-1, total_intersections)
 
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
@@ -709,155 +703,118 @@ class HeliostatRayTracer:
         # continuous value anywhere in-between the four pixels we sample.
         # That the "." may be anywhere in-between the four pixels is not
         # shown in the ASCII diagram, but is important to keep in mind.
+        # The western and lower neighbored pixels are saved in indices_low_e and indices_low_u
+        # (for e this corresponds to pixel 1 and 4, for u to 3 and 4).
+        # The eastern and upper neighbored pixels are accessed via indices_low_e + 1 and
+        # indices_low_u + 1 (for e this corresponds to 2 and 3, for u to 1 and 2).
+        # We use the straight-through estimator trick for differentiability.
+        indices_floor_e = torch.floor(bitmap_intersections_e)
+        indices_floor_u = torch.floor(bitmap_intersections_u)
 
-        # The lower-valued neighboring pixels (for x this corresponds to 1
-        # and 4, for y to 3 and 4).
-        x_indices_low = x_intersections.to(torch.int32)
-        y_indices_low = y_intersections.to(torch.int32)
-
-        # The higher-valued neighboring pixels (for x this corresponds to 2
-        # and 3, for y to 1 and 2).
-        x_indices_high = x_indices_low + 1
-        y_indices_high = y_indices_low + 1
-
-        x_indices = torch.zeros(
-            (
-                intersections.shape[index_mapping.heliostat_dimension],
-                total_intersections * 4,
-            ),
-            device=device,
-            dtype=torch.int32,
-        )
-
-        x_indices[:, :total_intersections] = x_indices_low
-        x_indices[
-            :, total_intersections : total_intersections * index_mapping.second_pixel
-        ] = x_indices_high
-        x_indices[
-            :,
-            total_intersections * index_mapping.second_pixel : total_intersections
-            * index_mapping.third_pixel,
-        ] = x_indices_high
-        x_indices[:, total_intersections * index_mapping.third_pixel :] = x_indices_low
-
-        y_indices = torch.zeros(
-            (
-                intersections.shape[index_mapping.heliostat_dimension],
-                total_intersections * 4,
-            ),
-            device=device,
-            dtype=torch.int32,
-        )
-
-        y_indices[:, :total_intersections] = y_indices_high
-        y_indices[
-            :, total_intersections : total_intersections * index_mapping.second_pixel
-        ] = y_indices_high
-        y_indices[
-            :,
-            total_intersections * index_mapping.second_pixel : total_intersections
-            * index_mapping.third_pixel,
-        ] = y_indices_low
-        y_indices[:, total_intersections * index_mapping.third_pixel :] = y_indices_low
+        indices_low_e = (
+            bitmap_intersections_e + (indices_floor_e - bitmap_intersections_e).detach()
+        ).to(torch.int32)
+        indices_low_u = (
+            bitmap_intersections_u + (indices_floor_u - bitmap_intersections_u).detach()
+        ).to(torch.int32)
 
         # When distributing the continuously positioned value/intensity to
-        # the discretely positioned pixels, we give the corresponding
-        # "influence" of the value to each neighbor. Here, we calculate this
-        # influence for each neighbor.
-
-        # x-value influence in 1 and 4.
-        x_low_influences = x_indices_high - x_intersections
-        # y-value influence in 3 and 4.
-        y_low_influences = y_indices_high - y_intersections
-        # x-value influence in 2 and 3.
-        x_high_influences = x_intersections - x_indices_low
-        # y-value influence in 1 and 2.
-        y_high_influences = y_intersections - y_indices_low
+        # the discretely positioned pixels, we assign the corresponding
+        # contribution to each neighbor based on its distance to the original,
+        # continuous intersection point.
+        # e-value contribution to 1 and 4.
+        contributions_low_e = indices_low_e + 1 - bitmap_intersections_e
+        # u-value contribution to 3 and 4.
+        contributions_low_u = indices_low_u + 1 - bitmap_intersections_u
+        # e-value contribution to 2 and 3.
+        contributions_high_e = bitmap_intersections_e - indices_low_e
+        # u-value contribution to 1 and 2.
+        contributions_high_u = bitmap_intersections_u - indices_low_u
 
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
         # so we know where to position them. The numbers correspond to the
         # ASCII diagram above.
         intensities_pixel_1 = (
-            x_low_influences * y_high_influences * absolute_intensities
+            contributions_low_e * contributions_high_u * absolute_intensities
         )
         intensities_pixel_2 = (
-            x_high_influences * y_high_influences * absolute_intensities
+            contributions_high_e * contributions_high_u * absolute_intensities
         )
         intensities_pixel_3 = (
-            x_high_influences * y_low_influences * absolute_intensities
+            contributions_high_e * contributions_low_u * absolute_intensities
         )
-        intensities_pixel_4 = x_low_influences * y_low_influences * absolute_intensities
-
-        intensities = torch.zeros(
-            (intersections.shape[0], total_intersections * 4), device=device
-        )
-        intensities[:, :total_intersections] = intensities_pixel_1.reshape(
-            -1, total_intersections
-        )
-        intensities[
-            :, total_intersections : total_intersections * index_mapping.second_pixel
-        ] = intensities_pixel_2.reshape(-1, total_intersections)
-        intensities[
-            :,
-            total_intersections * index_mapping.second_pixel : total_intersections
-            * index_mapping.third_pixel,
-        ] = intensities_pixel_3.reshape(-1, total_intersections)
-        intensities[:, total_intersections * index_mapping.third_pixel :] = (
-            intensities_pixel_4.reshape(-1, total_intersections)
+        intensities_pixel_4 = (
+            contributions_low_e * contributions_low_u * absolute_intensities
         )
 
         # For the distributions, we regarded even those neighboring pixels that are
-        # _not_ part of the image but within a little boundary outside of the image as well.
+        # _not_ part of the image.
         # That is why here, we set up a mask to choose only those indices that are actually
         # in the bitmap (i.e., we prevent out-of-bounds access).
-        intersection_indices_2 = (
-            (0 <= x_indices)
-            & (x_indices < self.bitmap_resolution[index_mapping.unbatched_bitmap_e])
-            & (0 <= y_indices)
-            & (y_indices < self.bitmap_resolution[index_mapping.unbatched_bitmap_u])
-        )
-
-        final_intersection_indices = (
-            intersection_indices_1.reshape(-1, total_intersections).repeat(
-                1, self.heliostat_group.number_of_facets_per_heliostat
-            )
-            & intersection_indices_2
-        )
-
-        mask = final_intersection_indices.flatten()
-
-        heliostat_indices = torch.repeat_interleave(
-            torch.arange(
-                active_heliostats_mask.sum(), device=active_heliostats_mask.device
-            ),
-            total_intersections * self.heliostat_group.number_of_facets_per_heliostat,
+        intersection_indices_on_target = (
+            (0 <= bitmap_intersections_e)
+            & (bitmap_intersections_e < bitmap_width - 1)
+            & (0 <= bitmap_intersections_u)
+            & (bitmap_intersections_u < bitmap_height - 1)
         )
 
         # Flux density maps for each active heliostat.
-        bitmaps_per_heliostat = torch.zeros(
-            (
-                active_heliostats_mask.sum(),
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            ),
-            dtype=dx_intersections.dtype,
-            device=device,
+        bitmaps_flat = torch.zeros(
+            (num_heliostats, bitmap_height * bitmap_width), device=device
         )
 
-        # Add up all distributed intensities in the corresponding indices.
-        bitmaps_per_heliostat.index_put_(
-            (
-                heliostat_indices[mask],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
-                - 1
-                - y_indices[final_intersection_indices],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
-                - 1
-                - x_indices[final_intersection_indices],
-            ),
-            intensities[final_intersection_indices],
-            accumulate=True,
+        # scatter_add_ can only handle flat tensors per batch. That is why the bitmaps are flattened.
+        # As an example: A bitmap with width = 4 and height = 2 has a total of 8 pixels.
+        # Therefore, flattened, the indices range from 0 to 7.
+        # 0     1     2     3
+        # [0,0] [0,1] [0,2] [0,3]
+        # [1,0] [1,1] [1,2] [1,3]
+        # 4     5     6     7
+        # The element at position [1,2] in the 2D array is at index 6 in the flattened tensor.
+        # To convert the pixel indices from their 2D representation to a flattened version we need
+        # to compute the row indices times the bitmap_width plus the column indices.
+        # In the example this is 1 * 4 + 2 = 6
+        # In our more general case that is:
+        # flattened_indices = indices_u * bitmap_width + indices_e
+        # Since tensor indices have their origin of (0,0) in the top left, but our image indices have their
+        # origin in the bottom left, we need to flip the row (u) indices. That is:
+        # flattened_indices = ((bitmap_height - 1) - indices_u) * bitmap_width + indices_e
+        # The column indices also need to be flipped because the the more intuitive way to look at flux prediction
+        # bitmaps, is to imagine oneself to stand in the heliostat field looking at the receiver.
+        # This means that we look at the backside of the flux images. This corresponds to a flip of left and right.
+        # Therefore our final indices are:
+        # flattened_indices = (((bitmap_height - 1) - indices_u) * bitmap_width + ((bitmap_width - 1) - indices_e))
+        # (For the flips, we need to subtract 1 from bitmap_height and bitmap_width, because this flips indices, we
+        # do not need to subtract the 1 for the multiplication with bitmap_width because there we are interested in the
+        # number of elements, not the indices.)
+        index_3 = (
+            ((bitmap_height - 1) - indices_low_u) * bitmap_width
+            + ((bitmap_width - 1) - (indices_low_e + 1))
+        ).long()
+        index_4 = (
+            ((bitmap_height - 1) - indices_low_u) * bitmap_width
+            + ((bitmap_width - 1) - indices_low_e)
+        ).long()
+
+        # We need to filter out out of bounds indices. scatter_add_ cannot handle advanced indexing in its parameters,
+        # therefore we cannot filter out invalid intersections by their indices. Instead we set all out of bounds indices
+        # to 0, that way they do not cause index out of bounds errors, and we also set the intensities at these indices
+        # to 0 so they do not add to the flux.
+        index_3[~intersection_indices_on_target] = 0
+        index_4[~intersection_indices_on_target] = 0
+        intensities_pixel_1 = intensities_pixel_1 * intersection_indices_on_target
+        intensities_pixel_2 = intensities_pixel_2 * intersection_indices_on_target
+        intensities_pixel_3 = intensities_pixel_3 * intersection_indices_on_target
+        intensities_pixel_4 = intensities_pixel_4 * intersection_indices_on_target
+
+        bitmaps_flat.scatter_add_(1, index_4 + 1, intensities_pixel_1)
+        bitmaps_flat.scatter_add_(1, index_3 + 1, intensities_pixel_2)
+        bitmaps_flat.scatter_add_(1, index_3, intensities_pixel_3)
+        bitmaps_flat.scatter_add_(1, index_4, intensities_pixel_4)
+
+        bitmaps_per_heliostat = bitmaps_flat.view(
+            num_heliostats, bitmap_height, bitmap_width
         )
 
         return bitmaps_per_heliostat

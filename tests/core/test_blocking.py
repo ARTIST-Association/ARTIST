@@ -413,6 +413,12 @@ def test_blocking_integration(device: torch.device) -> None:
         device=device,
     )
 
+    # Scale bitmap for testing precision.
+    bitmaps_per_heliostat = (
+        bitmaps_per_heliostat
+        / (bitmaps_per_heliostat.sum(dim=(1, 2), keepdim=True) + 1e-8)
+    ) * 100
+
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_bitmaps_blocking"
@@ -488,6 +494,7 @@ def test_ray_extinction(device: torch.device) -> None:
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_mask=target_area_mask,
+        ray_extinction_factor=0.0,
         device=device,
     )
 
@@ -502,6 +509,9 @@ def test_ray_extinction(device: torch.device) -> None:
     bitmaps = torch.cat(
         (bitmaps_per_heliostat_no_extinction, bitmaps_per_heliostat_extinction)
     )
+
+    # Scale bitmap for testing precision.
+    bitmaps = (bitmaps / (bitmaps.sum(dim=(1, 2), keepdim=True) + 1e-8)) * 100
 
     expected_path = (
         pathlib.Path(ARTIST_ROOT)

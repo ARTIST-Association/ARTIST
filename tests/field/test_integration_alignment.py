@@ -154,6 +154,11 @@ def test_integration_alignment(
 
         flux_distributions = flux_distributions + group_bitmaps_per_target
 
+    # Scale bitmap for testing precision.
+    flux_distributions = (
+        flux_distributions / (flux_distributions.sum(dim=(1, 2), keepdim=True) + 1e-8)
+    ) * 100
+
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_bitmaps_integration"
