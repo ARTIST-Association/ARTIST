@@ -631,10 +631,12 @@ class HeliostatRayTracer:
         """
         device = get_device(device=device)
 
+        # Extract number of active heliostats and bitmap height and width, i.e., its resolution in pixels.
         num_heliostats = active_heliostats_mask.sum()
         bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
         bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
 
+        # Extract widths and heights of target planes, along with corresponding centers in E and U direction.
         plane_widths = (
             self.scenario.target_areas.dimensions[target_area_mask][
                 :, index_mapping.target_area_width
@@ -664,9 +666,10 @@ class HeliostatRayTracer:
             .unsqueeze(index_mapping.points_dimension)
         )
 
-        # Determine the E- and U-positions of the intersections with the target areas, scaled to the bitmap resolutions.
-        # Here we decide that the bottom left corner of the 2D bitmap is the origin of the flux image that is computed.
-        # target_intersections_e and target_intersections_u contain intersection coordinates ranging from 0 to target_area.plane_e/_u in meters.
+        # Determine the E- and U-positions of the rays' intersections with the target areas' planes, scaled to the
+        # bitmap resolutions. Here, we decide that the bottom left corner of the 2D bitmap is the origin of the flux
+        # image that is computed. `target_intersections_e/u` contain the intersection coordinates in meters.
+        # Rays that hit the actual target have intersection coordinates ranging from 0 to `target_area.plane_e/_u`.
         target_intersections_e = (
             intersections[:, :, :, index_mapping.e] + plane_widths / 2 - plane_centers_e
         )
@@ -676,15 +679,33 @@ class HeliostatRayTracer:
             - plane_centers_u
         )
 
-        # We scale the target intersections to the bitmap resolution.
-        # bitmap_intersections_e and bitmap_intersections_u contain those intersection coordinates scaled to a range from 1 to bitmap_resolution_e/_u.
-        # To calculate the pixel intensities _on_ the target we consider the actual target area plus a one pixel margin
-        # around it.
-        # In the bilinear splatting, rays that hit this margin contribute to the flux on the target.
-        # To avoid negative splatting weights in the target area plus its margin we increment all bitmap indices by one.
-        # Note that this leads to wrong contribution weights outside the area of interest (those with negative indices),
-        # but these will be masked out when calculating the final bitmap.
-        # We scale to bitmap_width - 1 and bitmap_height - 1, because we want bitmap_resolution bins.
+        # Scale target intersection coordinates into bitmap space.
+        #
+        # The resulting `bitmap_intersections_e/u` represent continuous coordinates
+        # in pixel units.
+
+        # A one-pixel margin is implicitly added around the actual target area.
+        # This is required for bilinear splatting: rays that intersect close to
+        # the target boundary must still contribute partially to pixels inside
+        # the target region. Without this margin, contributions from neighboring
+        # pixels could be lost.
+        #
+        # To ensure that bilinear weights remain non-negative within the target
+        # area and its margin, all bitmap indices are shifted by +1. This avoids
+        # negative interpolation weights near the lower boundary.
+        #
+        # For intersections within the area of interest (i.e. the physical target
+        # plus its one-pixel margin), the coordinates lie in the range
+        # [1, `bitmap_resolution_e/u`].
+        # Intersections outside this region may produce coordinates outside this
+        # range (negative or larger than the bitmap size). This is intentional:
+        # such contributions are computed during splatting but later masked out
+        # when assembling the final bitmap.
+        #
+        # As bilinear weights assume integer indices are at pixel centers, the
+        # scaling uses `(bitmap_width - 1)` and `(bitmap_height - 1)` so that
+        # continuous coordinates map correctly to pixel centers when discretized
+        # into `bitmap_resolution` bins.
         bitmap_intersections_e = (
             1.0 + (target_intersections_e / plane_widths * (bitmap_width - 1))
         ).reshape(num_heliostats, -1)
@@ -720,18 +741,24 @@ class HeliostatRayTracer:
         # contribution to each neighbor based on its distance to the original,
         # continuous intersection point.
         # Note that the implementation below is already optimized for memory
-        # consumption. For improved clarity the detailed derivation of the
+        # consumption. For improved clarity, the detailed derivation of the
         # splatting weights is sketched below:
+        #
         # indices_high_e/u = indices_low_e/u + 1
         # contributions_low_e/u = indices_high_e/u - bitmap_intersections_e/u
         # contributions_high_e/u = bitmap_intersections_e/u - indices_low_e/u
-        # E-value contribution to 1 and 4.
+        # weight_pixel_1 = contributions_low_e * contributions_high_u
+        # weight_pixel_2 = contributions_high_e * contributions_high_u
+        # weight_pixel_3 = contributions_high_e * contributions_low_u
+        # weight_pixel_4 = contributions_low_e * contributions_low_u
+        #
+        # E-value contribution to 1 and 4
         contributions_low_e = indices_low_e + 1 - bitmap_intersections_e
-        # U-value contribution to 3 and 4.
+        # U-value contribution to 3 and 4
         contributions_low_u = indices_low_u + 1 - bitmap_intersections_u
-        # E-value contribution to 2 and 3.
+        # E-value contribution to 2 and 3
         contributions_high_e = bitmap_intersections_e - indices_low_e
-        # U-value contribution to 1 and 2.
+        # U-value contribution to 1 and 2
         contributions_high_u = bitmap_intersections_u - indices_low_u
 
         # Here we shift the bitmap indices back to the original range from 0 to bitmap_width/height - 1.
