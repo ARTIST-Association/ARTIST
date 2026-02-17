@@ -39,20 +39,21 @@ with setup_distributed_environment(
             scenario_file=scenario_file,
             device=device,
         )
-        # Set a ray extinction factor responsible for global shading of rays (0.0 -> no global shading, 1.0 -> full global shading).
-        ray_extinction_factor = 0.0
 
-        # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
-        # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
-        # If no mapping is provided, all heliostats are selected, and they will all receive the default incident ray direction
-        # from a sun positioned directly in the south and they will all be raytraced on the first target found in your scenario.
-        heliostat_target_light_source_mapping = None
-        # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-        # heliostat_target_light_source_mapping = [
-        #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
-        #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
-        #     (...)
-        # ]
+    # Set a ray extinction factor responsible for global shading of rays (0.0 -> no global shading, 1.0 -> full global shading).
+    ray_extinction_factor = 0.0
+
+    # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
+    # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
+    # If no mapping is provided, all heliostats are selected, and they will all receive the default incident ray direction
+    # from a sun positioned directly in the south and they will all be raytraced on the first target found in your scenario.
+    heliostat_target_light_source_mapping = None
+    # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
+    # heliostat_target_light_source_mapping = [
+    #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+    #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+    #     (...)
+    # ]
 
     bitmap_resolution = torch.tensor([256, 256])
 
