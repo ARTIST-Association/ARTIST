@@ -825,8 +825,6 @@ class HeliostatRayTracer:
         index_3[~intersection_indices_on_target] = 0
         index_4[~intersection_indices_on_target] = 0
 
-        # index_1 = index_1[torch.where(index_1 < 0 | index_1 > )]
-
         intensities_pixel_1 = intensities_pixel_1 * intersection_indices_on_target
         intensities_pixel_2 = intensities_pixel_2 * intersection_indices_on_target
         intensities_pixel_3 = intensities_pixel_3 * intersection_indices_on_target

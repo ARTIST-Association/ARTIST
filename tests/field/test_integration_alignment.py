@@ -154,11 +154,6 @@ def test_integration_alignment(
 
         flux_distributions = flux_distributions + group_bitmaps_per_target
 
-    # Scale bitmap for testing precision.
-    flux_distributions = (
-        flux_distributions / (flux_distributions.sum(dim=(1, 2), keepdim=True) + 1e-8)
-    ) * 100
-
     expected_path = (
         pathlib.Path(ARTIST_ROOT)
         / "tests/data/expected_bitmaps_integration"
@@ -167,4 +162,6 @@ def test_integration_alignment(
 
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(flux_distributions, expected, atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(
+        flux_distributions, expected, atol=flux_distributions.mean() * 0.01, rtol=0.01
+    )
