@@ -98,7 +98,7 @@ class EarlyStopping:
     """
     Implement early stopping.
 
-    Stops optimization when the loss improvement trend over a the last few epochs
+    Stops optimization when the loss improvement trend over the last few epochs
     falls below a given threshold.
 
     Attributes
@@ -110,7 +110,7 @@ class EarlyStopping:
     min_improvement : float
         Minimum required improvement over the window to reset patience (default is 1e-4).
     relative : bool
-        Indicates wether improvement is normalized by loss magnitude (default is True).
+        Indicates whether improvement is normalized by loss magnitude (default is True).
     eps : float
         Small value for stability (default is 1e-8).
     loss_history : Deque
@@ -144,7 +144,7 @@ class EarlyStopping:
         min_improvement : float
             Minimum required improvement over the window to reset patience (default is 1e-4).
         relative : bool
-            Indicates wether improvement is normalized by loss magnitude (default is True).
+            Indicates whether improvement is normalized by loss magnitude (default is True).
         eps : float
             Small value for stability (default is 1e-8).
         """

@@ -365,7 +365,7 @@ class KinematicReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
-                    # Early stopping when loss did not improve since a predefined number of epochs.
+                    # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
 
                     if stop:
