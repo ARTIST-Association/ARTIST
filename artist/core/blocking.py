@@ -189,13 +189,13 @@ def soft_ray_blocking_mask(
     softness: float = 50.0,
 ) -> torch.Tensor:
     r"""
-    Compute a mask indicating which rays are blocked, using a soft, differentiable approach.
+    Compute a mask indicating which rays are blocked, using a soft differentiable approach.
 
-    Calculate ray plane intersections and the distances of the intersection from the ray origin.
+    Calculate ray-plane intersections and the distances of the intersection from the ray origin.
     Depending on the intersections and the distances, rays are blocked if they cannot reach the target.
     The blocking is made differentiable by using sigmoid functions to approximate binary transitions
     with soft boundaries.
-    For each ray and each blocking plane the intersection point and distance is computed by solving the
+    For each ray and each blocking plane, the intersection point and distance is computed by solving the
     plane equation:
 
     .. math::
@@ -210,32 +210,33 @@ def soft_ray_blocking_mask(
 
         \mathbf{p_intersection} = \mathbf{l_0} + \mathbf{l}d
 
-    where :math:`\mathbf{p}` are the points on the plane (ray_origins), :math:`\mathbf{p_0}` is a single point on the plane
-    (corner_0), :math:`\mathbf{n}` is the normal vector of the plane (blocking_planes_normals), :math:`\mathbf{l}` is the unit
-    vector describing the direction of the line (ray_directions), :math:`\mathbf{l_0}` is a point on the line (ray_origins),
-    :math:`d` is the distance from the ray origin to the point of intersection.
-    In the final output of this method values near 0 mean no blocking and values near 1 mean full blocking (there is at least
-    one blocking primitive in front of the heliostat).
+    where :math:`\mathbf{p}` are the points on the plane (`ray_origins`), :math:`\mathbf{p_0}` is a single point on the
+    plane (`corner_0`), :math:`\mathbf{n}` is the normal vector of the plane (`blocking_planes_normals`),
+    :math:`\mathbf{l}` is the unit vector describing the direction of the line (`ray_directions`),
+    :math:`\mathbf{l_0}` is a point on the line (`ray_origins`), and :math:`d` is the distance from the ray origin to
+    the point of intersection.
+    In the final output of this method, values near 0 mean no blocking and values near 1 mean full blocking (there is
+    at least one blocking primitive in front of the heliostat).
 
     Parameters
     ----------
     ray_origins : torch.Tensor
-        The origin points of the rays, i.e. the surface points.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        The origin points of the rays, i.e., the surface points.
+        Shape is [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
     ray_directions : torch.Tensor
         The ray directions.
-        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
+        Shape is [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
     blocking_primitives_corners : torch.Tensor
         The blocking primitives corner points.
-        Tensor of shape [number_of_blocking_primitives, 4, 4].
+        Shape is [number_of_blocking_primitives, 4, 4].
     blocking_primitives_spans: torch.Tensor
         The blocking primitives spans in u and v direction.
-        Tensor of shape [number_of_blocking_primitives, 2, 4].
+        Shape is [number_of_blocking_primitives, 2, 4].
     blocking_primitives_normals : torch.Tensor
         The blocking primitives normals.
-        Tensor of shape [number_of_blocking_primitives, 3]
+        Shape is [number_of_blocking_primitives, 3]
     distances_to_target : torch.Tensor
-        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+        Shape is [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
     epsilon : float
         A small value (default is 1e-6).
     softness : float
@@ -245,7 +246,7 @@ def soft_ray_blocking_mask(
     -------
     torch.Tensor
         A soft blocking mask.
-        Tensor of shape [number_of_blocking_primitives, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is [number_of_blocking_primitives, number_of_rays, number_of_combined_surface_points_all_facets].
     """
     ray_origins = ray_origins[:, None, :, None, :3]
     ray_directions = ray_directions[:, :, :, None, :3]
