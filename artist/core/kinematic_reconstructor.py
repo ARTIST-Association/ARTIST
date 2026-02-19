@@ -317,7 +317,6 @@ class KinematicReconstructor:
                     loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=loss_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
-                        device=device,
                     )
 
                     loss = loss_per_heliostat.mean()

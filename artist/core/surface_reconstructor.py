@@ -404,7 +404,6 @@ class SurfaceReconstructor:
                     flux_loss_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=flux_loss_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
-                        device=device,
                     )
 
                     # Augmented Lagrangian.
@@ -422,7 +421,6 @@ class SurfaceReconstructor:
                     energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=energy_constraint,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
-                        device=device,
                     )
                     if lambda_energy is None:
                         lambda_energy = torch.full_like(
