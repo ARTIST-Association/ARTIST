@@ -87,6 +87,7 @@ def create_blocking_primitives_rectangle(
         surface_indices, corner_points_indices
     ]
 
+    # Compute reactangle spans and normals.
     spans = torch.zeros((number_of_surfaces, 2, 4), device=device)
     spans[:, 0] = corners[:, 1] - corners[:, 0]
     spans[:, 1] = corners[:, 3] - corners[:, 0]
