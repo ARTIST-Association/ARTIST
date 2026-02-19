@@ -457,7 +457,7 @@ class HeliostatField:
         device: torch.device | None = None,
     ) -> None:
         """
-        Update surface points and normals using new nurbs control points.
+        Update surface points and normals using new NURBS control points.
 
         Parameter
         ---------
