@@ -90,16 +90,11 @@ def create_blocking_primitives_rectangle(
     # Find points in the unaligned surface points tensor that are closest to
     # the four expected rectangle corner point coordinates saved in min_max_values.
     surface_points_2d = blocking_heliostats_surface_points[:, :, :2]
-    # Compute distances between all real surface points and rectangle corners.
-    distances_to_surface_points = torch.abs(
-        surface_points_2d[:, :, None, :] - min_max_values[:, None, :, :]
+    # Compute distances between all real surface points and expected rectangle corners.
+    distances_to_corner = torch.norm(
+        surface_points_2d[:, :, None, :] - min_max_values[:, None, :, :], dim=-1
     )
-    # Find surface points within epsilon of each corner (tolerance matching).
-    mask = (distances_to_surface_points < epsilon).all(-1)
-
-    # Use the indices of the four found corner points in the unaligned heliostat surface
-    # point tensor to find the coordinates of the aligned heliostat surface points.
-    corner_points_indices = mask.float().argmax(dim=1)
+    corner_points_indices = distances_to_corner.argmin(dim=1)
     surface_indices = torch.arange(number_of_surfaces, device=device)[:, None]
     # Extract corners from aligned heliostat surface points.
     corners = blocking_heliostats_active_surface_points[
