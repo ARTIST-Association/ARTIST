@@ -15,7 +15,7 @@ def create_blocking_primitives_rectangle(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Construct a rectangular blocking plane representation for heliostats by interpolating their corner points.
-    
+
     Instead of keeping many surface samples, each heliostat is reduced to its blocking plane via:
     - its four corner points
     - two spanning vectors (rectangle axes)
