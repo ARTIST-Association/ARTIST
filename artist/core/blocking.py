@@ -101,6 +101,7 @@ def create_blocking_primitives_rectangle(
     # point tensor to find the coordinates of the aligned heliostat surface points.
     corner_points_indices = mask.float().argmax(dim=1)
     surface_indices = torch.arange(number_of_surfaces, device=device)[:, None]
+    # Extract corners from aligned heliostat surface points.
     corners = blocking_heliostats_active_surface_points[
         surface_indices, corner_points_indices
     ]
