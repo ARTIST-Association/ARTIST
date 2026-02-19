@@ -40,6 +40,4 @@ def mean_loss_per_heliostat(
         number_of_chunks, number_of_samples_per_heliostat
     )
 
-    mean_loss_per_heliostat = loss_reshaped.mean(dim=1)
-
-    return mean_loss_per_heliostat
+    return loss_reshaped.mean(dim=1)
