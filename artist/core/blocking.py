@@ -33,7 +33,7 @@ def create_blocking_primitives_rectangle(
     ----------
     blocking_heliostats_surface_points : torch.Tensor
         The unaligned surface points of all heliostats that might block other heliostats.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
     blocking_heliostats_active_surface_points : torch.Tensor
         The aligned surface points of all heliostats that might block other heliostats.
         Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
