@@ -83,6 +83,19 @@ def test_nurbs(device: torch.device) -> None:
     ones = torch.ones(surface_points.shape[0], 1, device=device)
     surface_points = torch.cat((surface_points, ones), dim=1).unsqueeze(0).unsqueeze(0)
 
+    canting = torch.tensor(
+        [[[[0.3, 0.0, 0.0, 0.0], [0.0, 0.3, 0.0, 0.0]]]], device=device
+    )
+    facet_translation = torch.tensor([[[[0.5, 0.0, 0.0, 0.0]]]], device=device)
+
+    canted_surface_points = utils.perform_canting(
+        canting_angles=canting, data=surface_points, device=device
+    )
+
+    canted_and_translated = canted_surface_points + facet_translation.reshape(
+        1, 1, 1, 4
+    )
+
     evaluation_points = utils.create_nurbs_evaluation_grid(
         number_of_evaluation_points=torch.tensor([40, 40], device=device), device=device
     )
@@ -111,20 +124,23 @@ def test_nurbs(device: torch.device) -> None:
 
     for epoch in range(100):
         points, normals = nurbs.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0), device=device
+            evaluation_points=evaluation_points.unsqueeze(0).unsqueeze(0),
+            canting=canting,
+            facet_translations=facet_translation,
+            device=device,
         )
 
         optimizer.zero_grad()
 
-        loss = points - surface_points
+        loss = points - canted_and_translated
         loss.abs().mean().backward()
 
         optimizer.step()
 
-    torch.testing.assert_close(points, surface_points, atol=1e-2, rtol=1e-2)
+    torch.testing.assert_close(points, canted_and_translated, atol=1e-2, rtol=1e-2)
 
 
-def test_find_span(device: torch.device):
+def test_find_span(device: torch.device) -> None:
     """
     Test the find span method for non uniform knot vectors.
 
@@ -239,16 +255,43 @@ def test_nurbs_forward(device: torch.device) -> None:
         device=device,
     )
 
-    surface_points, surface_normals = nurbs(evaluation_points, device)
+    canting = torch.tensor(
+        [[[[0.7071, 0.7071, 0.0, 0.0], [0.7071, 0.7071, 0.0, 0.0]]]], device=device
+    )
+    facet_translation = torch.tensor([[[[0.5, 0.0, 0.0, 0.0]]]], device=device)
+
+    surface_points, surface_normals = nurbs(
+        evaluation_points, canting, facet_translation, device
+    )
 
     expected_points = torch.tensor(
         [
             [
                 [
-                    [-4.999866008759, -4.999866008759, 0.000000000000, 0.999999880791],
-                    [-4.999866485596, 4.999866008759, 0.000000000000, 0.999999940395],
-                    [4.999866008759, -4.999866485596, 0.000000000000, 0.999999940395],
-                    [4.999866485596, 4.999866485596, 0.000000000000, 1.000000000000],
+                    [
+                        -6.570879459381e00,
+                        -7.070879459381e00,
+                        0.000000000000e00,
+                        1.000000000000e00,
+                    ],
+                    [
+                        4.999997615814e-01,
+                        -2.384185791016e-07,
+                        0.000000000000e00,
+                        1.000000000000e00,
+                    ],
+                    [
+                        4.999997615814e-01,
+                        -2.384185791016e-07,
+                        0.000000000000e00,
+                        1.000000000000e00,
+                    ],
+                    [
+                        7.570879459381e00,
+                        7.070879459381e00,
+                        0.000000000000e00,
+                        1.000000000000e00,
+                    ],
                 ]
             ]
         ],
@@ -258,10 +301,10 @@ def test_nurbs_forward(device: torch.device) -> None:
         [
             [
                 [
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0],
                 ]
             ]
         ],

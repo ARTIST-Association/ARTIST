@@ -74,11 +74,22 @@ def generate_reconstruction_results(
             config_dictionary.kinematic_reconstruction_raytracing
         )
 
+        # Configure the optimization.
+        optimizer_dict = {
+            config_dictionary.initial_learning_rate: 1e-3,
+            config_dictionary.tolerance: 0,
+            config_dictionary.max_epoch: 1000,
+            config_dictionary.batch_size: 500,
+            config_dictionary.log_step: 50,
+            config_dictionary.early_stopping_delta: 1e-6,
+            config_dictionary.early_stopping_patience: 4000,
+            config_dictionary.early_stopping_window: 1000,
+        }
         # Configure the learning rate scheduler.
-        scheduler = config_dictionary.exponential
-        scheduler_parameters = {
+        scheduler_dict = {
+            config_dictionary.scheduler_type: config_dictionary.exponential,
             config_dictionary.gamma: 0.999,
-            config_dictionary.min: 1e-6,
+            config_dictionary.min: 1e-5,
             config_dictionary.max: 1e-2,
             config_dictionary.step_size_up: 500,
             config_dictionary.reduce_factor: 0.3,
@@ -86,17 +97,10 @@ def generate_reconstruction_results(
             config_dictionary.threshold: 1e-3,
             config_dictionary.cooldown: 10,
         }
-
-        # Set optimization parameters.
+        # Combine configurations.
         optimization_configuration = {
-            config_dictionary.initial_learning_rate: 0.0001,
-            config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 1000,
-            config_dictionary.log_step: 50,
-            config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.scheduler: scheduler,
-            config_dictionary.scheduler_parameters: scheduler_parameters,
+            config_dictionary.optimization: optimizer_dict,
+            config_dictionary.scheduler: scheduler_dict,
         }
 
         for centroid in [paint_mappings.UTIS_KEY, paint_mappings.HELIOS_KEY]:
@@ -110,7 +114,7 @@ def generate_reconstruction_results(
                 | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
             ] = {
                 config_dictionary.data_parser: PaintCalibrationDataParser(
-                    centroid_extraction_method=centroid
+                    sample_limit=3, centroid_extraction_method=centroid
                 ),
                 config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
             }
@@ -192,8 +196,10 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/paint_plots/scenarios"
+    )
 
     parser.add_argument(
         "--device",

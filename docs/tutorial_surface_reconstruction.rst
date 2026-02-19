@@ -102,48 +102,8 @@ in the generated image individually.
     loss_definition = KLDivergenceLoss()
 
 
-Regularizers
-^^^^^^^^^^^^
-
-Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and similar to an ideal
-surface. In this tutorial we consider two regularizers:
-
-- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here, is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learnt surface should be similar to the ideal surface, apart from these minute deviations.
-- ``TotalVariationRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the surface normals and the surface points.
-
-.. code-block::
-
-    # Configure regularizers and their weights.
-    ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.4, reduction_dimensions=(index_mapping.facet_dimension, index_mapping.points_dimension, index_mapping.coordinates_dimension)
-    )
-    total_variation_regularizer_points = TotalVariationRegularizer(
-        weight=0.3,
-        reduction_dimensions=(index_mapping.facet_dimension,),
-        surface=config_dictionary.surface_points,
-        number_of_neighbors=1000,
-        sigma=1e-3,
-    )
-    total_variation_regularizer_normals = TotalVariationRegularizer(
-        weight=0.8,
-        reduction_dimensions=(index_mapping.facet_dimension,),
-        surface=config_dictionary.surface_points,
-        number_of_neighbors=1000,
-        sigma=1e-3,
-    )
-
-Finally, these regularizers are added into a list which we will later use in the surface reconstruction:
-
-.. code-block::
-
-    regularizers = [
-        ideal_surface_regularizer,
-        total_variation_regularizer_points,
-        total_variation_regularizer_normals,
-    ]
-
-Scheduler and Optimizer Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Optimizer, Scheduler, Regularizer and Constraints Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The surface reconstruction internally uses the ``torch.optim.Adam`` optimizer. Depending on the data you use, different
 parameters may perform better for the optimizer - including a different learning rate scheduler. Therefore, we first have
@@ -152,34 +112,69 @@ an cyclic or reduce on plateau scheduler:
 
 .. code-block::
 
-    scheduler = (
-        config_dictionary.exponential
-    )
-    scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
+    # Configure the optimization.
+    optimizer_dict = {
+        config_dictionary.initial_learning_rate: 1e-4,
+        config_dictionary.tolerance: 1e-5,
+        config_dictionary.max_epoch: 30,
+        config_dictionary.batch_size: 30,
+        config_dictionary.log_step: 1,
+        config_dictionary.early_stopping_delta: 1e-4,
+        config_dictionary.early_stopping_patience: 100,
+        config_dictionary.early_stopping_window: 100,
+    }
+    # Configure the learning rate scheduler.
+    scheduler_dict = {
+        config_dictionary.scheduler_type: config_dictionary.exponential,
+        config_dictionary.gamma: 0.99,
         config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.3,
+        config_dictionary.max: 1e-2,
+        config_dictionary.step_size_up: 100,
+        config_dictionary.reduce_factor: 0.5,
         config_dictionary.patience: 10,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 10,
+        config_dictionary.threshold: 1e-4,
+        config_dictionary.cooldown: 5,
     }
 
-Given the scheduler we can now define the optimization parameters in the ``optimization_configuration`` dictionary:
+Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and similar to an ideal
+surface. In this tutorial we consider two regularizers:
+
+- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here, is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learnt surface should be similar to the ideal surface, apart from these minute deviations.
+- ``SmoothnessRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the NURBS control points.
+
+.. code-block::
+
+    # Configure regularizers.
+    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
+    regularizers = [
+        ideal_surface_regularizer,
+        smoothness_regularizer,
+    ]
+    constraint_dict = {
+        config_dictionary.regularizers: regularizers,
+        config_dictionary.weight_smoothness: 0.005,
+        config_dictionary.weight_ideal_surface: 0.005,
+        config_dictionary.initial_lambda_energy: 0.1,
+        config_dictionary.rho_energy: 1.0,
+        config_dictionary.energy_tolerance: 0.01,
+    }
+
+As you can see, there are further parameters in the ``constraints`` dictionary than necessary for the two regularizers mentioned before. To further stabilize the reconstruction there is one additional constraints.
+This constraint considers the flux integral of the raytraced flux images from the predicted surfaces. During reconstruction the flux integral may not change significantly.
+The parameters ``initial_lambda_energy`` and ``rho_energy`` are the Augmented Lagrangian coefficients used to enforce this energy conservation constraint.
+The multiplier ``lambda_energy`` represents the Lagrange multiplier associated with the energy integral constraint. It linearly penalizes violations and is updated iteratively during optimization based on the current constraint violation.
+If the predicted energy deviates from the reference energy, lambda increases, thereby strengthening the enforcement of the constraint in the next iteration.
+The parameter rho is the quadratic penalty weight. It controls how strongly deviations from the reference energy are penalized through the squared constraint term.
+The ``energy_tolerance`` describes how much the flux integral may vary relative to the initial surface.
+We can now define the combined optimization parameters in the ``optimization_configuration`` dictionary:
 
 .. code-block::
 
     optimization_configuration = {
-        config_dictionary.initial_learning_rate: 1e-4,
-        config_dictionary.tolerance: 0.00005,
-        config_dictionary.max_epoch: 500,
-        config_dictionary.log_step: 10,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 10,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
-        config_dictionary.regularizers: regularizers,
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
+        config_dictionary.constraints: constraint_dict,
     }
 
 **Note:** These parameters have performed well on our data and in our tests, however we cannot guarantee that they will

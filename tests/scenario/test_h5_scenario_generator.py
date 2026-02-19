@@ -84,12 +84,13 @@ def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
         (pathlib.Path("scenario.h5")),
         (pathlib.Path("scenario")),
         (pathlib.Path("scenario.txt")),
+        ("invalid"),
     ],
 )
 def test_generate_scenario(
     scenario_generator: H5ScenarioGenerator,
     tmp_path: pathlib.Path,
-    filename: pathlib.Path,
+    filename: pathlib.Path | str,
 ) -> None:
     """
     Test the h5 scenario generator.
@@ -100,7 +101,7 @@ def test_generate_scenario(
         The h5 scenario generator.
     tmp_path : pathlib.Path
         Pytest temporary directory fixture.
-    filename : pathlib.Path
+    filename : pathlib.Path | str
         File name to test.
 
     Raises
@@ -119,20 +120,28 @@ def test_generate_scenario(
     )
     assert save_name.exists()
 
-    with h5py.File(save_name, "r") as f:
-        assert f.attrs["version"] == 1.0
-        assert config_dictionary.number_of_heliostat_groups in f
-        assert f[config_dictionary.number_of_heliostat_groups][()] == 3
+    if filename == "invalid":
+        save_name = pathlib.Path("test_invalid")
+        with pytest.raises(FileNotFoundError) as exc_info:
+            with h5py.File(save_name, "r") as f:
+                pass
+        assert "No such file or directory" in str(exc_info.value)
 
-        expected_datasets = {
-            config_dictionary.power_plant_key: ["param1"],
-            config_dictionary.target_area_key: ["param2"],
-            config_dictionary.light_source_key: ["param3"],
-            config_dictionary.prototype_key: ["param4"],
-            config_dictionary.heliostat_key: ["param5"],
-        }
+    else:
+        with h5py.File(save_name, "r") as f:
+            assert f.attrs["version"] == 1.0
+            assert config_dictionary.number_of_heliostat_groups in f
+            assert f[config_dictionary.number_of_heliostat_groups][()] == 3
 
-        for prefix, keys in expected_datasets.items():
-            for key in keys:
-                dataset_path = f"{prefix}/{key}"
-                assert dataset_path in f
+            expected_datasets = {
+                config_dictionary.power_plant_key: ["param1"],
+                config_dictionary.target_area_key: ["param2"],
+                config_dictionary.light_source_key: ["param3"],
+                config_dictionary.prototype_key: ["param4"],
+                config_dictionary.heliostat_key: ["param5"],
+            }
+
+            for prefix, keys in expected_datasets.items():
+                for key in keys:
+                    dataset_path = f"{prefix}/{key}"
+                    assert dataset_path in f

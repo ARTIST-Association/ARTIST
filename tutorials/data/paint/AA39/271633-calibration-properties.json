@@ -1,21 +1,21 @@
 {
-    "motor_position": {
-        "axis_1_motor_position": 30094,
-        "axis_2_motor_position": 33406
-    },
-    "target_name": "solar_tower_juelich_lower",
-    "focal_spot": {
-        "HeliOS": [
-            50.91339203075979,
-            6.3878288087819435,
-            122.6312633480574
-        ],
-        "UTIS": [
-            50.91339204305797,
-            6.387830331032702,
-            122.61065673828124
-        ]
-    },
-    "sun_elevation": 37.324952494177886,
-    "sun_azimuth": 60.120563555225715
+  "motor_position": {
+    "axis_1_motor_position": 30094,
+    "axis_2_motor_position": 33406
+  },
+  "target_name": "solar_tower_juelich_lower",
+  "sun_elevation": 37.324952494177886,
+  "sun_azimuth": 60.120563555225715,
+  "focal_spot": {
+    "HeliOS": [
+      50.913392017966494,
+      6.387828566510014,
+      122.6312633480574
+    ],
+    "UTIS": [
+      50.913392025199904,
+      6.387830088826097,
+      122.61065673828124
+    ]
+  }
 }

@@ -5,8 +5,7 @@ from typing import Any, cast
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import learning_rate_schedulers
-from artist.core.core_utils import per_heliostat_reduction
+from artist.core import core_utils, learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
@@ -36,10 +35,16 @@ class KinematicReconstructor:
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         The data parser and the mapping of heliostat name and calibration data.
-    optimization_configuration : dict[str, Any]
-        The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+    optimizer_dict : dict[str, Any]
+        The parameters for the optimization.
+    scheduler_dict : dict[str, Any]
+        The parameters for the scheduler.
     reconstruction_method : str
         The reconstruction method. Currently only reconstruction via ray tracing is available.
+
+    Note
+    ----
+    Each heliostat selected for reconstruction needs to have the same amount of samples as all others.
 
     Methods
     -------
@@ -82,7 +87,9 @@ class KinematicReconstructor:
         self.ddp_setup = ddp_setup
         self.scenario = scenario
         self.data = data
-        self.optimization_configuration = optimization_configuration
+        self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
+        self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
+
         if (
             reconstruction_method
             == config_dictionary.kinematic_reconstruction_raytracing
@@ -210,37 +217,45 @@ class KinematicReconstructor:
                         heliostat_group.kinematic.rotation_deviation_parameters.requires_grad_(),
                         heliostat_group.kinematic.actuators.optimizable_parameters.requires_grad_(),
                     ],
-                    lr=self.optimization_configuration[
-                        config_dictionary.initial_learning_rate
-                    ],
+                    lr=float(
+                        self.optimizer_dict[config_dictionary.initial_learning_rate]
+                    ),
                 )
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
                     learning_rate_schedulers,
-                    self.optimization_configuration[config_dictionary.scheduler],
+                    self.scheduler_dict[config_dictionary.scheduler_type],
                 )
                 scheduler: LRScheduler = scheduler_fn(
-                    optimizer=optimizer,
-                    parameters=self.optimization_configuration[
-                        config_dictionary.scheduler_parameters
+                    optimizer=optimizer, parameters=self.scheduler_dict
+                )
+
+                # Set up early stopping.
+                early_stopper = learning_rate_schedulers.EarlyStopping(
+                    window_size=self.optimizer_dict[
+                        config_dictionary.early_stopping_window
                     ],
+                    patience=self.optimizer_dict[
+                        config_dictionary.early_stopping_patience
+                    ],
+                    min_improvement=self.optimizer_dict[
+                        config_dictionary.early_stopping_delta
+                    ],
+                    relative=True,
                 )
 
                 # Start the optimization.
                 loss = torch.inf
-                best_loss = torch.inf
-                patience_counter = 0
                 epoch = 0
                 log_step = (
-                    self.optimization_configuration[config_dictionary.max_epoch]
-                    if self.optimization_configuration[config_dictionary.log_step] == 0
-                    else self.optimization_configuration[config_dictionary.log_step]
+                    self.optimizer_dict[config_dictionary.max_epoch]
+                    if self.optimizer_dict[config_dictionary.log_step] == 0
+                    else self.optimizer_dict[config_dictionary.log_step]
                 )
                 while (
-                    loss > self.optimization_configuration[config_dictionary.tolerance]
-                    and epoch
-                    <= self.optimization_configuration[config_dictionary.max_epoch]
+                    loss > float(self.optimizer_dict[config_dictionary.tolerance])
+                    and epoch <= self.optimizer_dict[config_dictionary.max_epoch]
                 ):
                     optimizer.zero_grad()
 
@@ -257,15 +272,16 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    # Create a parallelized ray tracer.
+                    # Create a parallelized ray tracer. Blocking is always deactivated for this reconstruction.
                     ray_tracer = HeliostatRayTracer(
                         scenario=self.scenario,
                         heliostat_group=heliostat_group,
+                        blocking_active=False,
                         world_size=self.ddp_setup[
                             config_dictionary.heliostat_group_world_size
                         ],
                         rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
-                        batch_size=heliostat_group.number_of_active_heliostats,
+                        batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
@@ -279,28 +295,31 @@ class KinematicReconstructor:
                         device=device,
                     )
 
-                    if self.ddp_setup[config_dictionary.is_nested]:
-                        flux_distributions = torch.distributed.nn.functional.all_reduce(
-                            flux_distributions,
-                            group=self.ddp_setup[config_dictionary.process_subgroup],
-                            op=torch.distributed.ReduceOp.SUM,
-                        )
+                    sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
 
                     loss_per_sample = loss_definition(
                         prediction=flux_distributions,
-                        ground_truth=focal_spots_measured,
-                        target_area_mask=target_area_mask,
+                        ground_truth=focal_spots_measured[
+                            sample_indices_for_local_rank
+                        ],
+                        target_area_mask=target_area_mask[
+                            sample_indices_for_local_rank
+                        ],
                         reduction_dimensions=(index_mapping.focal_spots,),
                         device=device,
                     )
 
-                    loss_per_heliostat = per_heliostat_reduction(
-                        per_sample_values=loss_per_sample,
-                        active_heliostats_mask=active_heliostats_mask,
-                        device=device,
+                    number_of_samples_per_heliostat = int(
+                        heliostat_group.active_heliostats_mask.sum()
+                        / (heliostat_group.active_heliostats_mask > 0).sum()
                     )
 
-                    loss = loss_per_heliostat[torch.isfinite(loss_per_heliostat)].sum()
+                    loss_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=loss_per_sample,
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                    )
+
+                    loss = loss_per_heliostat.mean()
 
                     loss.backward()
 
@@ -318,6 +337,19 @@ class KinematicReconstructor:
                                             ],
                                         )
                                     )
+                                    param.grad /= self.ddp_setup[
+                                        config_dictionary.heliostat_group_world_size
+                                    ]
+
+                    torch.nn.utils.clip_grad_norm_(
+                        [heliostat_group.kinematic.rotation_deviation_parameters],
+                        max_norm=1.0,
+                    )
+
+                    torch.nn.utils.clip_grad_norm_(
+                        [heliostat_group.kinematic.actuators.optimizable_parameters],
+                        max_norm=1.0,
+                    )
 
                     optimizer.step()
                     if isinstance(
@@ -332,38 +364,34 @@ class KinematicReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
 
-                    # Early stopping when loss has reached a plateau.
-                    if (
-                        loss
-                        < best_loss
-                        - self.optimization_configuration[
-                            config_dictionary.early_stopping_delta
-                        ]
-                    ):
-                        best_loss = loss
-                        patience_counter = 0
-                    else:
-                        patience_counter += 1
-                    if (
-                        patience_counter
-                        >= self.optimization_configuration[
-                            config_dictionary.early_stopping_patience
-                        ]
-                    ):
-                        log.info(
-                            f"Early stopping at epoch {epoch}. The loss did not improve significantly for {patience_counter} epochs."
-                        )
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    stop = early_stopper.step(loss)
+
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
                         break
 
                     epoch += 1
 
-                final_loss_per_heliostat[
-                    final_loss_start_indices[
-                        heliostat_group_index
-                    ] : final_loss_start_indices[heliostat_group_index + 1]
-                ] = loss_per_heliostat
+                local_indices = (
+                    sample_indices_for_local_rank[::number_of_samples_per_heliostat]
+                    // number_of_samples_per_heliostat
+                )
 
-                log.info(f"Rank: {rank}, kinematic parameters optimized.")
+                global_active_indices = torch.nonzero(
+                    active_heliostats_mask != 0, as_tuple=True
+                )[0]
+
+                rank_active_indices_global = global_active_indices[local_indices]
+
+                final_indices = (
+                    rank_active_indices_global
+                    + final_loss_start_indices[heliostat_group_index]
+                )
+
+                final_loss_per_heliostat[final_indices] = loss_per_heliostat
+
+                log.info(f"Rank: {rank}, Kinematic reconstructed.")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(

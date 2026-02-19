@@ -71,11 +71,6 @@ def line_plane_intersections(
         If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
 
-    Raises
-    ------
-    ValueError
-        If there are no intersections on the front of the target plane.
-
     Returns
     -------
     torch.Tensor
@@ -93,55 +88,41 @@ def line_plane_intersections(
             dtype=torch.int32,
             device=device,
         )
+    plane_normals = target_areas.normal_vectors[target_area_mask]
+    plane_centers = target_areas.centers[target_area_mask]
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
     # unit normal vectors and the normalized ray-direction vectors, pointing from the planes to the sources.
     # This determines how much the rays align with the plane normals.
-    relative_intensities = (
-        -rays.ray_directions
-        * target_areas.normal_vectors[target_area_mask][:, None, None, :]
-    ).sum(dim=index_mapping.ray_intensities)
+    relative_intensities = (-rays.ray_directions * plane_normals[:, None, None, :]).sum(
+        dim=-1
+    )
 
-    if (relative_intensities <= epsilon).all():
-        raise ValueError("No ray intersections on the front of the target area planes.")
+    front_facing_mask = relative_intensities > epsilon
 
     # Calculate the intersections on the plane of each ray.
     # First, calculate the projections of the ray origins onto the planes' normals.
     # This indicates how far the ray origins are from the planes (along the normal directions of the planes).
     # Next, calculate the scalar distances along the ray directions from the ray origins to the intersection points on the planes.
     # This indicates how far the intersection points are along the rays' directions.
-    intersection_distances = (
-        (
-            (points_at_ray_origins - target_areas.centers[target_area_mask][:, None, :])
-            * target_areas.normal_vectors[target_area_mask][:, None, :]
-        ).sum(dim=index_mapping.intersection_distances)
-    ).unsqueeze(index_mapping.number_rays_per_point) / relative_intensities
+    numerator = (
+        (points_at_ray_origins - plane_centers[:, None, :]) * plane_normals[:, None, :]
+    ).sum(dim=-1)[:, None, :]
 
-    # Combine to get the intersections
-    intersections = points_at_ray_origins.unsqueeze(
-        index_mapping.number_rays_per_point
-    ) + rays.ray_directions * intersection_distances.unsqueeze(
-        index_mapping.intersection_distances_batched
+    intersection_distances = torch.where(
+        front_facing_mask,
+        numerator / torch.clamp(relative_intensities, min=epsilon),
+        torch.zeros_like(relative_intensities),
     )
 
-    # Calculate the absolute intensities of the rays hitting the target planes.
-    # Use the inverse-square law for distance attenuations from the heliostats to target planes.
-    distance_attenuations = (
-        1
-        / (
-            torch.norm(
-                (
-                    points_at_ray_origins
-                    - target_areas.centers[target_area_mask][:, None, :]
-                ),
-                dim=index_mapping.points_dimension,
-            )
-            ** 2
-        )
-    ).unsqueeze(index_mapping.number_rays_per_point)
-    absolute_intensities = (
-        rays.ray_magnitudes * relative_intensities * distance_attenuations
+    intersections = (
+        points_at_ray_origins[:, None, :, :]
+        + rays.ray_directions * intersection_distances[:, :, :, None]
     )
+
+    absolute_intensities = rays.ray_magnitudes * relative_intensities
+
+    absolute_intensities = absolute_intensities * front_facing_mask
 
     return intersections, absolute_intensities

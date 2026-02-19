@@ -222,7 +222,7 @@ def target_area_mask(
             "target_area_2",
             torch.tensor([[[2.0, 2.0, 2.0, 1.0]]]),
             torch.tensor([[[[0.7273, -0.5455, 0.7273, 1.0]]]]),
-            torch.tensor([[[0.458333343267]]]),
+            torch.tensor([[[5.500000000000]]]),
         ),
         (  # Multiple intersections with multiple rays.
             (
@@ -246,21 +246,7 @@ def target_area_mask(
             torch.tensor(
                 [[[[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, -2.0, 0.0, 1.0]]]]
             ),
-            torch.tensor([[[1.0000, 1.0000, 0.0833]]]),
-        ),
-        (  # ValueError - no intersection since ray is parallel to plane.
-            (torch.tensor([[[[1.0, 0.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
-            "target_area_1",
-            torch.tensor([[[0.0, 0.0, 1.0, 1.0]]]),
-            None,
-            None,
-        ),
-        (  # ValueError - no intersection since ray is within the plane.
-            (torch.tensor([[[[1.0, 0.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
-            "target_area_1",
-            torch.tensor([[[0.0, 0.0, 0.0, 1.0]]]),
-            None,
-            None,
+            torch.tensor([[[1.0000, 1.0000, 1.0000]]]),
         ),
     ],
     indirect=["rays"],
@@ -271,8 +257,8 @@ def test_line_plane_intersection(
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
-    expected_intersections: torch.Tensor | None,
-    expected_absolute_intensities: torch.Tensor | None,
+    expected_intersections: torch.Tensor,
+    expected_absolute_intensities: torch.Tensor,
     device: torch.device,
 ) -> None:
     """
@@ -286,16 +272,14 @@ def test_line_plane_intersection(
         The target area mask.
     rays : Rays
         The rays with directions and magnitudes.
-    plane_normal_vectors : torch.Tensor
-        The normal vectors of the plane being considered for the intersection.
-    plane_center : torch.Tensor
-        The center of the plane being considered for the intersection.
-    points_at_ray_origin : torch.Tensor
+    target_areas_fixture : str
+        Name of fixture to get target areas.
+    points_at_ray_origins : torch.Tensor
         The surface points of the ray origin.
-    expected_intersections : torch.Tensor | None
-        The expected intersections between the rays and the plane, or ``None`` if no intersections are expected.
-    expected_absolute_intensities : torch.Tensor | None
-        The expected absolute intensities of the ray intersections, or ``None`` if no intersections are expected.
+    expected_intersections : torch.Tensor
+        The expected intersections between the rays and the plane.
+    expected_absolute_intensities : torch.Tensor
+        The expected absolute intensities of the ray intersections.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -304,34 +288,19 @@ def test_line_plane_intersection(
     AssertionError
         If test does not complete as expected.
     """
-    # Check if the ValueError is thrown as expected.
-    if expected_intersections is None or expected_absolute_intensities is None:
-        with pytest.raises(ValueError) as exc_info:
-            raytracing_utils.line_plane_intersections(
-                rays=rays,
-                points_at_ray_origins=points_at_ray_origins.to(device),
-                target_areas=request.getfixturevalue(target_areas_fixture),
-                target_area_mask=target_area_mask,
-                device=device,
-            )
-        assert "No ray intersections on the front of the target area planes." in str(
-            exc_info.value
-        )
-    else:
-        # Check if the intersections match the expected intersections.
-        intersections, absolute_intensities = raytracing_utils.line_plane_intersections(
-            rays=rays,
-            points_at_ray_origins=points_at_ray_origins.to(device),
-            target_areas=request.getfixturevalue(target_areas_fixture),
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-        torch.testing.assert_close(
-            intersections, expected_intersections.to(device), rtol=1e-4, atol=1e-4
-        )
-        torch.testing.assert_close(
-            absolute_intensities,
-            expected_absolute_intensities.to(device),
-            rtol=1e-4,
-            atol=1e-4,
-        )
+    intersections, absolute_intensities = raytracing_utils.line_plane_intersections(
+        rays=rays,
+        points_at_ray_origins=points_at_ray_origins.to(device),
+        target_areas=request.getfixturevalue(target_areas_fixture),
+        target_area_mask=target_area_mask,
+        device=device,
+    )
+    torch.testing.assert_close(
+        intersections, expected_intersections.to(device), rtol=1e-4, atol=1e-4
+    )
+    torch.testing.assert_close(
+        absolute_intensities,
+        expected_absolute_intensities.to(device),
+        rtol=1e-4,
+        atol=1e-4,
+    )

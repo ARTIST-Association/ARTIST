@@ -1,21 +1,21 @@
 {
-    "motor_position": {
-        "axis_1_motor_position": 16963,
-        "axis_2_motor_position": 72374
-    },
-    "target_name": "multi_focus_tower",
-    "focal_spot": {
-        "HeliOS": [
-            50.91339561753624,
-            6.3875745058729905,
-            137.70818056409652
-        ],
-        "UTIS": [
-            50.913395620694814,
-            6.387574139476353,
-            137.70894622802734
-        ]
-    },
-    "sun_elevation": 27.809486551769538,
-    "sun_azimuth": -85.31171110078206
+  "motor_position": {
+    "axis_1_motor_position": 16963,
+    "axis_2_motor_position": 72374
+  },
+  "target_name": "multi_focus_tower",
+  "sun_elevation": 27.809486551769538,
+  "sun_azimuth": -85.31171110078206,
+  "focal_spot": {
+    "HeliOS": [
+      50.91339645043245,
+      6.387574299623125,
+      137.70818056409652
+    ],
+    "UTIS": [
+      50.91339645480913,
+      6.387573933261633,
+      137.70894622802734
+    ]
+  }
 }

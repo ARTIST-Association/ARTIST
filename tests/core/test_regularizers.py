@@ -4,8 +4,11 @@ import torch
 from artist.core.regularizers import (
     IdealSurfaceRegularizer,
     Regularizer,
-    TotalVariationRegularizer,
+    SmoothnessRegularizer,
 )
+
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
 
 
 def test_base_regularizer(
@@ -24,26 +27,74 @@ def test_base_regularizer(
     AssertionError
         If test does not complete as expected.
     """
-    base_regularizer = Regularizer(weight=1.0, reduction_dimensions=(1,))
+    base_regularizer = Regularizer(reduction_dimensions=(1,))
 
     with pytest.raises(NotImplementedError) as exc_info:
         base_regularizer(
-            original_surface_points=torch.empty((2, 4), device=device),
-            surface_points=torch.tensor([0, 1], device=device),
-            surface_normals=(1,),
+            current_control_points=torch.empty((1, 1, 6, 6, 4), device=device),
+            original_control_points=torch.empty((1, 1, 6, 6, 4), device=device),
             device=device,
         )
     assert "Must be overridden!" in str(exc_info.value)
 
 
-def test_total_variation_regularizer(
+@pytest.fixture
+def control_points(
     device: torch.device,
-) -> None:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Test the total variation regularizer.
+    Generate flat, smooth, and irregular control point tensors.
 
     Parameters
     ----------
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Returns
+    -------
+    torch.Tensor
+        Flat control points.
+        Tensor of shape [number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    torch.Tensor
+        Smooth control points.
+        Tensor of shape [number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    torch.Tensor
+        Irregular control points.
+        Tensor of shape [number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+    """
+    x = torch.linspace(0, 4 * 3.1415, 6, device=device)
+    y = torch.linspace(0, 4 * 3.1415, 6, device=device)
+    x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+
+    x_expanded = x_grid.unsqueeze(0).expand(4, -1, -1)
+    y_expanded = y_grid.unsqueeze(0).expand(4, -1, -1)
+
+    # Flat surface
+    z_flat = torch.zeros_like(x_expanded, device=device)
+    flat_points = torch.stack([x_expanded, y_expanded, z_flat], dim=-1)
+
+    # Smooth surface
+    z_smooth = 0.2 * torch.sin(x_expanded) + 0.2 * torch.cos(y_expanded)
+    smooth_points = torch.stack([x_expanded, y_expanded, z_smooth], dim=-1)
+
+    # Irregular surface
+    z_irregular = z_smooth * 5.0
+    irregular_points = torch.stack([x_expanded, y_expanded, z_irregular], dim=-1)
+
+    return flat_points, smooth_points, irregular_points
+
+
+def test_smoothness_regularizer(
+    control_points: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    device: torch.device,
+) -> None:
+    """
+    Test the smoothness regularizer.
+
+    Parameters
+    ----------
+    control_points : tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        A fixture to retrieve the control points.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -52,82 +103,32 @@ def test_total_variation_regularizer(
     AssertionError
         If test does not complete as expected.
     """
-    rows = torch.linspace(0, 4 * 3.1415, 120, device=device)
-    columns = torch.linspace(0, 4 * 3.1415, 120, device=device)
-    x, y = torch.meshgrid(rows, columns, indexing="ij")
+    flat_points, smooth_points, irregular_points = control_points
 
-    # Smooth surface with waves.
-    z_values_smooth = 0.5 * torch.sin(x) + 0.5 * torch.cos(y)
-
-    # Irregular surface = smooth surface with waves and random noise.
-    noise = torch.randn_like(z_values_smooth, device=device) * 0.5
-    z_irregular = z_values_smooth + noise
-
-    coordinates_smooth = torch.stack(
-        [x.flatten(), y.flatten(), z_values_smooth.flatten()], dim=1
-    ).unsqueeze(0)
-    coordinates_irregular = torch.stack(
-        [x.flatten(), y.flatten(), z_irregular.flatten()], dim=1
-    ).unsqueeze(0)
-
-    surfaces = (
-        torch.cat([coordinates_smooth, coordinates_irregular], dim=0)
-        .unsqueeze(1)
-        .expand(2, 4, -1, 3)
-    )
-
-    total_variation = TotalVariationRegularizer(
-        weight=1.0,
+    smoothness_regularizer = SmoothnessRegularizer(
         reduction_dimensions=(1,),
-        surface="surface_points",
-        number_of_neighbors=10,
-        sigma=1.0,
     )
-    loss = total_variation(
-        original_surface_points=torch.empty(1, device=device),
-        surface_points=surfaces,
-        surface_normals=torch.empty(1, device=device),
-        device=device,
+    loss = smoothness_regularizer(
+        current_control_points=torch.stack([smooth_points, irregular_points]),
+        original_control_points=flat_points.expand(2, 4, 6, 6, 3),
     )
 
     torch.testing.assert_close(
         loss,
-        torch.tensor([0.174590915442, 2.252339363098], device=device),
-        atol=5e-2,
-        rtol=5e-2,
+        torch.tensor([0.529724955559, 13.243123054504], device=device),
+        atol=5e-4,
+        rtol=5e-4,
     )
 
 
-@pytest.mark.parametrize(
-    "original_surface_points, new_surface_points, expected",
-    [
-        (
-            torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]]]),
-            torch.tensor([[[[1.0, 2.0, 3.0], [2.0, 1.0, 3.0]]]]),
-            torch.tensor([2.0]),
-        ),
-    ],
-)
-def test_ideal_surface_regularizer(
-    original_surface_points: torch.Tensor,
-    new_surface_points: torch.Tensor,
-    expected: torch.Tensor,
-    device: torch.device,
-) -> None:
+def test_ideal_surface_regularizer(control_points, device):
     """
     Test the ideal surface regularizer.
 
     Parameters
     ----------
-    original_surface_points : torch.Tensor
-        The original surface points.
-        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 3].
-    new_surface_points : torch.Tensor
-        The new surface points.
-        Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_surface_points, 3].
-    expected : torch.Tensor
-        The expected loss.
-        Tensor of shape [number_of_surfaces].
+    control_points : tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        A fixture to retrieve the control points.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -136,14 +137,19 @@ def test_ideal_surface_regularizer(
     AssertionError
         If test does not complete as expected.
     """
+    flat_points, smooth_points, irregular_points = control_points
+
     ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=1.0, reduction_dimensions=(1, 2, 3)
+        reduction_dimensions=(1,),
     )
     loss = ideal_surface_regularizer(
-        original_surface_points=original_surface_points.to(device),
-        surface_points=new_surface_points.to(device),
-        surface_normals=torch.empty(1, device=device),
-        device=device,
+        current_control_points=torch.stack([smooth_points, irregular_points]),
+        original_control_points=flat_points.expand(2, 4, 6, 6, 3),
     )
 
-    torch.testing.assert_close(loss, expected.to(device), atol=5e-2, rtol=5e-2)
+    torch.testing.assert_close(
+        loss,
+        torch.tensor([0.053332783282, 1.333319664001], device=device),
+        atol=5e-4,
+        rtol=5e-4,
+    )

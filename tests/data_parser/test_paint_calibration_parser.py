@@ -30,18 +30,18 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                 torch.tensor(
                     [
                         [
-                            -17.593019485474,
+                            -17.623041152954,
                             -3.039341926575,
                             50.708953857422,
                             1.000000000000,
-                        ],
+                        ]
                     ]
                 ),
                 torch.tensor(
                     [[0.881544291973, 0.072294861078, -0.466533094645, 0.000000000000]]
                 ),
                 torch.tensor([[16963.0, 72374.0]]),
-                torch.tensor([0, 1]),
+                torch.tensor([0, 1], dtype=torch.int32),
                 torch.tensor([0]),
             ],
         ),
@@ -64,13 +64,13 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                 torch.tensor(
                     [
                         [
-                            -17.562997817993,
+                            -17.593019485474,
                             -3.039341926575,
                             50.708175659180,
                             1.000000000000,
                         ],
                         [
-                            -17.142686843872,
+                            -17.202730178833,
                             -3.039341926575,
                             51.339904785156,
                             1.000000000000,
@@ -94,7 +94,7 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                     ]
                 ),
                 torch.tensor([[16963.0, 72374.0], [20634.0, 40816.0]]),
-                torch.tensor([0, 2]),
+                torch.tensor([0, 2], dtype=torch.int32),
                 torch.tensor([0, 0]),
             ],
         ),
@@ -127,7 +127,7 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                     ]
                 ),
                 torch.tensor([[28061.0, 47874.0], [22585.0, 48224.0]]),
-                torch.tensor([0, 2]),
+                torch.tensor([0, 2], dtype=torch.int32),
                 torch.tensor([3, 0]),
             ],
         ),

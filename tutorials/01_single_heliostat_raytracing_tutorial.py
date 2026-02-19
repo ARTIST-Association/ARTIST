@@ -240,9 +240,9 @@ def align_and_trace_rays(
     Returns
     -------
     torch.Tensor
-        A tensor containing the distribution strengths used to generate the image on the receiver.
+        The distribution strengths used to generate the image on the receiver.
     """
-    # Activate heliostats
+    # Activate heliostats.
     scenario.heliostat_field.heliostat_groups[
         index_mapping.first_heliostat_group
     ].activate_heliostats(

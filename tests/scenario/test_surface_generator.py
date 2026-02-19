@@ -162,7 +162,7 @@ def test_surface_generator(device: torch.device) -> None:
     )
     torch.testing.assert_close(
         surface_config_ideal.facet_list[2].control_points[3, 2],
-        torch.tensor([-0.406257748604, -0.642499983311, 0.037706092000], device=device),
+        torch.tensor([0.401250004768, 0.000000000000, 0.000000000000], device=device),
     )
 
 

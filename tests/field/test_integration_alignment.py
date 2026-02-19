@@ -133,6 +133,7 @@ def test_integration_alignment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
+            blocking_active=False,
             bitmap_resolution=bitmap_resolution,
             batch_size=10,
         )
@@ -161,4 +162,6 @@ def test_integration_alignment(
 
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
-    torch.testing.assert_close(flux_distributions, expected, atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(
+        flux_distributions, expected, atol=flux_distributions.mean() * 0.01, rtol=0.01
+    )

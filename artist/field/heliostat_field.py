@@ -1,4 +1,5 @@
 import logging
+import math
 from collections import defaultdict
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
@@ -11,6 +12,7 @@ import artist.util.index_mapping
 from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
+from artist.util.nurbs import NURBSSurfaces
 
 if TYPE_CHECKING:
     from artist.scenario.configuration_classes import (
@@ -45,6 +47,8 @@ class HeliostatField:
     -------
     from_hdf5()
         Load a heliostat field from an HDF5 file.
+    update_surfaces()
+        Update surface points and normals using new NURBS control points.
     """
 
     def __init__(
@@ -337,6 +341,8 @@ class HeliostatField:
             ].append(
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
+                    canting=canting,
+                    facet_translations=facet_translation_vectors,
                     device=device,
                 )[index_mapping.surface_points_from_tuple]
             )
@@ -345,9 +351,17 @@ class HeliostatField:
             ].append(
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
+                    canting=canting,
+                    facet_translations=facet_translation_vectors,
                     device=device,
                 )[index_mapping.surface_normals_from_tuple]
             )
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.facets_canting
+            ].append(canting)
+            grouped_field_data[heliostat_group_key][
+                config_dictionary.facet_translations
+            ].append(facet_translation_vectors)
             grouped_field_data[heliostat_group_key][
                 config_dictionary.facet_control_points
             ].append(control_points)
@@ -403,6 +417,12 @@ class HeliostatField:
                             config_dictionary.surface_normals
                         ],
                     ).reshape(number_of_heliostats_in_group, -1, 4),
+                    canting=grouped_field_data[heliostat_group_name][
+                        config_dictionary.facets_canting
+                    ],
+                    facet_translations=grouped_field_data[heliostat_group_name][
+                        config_dictionary.facet_translations
+                    ],
                     nurbs_control_points=grouped_field_data[heliostat_group_name][
                         config_dictionary.facet_control_points
                     ],
@@ -431,3 +451,71 @@ class HeliostatField:
                 )
 
         return cls(heliostat_groups=heliostat_groups, device=device)
+
+    def update_surfaces(
+        self,
+        device: torch.device | None = None,
+    ) -> None:
+        """
+        Update surface points and normals using new NURBS control points.
+
+        Parameter
+        ---------
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+        """
+        device = get_device(device=device)
+
+        for heliostat_group in self.heliostat_groups:
+            number_of_surface_points_per_facet = int(
+                math.sqrt(
+                    heliostat_group.surface_points.shape[1]
+                    / heliostat_group.number_of_facets_per_heliostat
+                )
+            )
+            evaluation_points = (
+                utils.create_nurbs_evaluation_grid(
+                    number_of_evaluation_points=torch.tensor(
+                        [
+                            number_of_surface_points_per_facet,
+                            number_of_surface_points_per_facet,
+                        ],
+                        device=device,
+                    ),
+                    device=device,
+                )
+                .unsqueeze(index_mapping.heliostat_dimension)
+                .unsqueeze(index_mapping.facet_index_unbatched)
+                .expand(
+                    heliostat_group.number_of_heliostats,
+                    heliostat_group.number_of_facets_per_heliostat,
+                    -1,
+                    -1,
+                )
+            )
+            nurbs_surfaces = NURBSSurfaces(
+                degrees=heliostat_group.nurbs_degrees,
+                control_points=heliostat_group.nurbs_control_points.detach(),
+                device=device,
+            )
+            (
+                new_surface_points,
+                new_surface_normals,
+            ) = nurbs_surfaces.calculate_surface_points_and_normals(
+                evaluation_points=evaluation_points,
+                canting=heliostat_group.canting,
+                facet_translations=heliostat_group.facet_translations,
+                device=device,
+            )
+            heliostat_group.surface_points = new_surface_points.reshape(
+                heliostat_group.surface_points.shape[0],
+                -1,
+                4,
+            ).detach()
+            heliostat_group.surface_normals = new_surface_normals.reshape(
+                heliostat_group.surface_points.shape[0],
+                -1,
+                4,
+            ).detach()

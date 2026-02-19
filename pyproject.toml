@@ -17,7 +17,7 @@ requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
 ]
 dependencies = [
     "numpy",

@@ -1,5 +1,4 @@
 import argparse
-import math
 import pathlib
 import warnings
 from typing import Any
@@ -41,12 +40,10 @@ def plot_error_distribution(
 
     # Convert losses to list.
     helios_losses_in_meters = [
-        math.sqrt(data[paint_mappings.HELIOS_KEY])
-        for data in reconstruction_results.values()
+        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
     ]
     utis_losses_in_meters = [
-        math.sqrt(data[paint_mappings.UTIS_KEY])
-        for data in reconstruction_results.values()
+        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
     ]
     x_max = max(utis_losses_in_meters + helios_losses_in_meters)
     x_vals = np.linspace(0, x_max, 100)
@@ -168,12 +165,10 @@ def plot_error_against_distance(
     # Load as lists.
     positions_list = [data["Position"] for data in reconstruction_results.values()]
     helios_loss_list_in_meters = [
-        math.sqrt(data[paint_mappings.HELIOS_KEY])
-        for data in reconstruction_results.values()
+        data[paint_mappings.HELIOS_KEY] for data in reconstruction_results.values()
     ]
     utis_loss_list_in_meters = [
-        math.sqrt(data[paint_mappings.UTIS_KEY])
-        for data in reconstruction_results.values()
+        data[paint_mappings.UTIS_KEY] for data in reconstruction_results.values()
     ]
 
     # Convert to arrays for plotting.
@@ -239,7 +234,7 @@ def plot_error_against_distance(
         label="UTIS Trend",
     )
 
-    ax.set_xlabel("\\textbf{Heliostat Distance from Tower} \n{m}")
+    ax.set_xlabel("\\textbf{Heliostat Distance from Tower} \n{meter}")
     ax.set_ylabel("\\textbf{Mean Pointing Error} \n{meter}")
     ax.grid(True)
     ax.legend(fontsize=8, loc="upper right", ncol=2)
@@ -303,8 +298,8 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
-    plots_dir_default = config.get("plots_dir", "./plots")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    plots_dir_default = config.get("plots_dir", "./examples/paint_plots/plots")
     number_of_points_to_plot_default = config.get("number_of_points_to_plot", 100)
     random_seed_default = config.get("random_seed", 7)
 

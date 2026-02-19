@@ -94,8 +94,6 @@ def test_vector_loss(
         Tensor of shape [number_of_samples, 4].
     reduction_dimensions : tuple[int] | None
         The dimensions along which to reduce the final loss.
-        reduction_dimensions : tuple[int] | None
-        The dimensions to reduce over.
     expected : torch.Tensor
         The expected loss.
         Tensor of shape [number_of_samples].
@@ -143,7 +141,7 @@ def test_vector_loss(
         (
             torch.ones((1, 2, 2)),
             torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
-            torch.tensor([3.0]),
+            torch.tensor([1.732050776482]),
             True,
         ),
         (
@@ -236,7 +234,7 @@ def test_focal_spot_loss(
             torch.tensor([[[1.0, 2.0], [8.0, 6.0]]]),
             torch.tensor([[2.0, 2.0]]),
             100,
-            torch.tensor([0.761904418468]),
+            torch.tensor([39.0]),
             True,
         ),
         (
@@ -244,7 +242,7 @@ def test_focal_spot_loss(
             torch.tensor([[[1.0, 2.0], [8.0, 6.0]]]),
             torch.tensor([[2.0, 2.0]]),
             100,
-            torch.tensor([0.761904418468]),
+            torch.tensor([1.0]),
             False,
         ),
     ],
@@ -376,6 +374,12 @@ def test_pixel_loss(
             torch.tensor([0.0]),
             False,
         ),
+        (
+            torch.tensor([[[0.5, 0.5]]]),
+            torch.tensor([[[-0.5, -0.5]]]),
+            torch.tensor([0.0]),
+            True,
+        ),
     ],
 )
 def test_kl_divergence(
@@ -476,8 +480,6 @@ def test_angle_loss(
         Tensor of variable shape.
     reduction_dimensions : tuple[int]
         The dimensions along which to reduce the final loss.
-        reduction_dimensions : tuple[int] | None
-        The dimensions to reduce over.
     expected : torch.Tensor
         The expected loss.
         Tensor of shape [number_of_samples].

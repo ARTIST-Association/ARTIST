@@ -8,55 +8,63 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.kinematic_reconstructor import KinematicReconstructor
-from artist.core.loss_functions import FocalSpotLoss, Loss, VectorLoss
+from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
-
-# Set up logger.
-set_logger_config()
+from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "reconstruction_method, initial_learning_rate, loss_class, data_parser, early_stopping_delta, centroid_extraction_method, scheduler",
+    "reconstruction_method, data_parser, centroid_extraction_method, early_stopping_window, scheduler",
     [
+        # Test normal behavior.
         (
             config_dictionary.kinematic_reconstruction_raytracing,
-            0.005,
-            FocalSpotLoss,
             PaintCalibrationDataParser(),
-            1e-4,
             paint_mappings.UTIS_KEY,
+            50,
             config_dictionary.exponential,
         ),
+        # Test early stopping.
         (
             config_dictionary.kinematic_reconstruction_raytracing,
-            0.005,
-            FocalSpotLoss,
             PaintCalibrationDataParser(),
-            1.0,
-            "invalid",
+            paint_mappings.UTIS_KEY,
+            10,
             config_dictionary.reduce_on_plateau,
         ),
+        # Test invalid centroid extraction.
+        (
+            config_dictionary.kinematic_reconstruction_raytracing,
+            PaintCalibrationDataParser(),
+            "invalid",
+            10,
+            config_dictionary.reduce_on_plateau,
+        ),
+        # Test invalid reconstruction method.
         (
             "invalid",
-            0.005,
-            FocalSpotLoss,
             PaintCalibrationDataParser(),
-            1.0,
-            "invalid",
+            paint_mappings.UTIS_KEY,
+            10,
+            config_dictionary.reduce_on_plateau,
+        ),
+        # Test invalid parser.
+        (
+            config_dictionary.kinematic_reconstruction_raytracing,
+            CalibrationDataParser(),
+            paint_mappings.UTIS_KEY,
+            10,
             config_dictionary.reduce_on_plateau,
         ),
     ],
 )
 def test_kinematic_reconstructor(
     reconstruction_method: str,
-    initial_learning_rate: float,
-    loss_class: Loss,
     data_parser: CalibrationDataParser,
-    early_stopping_delta: float,
     centroid_extraction_method: str,
+    early_stopping_window: int,
     scheduler: str,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
@@ -68,16 +76,12 @@ def test_kinematic_reconstructor(
     ----------
     reconstruction_method : str
         The name of the reconstruction method.
-    initial_learning_rate : float
-        The initial learning rate.
-    loss_class : Loss
-        The loss class.
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
-    early_stopping_delta : float
-        The minimum required improvement to prevent early stopping.
     centroid_extraction_method : str
         The method used to extract the focal spot centroids.
+    early_stopping_window : int
+        Early stopping window size.
     scheduler : str
         The scheduler to be used.
     ddp_setup_for_testing : dict[str, Any]
@@ -93,24 +97,28 @@ def test_kinematic_reconstructor(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scheduler_parameters = {
-        config_dictionary.gamma: 0.9,
+    scheduler_dict = {
+        config_dictionary.scheduler_type: scheduler,
+        config_dictionary.gamma: 0.99,
         config_dictionary.min: 1e-4,
         config_dictionary.reduce_factor: 0.9,
         config_dictionary.patience: 100,
         config_dictionary.threshold: 1e-3,
         config_dictionary.cooldown: 20,
     }
-
-    optimization_configuration = {
-        config_dictionary.initial_learning_rate: initial_learning_rate,
+    optimizer_dict = {
+        config_dictionary.initial_learning_rate: 1e-3,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
+        config_dictionary.max_epoch: 50,
+        config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 80,
-        config_dictionary.scheduler: scheduler,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
+        config_dictionary.early_stopping_delta: 1.0,
+        config_dictionary.early_stopping_patience: 2,
+        config_dictionary.early_stopping_window: early_stopping_window,
+    }
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
     }
 
     scenario_path = (
@@ -136,9 +144,14 @@ def test_kinematic_reconstructor(
             "AA31",
             [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_1.json"
+                / "tests/data/field_data/AA31-calibration-properties_1.json",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-calibration-properties_2.json",
             ],
-            [pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png"],
+            [
+                pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_1.png",
+                pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/AA31-flux_2.png",
+            ],
         ),
     ]
 
@@ -172,6 +185,10 @@ def test_kinematic_reconstructor(
 
         ddp_setup_for_testing[config_dictionary.device] = device
         ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+        ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {
+            0: [0],
+            1: [0],
+        }
 
         if reconstruction_method == "invalid":
             with pytest.raises(ValueError) as exc_info:
@@ -195,11 +212,7 @@ def test_kinematic_reconstructor(
                 reconstruction_method=reconstruction_method,
             )
 
-            loss_definition = (
-                FocalSpotLoss(scenario=scenario)
-                if loss_class is FocalSpotLoss
-                else VectorLoss()
-            )
+            loss_definition = FocalSpotLoss(scenario=scenario)
 
             # Reconstruct the kinematic.
             if not isinstance(data_parser, PaintCalibrationDataParser):
@@ -220,7 +233,7 @@ def test_kinematic_reconstructor(
                     expected_path = (
                         pathlib.Path(ARTIST_ROOT)
                         / "tests/data/expected_reconstructed_kinematic_parameters"
-                        / f"{reconstruction_method}_{str(early_stopping_delta).replace('.', '')}_group_{index}_{device.type}.pt"
+                        / f"group_{index}_{early_stopping_window}_{device.type}.pt"
                     )
 
                     expected = torch.load(
