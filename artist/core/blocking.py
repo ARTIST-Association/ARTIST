@@ -18,12 +18,12 @@ def create_blocking_primitives_rectangle(
 
     The blocking plane for rectangular heliostats is represented by its four
     corner points, and its normal vector. The corner points are indexed
-    counterclockwise. The lower left corner point of a heliostat is indexed
+    clockwise. The lower left corner point of a heliostat is indexed
     by 0, and so on. Overview of corner points and their indices:
 
-    3 | 2
+    1 | 2
     -----
-    0 | 1
+    0 | 3
 
     Assumptions:
     - The heliostat is rectangular.
@@ -68,9 +68,9 @@ def create_blocking_primitives_rectangle(
     min_max_values = torch.stack(
         [
             torch.stack([min_e, min_n], dim=1),
-            torch.stack([max_e, min_n], dim=1),
-            torch.stack([max_e, max_n], dim=1),
             torch.stack([min_e, max_n], dim=1),
+            torch.stack([max_e, max_n], dim=1),
+            torch.stack([max_e, min_n], dim=1),
         ],
         dim=1,
     )
@@ -107,12 +107,12 @@ def create_blocking_primitives_rectangles_by_index(
 
     The blocking plane for rectangular heliostats is represented by its four
     corner points, and its normal vector. The corner points are indexed
-    counterclockwise. The lower left corner point of a heliostat is indexed
+    clockwise. The lower left corner point of a heliostat is indexed
     by 0, and so on. Overview of corner points and their indices:
 
-    3 | 2
+    1 | 2
     -----
-    0 | 1
+    0 | 3
 
     Assumptions:
     - The heliostat is rectangular in shape, each facet is also rectangular.
@@ -185,7 +185,7 @@ def soft_ray_blocking_mask(
     blocking_primitives_spans: torch.Tensor,
     blocking_primitives_normals: torch.Tensor,
     distances_to_target: torch.Tensor,
-    epsilon: float = 1e-6,
+    epsilon: float = 1e-12,
     softness: float = 50.0,
 ) -> torch.Tensor:
     r"""
@@ -237,7 +237,7 @@ def soft_ray_blocking_mask(
     distances_to_target : torch.Tensor
         Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
     epsilon : float
-        A small value (default is 1e-6).
+        A small value (default is 1e-12).
     softness : float
         Controls how soft the sigmoid approximates the blocking (default is 50.0).
 
