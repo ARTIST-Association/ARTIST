@@ -60,11 +60,20 @@ def create_blocking_primitives_rectangle(
 
     number_of_surfaces = blocking_heliostats_active_surface_points.shape[0]
 
+    # Determine bounding rectangle in EN space. The indices of the corner points
+    # are determined from the unaligned heliostat surface points, while their actual
+    # positions are extracted from the aligned surfaces later on.
+    # First retrieve the minimum east and north coordinates of unaligned heliostat surface points.
+    # Unaligned heliostats are oriented horizontally, their normals point straight upwards.
     min_e = blocking_heliostats_surface_points[:, :, 0].min(dim=1).values
     max_e = blocking_heliostats_surface_points[:, :, 0].max(dim=1).values
     min_n = blocking_heliostats_surface_points[:, :, 1].min(dim=1).values
     max_n = blocking_heliostats_surface_points[:, :, 1].max(dim=1).values
 
+    # Combine the minimum east and north values to form the expected four rectangle corner point
+    # coordinates.
+    # min_e and min_n form the lower left corner of the ASCII-diagram in the docstring
+    # indexed by 0, min_e and max_n forms the corner indexed by 1, etc.
     min_max_values = torch.stack(
         [
             torch.stack([min_e, min_n], dim=1),
@@ -75,12 +84,18 @@ def create_blocking_primitives_rectangle(
         dim=1,
     )
 
+    # Find points in the unaligned surface points tensor that are closest to
+    # the four expected rectangle corner point coordinates saved in min_max_values.
     surface_points_2d = blocking_heliostats_surface_points[:, :, :2]
+    # Compute distances between all real surface points and rectangle corners.
     distances_to_surface_points = torch.abs(
         surface_points_2d[:, :, None, :] - min_max_values[:, None, :, :]
     )
+    # Find surface points within epsilon of each corner (tolerance matching).
     mask = (distances_to_surface_points < epsilon).all(-1)
 
+    # Use the indices of the four found corner points in the unaligned heliostat surface
+    # point tensor to find the coordinates of the aligned heliostat surface points.
     corner_points_indices = mask.float().argmax(dim=1)
     surface_indices = torch.arange(number_of_surfaces, device=device)[:, None]
     corners = blocking_heliostats_active_surface_points[
