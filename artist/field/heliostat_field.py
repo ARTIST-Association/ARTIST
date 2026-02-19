@@ -48,7 +48,7 @@ class HeliostatField:
     from_hdf5()
         Load a heliostat field from an HDF5 file.
     update_surfaces()
-        Update surface points and normals using new nurbs control points.
+        Update surface points and normals using new NURBS control points.
     """
 
     def __init__(
@@ -457,7 +457,7 @@ class HeliostatField:
         device: torch.device | None = None,
     ) -> None:
         """
-        Update surface points and normals using new nurbs control points.
+        Update surface points and normals using new NURBS control points.
 
         Parameter
         ---------
