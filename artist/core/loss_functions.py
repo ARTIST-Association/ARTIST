@@ -120,7 +120,7 @@ class VectorLoss(Loss):
 
 class FocalSpotLoss(Loss):
     """
-    A loss defined as euclidean distance between the predicted focal spot coordinate and the ground truth coordinate.
+    A loss defined as Euclidean distance between the predicted focal spot coordinate and the ground-truth coordinate.
 
     Attributes
     ----------
@@ -162,13 +162,14 @@ class FocalSpotLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, 4].
+            Shape is [number_of_samples, 4].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the focal spot loss.
+            ``reduction_dimensions``, ``target_area_mask``, and optionally ``device`` are expected keyword arguments
+            for the focal spot loss.
 
         Raises
         ------
@@ -179,7 +180,7 @@ class FocalSpotLoss(Loss):
         -------
         torch.Tensor
             The focal spot loss.
-            Tensor of shape [number_of_samples].
+            Shape is [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
         errors = []
@@ -208,9 +209,7 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        loss = torch.norm(focal_spot[:, :3] - ground_truth[:, :3], dim=1)
-
-        return loss
+        return torch.norm(focal_spot[:, :3] - ground_truth[:, :3], dim=1)
 
 
 class PixelLoss(Loss):
@@ -263,7 +262,8 @@ class PixelLoss(Loss):
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the pixel loss.
+            ``reduction_dimensions``, ``target_area_mask``, and optionally ``device`` are expected keyword arguments
+            for the pixel loss.
 
         Raises
         ------
@@ -274,7 +274,7 @@ class PixelLoss(Loss):
         -------
         torch.Tensor
             The summed MSE pixel loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            Shape is [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
         errors = []
@@ -321,7 +321,7 @@ class KLDivergenceLoss(Loss):
         Compute the Kullback-Leibler divergence loss :math:`D_{\mathrm{KL}}(P \parallel Q)`.
 
         The elements in the prediction and ground truth are normalized and shifted, to be greater or
-        equal to zero. The kl-divergence is defined by:
+        equal to zero. The KL-divergence is defined by:
 
         .. math::
 
@@ -337,13 +337,13 @@ class KLDivergenceLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is[number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the kl-divergence loss.
+            ``reduction_dimensions`` is an expected keyword argument for the KL-divergence loss.
 
         Raises
         ------
@@ -353,14 +353,14 @@ class KLDivergenceLoss(Loss):
         Returns
         -------
         torch.Tensor
-            The summed kl-divergence loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            The summed KL-divergence loss reduced along the specified dimensions.
+            Shape is [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions"]
         for key in expected_kwargs:
             if key not in kwargs:
                 raise ValueError(
-                    f"The kl-divergence loss expects {key} as keyword argument. Please add this argument."
+                    f"The KL-divergence loss expects {key} as keyword argument. Please add this argument."
                 )
 
         # Scale to make distributions non-negative.
@@ -422,10 +422,10 @@ class AngleLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, 4].
+            Shape is [number_of_samples, 4].
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, 4].
+            Shape is [number_of_samples, 4].
         \*\*kwargs : Any
             Keyword arguments.
 
@@ -433,10 +433,6 @@ class AngleLoss(Loss):
         -------
         torch.Tensor
             The summed loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            Shape is [number_of_samples].
         """
-        cosine_similarity = self.loss_function(prediction, ground_truth)
-
-        loss = 1.0 - cosine_similarity
-
-        return loss
+        return 1.0 - self.loss_function(prediction, ground_truth)
