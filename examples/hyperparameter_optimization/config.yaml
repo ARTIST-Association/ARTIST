@@ -1,12 +1,12 @@
 metadata_root: "./"
 metadata_file_name: "calibration_metadata_all_heliostats.csv"
-data_dir: "/base/path/data"
+data_dir: "/workVERLEIHNIX/share/PAINT"
 tower_file_name: "WRI1030197-tower-measurements.json"
 scenarios_dir: "./examples/hyperparameter_optimization/scenarios"
 results_dir: "./examples/hyperparameter_optimization/results"
 plots_dir: "./examples/hyperparameter_optimization/plots"
 propulate_logs_dir: "./examples/hyperparameter_optimization/logs"
-minimum_number_of_measurements: 2
+minimum_number_of_measurements: 6
 number_of_points_to_plot: 200
 kinematic_reconstruction_image_type: "flux"
 surface_reconstruction_image_type: "flux-centered"
@@ -22,6 +22,7 @@ parameter_ranges_kinematic:
   threshold: [1e-6, 1e-3]
   cooldown: [2, 20]
   gamma: [0.85, 0.999]
+  sample_limit: [2, 6]
 parameter_ranges_surface:
   number_of_surface_points: [30, 90]
   number_of_rays: [50, 120]

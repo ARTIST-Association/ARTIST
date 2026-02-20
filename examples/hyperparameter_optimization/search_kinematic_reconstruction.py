@@ -86,7 +86,7 @@ def kinematic_reconstructor_for_hpo(
     scenario.set_number_of_rays(number_of_rays=4)
 
     data_parser = PaintCalibrationDataParser(
-        sample_limit=2,
+        sample_limit=int(params["sample_limit"]),
         centroid_extraction_method="UTIS",
     )
     data: dict[
@@ -100,11 +100,11 @@ def kinematic_reconstructor_for_hpo(
     optimizer_dict = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 60,
+        config_dictionary.max_epoch: 100,
         config_dictionary.batch_size: 945,
         config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
+        config_dictionary.early_stopping_delta: 1e-5,
+        config_dictionary.early_stopping_patience: 8,
         config_dictionary.early_stopping_window: 10,
     }
     scheduler_dict = {
@@ -226,6 +226,7 @@ if __name__ == "__main__":
             "threshold": [1e-6, 1e-2],
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
+            "sample_limit": [2, 6],
         },
     )
 
@@ -338,7 +339,7 @@ if __name__ == "__main__":
             reconstruction_parameter_ranges[key] = str_tuple
 
     # Set up evolutionary operator.
-    num_generations = 200
+    num_generations = 100
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,

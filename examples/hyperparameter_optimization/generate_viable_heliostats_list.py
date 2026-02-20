@@ -146,6 +146,9 @@ def find_viable_heliostats(
                     properties_path,
                 )
             )
+            print(
+                f"Added heliostat {heliostat_name}. Found {len(found_heliostats)} so far."
+            )
 
     return sorted(found_heliostats, key=lambda x: x[0])
 
@@ -217,7 +220,7 @@ if __name__ == "__main__":
         "surface_reconstruction_image_type", "flux-centered"
     )
     excluded_heliostats_default = config.get(
-        "excluded_heliostats_for_reconstruction", ["AA39"]
+        "excluded_heliostats_for_reconstruction", ["BE20", "AP14"]
     )
 
     parser.add_argument(
