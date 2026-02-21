@@ -1,13 +1,16 @@
 import argparse
 import json
 import pathlib
+import random
 import re
 import warnings
 
 import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
+from sklearn.cluster import KMeans
 
+from artist.data_parser import paint_scenario_parser
 from artist.util.environment_setup import get_device
 
 
@@ -153,6 +156,79 @@ def find_viable_heliostats(
     return sorted(found_heliostats, key=lambda x: x[0])
 
 
+def find_selected_heliostats(
+    heliostat_properties_list: list[tuple[str, pathlib.Path]],
+    power_plant_position: torch.Tensor,
+    number_of_heliostats: int,
+    random_seed: int = 7,
+) -> list[str]:
+    """
+    Select heliostats evenly but randomly distributed around the tower.
+
+    Parameters
+    ----------
+    heliostat_properties_list : list[tuple[str, pathlib.Path]]
+        List of heliostat names and paths.
+    power_plant_position : torch.Tensor
+        Tower position in WGS84.
+        Tensor of shape [3].
+    number_of_heliostats : int
+        Number of heliostats to select.
+    random_seed : int
+        Random seed for reproducibility (default is 7).
+
+    Returns
+    -------
+    list[str]
+        Selected heliostats.
+    """
+    random.seed(random_seed)
+
+    if len(heliostat_properties_list) < number_of_heliostats:
+        raise ValueError("Not enough heliostats available.")
+
+    tower_lat, tower_lon, _ = power_plant_position
+
+    positions = []
+    heliostats = []
+
+    for name, path in heliostat_properties_list:
+        with open(path, "r") as f:
+            data = json.load(f)
+        lat, lon, _ = data["heliostat_position"]
+
+        positions.append([lat - tower_lat, lon - tower_lon])
+        heliostats.append((name, path))
+
+    features = torch.tensor(positions, dtype=torch.float32)
+
+    kmeans = KMeans(
+        n_clusters=number_of_heliostats,
+        random_state=random_seed,
+        n_init="auto",
+    )
+    labels = kmeans.fit_predict(features.numpy())
+
+    selected_indices = []
+    for cluster_id in range(number_of_heliostats):
+        cluster_members = torch.where(torch.tensor(labels) == cluster_id)[0].tolist()
+        if cluster_members:
+            selected_indices.append(random.choice(cluster_members))
+
+    if len(selected_indices) < number_of_heliostats:
+        all_indices = set(range(len(heliostats)))
+        used = set(selected_indices)
+        remaining = list(all_indices - used)
+        random.shuffle(remaining)
+        selected_indices.extend(
+            remaining[: number_of_heliostats - len(selected_indices)]
+        )
+
+    selected_heliostats = [heliostats[i][0] for i in selected_indices]
+
+    return selected_heliostats
+
+
 if __name__ == "__main__":
     """
     Generate list of viable heliostats for the hyperparameter optimizations.
@@ -168,6 +244,8 @@ if __name__ == "__main__":
         Device to use for the computation.
     data_dir : str
         Path to the data directory.
+    tower_file_name : str
+        Name of the file containing the tower measurements.
     results_dir : str
         Path to where the results will be saved.
     minimum_number_of_measurements : int
@@ -176,6 +254,8 @@ if __name__ == "__main__":
         Type of calibration image to use for the kinematic reconstruction, i.e., flux or flux-centered.
     surface_reconstruction_image_type : str
         Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
+    excluded_heliostats_for_reconstruction : list[str]
+
     """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
@@ -207,6 +287,9 @@ if __name__ == "__main__":
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
     data_dir_default = config.get("data_dir", "./paint_data")
+    tower_file_name_default = config.get(
+        "tower_file_name", "WRI1030197-tower-measurements.json"
+    )
     results_dir_default = config.get(
         "results_dir", "./examples/hyperparameter_optimization/results"
     )
@@ -234,6 +317,12 @@ if __name__ == "__main__":
         type=str,
         help="Path to the data directory.",
         default=data_dir_default,
+    )
+    parser.add_argument(
+        "--tower_file_name",
+        type=str,
+        help="Name of the file containing the tower measurements.",
+        default=tower_file_name_default,
     )
     parser.add_argument(
         "--results_dir",
@@ -273,6 +362,7 @@ if __name__ == "__main__":
     args = parser.parse_args(args=unknown)
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
+    tower_file = data_dir / args.tower_file_name
     number_measurements = args.minimum_number_of_measurements
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
@@ -320,3 +410,42 @@ if __name__ == "__main__":
             json.dump(serializable_data, output_file, indent=2)
 
         print(f"Saved {len(serializable_data)} heliostat entries to {results_path}")
+
+        if case == "surface":
+            heliostat_properties_list: list[tuple[str, pathlib.Path]] = [
+                (
+                    item["name"],
+                    pathlib.Path(item["properties"]),
+                )
+                for item in serializable_data
+            ]
+
+            power_plant_config, _ = (
+                paint_scenario_parser.extract_paint_tower_measurements(
+                    tower_measurements_path=tower_file, device=device
+                )
+            )
+
+            selected_heliostats = find_selected_heliostats(
+                heliostat_properties_list=heliostat_properties_list,
+                power_plant_position=power_plant_config.power_plant_position,
+                number_of_heliostats=10,
+            )
+
+            selected_viable_heliostats = [
+                heliostat
+                for heliostat in serializable_data
+                if heliostat["name"] in selected_heliostats
+            ]
+
+            results_path = pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
+
+            if not results_path.parent.is_dir():
+                results_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(results_path, "w") as output_file:
+                json.dump(selected_viable_heliostats, output_file, indent=2)
+
+            print(
+                f"Saved {len(selected_viable_heliostats)} heliostat entries to {results_path}"
+            )

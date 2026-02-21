@@ -255,12 +255,12 @@ def generate_reconstruction_results(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 10,
-            config_dictionary.batch_size: 500,
-            config_dictionary.log_step: 1,
+            config_dictionary.max_epoch: 10000,
+            config_dictionary.batch_size: 6000,
+            config_dictionary.log_step: 10,
             config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.early_stopping_window: 1000,
+            config_dictionary.early_stopping_patience: 10000,
+            config_dictionary.early_stopping_window: 10000,
         }
         scheduler_dict = {
             config_dictionary.scheduler_type: hyperparameters["scheduler"],
@@ -284,9 +284,12 @@ def generate_reconstruction_results(
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ] = {
             config_dictionary.data_parser: PaintCalibrationDataParser(
-                sample_limit=2, centroid_extraction_method="UTIS"
+                sample_limit=hyperparameters["sample_limit"],
+                centroid_extraction_method="UTIS",
             ),
-            config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+            config_dictionary.heliostat_data_mapping: [
+                mapping for mapping in heliostat_data_mapping if mapping[0] != "AG21"
+            ],
         }
 
         data_plot: dict[
@@ -462,7 +465,7 @@ if __name__ == "__main__":
         for item in viable_heliostats
     ]
 
-    with open(results_dir / "hpo_results_kinematic.json", "r") as file:
+    with open(results_dir / "kinematic_config.json", "r") as file:
         hyperparameters = json.load(file)
 
     reconstruction_results = generate_reconstruction_results(

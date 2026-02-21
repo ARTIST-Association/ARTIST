@@ -729,35 +729,35 @@ if __name__ == "__main__":
         map_location=device,
     )
 
-    results_path_motor_pos = (
-        pathlib.Path(args.results_dir) / "motor_position_optimization_results.pt"
-    )
-    if not results_path_motor_pos.exists():
-        raise FileNotFoundError(
-            f"Results file not found: {results_path_motor_pos}. Please run ``reconstruction_generate_results.py``"
-            f"or adjust the location of the results file and try again!"
-        )
+    # results_path_motor_pos = (
+    #     pathlib.Path(args.results_dir) / "motor_position_optimization_results.pt"
+    # )
+    # if not results_path_motor_pos.exists():
+    #     raise FileNotFoundError(
+    #         f"Results file not found: {results_path_motor_pos}. Please run ``reconstruction_generate_results.py``"
+    #         f"or adjust the location of the results file and try again!"
+    #     )
 
-    results_motor_pos = torch.load(
-        results_path_motor_pos,
-        weights_only=False,
-        map_location=device,
-    )
+    # results_motor_pos = torch.load(
+    #     results_path_motor_pos,
+    #     weights_only=False,
+    #     map_location=device,
+    # )
 
-    results_path_surface = (
-        pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
-    )
-    if not results_path_surface.exists():
-        raise FileNotFoundError(
-            f"Results file not found: {results_path_surface}. Please run ``reconstruction_generate_results.py``"
-            f"or adjust the location of the results file and try again!"
-        )
+    # results_path_surface = (
+    #     pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
+    # )
+    # if not results_path_surface.exists():
+    #     raise FileNotFoundError(
+    #         f"Results file not found: {results_path_surface}. Please run ``reconstruction_generate_results.py``"
+    #         f"or adjust the location of the results file and try again!"
+    #     )
 
-    results_surface = torch.load(
-        results_path_surface,
-        weights_only=False,
-        map_location=device,
-    )
+    # results_surface = torch.load(
+    #     results_path_surface,
+    #     weights_only=False,
+    #     map_location=device,
+    # )
 
     plots_path = pathlib.Path(args.plots_dir)
 
@@ -776,14 +776,14 @@ if __name__ == "__main__":
         reconstruction_results=reconstruction_results, save_dir=plots_path
     )
 
-    plot_surface_reconstruction(
-        reconstruction_results=results_surface, save_dir=plots_path
-    )
+    # plot_surface_reconstruction(
+    #     reconstruction_results=results_surface, save_dir=plots_path
+    # )
 
-    plot_motor_pos_fluxes(reconstruction_results=results_motor_pos, save_dir=plots_path)
+    # plot_motor_pos_fluxes(reconstruction_results=results_motor_pos, save_dir=plots_path)
 
-    plot_heliostat_positions(
-        surface_scenario=results_surface,
-        kinematic_scenario=reconstruction_results,
-        save_dir=plots_path,
-    )
+    # plot_heliostat_positions(
+    #     surface_scenario=results_surface,
+    #     kinematic_scenario=reconstruction_results,
+    #     save_dir=plots_path,
+    # )
