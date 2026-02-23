@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
-from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser import paint_scenario_parser
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
@@ -420,16 +419,8 @@ scheduler_dict = {
     config_dictionary.threshold: 1e-4,
     config_dictionary.cooldown: 5,
 }
-# Configure the regularizers.
-ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
-smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-regularizers = [
-    ideal_surface_regularizer,
-    smoothness_regularizer,
-]
 # Configure the regularizers and constraints.
 constraint_dict = {
-    config_dictionary.regularizers: regularizers,
     config_dictionary.weight_smoothness: 0.005,
     config_dictionary.weight_ideal_surface: 0.005,
     config_dictionary.initial_lambda_energy: 0.1,
