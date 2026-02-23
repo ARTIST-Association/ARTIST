@@ -168,7 +168,7 @@ class FocalSpotLoss(Loss):
             Tensor of shape [number_of_samples, 4].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the focal spot loss.
+            The ``reduction_dimensions``, ``target_area_mask`` and ``device`` are expected keyword arguments for the focal spot loss.
 
         Raises
         ------

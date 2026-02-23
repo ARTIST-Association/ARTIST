@@ -311,7 +311,7 @@ class RigidBody(Kinematic):
             The orientation matrices with the initial orientation offset.
             Tensor of shape [number_of_active_heliostats, 4, 4].
         """
-        # The surface points and normals are always sampled from a model (converted nurbs from deflectometry or ideal nurbs) that lays
+        # The surface points and normals are always sampled from a model (converted NURBS from deflectometry or ideal NURBS) that lays
         # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since ARTIST expects the points and normals
         # to be initially oriented to the south, an extra rotation needs to be applied.
         sampled_surface_model_orientation = torch.tensor(

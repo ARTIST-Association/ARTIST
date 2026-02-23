@@ -516,7 +516,7 @@ class HeliostatRayTracer:
                         distances_to_target=torch.norm(
                             intersections[..., :3] - points_at_ray_origins, dim=-1
                         ),
-                        epsilon=1e-6,
+                        epsilon=1e-12,
                         softness=50.0,
                     )
 

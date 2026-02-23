@@ -14,16 +14,19 @@ def create_blocking_primitives_rectangle(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Create a representation of a rectangular heliostat blocking plane, by interpolating its corner points.
+    Construct a rectangular blocking plane representation for heliostats by interpolating their corner points.
 
-    The blocking plane for rectangular heliostats is represented by its four
-    corner points, and its normal vector. The corner points are indexed
-    counterclockwise. The lower left corner point of a heliostat is indexed
+    Instead of keeping many surface samples, each heliostat is reduced to its blocking plane via:
+    - its four corner points
+    - two spanning vectors (rectangle axes)
+    - the plane normal
+
+    The corner points are indexed clockwise. The lower left corner point of a heliostat is indexed
     by 0, and so on. Overview of corner points and their indices:
 
-    3 | 2
+    1 | 2
     -----
-    0 | 1
+    0 | 3
 
     Assumptions:
     - The heliostat is rectangular.
@@ -33,7 +36,7 @@ def create_blocking_primitives_rectangle(
     ----------
     blocking_heliostats_surface_points : torch.Tensor
         The unaligned surface points of all heliostats that might block other heliostats.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
     blocking_heliostats_active_surface_points : torch.Tensor
         The aligned surface points of all heliostats that might block other heliostats.
         Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
@@ -60,33 +63,45 @@ def create_blocking_primitives_rectangle(
 
     number_of_surfaces = blocking_heliostats_active_surface_points.shape[0]
 
+    # Determine bounding rectangle in EN space. The indices of the corner points
+    # are determined from the unaligned heliostat surface points, while their actual
+    # positions are extracted from the aligned surfaces later on.
+    # First retrieve the minimum east and north coordinates of unaligned heliostat surface points.
+    # Unaligned heliostats are oriented horizontally, their normals point straight upwards.
     min_e = blocking_heliostats_surface_points[:, :, 0].min(dim=1).values
     max_e = blocking_heliostats_surface_points[:, :, 0].max(dim=1).values
     min_n = blocking_heliostats_surface_points[:, :, 1].min(dim=1).values
     max_n = blocking_heliostats_surface_points[:, :, 1].max(dim=1).values
 
+    # Combine the minimum east and north values to form the expected four rectangle corner point
+    # coordinates.
+    # min_e and min_n form the lower left corner of the ASCII-diagram in the docstring
+    # indexed by 0, min_e and max_n forms the corner indexed by 1, etc.
     min_max_values = torch.stack(
         [
             torch.stack([min_e, min_n], dim=1),
-            torch.stack([max_e, min_n], dim=1),
-            torch.stack([max_e, max_n], dim=1),
             torch.stack([min_e, max_n], dim=1),
+            torch.stack([max_e, max_n], dim=1),
+            torch.stack([max_e, min_n], dim=1),
         ],
         dim=1,
     )
 
+    # Find points in the unaligned surface points tensor that are closest to
+    # the four expected rectangle corner point coordinates saved in min_max_values.
     surface_points_2d = blocking_heliostats_surface_points[:, :, :2]
-    distances_to_surface_points = torch.abs(
-        surface_points_2d[:, :, None, :] - min_max_values[:, None, :, :]
+    # Compute distances between all real surface points and expected rectangle corners.
+    distances_to_corner = torch.norm(
+        surface_points_2d[:, :, None, :] - min_max_values[:, None, :, :], dim=-1
     )
-    mask = (distances_to_surface_points < epsilon).all(-1)
-
-    corner_points_indices = mask.float().argmax(dim=1)
+    corner_points_indices = distances_to_corner.argmin(dim=1)
     surface_indices = torch.arange(number_of_surfaces, device=device)[:, None]
+    # Extract corners from aligned heliostat surface points.
     corners = blocking_heliostats_active_surface_points[
         surface_indices, corner_points_indices
     ]
 
+    # Compute rectangle spans and normals.
     spans = torch.zeros((number_of_surfaces, 2, 4), device=device)
     spans[:, 0] = corners[:, 1] - corners[:, 0]
     spans[:, 1] = corners[:, 3] - corners[:, 0]
@@ -103,16 +118,16 @@ def create_blocking_primitives_rectangles_by_index(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Create a representation of a rectangular heliostat blocking plane, by the known indices of its corner points.
+    Construct a rectangular blocking plane representation for heliostats by the known indices of their corner points.
 
     The blocking plane for rectangular heliostats is represented by its four
     corner points, and its normal vector. The corner points are indexed
-    counterclockwise. The lower left corner point of a heliostat is indexed
+    clockwise. The lower left corner point of a heliostat is indexed
     by 0, and so on. Overview of corner points and their indices:
 
-    3 | 2
+    1 | 2
     -----
-    0 | 1
+    0 | 3
 
     Assumptions:
     - The heliostat is rectangular in shape, each facet is also rectangular.
@@ -185,7 +200,7 @@ def soft_ray_blocking_mask(
     blocking_primitives_spans: torch.Tensor,
     blocking_primitives_normals: torch.Tensor,
     distances_to_target: torch.Tensor,
-    epsilon: float = 1e-6,
+    epsilon: float = 1e-12,
     softness: float = 50.0,
 ) -> torch.Tensor:
     r"""
@@ -238,7 +253,7 @@ def soft_ray_blocking_mask(
     distances_to_target : torch.Tensor
         Shape is [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
     epsilon : float
-        A small value (default is 1e-6).
+        A small value (default is 1e-12).
     softness : float
         Controls how soft the sigmoid approximates the blocking (default is 50.0).
 
