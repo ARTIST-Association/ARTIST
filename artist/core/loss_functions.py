@@ -120,7 +120,7 @@ class VectorLoss(Loss):
 
 class FocalSpotLoss(Loss):
     """
-    A loss defined as euclidean distance between the predicted focal spot coordinate and the ground truth coordinate.
+    A loss defined as Euclidean distance between the predicted focal spot coordinate and the ground-truth coordinate.
 
     Attributes
     ----------
