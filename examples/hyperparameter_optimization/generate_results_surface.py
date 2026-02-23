@@ -282,16 +282,16 @@ def generate_reconstruction_results(
             )
 
         selected_heliostats = [
-            "AC38",
-            "BD38",
-            "AE34",
-            "BG65",
-            "AK26",
-            "AK17",
-            "BA43",
-            "AZ28",
-            "AP51",
-            "AP35",
+            "AC43",
+            "AH31",
+            "AI21",
+            "AM56",
+            "AP38",
+            "AU69",
+            "AW38",
+            "BD35",
+            "BF26",
+            "BG24",
         ]
 
         scenario.set_number_of_rays(
@@ -309,8 +309,8 @@ def generate_reconstruction_results(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 3,
-            config_dictionary.batch_size: hyperparameters["sample_limit"] * 2,
+            config_dictionary.max_epoch: 200,
+            config_dictionary.batch_size: 8,
             config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
             config_dictionary.early_stopping_patience: 150,
@@ -335,11 +335,10 @@ def generate_reconstruction_results(
         ]
         constraint_dict = {
             config_dictionary.regularizers: regularizers,
-            config_dictionary.initial_lambda_energy: 0.1,
-            config_dictionary.rho_energy: 1.0,
-            config_dictionary.energy_tolerance: 0.01,
-            config_dictionary.weight_smoothness: 0.005,
-            config_dictionary.weight_ideal_surface: 0.005,
+            config_dictionary.initial_lambda_energy: hyperparameters["initial_lambda_energy"],
+            config_dictionary.rho_energy: hyperparameters["rho_energy"],
+            config_dictionary.weight_smoothness: hyperparameters["weight_smoothness"],
+            config_dictionary.weight_ideal_surface: hyperparameters["weight_ideal_surface"],
         }
         optimization_configuration = {
             config_dictionary.optimization: optimizer_dict,
@@ -521,14 +520,14 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_surface.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_hpo.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_surface.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
