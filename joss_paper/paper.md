@@ -42,7 +42,25 @@ bibliography: paper.bib
 
 # Summary
 
-`artist` is a software package for the simulation and optimization of concentrating solar power (CSP) plant operation. Solar tower power plants use an array of mirrors (heliostats), to reflect and concentrate sunlight onto a small area called the receiver. The thermal power, represented through a flux distributions in the digital twin, can be used directly as high-temperature heat in industrial processes or it can be converted into carbon-neutral electricity. This Python package, `artist`, implements a fully differentiable digital twin for solar tower power plants, providing tools for data-driven power plant component modeling and aim point optimization. The differentiable ray tracer in `artist` simulates light transport in the three-dimensional scene, including environmental conditions, allowing ray tracing to be integrated in the gradient-based optimizations. All physical hardware is inherently subject to small manufacturing tolerances and imperfections which tend to increase as components age. In solar tower power plants this leads to individually deformed fluxes for each heliostat. To improve efficiency in a solar tower power plant, each heliostats deformed and misaligned flux needs to aim at an individual point on the receiver for an optimal combined flux density distribution. Small surface deformations [@Ulmer:2011] and misalignments in each heliostat due to inaccurate kinematic components [@Sattler:2020] are main contributors for uncertainties which accumulate over the total heliostat field and cannot be neglected in the simulation. The digital twin `artist` provides functionality to reconstruct the real-world heliostat surfaces and the heliostat kinematic. The simulation includes algorithms for alignment and raytracing to predict flux densities on the receiver. Based on this the heliostat aim points can be optimized. The main functionality of `artist` is shown in \autoref{fig:flowchart}.
+`artist` is a Python software package for the simulation and optimization of concentrating solar power (CSP) plant
+operation. Solar tower power plants use an array of mirrors, known as heliostats, to reflect and concentrate sunlight
+onto a small receiver located at the top of a tower. The resulting thermal power, represented as a flux distribution on the
+receiver, can either be used directly as high-temperature heat in industrial processes or converted into carbon-neutral
+electricity.
+`artist` implements a fully differentiable digital twin of solar tower power plants and provides tools for
+data-driven power plant component modeling and heliostat aim point optimization. Its differentiable ray tracer simulates
+light transport within a three-dimensional scene taking into account environmental conditions, while enabling the integration
+of ray tracing into gradient-based optimization. The main functionality and workflow of artist are illustrated in \autoref{fig:flowchart}.
+In real-world operation, all physical components are subject to manufacturing
+tolerances and imperfections, which typically increase as the system ages. As a result, each heliostat produces an
+individually distorted flux distribution. To maximize plant efficiency, the real-world flux of every heliostat must be
+directed to a specific aim point on the receiver so that the combined flux density distribution is optimal. The main sources
+of uncertainty are small surface deformations [@Ulmer:2011] and misalignments in each heliostat caused by inaccuracies in the kinematic
+components [@Sattler:2020]. These effects accumulate across the heliostat field and must be accounted for in accurate simulations.
+To address these challenges, `artist` provides functionality to reconstruct real-world
+heliostat surface geometries and kinematic properties. It includes algorithms for alignment and raytracing that enable the
+prediction of flux densities on the receiver. Building on this, heliostat aim points can be optimized to maximize the plant's
+overall energy efficiency.
 
 # Statement of Need
 
