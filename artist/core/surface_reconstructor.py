@@ -255,12 +255,20 @@ class SurfaceReconstructor:
                     relative=True,
                 )
 
+                # Set up energy constraints.
                 energy_per_flux_reference = torch.zeros_like(active_heliostats_mask)
                 initial_lambda_energy = self.constraint_dict[
                     config_dictionary.initial_lambda_energy
                 ]
                 lambda_energy = None
                 rho_energy = self.constraint_dict[config_dictionary.rho_energy]
+                # Set up regularizers.
+                ideal_surface_regularizer = IdealSurfaceRegularizer(
+                    reduction_dimensions=(1,)
+                )
+                smoothness_regularizer = SmoothnessRegularizer(
+                    reduction_dimensions=(1,)
+                )
                 weight_smoothness = self.constraint_dict[
                     config_dictionary.weight_smoothness
                 ]
@@ -440,27 +448,26 @@ class SurfaceReconstructor:
                     ideal_surface_loss_per_heliostat = torch.zeros_like(
                         flux_loss_per_heliostat, device=device
                     )
-                    if self.constraint_dict[config_dictionary.regularizers] is not None:
-                        for regularizer in self.constraint_dict[
-                            config_dictionary.regularizers
-                        ]:
-                            regularization_term_active_heliostats = regularizer(
-                                current_control_points=heliostat_group.active_nurbs_control_points[
-                                    ::number_of_samples_per_heliostat
-                                ][local_indices],
-                                original_control_points=original_control_points[
-                                    local_indices
-                                ],
-                                device=device,
-                            )
-                            if isinstance(regularizer, SmoothnessRegularizer):
-                                smoothness_loss_per_heliostat = (
-                                    regularization_term_active_heliostats
-                                )
-                            if isinstance(regularizer, IdealSurfaceRegularizer):
-                                ideal_surface_loss_per_heliostat = (
-                                    regularization_term_active_heliostats
-                                )
+                    if weight_smoothness > 0:
+                        smoothness_loss_per_heliostat = smoothness_regularizer(
+                            current_control_points=heliostat_group.active_nurbs_control_points[
+                                ::number_of_samples_per_heliostat
+                            ][local_indices],
+                            original_control_points=original_control_points[
+                                local_indices
+                            ],
+                            device=device,
+                        )
+                    if weight_ideal_surface > 0:
+                        ideal_surface_loss_per_heliostat = ideal_surface_regularizer(
+                            current_control_points=heliostat_group.active_nurbs_control_points[
+                                ::number_of_samples_per_heliostat
+                            ][local_indices],
+                            original_control_points=original_control_points[
+                                local_indices
+                            ],
+                            device=device,
+                        )
                     alpha = (
                         weight_smoothness
                         * flux_loss_per_heliostat.mean()

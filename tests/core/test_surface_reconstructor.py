@@ -7,7 +7,6 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
-from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -82,14 +81,7 @@ def test_surface_reconstructor(
         config_dictionary.threshold: 1e-4,
         config_dictionary.cooldown: 5,
     }
-    ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
-    smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-    regularizers = [
-        ideal_surface_regularizer,
-        smoothness_regularizer,
-    ]
     constraint_dict = {
-        config_dictionary.regularizers: regularizers,
         config_dictionary.initial_lambda_energy: 0.1,
         config_dictionary.rho_energy: 1.0,
         config_dictionary.energy_tolerance: 0.01,
