@@ -155,7 +155,7 @@ def generate_ideal_scenario(
     Returns
     -------
     list[tuple[str, pathlib.Path]]
-        List of selected heliostats.
+        Selected heliostats.
     """
     device = get_device(device=device)
 
