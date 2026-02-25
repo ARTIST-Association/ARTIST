@@ -413,4 +413,4 @@ if __name__ == "__main__":
         results_path.parent.mkdir(parents=True, exist_ok=True)
 
     torch.save(optimization_results, results_path)
-    print(f"Reconstruction results saved to {results_path}")
+    print(f"Reconstruction results saved to {results_path}.")
