@@ -726,7 +726,7 @@ def perform_canting(
 
     Parameters
     ----------
-    canting_angles torch.Tensor
+    canting_angles : torch.Tensor
         Canting angles.
         Tensor of shape [number_of_surfaces, number_of_facets, 2, 4].
     data : torch.Tensor
