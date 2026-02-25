@@ -75,7 +75,7 @@ def extract_paint_tower_measurements(
 
     for target_area in list(tower_dict.keys())[1:]:
         prefix = (
-            "receiver_inner_"
+            "receiver_outer_"
             if target_area == config_dictionary.target_area_receiver
             else ""
         )
