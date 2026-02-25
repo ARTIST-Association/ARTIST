@@ -147,7 +147,7 @@ def plot_error_distribution(
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
-    # Set Plot style.
+    # Set plot style.
     plt.rcParams["text.usetex"] = True
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
     plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
