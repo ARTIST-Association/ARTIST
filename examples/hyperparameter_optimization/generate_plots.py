@@ -25,7 +25,7 @@ def plot_kinematic_reconstruction_fluxes(
     reconstruction_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
 ) -> None:
     """
-    Plot the distribution of reconstruction errors.
+    Plot the reconstructed fluxes.
 
     This function plots histograms and kernel density estimations of the pointing errors in reconstruction when comparing
     HeliOS and UTIS as methods for focal spot centroid extraction.
