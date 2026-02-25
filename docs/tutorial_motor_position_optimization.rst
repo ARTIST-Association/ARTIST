@@ -41,9 +41,9 @@ improve operation of the power plant. Therefore, we have to define the ground tr
         index_mapping.unbatched_bitmap_u
     ) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
 
-For the motor position optimization the flux integral is essential as we usually want to maximize the energy on the receiver while optimally distributing the single heliostat fluxes.
-To simulate the energy on the receiver we need to assign meaningful magnitudes to each single ray. This is done by providing the ``dni`` parameter.
-The DNI  is the insolation measured at a given location on Earth with a surface element perpendicular to the Sun's rays, excluding diffuse insolation.
+For the motor position optimization, the flux integral is essential as we usually want to maximize the energy on the receiver while optimally distributing the single heliostat fluxes.
+To simulate the energy on the receiver, we need to assign meaningful magnitudes to each single ray. This is done by providing the ``dni`` parameter.
+The DNI is the insolation measured at a given location on Earth with a surface element perpendicular to the sun's rays, excluding diffuse insolation.
 The DNI needs to be provided in W/m^2 and is then automatically converted to ray magnitudes.
 The DNI is a parameter in the ``MotorPositionsOptimizer``, as we will later see.
 You can pass a DNI directly into a ``HeliostatRayTracer`` anywhere else in ``ARTIST`` too, but in the previous two reconstructions it is not necessary.
