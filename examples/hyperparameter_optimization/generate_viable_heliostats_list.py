@@ -24,8 +24,8 @@ def find_viable_heliostats(
     """
     Find heliostats that have at least a minimum number of valid calibration files.
 
-    This function iterates through a data directory to find all heliostats having at least the minimum number of measurements
-    calibration files. All paths are collected, and a sorted list of the heliostats is returned containing tuples including
+    This function iterates through a data directory to find all heliostats having at least the minimum number of calibration 
+    measurement files. All paths are collected, and a sorted list of the heliostats is returned containing tuples including
     the heliostat name, path to the calibration file, and path to the flux images for surface and kinematic reconstruction.
 
     Parameters
