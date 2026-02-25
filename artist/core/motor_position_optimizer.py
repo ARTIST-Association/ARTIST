@@ -20,9 +20,9 @@ class MotorPositionsOptimizer:
     """
     An optimizer used to find optimal motor positions for the heliostats.
 
-    The optimization loss is defined by the loss between the combined predicted and target
-    flux densities. Additionally there is one constraint that maximizes the flux integral and
-    one that constraints the maximum pixel intensity (maximum allowed flux density).
+    The optimization loss is defined as the loss between the combined predicted and target
+    flux densities. Additionally, there is one constraint that maximizes the flux integral and
+    one that constrains the maximum pixel intensity (maximum allowed flux density).
 
     Attributes
     ----------
