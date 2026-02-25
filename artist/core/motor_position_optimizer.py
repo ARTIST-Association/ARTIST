@@ -27,7 +27,7 @@ class MotorPositionsOptimizer:
     Attributes
     ----------
     ddp_setup : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group_to_ranks mapping.
     scenario : Scenario
         The scenario.
     optimizer_dict : dict[str, Any]
