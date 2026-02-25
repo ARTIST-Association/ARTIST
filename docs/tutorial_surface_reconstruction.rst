@@ -139,7 +139,7 @@ an cyclic or reduce on plateau scheduler:
 Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and similar to an ideal
 surface. In the surface reconstruction we consider two regularizers:
 
-- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here, is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learnt surface should be similar to the ideal surface, apart from these minute deviations.
+- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learned surface should be similar to the ideal surface, apart from these minute deviations.
 - ``SmoothnessRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the NURBS control points.
 
 These regularizers are initialized automatically within the ``SurfaceReconstructor``. We can adjust their influence by setting their weights inside the constraints dict.
