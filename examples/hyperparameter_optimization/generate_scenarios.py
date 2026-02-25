@@ -144,7 +144,7 @@ def generate_ideal_scenario(
     tower_file_path : pathlib.Path
         Path to the tower measurements file.
     heliostat_properties_list : list[tuple[str, pathlib.Path]]
-        List of heliostat names and their property files to include in the scenario.
+        Heliostat names and their property files to include in the scenario.
     number_of_heliostats : int
         Number of heliostats to select.
     device : torch.device | None
