@@ -143,7 +143,7 @@ surface. In the surface reconstruction we consider two regularizers:
 - ``SmoothnessRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the NURBS control points.
 
 These regularizers are initialized automatically within the ``SurfaceReconstructor``. We can adjust their influence by setting their weights inside the constraints dict.
-Weight of zero deactivate the regularizers completely.
+Weights of zero deactivate the regularizers completely.
 
 .. code-block::
 
