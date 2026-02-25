@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset, Sampler
 
 import artist.util.index_mapping
+from artist.core import blocking
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
@@ -34,7 +35,7 @@ class DistortionsDataset(Dataset):
         self,
         light_source: LightSource,
         number_of_points_per_heliostat: int,
-        number_of_heliostats: int,
+        number_of_active_heliostats: int,
         random_seed: int = 7,
     ) -> None:
         """
@@ -52,14 +53,14 @@ class DistortionsDataset(Dataset):
             The light source used to model the distortions.
         number_of_points_per_heliostat : int
             The number of points on the heliostats for which distortions are created.
-        number_of_heliostats : int
-            The number of heliostats in the scenario.
+        number_of_active_heliostats : int
+            The number of active heliostats in the scenario.
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         """
         self.distortions_u, self.distortions_e = light_source.get_distortions(
             number_of_points=number_of_points_per_heliostat,
-            number_of_heliostats=number_of_heliostats,
+            number_of_active_heliostats=number_of_active_heliostats,
             random_seed=random_seed,
         )
 
@@ -107,16 +108,8 @@ class RestrictedDistributedSampler(Sampler):
 
     Attributes
     ----------
-    number_of_samples : int
-        The number of samples in the dataset.
-    world_size : int
-        The world size or total number of processes.
-    rank : int
-        The rank of the current process.
-    number_of_active_ranks : int
-        The number of processes that will receive data.
-    number_of_samples_per_rank : int
-        The number of samples per rank.
+    rank_indices : int
+        The indices corresponding to the ranks assigned samples.
 
     See Also
     --------
@@ -126,6 +119,7 @@ class RestrictedDistributedSampler(Sampler):
     def __init__(
         self,
         number_of_samples: int,
+        number_of_active_heliostats: int,
         world_size: int = 1,
         rank: int = 0,
     ) -> None:
@@ -135,26 +129,33 @@ class RestrictedDistributedSampler(Sampler):
         Parameters
         ----------
         number_of_samples : int
-            The length of the dataset or total number of samples.
+            Length of the dataset or total number of samples.
+        number_of_active_heliostats : int
+            Number of active heliostats.
         world_size : int
-            The world size or total number of processes (default is 1).
+            World size or total number of processes (default is 1).
         rank : int
-            The rank of the current process (default is 0).
+            Rank of the current process (default is 0).
         """
         super().__init__()
-        self.number_of_samples = number_of_samples
-        self.world_size = world_size
-        self.rank = rank
+        number_of_active_ranks = min(number_of_active_heliostats, world_size)
+        self.rank_indices = []
 
-        # Adjust num_replicas if dataset is smaller than world_size.
-        self.number_of_active_ranks = min(self.number_of_samples, self.world_size)
+        if rank < number_of_active_ranks:
+            number_of_samples_per_heliostat = (
+                number_of_samples // number_of_active_heliostats
+            )
+            indices: list[int] = []
 
-        # Only assign data to first active ranks.
-        self.number_of_samples_per_rank = (
-            self.number_of_samples // self.number_of_active_ranks
-            if self.rank < self.number_of_active_ranks
-            else 0
-        )
+            for index in range(number_of_active_heliostats):
+                if index % number_of_active_ranks == rank:
+                    start = index * number_of_samples_per_heliostat
+                    end = start + number_of_samples_per_heliostat
+                    indices.extend(range(start, end))
+
+            self.rank_indices = indices
+        else:
+            self.rank_indices = []
 
     def __iter__(self) -> Iterator[int]:
         """
@@ -165,11 +166,7 @@ class RestrictedDistributedSampler(Sampler):
         Iterator[int]
             An iterator over indices for the current rank.
         """
-        rank_indices = []
-        for i in range(self.rank, self.number_of_samples, self.world_size):
-            rank_indices.append(i)
-
-        return iter(rank_indices)
+        return iter(self.rank_indices)
 
 
 class HeliostatRayTracer:
@@ -182,12 +179,14 @@ class HeliostatRayTracer:
         The scenario used to perform ray tracing.
     heliostat_group : HeliostatGroup
         The selected heliostat group containing active heliostats.
+    blocking_active : bool
+        Indicates whether blocking is activated.
     world_size : int
         The world size i.e., the overall number of processes.
     rank : int
         The rank, i.e., individual process ID.
     batch_size : int
-        The amount of samples (Heliostats) processed parallel within a single rank.
+        The amount of samples (heliostats) processed in parallel within a single rank.
     light_source : LightSource
         The light source emitting the traced rays.
     distortions_dataset : DistortionsDataset
@@ -199,9 +198,19 @@ class HeliostatRayTracer:
     bitmap_resolution : int
         The resolution of the bitmap in both directions.
         Tensor of shape [2].
+    ray_magnitude : float
+        Magnitude of each single ray.
+    blocking_heliostat_surfaces : torch.Tensor
+        The heliostat surfaces considered during blocking calculations.
+        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+    blocking_heliostat_surfaces_active : torch.Tensor
+        The aligned heliostat surfaces considered during blocking calculations.
+        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
 
     Methods
     -------
+    get_sampler_indices()
+        Get the indices assigned to the current rank by the distributed sampler.
     trace_rays()
         Perform heliostat ray tracing.
     scatter_rays()
@@ -216,6 +225,7 @@ class HeliostatRayTracer:
         self,
         scenario: Scenario,
         heliostat_group: "HeliostatGroup",
+        blocking_active: bool = True,
         world_size: int = 1,
         rank: int = 0,
         batch_size: int = 100,
@@ -226,6 +236,7 @@ class HeliostatRayTracer:
                 artist.util.index_mapping.bitmap_resolution,
             ]
         ),
+        dni: float | None = None,
     ) -> None:
         """
         Initialize the heliostat ray tracer.
@@ -242,6 +253,8 @@ class HeliostatRayTracer:
             The scenario used to perform ray tracing.
         heliostat_group : HeliostatGroup
             The selected heliostat group containing active heliostats.
+        blocking_active : bool
+            Flag indicating whether blocking is activated (default is True).
         world_size : int
             The world size i.e., the overall number of processes (default is 1).
         rank : int
@@ -253,9 +266,12 @@ class HeliostatRayTracer:
         bitmap_resolution : torch.Tensor
             The resolution of the bitmap in both directions. (default is torch.tensor([256,256])).
             Tensor of shape [2].
+        dni : float | None
+            Direct normal irradiance in W/m^2 (default is None -> ray magnitude = 1.0).
         """
         self.scenario = scenario
         self.heliostat_group = heliostat_group
+        self.blocking_active = blocking_active
 
         self.world_size = world_size
         self.rank = rank
@@ -271,12 +287,15 @@ class HeliostatRayTracer:
             number_of_points_per_heliostat=self.heliostat_group.active_surface_points.shape[
                 index_mapping.number_of_surface_points_dimension
             ],
-            number_of_heliostats=self.heliostat_group.number_of_active_heliostats,
+            number_of_active_heliostats=self.heliostat_group.number_of_active_heliostats,
             random_seed=random_seed,
         )
         # Create restricted distributed sampler.
         self.distortions_sampler = RestrictedDistributedSampler(
             number_of_samples=len(self.distortions_dataset),
+            number_of_active_heliostats=(
+                self.heliostat_group.active_heliostats_mask > 0
+            ).sum(),
             world_size=self.world_size,
             rank=self.rank,
         )
@@ -290,11 +309,69 @@ class HeliostatRayTracer:
 
         self.bitmap_resolution = bitmap_resolution
 
+        if self.blocking_active:
+            self.blocking_heliostat_surfaces = torch.cat(
+                [
+                    group.surface_points
+                    for group in self.scenario.heliostat_field.heliostat_groups
+                ]
+            )
+            blocking_heliostat_surfaces_active_list = []
+            for group in self.scenario.heliostat_field.heliostat_groups:
+                if group.active_heliostats_mask.sum() == 0:
+                    blocking_heliostat_surfaces_active_list.append(
+                        group.surface_points + group.positions.unsqueeze(1)
+                    )
+                    log.warning(
+                        "Not all heliostat groups have been aligned yet."
+                        "Use unaligned, i.e., horizontal heliostats as approximated blocking planes in raytracing."
+                    )
+                if group.active_heliostats_mask.sum() > 0:
+                    heliostat_mask = torch.cumsum(group.active_heliostats_mask, dim=0)
+                    start_indices = heliostat_mask - group.active_heliostats_mask
+                    blocking_heliostat_surfaces_active_list.append(
+                        group.active_surface_points[start_indices]
+                    )
+            self.blocking_heliostat_surfaces_active = torch.cat(
+                blocking_heliostat_surfaces_active_list
+            )
+
+        if dni is not None:
+            # Calculate surface area per heliostat.
+            canting_norm = (torch.norm(self.heliostat_group.canting[0], dim=1)[0])[:2]
+            dimensions = (canting_norm * 4) + 0.02
+            heliostat_surface_area = dimensions[0] * dimensions[1]
+            # Calculate ray magnitude.
+            power_single_heliostat = dni * heliostat_surface_area
+            rays_per_heliostat = (
+                self.heliostat_group.surface_points.shape[1]
+                * self.scenario.light_sources.light_source_list[0].number_of_rays
+            )
+            self.ray_magnitude = power_single_heliostat / rays_per_heliostat
+        else:
+            self.ray_magnitude = 1.0
+
+    def get_sampler_indices(self) -> torch.Tensor:
+        """
+        Get the indices assigned to the current rank by the distributed sampler.
+
+        Returns
+        -------
+        torch.Tensor
+            Indices of the distortions dataset that are assigned to this rank.
+            Tensor of shape [number of samples assigned to the current rank].
+        """
+        return torch.tensor(
+            self.distortions_sampler.rank_indices,
+            device=self.distortions_dataset.distortions_u.device,
+        )
+
     def trace_rays(
         self,
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
         target_area_mask: torch.Tensor,
+        ray_extinction_factor: float = 0.0,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -302,8 +379,9 @@ class HeliostatRayTracer:
 
         Scatter the rays according to the distortions, calculate the intersections with the target planes,
         and sample the resulting bitmaps on the target areas. The bitmaps are generated separately for each
-        active heliostat and can be accessed individually or they can be combined to get the total flux
-        density distribution for all heliostats on all target areas.
+        active heliostat and are accessed individually.
+        If blocking is activated in the ``HeliostatRayTracer``, rays that are blocked by other heliostats are
+        filtered out.
 
         Parameters
         ----------
@@ -317,6 +395,8 @@ class HeliostatRayTracer:
         target_area_mask : torch.Tensor
             The indices of the target areas for each active heliostat.
             Tensor of shape [number_of_active_heliostats].
+        ray_extinction_factor : float
+            Amount of global ray extinction, responsible for shading (default is 0.0 -> no extinction).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -339,15 +419,6 @@ class HeliostatRayTracer:
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
 
-        flux_distributions = torch.zeros(
-            (
-                self.heliostat_group.number_of_active_heliostats,
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            ),
-            device=device,
-        )
-
         self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(
                 index_mapping.number_rays_per_point
@@ -355,6 +426,18 @@ class HeliostatRayTracer:
             reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
 
+        if self.blocking_active:
+            # Compute the heliostat blocking primitives.
+            (
+                blocking_primitives_corners,
+                blocking_primitives_spans,
+                blocking_primitives_normals,
+            ) = blocking.create_blocking_primitives_rectangles_by_index(
+                blocking_heliostats_active_surface_points=self.blocking_heliostat_surfaces_active,
+                device=device,
+            )
+
+        flux_distributions = []
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
             sampler_indices = list(self.distortions_sampler)
 
@@ -390,17 +473,76 @@ class HeliostatRayTracer:
                 )
             )
 
-            bitmaps = self.sample_bitmaps(
+            # The variable blocked is all zeros if there is no blocking at all in the scene.
+            # If blocking was activated in the HeliostatRaytracer, blocking will be computed.
+            number_of_heliostats, number_of_rays, number_of_points, _ = (
+                intersections.shape
+            )
+            blocked = torch.zeros(
+                (number_of_heliostats, number_of_rays, number_of_points),
+                device=device,
+            )
+            if self.blocking_active:
+                points_at_ray_origins = self.heliostat_group.active_surface_points[
+                    active_heliostats_mask_batch, None, :, :3
+                ].expand(-1, self.light_source.number_of_rays, -1, -1)
+                ray_to_heliostat_mapping = torch.arange(
+                    number_of_heliostats, device=device
+                ).repeat_interleave(number_of_rays * number_of_points)
+
+                # Filter out the blocking primitives that are relevant for blocking.
+                filtered_blocking_primitive_indices = (
+                    blocking.lbvh_filter_blocking_planes(
+                        points_at_ray_origins=points_at_ray_origins,
+                        ray_directions=rays.ray_directions[..., :3],
+                        blocking_primitives_corners=blocking_primitives_corners[
+                            ..., :3
+                        ],
+                        ray_to_heliostat_mapping=ray_to_heliostat_mapping,
+                        max_stack_size=128,
+                        device=device,
+                    )
+                )
+                # Create the blocked ray mask based on the relevant blocking primitive indices.
+                if filtered_blocking_primitive_indices.numel() > 0:
+                    blocked = blocking.soft_ray_blocking_mask(
+                        ray_origins=self.heliostat_group.active_surface_points[
+                            active_heliostats_mask_batch
+                        ],
+                        ray_directions=rays.ray_directions,
+                        blocking_primitives_corners=blocking_primitives_corners[
+                            filtered_blocking_primitive_indices
+                        ],
+                        blocking_primitives_spans=blocking_primitives_spans[
+                            filtered_blocking_primitive_indices
+                        ],
+                        blocking_primitives_normals=blocking_primitives_normals[
+                            filtered_blocking_primitive_indices
+                        ],
+                        distances_to_target=torch.norm(
+                            intersections[..., :3] - points_at_ray_origins, dim=-1
+                        ),
+                        epsilon=1e-12,
+                        softness=50.0,
+                    )
+
+            intensities = (
+                absolute_intensities * (1 - blocked) * (1 - ray_extinction_factor)
+            )
+
+            batch_bitmaps = self.sample_bitmaps(
                 intersections=intersections,
-                absolute_intensities=absolute_intensities,
+                absolute_intensities=intensities,
                 active_heliostats_mask=active_heliostats_mask_batch,
                 target_area_mask=target_area_mask[active_heliostats_mask_batch],
                 device=device,
             )
 
-            flux_distributions = flux_distributions + bitmaps
+            flux_distributions.append(batch_bitmaps)
 
-        return flux_distributions
+        combined = torch.cat(flux_distributions, dim=0)
+
+        return combined
 
     def scatter_rays(
         self,
@@ -448,8 +590,10 @@ class HeliostatRayTracer:
 
         return Rays(
             ray_directions=scattered_rays,
-            ray_magnitudes=torch.ones(
-                scattered_rays.shape[: index_mapping.ray_directions], device=device
+            ray_magnitudes=torch.full(
+                (scattered_rays.shape[: index_mapping.ray_directions]),
+                self.ray_magnitude,
+                device=device,
             ),
         )
 
@@ -493,6 +637,12 @@ class HeliostatRayTracer:
         """
         device = get_device(device=device)
 
+        # Extract number of active heliostats and bitmap height and width, i.e., its resolution in pixels.
+        num_heliostats = active_heliostats_mask.sum()
+        bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
+        bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
+
+        # Extract widths and heights of target planes, along with corresponding centers in E and U direction.
         plane_widths = (
             self.scenario.target_areas.dimensions[target_area_mask][
                 :, index_mapping.target_area_width
@@ -521,44 +671,58 @@ class HeliostatRayTracer:
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
-        total_intersections = (
-            intersections.shape[index_mapping.number_rays_per_point]
-            * intersections.shape[index_mapping.surface_points]
-        )
-        absolute_intensities = absolute_intensities.reshape(-1, total_intersections)
 
-        # Determine the x- and y-positions of the intersections with the target areas, scaled to the bitmap resolutions.
-        dx_intersections = (
+        # Determine the E- and U-positions of the rays' intersections with the target areas' planes, scaled to the
+        # bitmap resolutions. Here, we decide that the bottom left corner of the 2D bitmap is the origin of the flux
+        # image that is computed. `target_intersections_e/u` contain the intersection coordinates in meters.
+        # Rays that hit the actual target have intersection coordinates ranging from 0 to `target_area.plane_e/_u`.
+        target_intersections_e = (
             intersections[:, :, :, index_mapping.e] + plane_widths / 2 - plane_centers_e
         )
-        dy_intersections = (
+        target_intersections_u = (
             intersections[:, :, :, index_mapping.u]
             + plane_heights / 2
             - plane_centers_u
         )
 
-        # Selection of valid intersection indices within the bounds of the target areas or within a little boundary outside the target areas.
-        intersection_indices_1 = (
-            (-1 <= dx_intersections)
-            & (dx_intersections < plane_widths + 1)
-            & (-1 <= dy_intersections)
-            & (dy_intersections < plane_heights + 1)
-        )
+        # Scale target intersection coordinates into bitmap space.
+        #
+        # The resulting `bitmap_intersections_e/u` represent continuous coordinates
+        # in pixel units.
 
-        # dx_intersections and dy_intersections contain intersection coordinates ranging from 0 to target_area.plane_e/_u.
-        # x_intersections and y_intersections contain those intersection coordinates scaled to a range from 0 to bitmap_resolution_e/_u.
-        # Additionally a mask is applied, only the intersections where intersection_indices == True are kept, the tensors are flattened.
-        x_intersections = (
-            dx_intersections
-            / plane_widths
-            * self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
-        ).reshape(-1, total_intersections)
-        y_intersections = (
-            dy_intersections
-            / plane_heights
-            * self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
-        ).reshape(-1, total_intersections)
+        # A one-pixel margin is implicitly added around the actual target area.
+        # This is required for bilinear splatting: rays that intersect close to
+        # the target boundary must still contribute partially to pixels inside
+        # the target region. Without this margin, contributions from neighboring
+        # pixels could be lost.
+        #
+        # To ensure that bilinear weights remain non-negative within the target
+        # area and its margin, all bitmap indices are shifted by +1. This avoids
+        # negative interpolation weights near the lower boundary.
+        #
+        # For intersections within the area of interest (i.e. the physical target
+        # plus its one-pixel margin), the coordinates lie in the range
+        # [1, `bitmap_resolution_e/u`].
+        # Intersections outside this region may produce coordinates outside this
+        # range (negative or larger than the bitmap size). This is intentional:
+        # such contributions are computed during splatting but later masked out
+        # when assembling the final bitmap.
+        #
+        # As bilinear weights assume integer indices are at pixel centers, the
+        # scaling uses `(bitmap_width - 1)` and `(bitmap_height - 1)` so that
+        # continuous coordinates map correctly to pixel centers when discretized
+        # into `bitmap_resolution` bins.
+        bitmap_intersections_e = (
+            1.0 + (target_intersections_e / plane_widths * (bitmap_width - 1))
+        ).reshape(num_heliostats, -1)
+        bitmap_intersections_u = (
+            1.0 + (target_intersections_u / plane_heights * (bitmap_height - 1))
+        ).reshape(num_heliostats, -1)
 
+        absolute_intensities = absolute_intensities.reshape(num_heliostats, -1)
+
+        # To ensure differentiability of the ray tracing process, the intensity of each ray
+        # is distributed via bilinear splatting.
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
         #
@@ -571,158 +735,123 @@ class HeliostatRayTracer:
         # continuous value anywhere in-between the four pixels we sample.
         # That the "." may be anywhere in-between the four pixels is not
         # shown in the ASCII diagram, but is important to keep in mind.
-
-        # The lower-valued neighboring pixels (for x this corresponds to 1
-        # and 4, for y to 3 and 4).
-        x_indices_low = x_intersections.to(torch.int32)
-        y_indices_low = y_intersections.to(torch.int32)
-
-        # The higher-valued neighboring pixels (for x this corresponds to 2
-        # and 3, for y to 1 and 2).
-        x_indices_high = x_indices_low + 1
-        y_indices_high = y_indices_low + 1
-
-        x_indices = torch.zeros(
-            (
-                intersections.shape[index_mapping.heliostat_dimension],
-                total_intersections * 4,
-            ),
-            device=device,
-            dtype=torch.int32,
-        )
-
-        x_indices[:, :total_intersections] = x_indices_low
-        x_indices[
-            :, total_intersections : total_intersections * index_mapping.second_pixel
-        ] = x_indices_high
-        x_indices[
-            :,
-            total_intersections * index_mapping.second_pixel : total_intersections
-            * index_mapping.third_pixel,
-        ] = x_indices_high
-        x_indices[:, total_intersections * index_mapping.third_pixel :] = x_indices_low
-
-        y_indices = torch.zeros(
-            (
-                intersections.shape[index_mapping.heliostat_dimension],
-                total_intersections * 4,
-            ),
-            device=device,
-            dtype=torch.int32,
-        )
-
-        y_indices[:, :total_intersections] = y_indices_high
-        y_indices[
-            :, total_intersections : total_intersections * index_mapping.second_pixel
-        ] = y_indices_high
-        y_indices[
-            :,
-            total_intersections * index_mapping.second_pixel : total_intersections
-            * index_mapping.third_pixel,
-        ] = y_indices_low
-        y_indices[:, total_intersections * index_mapping.third_pixel :] = y_indices_low
+        # The western and lower neighbored pixels are saved in indices_low_e and indices_low_u
+        # (for E this corresponds to pixel 1 and 4, for U to 3 and 4).
+        # The eastern and upper neighbored pixels are accessed via indices_low_e + 1 and
+        # indices_low_u + 1 (for E this corresponds to 2 and 3, for U to 1 and 2).
+        indices_low_e = bitmap_intersections_e.long()
+        indices_low_u = bitmap_intersections_u.long()
 
         # When distributing the continuously positioned value/intensity to
-        # the discretely positioned pixels, we give the corresponding
-        # "influence" of the value to each neighbor. Here, we calculate this
-        # influence for each neighbor.
+        # the discretely positioned pixels, we assign the corresponding
+        # contribution to each neighbor based on its distance to the original,
+        # continuous intersection point.
+        # Note that the implementation below is already optimized for memory
+        # consumption. For improved clarity, the detailed derivation of the
+        # splatting weights is sketched below:
+        #
+        # indices_high_e/u = indices_low_e/u + 1
+        # contributions_low_e/u = indices_high_e/u - bitmap_intersections_e/u
+        # contributions_high_e/u = bitmap_intersections_e/u - indices_low_e/u
+        # weight_pixel_1 = contributions_low_e * contributions_high_u
+        # weight_pixel_2 = contributions_high_e * contributions_high_u
+        # weight_pixel_3 = contributions_high_e * contributions_low_u
+        # weight_pixel_4 = contributions_low_e * contributions_low_u
+        #
+        # E-value contribution to 1 and 4
+        contributions_low_e = indices_low_e + 1 - bitmap_intersections_e
+        # U-value contribution to 3 and 4
+        contributions_low_u = indices_low_u + 1 - bitmap_intersections_u
+        # E-value contribution to 2 and 3
+        contributions_high_e = bitmap_intersections_e - indices_low_e
+        # U-value contribution to 1 and 2
+        contributions_high_u = bitmap_intersections_u - indices_low_u
 
-        # x-value influence in 1 and 4.
-        x_low_influences = x_indices_high - x_intersections
-        # y-value influence in 3 and 4.
-        y_low_influences = y_indices_high - y_intersections
-        # x-value influence in 2 and 3.
-        x_high_influences = x_intersections - x_indices_low
-        # y-value influence in 1 and 2.
-        y_high_influences = y_intersections - y_indices_low
+        # Here we shift the bitmap indices back to the original range from 0 to bitmap_width/height - 1.
+        indices_low_e = indices_low_e - 1
+        indices_low_u = indices_low_u - 1
 
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
         # so we know where to position them. The numbers correspond to the
         # ASCII diagram above.
         intensities_pixel_1 = (
-            x_low_influences * y_high_influences * absolute_intensities
+            contributions_low_e * contributions_high_u * absolute_intensities
         )
         intensities_pixel_2 = (
-            x_high_influences * y_high_influences * absolute_intensities
+            contributions_high_e * contributions_high_u * absolute_intensities
         )
         intensities_pixel_3 = (
-            x_high_influences * y_low_influences * absolute_intensities
+            contributions_high_e * contributions_low_u * absolute_intensities
         )
-        intensities_pixel_4 = x_low_influences * y_low_influences * absolute_intensities
-
-        intensities = torch.zeros(
-            (intersections.shape[0], total_intersections * 4), device=device
-        )
-        intensities[:, :total_intersections] = intensities_pixel_1.reshape(
-            -1, total_intersections
-        )
-        intensities[
-            :, total_intersections : total_intersections * index_mapping.second_pixel
-        ] = intensities_pixel_2.reshape(-1, total_intersections)
-        intensities[
-            :,
-            total_intersections * index_mapping.second_pixel : total_intersections
-            * index_mapping.third_pixel,
-        ] = intensities_pixel_3.reshape(-1, total_intersections)
-        intensities[:, total_intersections * index_mapping.third_pixel :] = (
-            intensities_pixel_4.reshape(-1, total_intersections)
+        intensities_pixel_4 = (
+            contributions_low_e * contributions_low_u * absolute_intensities
         )
 
         # For the distributions, we regarded even those neighboring pixels that are
-        # _not_ part of the image but within a little boundary outside of the image as well.
+        # _not_ part of the image.
         # That is why here, we set up a mask to choose only those indices that are actually
         # in the bitmap (i.e., we prevent out-of-bounds access).
-        intersection_indices_2 = (
-            (0 <= x_indices)
-            & (x_indices < self.bitmap_resolution[index_mapping.unbatched_bitmap_e])
-            & (0 <= y_indices)
-            & (y_indices < self.bitmap_resolution[index_mapping.unbatched_bitmap_u])
-        )
-
-        final_intersection_indices = (
-            intersection_indices_1.reshape(-1, total_intersections).repeat(
-                1, self.heliostat_group.number_of_facets_per_heliostat
-            )
-            & intersection_indices_2
-        )
-        mask = final_intersection_indices.flatten()
-
-        active_heliostat_indices = torch.nonzero(
-            active_heliostats_mask, as_tuple=False
-        ).squeeze()
-        heliostat_indices = torch.repeat_interleave(
-            active_heliostat_indices,
-            total_intersections * self.heliostat_group.number_of_facets_per_heliostat,
+        intersection_indices_on_target = (
+            (0 <= indices_low_e)
+            & (indices_low_e + 1 < bitmap_width)
+            & (0 <= indices_low_u)
+            & (indices_low_u + 1 < bitmap_height)
         )
 
         # Flux density maps for each active heliostat.
-        bitmaps_per_heliostat = torch.zeros(
-            (
-                self.heliostat_group.number_of_active_heliostats,
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            ),
-            dtype=dx_intersections.dtype,
-            device=device,
+        bitmaps_flat = torch.zeros(
+            (num_heliostats, bitmap_height * bitmap_width), device=device
         )
 
-        # Add up all distributed intensities in the corresponding indices.
-        bitmaps_per_heliostat.index_put_(
-            (
-                heliostat_indices[mask],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
-                - 1
-                - y_indices[final_intersection_indices],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
-                - 1
-                - x_indices[final_intersection_indices],
-            ),
-            intensities[final_intersection_indices],
-            accumulate=True,
+        # scatter_add_ can only handle flat tensors per batch. That is why the bitmaps are flattened.
+        # As an example: A bitmap with width = 4 and height = 2 has a total of 8 pixels.
+        # Therefore, flattened, the indices range from 0 to 7.
+        # 0     1     2     3
+        # [0,0] [0,1] [0,2] [0,3]
+        # [1,0] [1,1] [1,2] [1,3]
+        # 4     5     6     7
+        # The element at position [1,2] in the 2D array is at index 6 in the flattened tensor.
+        # To convert the pixel indices from their 2D representation to a flattened version we need
+        # to compute the row indices times the bitmap_width plus the column indices.
+        # In the example this is 1 * 4 + 2 = 6
+        # In our more general case that is:
+        # flattened_indices = indices_u * bitmap_width + indices_e
+        index_1 = (indices_low_u + 1) * bitmap_width + indices_low_e
+        index_2 = (indices_low_u + 1) * bitmap_width + indices_low_e + 1
+        index_3 = indices_low_u * bitmap_width + indices_low_e + 1
+        index_4 = indices_low_u * bitmap_width + indices_low_e
+
+        # We need to filter out out of bounds indices. scatter_add_ cannot handle advanced indexing in its parameters,
+        # therefore we cannot filter out invalid intersections by their indices. Instead we set all out of bounds indices
+        # to 0, that way they do not cause index out of bounds errors, and we also set the intensities at these indices
+        # to 0 so they do not add to the flux.
+        index_1[~intersection_indices_on_target] = 0
+        index_2[~intersection_indices_on_target] = 0
+        index_3[~intersection_indices_on_target] = 0
+        index_4[~intersection_indices_on_target] = 0
+
+        intensities_pixel_1 = intensities_pixel_1 * intersection_indices_on_target
+        intensities_pixel_2 = intensities_pixel_2 * intersection_indices_on_target
+        intensities_pixel_3 = intensities_pixel_3 * intersection_indices_on_target
+        intensities_pixel_4 = intensities_pixel_4 * intersection_indices_on_target
+
+        bitmaps_flat.scatter_add_(1, index_1, intensities_pixel_1)
+        bitmaps_flat.scatter_add_(1, index_2, intensities_pixel_2)
+        bitmaps_flat.scatter_add_(1, index_3, intensities_pixel_3)
+        bitmaps_flat.scatter_add_(1, index_4, intensities_pixel_4)
+
+        bitmaps_per_heliostat = bitmaps_flat.view(
+            num_heliostats, bitmap_height, bitmap_width
         )
 
-        return bitmaps_per_heliostat
+        # Since tensor indices have their origin of (0,0) in the top left, but our image indices have their
+        # origin in the bottom left, we need to flip the row (u) indices, i.e., up-down flip (flip along axis 1).
+        # The column indices also need to be flipped because the more intuitive way to look at flux prediction
+        # bitmaps, is to imagine oneself to stand in the heliostat field looking at the receiver.
+        # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
+        # (flip along axis 2).
+        return torch.flip(bitmaps_per_heliostat, [1, 2])
 
     def get_bitmaps_per_target(
         self,

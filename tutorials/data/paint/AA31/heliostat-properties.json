@@ -1,8 +1,16 @@
 {
-  "heliostat_position": [50.9136444630788, 6.38749024195609, 88.67166138],
-  "height": 2.55999994277954,
-  "width": 3.22000002861023,
-  "initial_orientation": [0, 0, 1],
+  "heliostat_position": [
+    50.91364495251966,
+    6.387513366387674,
+    88.67166138
+  ],
+  "height": 2.559999942779541,
+  "width": 3.2200000286102295,
+  "initial_orientation": [
+    0.0,
+    -1.0,
+    0.0
+  ],
   "kinematic_properties": {
     "actuators": [
       {
@@ -38,39 +46,87 @@
         "movement_speed": 0
       }
     ],
-    "joint_translation_e_1": 0,
-    "joint_translation_n_1": 0,
-    "joint_translation_u_1": 0,
-    "joint_translation_e_2": 0,
-    "joint_translation_n_2": 0,
-    "joint_translation_u_2": 0.314999997615814,
-    "concentrator_translation_e": 0,
-    "concentrator_translation_n": -0.177550002932549,
-    "concentrator_translation_u": -0.404500007629395
+    "joint_translation_e_1": 0.0,
+    "joint_translation_n_1": 0.0,
+    "joint_translation_u_1": 0.0,
+    "joint_translation_e_2": 0.0,
+    "joint_translation_n_2": 0.0,
+    "joint_translation_u_2": 0.0,
+    "concentrator_translation_e": 0.0,
+    "concentrator_translation_n": 0.175,
+    "concentrator_translation_u": 0.0
   },
   "facet_properties": {
     "canting_type": "receiver canting",
     "number_of_facets": 4,
     "facets": [
       {
-        "translation_vector": [-0.8075, 0.6425, 0.0402],
-        "canting_e": [0.802484571933746, 0, -0.00498456787317991],
-        "canting_n": [0.000019569211872294, 0.637492179870606, 0.00315052270889282]
+        "translation_vector": [
+          -0.8075,
+          0.6425,
+          0.0402
+        ],
+        "canting_e": [
+          0.8024845719337463,
+          -0.0,
+          -0.004984567873179913
+        ],
+        "canting_n": [
+          1.9569211872294545e-05,
+          0.6374921798706055,
+          0.0031505227088928223
+        ]
       },
       {
-        "translation_vector": [0.8075, 0.6425, 0.0402],
-        "canting_e": [0.802484571933746, 0, 0.00498456787317991],
-        "canting_n": [-0.000019569211872294, 0.637492179870606, 0.00315052270889282]
+        "translation_vector": [
+          0.8075,
+          0.6425,
+          0.0402
+        ],
+        "canting_e": [
+          0.8024845719337463,
+          -0.0,
+          0.004984567873179913
+        ],
+        "canting_n": [
+          -1.9569211872294545e-05,
+          0.6374921798706055,
+          0.0031505227088928223
+        ]
       },
       {
-        "translation_vector": [-0.8075, -0.6425, 0.0402],
-        "canting_e": [0.802484571933746, 0, -0.00498456787317991],
-        "canting_n": [-0.000019569211872294, 0.637492179870606, -0.00315052270889282]
+        "translation_vector": [
+          -0.8075,
+          -0.6425,
+          0.0402
+        ],
+        "canting_e": [
+          0.8024845719337463,
+          -0.0,
+          -0.004984567873179913
+        ],
+        "canting_n": [
+          -1.9569211872294545e-05,
+          0.6374921798706055,
+          -0.0031505227088928223
+        ]
       },
       {
-        "translation_vector": [0.8075, -0.6425, 0.0402],
-        "canting_e": [0.802484571933746, 0, 0.00498456787317991],
-        "canting_n": [0.000019569211872294, 0.637492179870606, -0.00315052270889282]
+        "translation_vector": [
+          0.8075,
+          -0.6425,
+          0.0402
+        ],
+        "canting_e": [
+          0.8024845719337463,
+          -0.0,
+          0.004984567873179913
+        ],
+        "canting_n": [
+          1.9569211872294545e-05,
+          0.6374921798706055,
+          -0.0031505227088928223
+        ]
       }
     ]
   },

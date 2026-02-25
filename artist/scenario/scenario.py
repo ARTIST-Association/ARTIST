@@ -36,6 +36,8 @@ class Scenario:
 
     Methods
     -------
+    get_number_of_heliostat_groups_from_hdf5()
+        Get the number of heliostat groups to initiate distributed setup from the HDF5 scenario file.
     load_scenario_from_hdf5()
         Class method to load the scenario from an HDF5 file.
     index_mapping()
@@ -162,31 +164,31 @@ class Scenario:
 
         prototype_initial_orientation = torch.tensor(
             scenario_file[config_dictionary.prototype_key][
-                config_dictionary.kinematic_prototype_key
-            ][config_dictionary.kinematic_initial_orientation][()],
+                config_dictionary.kinematics_prototype_key
+            ][config_dictionary.kinematics_initial_orientation][()],
             dtype=torch.float,
             device=device,
         )
 
-        prototype_kinematic_type = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.kinematic_prototype_key
-        ][config_dictionary.kinematic_type][()].decode("utf-8")
+        prototype_kinematics_type = scenario_file[config_dictionary.prototype_key][
+            config_dictionary.kinematics_prototype_key
+        ][config_dictionary.kinematics_type][()].decode("utf-8")
 
         (
             prototype_translation_deviations,
             prototype_rotation_deviations,
             number_of_actuators,
-        ) = h5_scenario_parser.kinematic_deviations(
+        ) = h5_scenario_parser.kinematics_deviations(
             prototype=True,
-            kinematic_type=prototype_kinematic_type,
+            kinematics_type=prototype_kinematics_type,
             scenario_file=scenario_file,
             log=log,
             device=device,
         )
 
-        prototype_kinematic = {
-            config_dictionary.kinematic_type: prototype_kinematic_type,
-            config_dictionary.kinematic_initial_orientation: prototype_initial_orientation,
+        prototype_kinematics = {
+            config_dictionary.kinematics_type: prototype_kinematics_type,
+            config_dictionary.kinematics_initial_orientation: prototype_initial_orientation,
             config_dictionary.translation_deviations: prototype_translation_deviations,
             config_dictionary.rotation_deviations: prototype_rotation_deviations,
         }
@@ -207,10 +209,10 @@ class Scenario:
 
         unique_prototype_actuators = {a for a in prototype_actuator_type_list}
 
-        if prototype_kinematic_type == config_dictionary.rigid_body_key:
+        if prototype_kinematics_type == config_dictionary.rigid_body_key:
             if len(unique_prototype_actuators) > 1:
                 raise ValueError(
-                    "There is an error in the prototype. When using the Rigid Body Kinematic, all actuators for this prototype must have the same type."
+                    "There is an error in the prototype. When using the rigid body kinematics, all actuators for this prototype must have the same type."
                 )
             else:
                 prototype_actuator_type = prototype_actuator_type_list[0]
@@ -223,7 +225,6 @@ class Scenario:
             scenario_file=scenario_file,
             actuator_type=prototype_actuator_type,
             number_of_actuators=number_of_actuators,
-            initial_orientation=prototype_initial_orientation,
             log=log,
             device=device,
         )
@@ -237,7 +238,7 @@ class Scenario:
         heliostat_field = HeliostatField.from_hdf5(
             config_file=scenario_file,
             prototype_surface=prototype_surface,
-            prototype_kinematic=prototype_kinematic,
+            prototype_kinematics=prototype_kinematics,
             prototype_actuators=prototype_actuators,
             number_of_surface_points_per_facet=number_of_surface_points_per_facet.to(
                 device

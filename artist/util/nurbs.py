@@ -1,6 +1,6 @@
 import torch
 
-from artist.util import index_mapping
+from artist.util import index_mapping, utils
 from artist.util.environment_setup import get_device
 
 
@@ -34,9 +34,9 @@ class NURBSSurfaces(torch.nn.Module):
 
     Methods
     -------
-    calculate_knot_vector()
+    calculate_uniform_knot_vectors()
         Calculate the knot vectors for all surfaces in one direction.
-    find_span()
+    find_spans()
         Determine the knot spans in one direction.
     basis_functions_and_derivatives()
         Compute the nonzero derivatives of the basis functions up to the nth-derivative.
@@ -488,6 +488,8 @@ class NURBSSurfaces(torch.nn.Module):
     def calculate_surface_points_and_normals(
         self,
         evaluation_points: torch.Tensor,
+        canting: torch.Tensor,
+        facet_translations: torch.Tensor,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -623,7 +625,7 @@ class NURBSSurfaces(torch.nn.Module):
                         basis_values_derivatives_v[t][s].unsqueeze(-1) * temp[s]
                     )
 
-        normals = torch.linalg.cross(
+        surface_normals = torch.linalg.cross(
             derivatives[
                 :,
                 :,
@@ -640,32 +642,71 @@ class NURBSSurfaces(torch.nn.Module):
                 index_mapping.nurbs_derivative_order_1,
                 :3,
             ],
-        )
-        normals = torch.nn.functional.normalize(
-            normals, dim=index_mapping.nurbs_normals
         )
 
-        normals = torch.cat(
+        surface_points_homogenous = derivatives[
+            :,
+            :,
+            :,
+            index_mapping.nurbs_derivative_order_0,
+            index_mapping.nurbs_derivative_order_0,
+        ]
+
+        homogenous_weights = surface_points_homogenous[:, :, :, 3:4]
+        surface_points = (
+            surface_points_homogenous[:, :, :, : index_mapping.slice_fourth_dimension]
+            / homogenous_weights
+        )
+
+        surface_points = torch.cat(
             (
-                normals,
-                torch.zeros(
-                    tuple(normals.shape[: index_mapping.nurbs_normals]) + (1,),
+                surface_points,
+                torch.ones(
+                    tuple(surface_points.shape[:3]) + (1,),
                     device=device,
                 ),
             ),
             dim=index_mapping.nurbs_normals,
         )
 
-        return derivatives[
-            :,
-            :,
-            :,
-            index_mapping.nurbs_derivative_order_0,
-            index_mapping.nurbs_derivative_order_0,
-        ], normals
+        surface_normals = torch.nn.functional.normalize(
+            surface_normals, dim=index_mapping.nurbs_normals
+        )
+
+        surface_normals = torch.cat(
+            (
+                surface_normals,
+                torch.zeros(
+                    tuple(surface_normals.shape[: index_mapping.nurbs_normals]) + (1,),
+                    device=device,
+                ),
+            ),
+            dim=index_mapping.nurbs_normals,
+        )
+
+        if canting is not None:
+            canted_surface_points = utils.perform_canting(
+                canting_angles=canting, data=surface_points, device=device
+            )
+            transformed_surface_points = (
+                canted_surface_points
+                + facet_translations.reshape(
+                    self.number_of_surfaces, self.number_of_facets_per_surface, 1, 4
+                )
+            )
+            transformed_surface_normals = utils.perform_canting(
+                canting_angles=canting, data=surface_normals, device=device
+            )
+            return transformed_surface_points, transformed_surface_normals
+
+        return surface_points, surface_normals
 
     def forward(
-        self, evaluation_points: torch.Tensor, device: torch.device | None = None
+        self,
+        evaluation_points: torch.Tensor,
+        canting: torch.Tensor,
+        facet_translations: torch.Tensor,
+        device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Specify the forward operation of the NURBS, i.e., calculate the surface points and normals.
@@ -692,5 +733,8 @@ class NURBSSurfaces(torch.nn.Module):
         device = get_device(device=device)
 
         return self.calculate_surface_points_and_normals(
-            evaluation_points=evaluation_points, device=device
+            evaluation_points=evaluation_points,
+            canting=canting,
+            facet_translations=facet_translations,
+            device=device,
         )

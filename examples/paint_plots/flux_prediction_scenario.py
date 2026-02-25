@@ -247,7 +247,9 @@ if __name__ == "__main__":
     heliostats_default = config.get(
         "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
     )
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/paint_plots/scenarios"
+    )
 
     parser.add_argument(
         "--device",

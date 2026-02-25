@@ -2,7 +2,7 @@
 
 import torch
 
-from artist.field.kinematic import Kinematic
+from artist.field.kinematics import Kinematics
 from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
@@ -12,7 +12,7 @@ class HeliostatGroup:
     Abstract base class for all heliostat groups.
 
     The abstract heliostat group implements a template for the construction of inheriting heliostat groups, each
-    with a specific kinematic type and specific actuator type. All heliostat groups together form the overall heliostat
+    with a specific kinematics type and specific actuator type. All heliostat groups together form the overall heliostat
     field. The abstract base class defines an align function that all heliostat groups need to overwrite
     in order to align the heliostats within this group. The heliostat groups will be initialized with no active
     heliostats. The heliostats have to be selected and activated before alignment, raytracing or optimization can begin.
@@ -45,8 +45,8 @@ class HeliostatGroup:
     nurbs_degrees : torch.Tensor
         The spline degrees for NURBS surfaces in u and then in v direction, for all heliostats in the group.
         Tensor of shape [2].
-    kinematic : Kinematic
-        The kinematic of all heliostats in the group.
+    kinematics : Kinematics
+        The kinematics of all heliostats in the group.
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostats_mask : torch.Tensor
@@ -81,6 +81,8 @@ class HeliostatGroup:
         positions: torch.Tensor,
         surface_points: torch.Tensor,
         surface_normals: torch.Tensor,
+        canting: torch.Tensor,
+        facet_translations: torch.Tensor,
         initial_orientations: torch.Tensor,
         nurbs_control_points: torch.Tensor,
         nurbs_degrees: torch.Tensor,
@@ -126,15 +128,17 @@ class HeliostatGroup:
         self.positions = positions
         self.surface_points = surface_points
         self.surface_normals = surface_normals
+        self.canting = canting
+        self.facet_translations = facet_translations
         self.initial_orientations = initial_orientations
 
         self.nurbs_control_points = nurbs_control_points
         self.nurbs_degrees = nurbs_degrees
 
-        self.kinematic = Kinematic()
+        self.kinematics = Kinematics()
 
         self.number_of_active_heliostats = 0
-        self.active_heliostats_mask = torch.empty(
+        self.active_heliostats_mask = torch.zeros(
             self.number_of_heliostats, device=device
         )
         self.active_surface_points = torch.empty_like(
@@ -142,6 +146,10 @@ class HeliostatGroup:
         )
         self.active_surface_normals = torch.empty_like(
             self.surface_normals, device=device
+        )
+        self.active_canting = torch.empty_like(self.canting, device=device)
+        self.active_facet_translations = torch.empty_like(
+            self.facet_translations, device=device
         )
         self.active_nurbs_control_points = torch.empty_like(
             self.nurbs_control_points, device=device
@@ -222,7 +230,7 @@ class HeliostatGroup:
         """
         Activate certain heliostats for alignment, raytracing or optimization.
 
-        Select and repeat indices of all active heliostat and kinematic parameters once according
+        Select and repeat indices of all active heliostat and kinematics parameters once according
         to the mask. Doing this once instead of slicing every time when accessing one
         of those parameter tensors saves memory.
 
@@ -253,47 +261,55 @@ class HeliostatGroup:
         self.active_surface_normals = self.surface_normals.repeat_interleave(
             active_heliostats_mask, dim=0
         )
+        self.active_canting = self.canting.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+        self.active_facet_translations = self.facet_translations.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
         self.active_nurbs_control_points = self.nurbs_control_points.repeat_interleave(
             active_heliostats_mask, dim=0
         )
-        self.kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-        self.kinematic.active_heliostat_positions = (
-            self.kinematic.heliostat_positions.repeat_interleave(
+        self.kinematics.number_of_active_heliostats = (
+            active_heliostats_mask.sum().item()
+        )
+        self.kinematics.active_heliostat_positions = (
+            self.kinematics.heliostat_positions.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_initial_orientations = (
-            self.kinematic.initial_orientations.repeat_interleave(
+        self.kinematics.active_initial_orientations = (
+            self.kinematics.initial_orientations.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_translation_deviation_parameters = (
-            self.kinematic.translation_deviation_parameters.repeat_interleave(
+        self.kinematics.active_translation_deviation_parameters = (
+            self.kinematics.translation_deviation_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_rotation_deviation_parameters = (
-            self.kinematic.rotation_deviation_parameters.repeat_interleave(
+        self.kinematics.active_rotation_deviation_parameters = (
+            self.kinematics.rotation_deviation_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.active_motor_positions = (
-            self.kinematic.motor_positions.repeat_interleave(
+        self.kinematics.active_motor_positions = (
+            self.kinematics.motor_positions.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        self.kinematic.actuators.active_non_optimizable_parameters = (
-            self.kinematic.actuators.non_optimizable_parameters.repeat_interleave(
+        self.kinematics.actuators.active_non_optimizable_parameters = (
+            self.kinematics.actuators.non_optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
-        if self.kinematic.actuators.active_optimizable_parameters.numel() > 0:
-            self.kinematic.actuators.active_optimizable_parameters = (
-                self.kinematic.actuators.optimizable_parameters.repeat_interleave(
+        if self.kinematics.actuators.active_optimizable_parameters.numel() > 0:
+            self.kinematics.actuators.active_optimizable_parameters = (
+                self.kinematics.actuators.optimizable_parameters.repeat_interleave(
                     active_heliostats_mask, dim=0
                 )
             )
         else:
-            self.kinematic.actuators.active_optimizable_parameters = torch.tensor(
+            self.kinematics.actuators.active_optimizable_parameters = torch.tensor(
                 [], requires_grad=True
             )

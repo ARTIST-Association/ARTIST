@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from artist.field.kinematic import Kinematic
-from artist.field.kinematic_rigid_body import RigidBody
+from artist.field.kinematics import Kinematics
+from artist.field.kinematics_rigid_body import RigidBody
 
 
 @pytest.mark.parametrize(
@@ -11,18 +11,38 @@ from artist.field.kinematic_rigid_body import RigidBody
         torch.tensor(
             [
                 [
-                    [0.9999, 0.0104, 0.0000, -0.0019],
-                    [-0.0074, 0.7107, 0.7035, -0.1892],
-                    [0.0073, -0.7035, 0.7107, 0.0613],
-                    [0.0000, 0.0000, 0.0000, 1.0000],
+                    [
+                        9.999455809593e-01,
+                        -4.559969624118e-10,
+                        -1.043199468404e-02,
+                        -1.852722256444e-03,
+                    ],
+                    [
+                        -7.413947489113e-03,
+                        7.035020589828e-01,
+                        -7.106545567513e-01,
+                        -1.891756802797e-01,
+                    ],
+                    [
+                        7.338930387050e-03,
+                        7.106932401657e-01,
+                        7.034637928009e-01,
+                        6.132812798023e-02,
+                    ],
+                    [
+                        0.000000000000e00,
+                        0.000000000000e00,
+                        0.000000000000e00,
+                        1.000000000000e00,
+                    ],
                 ]
             ]
         )
     ],
 )
-def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None:
+def test_kinematics_forward(expected: torch.Tensor, device: torch.device) -> None:
     """
-    Test the forward method of the kinematic.
+    Test the forward method of the kinematics.
 
     Parameters
     ----------
@@ -90,7 +110,7 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
         device=device,
     )
 
-    kinematic = RigidBody(
+    kinematics = RigidBody(
         number_of_heliostats=1,
         heliostat_positions=torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device),
         initial_orientations=torch.tensor([[0.0, -1.0, 0.0, 0.0]], device=device),
@@ -102,38 +122,38 @@ def test_kinematic_forward(expected: torch.Tensor, device: torch.device) -> None
     )
 
     active_heliostats_mask = torch.ones(
-        kinematic.number_of_heliostats, dtype=torch.int32, device=device
+        kinematics.number_of_heliostats, dtype=torch.int32, device=device
     )
 
-    kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematic.active_heliostat_positions = (
-        kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematics.number_of_active_heliostats = active_heliostats_mask.sum().item()
+    kinematics.active_heliostat_positions = (
+        kinematics.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_initial_orientations = (
-        kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematics.active_initial_orientations = (
+        kinematics.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_translation_deviation_parameters = (
-        kinematic.translation_deviation_parameters.repeat_interleave(
+    kinematics.active_translation_deviation_parameters = (
+        kinematics.translation_deviation_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.active_rotation_deviation_parameters = (
-        kinematic.rotation_deviation_parameters.repeat_interleave(
+    kinematics.active_rotation_deviation_parameters = (
+        kinematics.rotation_deviation_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_non_optimizable_parameters = (
-        kinematic.actuators.non_optimizable_parameters.repeat_interleave(
+    kinematics.actuators.active_non_optimizable_parameters = (
+        kinematics.actuators.non_optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_optimizable_parameters = (
-        kinematic.actuators.optimizable_parameters.repeat_interleave(
+    kinematics.actuators.active_optimizable_parameters = (
+        kinematics.actuators.optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
 
-    orientation_matrix = kinematic(
+    orientation_matrix = kinematics(
         incident_ray_directions=incident_ray_directions.to(device),
         aim_points=aim_points.to(device),
         device=device,
@@ -147,7 +167,7 @@ def test_abstract_kinematics(
     device: torch.device,
 ) -> None:
     """
-    Test the abstract methods of the kinematic.
+    Test the abstract methods of the kinematics.
 
     Parameters
     ----------
@@ -159,10 +179,10 @@ def test_abstract_kinematics(
     AssertionError
         If test does not complete as expected.
     """
-    abstract_kinematic = Kinematic()
+    abstract_kinematics = Kinematics()
 
     with pytest.raises(NotImplementedError) as exc_info:
-        abstract_kinematic.incident_ray_directions_to_orientations(
+        abstract_kinematics.incident_ray_directions_to_orientations(
             incident_ray_directions=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
             aim_points=torch.tensor([0.0, 0.0, 1.0, 1.0], device=device),
             device=device,
@@ -170,7 +190,7 @@ def test_abstract_kinematics(
     assert "Must be overridden!" in str(exc_info.value)
 
     with pytest.raises(NotImplementedError) as exc_info:
-        abstract_kinematic.motor_positions_to_orientations(
+        abstract_kinematics.motor_positions_to_orientations(
             motor_positions=torch.tensor([1.0, 1.0], device=device)
         )
     assert "Must be overridden!" in str(exc_info.value)

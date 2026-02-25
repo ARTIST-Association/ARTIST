@@ -22,7 +22,7 @@ Initial Setup
 -------------
 
 ``ARTIST`` is designed for parallel computation. To enable this (even when considering different types of heliostats
-with different kinematic and actuator configurations) we require ``HeliostatGroups``. Detailed information on heliostat
+with different kinematics and actuator configurations) we require ``HeliostatGroups``. Detailed information on heliostat
 groups and how ``ARTIST`` is designed can be found in this description of :ref:`what is happening under the hood<artist_under_hood>`
 in ``ARTIST``.
 
@@ -73,7 +73,7 @@ To map each heliostat with its designated target area and incident ray direction
 
 .. code-block::
 
-    # heliostat_target_light_source_mapping = [
+    heliostat_target_light_source_mapping = [
         ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
         ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
         (...)

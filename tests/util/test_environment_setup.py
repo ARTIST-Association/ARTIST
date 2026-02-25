@@ -42,7 +42,6 @@ def test_initialize_ddp_environment(
     AssertionError
         If test does not complete as expected.
     """
-    # Set up mock environment variables
     mock_env = {
         "WORLD_SIZE": str(world_size),
         "RANK": str(rank),
@@ -106,7 +105,7 @@ def test_initialize_ddp_environment(
 )
 def test_create_subgroups_for_nested_ddp(
     rank: int, groups_to_ranks_mapping: dict[int, list[int]], expected: tuple[int, int]
-):
+) -> None:
     """
     Test the creation of process subgroups.
 
@@ -147,7 +146,7 @@ def test_distribute_groups_among_ranks(
     number_of_heliostat_groups: int,
     expected_mapping: dict[int, list[int]],
     expected_is_nested: bool,
-):
+) -> None:
     """
     Test the distribution of groups among ranks.
 

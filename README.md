@@ -27,7 +27,7 @@ smooth parametric descriptions of heliostats.
 
 **Our contributions include:**
 
-- **Efficient heliostat calibration:** We develop a parallelized geometric kinematic model that enables efficient
+- **Efficient heliostat calibration:** We develop a parallelized geometric kinematics model that enables efficient
     calibration via either ray tracing-based or motor position data. This offers a flexible and robust approach to
     heliostat calibration.
 

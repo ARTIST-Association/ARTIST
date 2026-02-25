@@ -4,7 +4,6 @@ from typing import Any
 import paint.util.paint_mappings as paint_mappings
 import pytest
 import torch
-from _pytest.monkeypatch import MonkeyPatch
 
 from artist import ARTIST_ROOT
 from artist.data_parser import paint_scenario_parser
@@ -129,12 +128,12 @@ def test_extract_paint_tower_measurements(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -151,7 +150,7 @@ def test_extract_paint_tower_measurements(
                         ],
                     ]
                 ),
-                torch.tensor([-1.609997987747, 0.206321120262, 0.043028946966]),
+                torch.tensor([-0.802500069141, -0.436184167862, 0.000000000000]),
             ],
         ),
     ],
@@ -168,13 +167,13 @@ def test_extract_paint_heliostats_ideal_surface(
 
     Parameters
     ----------
-    heliostat_paths : tuple[str, pathlib.Path]
+    heliostat_paths : list[tuple[str, pathlib.Path]]
         Name of the heliostat and a heliostat properties file path.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
     expected_types : list[Any]
         The expected extracted data types.
-    expected_heliostat : list[Union[torch.Tensor, int, str]],
+    expected_heliostat : list[Any]
         The expected extracted heliostat data.
     device : torch.device
         The device on which to initialize tensors.
@@ -219,7 +218,7 @@ def test_extract_paint_heliostats_ideal_surface(
         expected_heliostat[3].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].kinematic.initial_orientation,
+        extracted_list[0].heliostat_list[0].kinematics.initial_orientation,
         expected_heliostat[4].to(device),
     )
     torch.testing.assert_close(
@@ -250,12 +249,12 @@ def test_extract_paint_heliostats_ideal_surface(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -290,7 +289,7 @@ def test_extract_paint_heliostats_fitted_surface(
 
     Parameters
     ----------
-    heliostat_and_deflectometry_paths : tuple[str, pathlib.Path, pathlib.Path]
+    heliostat_and_deflectometry_paths : list[tuple[str, pathlib.Path, pathlib.Path]]
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
@@ -298,7 +297,7 @@ def test_extract_paint_heliostats_fitted_surface(
         The maximum amount of epochs for fitting the NURBS.
     expected_types : list[Any]
         The expected extracted data types.
-    expected_heliostat : list[torch.Tensor| int| str],
+    expected_heliostat : list[Any]
         The expected extracted heliostat data.
     device : torch.device
         The device on which to initialize tensors.
@@ -359,7 +358,7 @@ def test_extract_paint_heliostats_fitted_surface(
         expected_heliostat[3].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].kinematic.initial_orientation,
+        extracted_list[0].heliostat_list[0].kinematics.initial_orientation,
         expected_heliostat[4].to(device),
     )
     torch.testing.assert_close(
@@ -397,12 +396,12 @@ def test_extract_paint_heliostats_fitted_surface(
             [HeliostatListConfig, PrototypeConfig],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -419,16 +418,16 @@ def test_extract_paint_heliostats_fitted_surface(
                         ],
                     ]
                 ),
-                torch.tensor([-1.609997987747, 0.206321120262, 0.043028946966]),
+                torch.tensor([-0.802500069141, -0.436184167862, 0.000000000000]),
             ],
             [
                 torch.tensor(
-                    [11.664672851562, 24.570718765259, 1.688941955566, 1.000000000000]
+                    [13.290966033936, 24.625156402588, 1.688941955566, 1.000000000000]
                 ),
                 2,
                 "linear",
                 torch.tensor(154166.671875000000),
-                torch.tensor([0, 0, 1, 0]),
+                torch.tensor([0.0, -1.0, 0.0, 0.0]),
                 torch.tensor(
                     [
                         [
@@ -475,9 +474,9 @@ def test_extract_paint_heliostats_mixed_surface(
         The maximum number of epochs for fitting the NURBS.
     expected_types : list[Any]
         The expected extracted data types.
-    expected_heliostat_ideal : list[Union[torch.Tensor, int, str]]
+    expected_heliostat_ideal : list[Any]
         The expected data for the ideal heliostat.
-    expected_heliostat_fitted : list[Union[torch.Tensor, int, str]]
+    expected_heliostat_fitted : list[Any]
         The expected data for the fitted heliostat.
     device : torch.device
         The device on which to initialize tensors.
@@ -512,11 +511,11 @@ def test_extract_paint_heliostats_mixed_surface(
         )
     )
 
-    # Assert overall return types
+    # Assert overall return types.
     assert isinstance(extracted_list[0], expected_types[0])
     assert isinstance(extracted_list[1], expected_types[1])
 
-    # Find the ideal and fitted heliostat in the returned list
+    # Find the ideal and fitted heliostat in the returned list.
     ideal_heliostat = next(
         h for h in extracted_list[0].heliostat_list if h.name == "ideal_heliostat"
     )
@@ -538,7 +537,7 @@ def test_extract_paint_heliostats_mixed_surface(
         expected_heliostat_ideal[3].to(device),
     )
     torch.testing.assert_close(
-        ideal_heliostat.kinematic.initial_orientation,
+        ideal_heliostat.kinematics.initial_orientation,
         expected_heliostat_ideal[4].to(device),
     )
     torch.testing.assert_close(
@@ -564,7 +563,7 @@ def test_extract_paint_heliostats_mixed_surface(
         expected_heliostat_fitted[3].to(device),
     )
     torch.testing.assert_close(
-        fitted_heliostat.kinematic.initial_orientation,
+        fitted_heliostat.kinematics.initial_orientation,
         expected_heliostat_fitted[4].to(device),
     )
     torch.testing.assert_close(
@@ -621,18 +620,19 @@ def _make_fake_calibration_data(
 
 
 @pytest.mark.parametrize(
-    "randomize_selection_flag, random_seed_value, number_of_measurements, image_variant_name",
+    "randomize_selection_flag, random_seed_value, number_of_measurements, count_per_heliostat, image_variant_name",
     [
-        (False, 0, 2, "flux"),
-        (True, 123, 2, "flux"),
+        (False, 0, 2, 2, "flux"),
+        (True, 123, 2, 2, "flux"),
+        (True, 123, 6, 5, "flux"),
     ],
 )
 def test_build_heliostat_data_mapping_shape_parametrized(
     tmp_path: pathlib.Path,
-    monkeypatch: MonkeyPatch,
     randomize_selection_flag: bool,
     random_seed_value: int,
     number_of_measurements: int,
+    count_per_heliostat: int,
     image_variant_name: str,
 ) -> None:
     """
@@ -657,14 +657,14 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     ----------
     tmp_path : pathlib.Path
         Temporary directory provided by pytest for creating fake calibration data.
-    monkeypatch : MonkeyPatch
-        Pytest fixture to dynamically replace module attributes for testing.
     randomize_selection_flag : bool
         Flag to randomize selection of measurement files when building the mapping.
     random_seed_value : int
         Random seed to use when `randomize_selection_flag` is `True` for reproducibility.
     number_of_measurements : int
         Number of measurement files to select per heliostat.
+    count_per_heliostat : int
+        Number of files actually loaded.
     image_variant_name : str
         Identifier for the variant of image data to use (e.g., ``raw``, ``processed``).
 
@@ -684,7 +684,7 @@ def test_build_heliostat_data_mapping_shape_parametrized(
 
     result_mapping_list = paint_scenario_parser.build_heliostat_data_mapping(
         base_path=str(tmp_path),
-        heliostat_names=heliostat_name_list,
+        heliostat_names=["heliostat_1", "heliostat_2", "heliostat_3"],
         number_of_measurements=number_of_measurements,
         image_variant=image_variant_name,
         randomize=randomize_selection_flag,
@@ -710,8 +710,8 @@ def test_build_heliostat_data_mapping_shape_parametrized(
             isinstance(image_path, pathlib.Path) for image_path in image_file_paths
         )
 
-        assert len(property_file_paths) == number_of_measurements
-        assert len(image_file_paths) == number_of_measurements
+        assert len(property_file_paths) == count_per_heliostat
+        assert len(image_file_paths) == count_per_heliostat
 
         # Correspondence by ID and directory.
         for property_file_path, image_file_path in zip(
@@ -727,7 +727,6 @@ def test_build_heliostat_data_mapping_shape_parametrized(
 @pytest.mark.parametrize("random_seed_value", [7, 11, 123, 2024])
 def test_build_heliostat_data_mapping_randomization_changes_order(
     tmp_path: pathlib.Path,
-    monkeypatch: MonkeyPatch,
     random_seed_value: int,
 ) -> None:
     """
@@ -741,8 +740,6 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     ----------
     tmp_path : pathlib.Path
         Temporary directory provided by pytest for creating fake calibration data.
-    monkeypatch : MonkeyPatch
-        Pytest fixture to dynamically replace module attributes for testing.
     random_seed_value : int
         Random seed to use for reproducibility in randomized selection.
 

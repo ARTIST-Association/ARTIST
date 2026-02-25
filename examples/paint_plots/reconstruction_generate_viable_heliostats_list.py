@@ -133,7 +133,7 @@ def find_viable_heliostats(
 
 if __name__ == "__main__":
     """
-    Generate list of viable heliostats for kinematic reconstruction.
+    Generate list of viable heliostats for kinematics reconstruction.
 
     This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
     the reconstruction process.
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
     minimum_number_of_measurements_default = config.get(
         "minimum_number_of_measurements", 80
     )

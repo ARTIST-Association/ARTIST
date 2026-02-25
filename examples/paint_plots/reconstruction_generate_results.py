@@ -10,7 +10,7 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -29,9 +29,9 @@ def generate_reconstruction_results(
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematic reconstruction in ``ARTIST`` and save results.
+    Perform kinematics reconstruction in ``ARTIST`` and save results.
 
-    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
+    This function performs the kinematics reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
     focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
     for plotting later.
 
@@ -70,15 +70,26 @@ def generate_reconstruction_results(
         device=device,
     ) as ddp_setup:
         # Select calibration via raytracing.
-        kinematic_reconstruction_method = (
-            config_dictionary.kinematic_reconstruction_raytracing
+        kinematics_reconstruction_method = (
+            config_dictionary.kinematics_reconstruction_raytracing
         )
 
+        # Configure the optimization.
+        optimizer_dict = {
+            config_dictionary.initial_learning_rate: 1e-3,
+            config_dictionary.tolerance: 0,
+            config_dictionary.max_epoch: 1000,
+            config_dictionary.batch_size: 500,
+            config_dictionary.log_step: 50,
+            config_dictionary.early_stopping_delta: 1e-6,
+            config_dictionary.early_stopping_patience: 4000,
+            config_dictionary.early_stopping_window: 1000,
+        }
         # Configure the learning rate scheduler.
-        scheduler = config_dictionary.exponential
-        scheduler_parameters = {
+        scheduler_dict = {
+            config_dictionary.scheduler_type: config_dictionary.exponential,
             config_dictionary.gamma: 0.999,
-            config_dictionary.min: 1e-6,
+            config_dictionary.min: 1e-5,
             config_dictionary.max: 1e-2,
             config_dictionary.step_size_up: 500,
             config_dictionary.reduce_factor: 0.3,
@@ -86,17 +97,10 @@ def generate_reconstruction_results(
             config_dictionary.threshold: 1e-3,
             config_dictionary.cooldown: 10,
         }
-
-        # Set optimization parameters.
+        # Combine configurations.
         optimization_configuration = {
-            config_dictionary.initial_learning_rate: 0.0001,
-            config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 1000,
-            config_dictionary.log_step: 50,
-            config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.scheduler: scheduler,
-            config_dictionary.scheduler_parameters: scheduler_parameters,
+            config_dictionary.optimization: optimizer_dict,
+            config_dictionary.scheduler: scheduler_dict,
         }
 
         for centroid in [paint_mappings.UTIS_KEY, paint_mappings.HELIOS_KEY]:
@@ -110,20 +114,20 @@ def generate_reconstruction_results(
                 | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
             ] = {
                 config_dictionary.data_parser: PaintCalibrationDataParser(
-                    centroid_extraction_method=centroid
+                    sample_limit=3, centroid_extraction_method=centroid
                 ),
                 config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
             }
 
-            kinematic_reconstructor = KinematicReconstructor(
+            kinematics_reconstructor = KinematicsReconstructor(
                 ddp_setup=ddp_setup,
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
-                reconstruction_method=kinematic_reconstruction_method,
+                reconstruction_method=kinematics_reconstruction_method,
             )
 
-            per_heliostat_losses = kinematic_reconstructor.reconstruct_kinematic(
+            per_heliostat_losses = kinematics_reconstructor.reconstruct_kinematics(
                 loss_definition=loss_definition, device=device
             )
 
@@ -147,7 +151,7 @@ if __name__ == "__main__":
     """
     Generate reconstruction results and save them.
 
-    This script performs kinematic reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
+    This script performs kinematics reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
     plots.
 
     Parameters
@@ -192,8 +196,10 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/paint_plots/scenarios"
+    )
 
     parser.add_argument(
         "--device",
@@ -252,7 +258,7 @@ if __name__ == "__main__":
     )
 
     results_path = (
-        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)

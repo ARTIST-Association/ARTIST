@@ -1,15 +1,15 @@
 import pytest
 import torch
 
-from artist.field.kinematic_rigid_body import (
+from artist.field.kinematics_rigid_body import (
     RigidBody,
 )
 
 
 @pytest.fixture
-def kinematic_parameters(device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
+def kinematics_parameters(device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Define kinematic parameters used in tests.
+    Define kinematics parameters used in tests.
 
     Parameters
     ----------
@@ -35,24 +35,24 @@ def kinematic_parameters(device: torch.device) -> tuple[torch.Tensor, torch.Tens
 
 
 @pytest.fixture
-def kinematic_model_linear(
-    kinematic_parameters: torch.Tensor,
+def kinematics_model_linear(
+    kinematics_parameters: torch.Tensor,
     device: torch.device,
 ) -> RigidBody:
     """
-    Create a rigid body kinematic with linear actuators and deviation parameters.
+    Create a rigid body kinematics with linear actuators and deviation parameters.
 
     Parameters
     ----------
-    kinematic_parameters : torch.Tensor
-        The kinematic deviation parameters.
+    kinematics_parameters : torch.Tensor
+        The kinematics deviation parameters.
     device : torch.device
         The device on which to initialize tensors.
 
     Returns
     -------
     RigidBody
-        The kinematic model.
+        The kinematics model.
     """
     heliostat_positions = torch.tensor(
         [
@@ -85,8 +85,8 @@ def kinematic_model_linear(
         number_of_heliostats=6,
         heliostat_positions=heliostat_positions,
         initial_orientations=initial_orientation.expand(6, 4),
-        translation_deviation_parameters=kinematic_parameters[0],
-        rotation_deviation_parameters=kinematic_parameters[1],
+        translation_deviation_parameters=kinematics_parameters[0],
+        rotation_deviation_parameters=kinematics_parameters[1],
         actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
         actuator_parameters_optimizable=actuator_parameters_optimizable,
         device=device,
@@ -94,11 +94,11 @@ def kinematic_model_linear(
 
 
 @pytest.fixture
-def kinematic_model_ideal_1(
+def kinematics_model_ideal_1(
     device: torch.device,
 ) -> RigidBody:
     """
-    Create a rigid body kinematic with ideal actuators and no deviation parameters.
+    Create a rigid body kinematics with ideal actuators and no deviation parameters.
 
     Parameters
     ----------
@@ -108,7 +108,7 @@ def kinematic_model_ideal_1(
     Returns
     -------
     RigidBody
-        The kinematic model.
+        The kinematics model.
     """
     positions = torch.tensor(
         [
@@ -161,11 +161,11 @@ def kinematic_model_ideal_1(
 
 
 @pytest.fixture
-def kinematic_model_ideal_2(
+def kinematics_model_ideal_2(
     device: torch.device,
 ) -> RigidBody:
     """
-    Create rigid body kinematic with ideal actuators and deviation parameters.
+    Create rigid body kinematics with ideal actuators and deviation parameters.
 
     Parameters
     ----------
@@ -175,7 +175,7 @@ def kinematic_model_ideal_2(
     Returns
     -------
     RigidBody
-        The kinematic model.
+        The kinematics model.
     """
     positions = torch.tensor(
         [[0.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0]],
@@ -206,10 +206,10 @@ def kinematic_model_ideal_2(
 
 
 @pytest.mark.parametrize(
-    "kinematic_model_fixture, aim_points, incident_ray_directions, expected",
+    "kinematics_model_fixture, aim_points, incident_ray_directions, expected",
     [
         (
-            "kinematic_model_linear",
+            "kinematics_model_linear",
             torch.tensor(
                 [
                     [0.0, -10.0, 0.0, 1.0],
@@ -233,46 +233,166 @@ def kinematic_model_ideal_2(
             torch.tensor(
                 [
                     [
-                        [0.9999, 0.0104, 0.0000, -0.0019],
-                        [-0.0074, 0.7107, 0.7035, -0.1891],
-                        [0.0073, -0.7035, 0.7107, 0.0613],
-                        [0.0000, 0.0000, 0.0000, 1.0000],
+                        [
+                            9.999456405640e-01,
+                            -4.558640964714e-10,
+                            -1.042895484716e-02,
+                            -1.851661014371e-03,
+                        ],
+                        [
+                            -7.411775179207e-03,
+                            7.035031914711e-01,
+                            -7.106534838676e-01,
+                            -1.891400665045e-01,
+                        ],
+                        [
+                            7.336803711951e-03,
+                            7.106921076775e-01,
+                            7.034649252892e-01,
+                            6.129327416420e-02,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [0.7123, -0.7019, 0.0000, 0.1246],
-                        [0.7019, 0.7122, -0.0103, -0.1255],
-                        [0.0072, 0.0073, 0.9999, -0.0908],
-                        [0.0000, 0.0000, 0.0000, 1.0000],
+                        [
+                            7.122755050659e-01,
+                            3.068102216730e-08,
+                            7.019000053406e-01,
+                            1.246223449707e-01,
+                        ],
+                        [
+                            7.018629312515e-01,
+                            -1.027521397918e-02,
+                            -7.122378945351e-01,
+                            -1.255382150412e-01,
+                        ],
+                        [
+                            7.212151307613e-03,
+                            9.999471902847e-01,
+                            -7.318804971874e-03,
+                            -9.079471230507e-02,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [9.9997e-01, 7.3368e-03, 0.0000e00, -1.3026e-03],
-                        [-7.3367e-03, 9.9996e-01, -5.1375e-03, -1.7708e-01],
-                        [-3.7693e-05, 5.1374e-03, 9.9999e-01, -9.0411e-02],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            9.999730587006e-01,
+                            -3.207012433393e-10,
+                            -7.336789276451e-03,
+                            -1.302646938711e-03,
+                        ],
+                        [
+                            -7.336692418903e-03,
+                            -5.136868450791e-03,
+                            -9.999598860741e-01,
+                            -1.770831346512e-01,
+                        ],
+                        [
+                            -3.768780152313e-05,
+                            9.999868273735e-01,
+                            -5.136730149388e-03,
+                            -9.041082859039e-02,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [0.7019, 0.7123, 0.0000, -0.1265],
-                        [-0.7122, 0.7019, -0.0103, -0.1237],
-                        [-0.0073, 0.0072, 0.9999, -0.0908],
-                        [0.0000, 0.0000, 0.0000, 1.0000],
+                        [
+                            7.018998265266e-01,
+                            -3.113456159554e-08,
+                            -7.122757434845e-01,
+                            -1.264645606279e-01,
+                        ],
+                        [
+                            -7.122381329536e-01,
+                            -1.027521397918e-02,
+                            -7.018627524376e-01,
+                            -1.236961036921e-01,
+                        ],
+                        [
+                            -7.318763993680e-03,
+                            9.999471902847e-01,
+                            -7.212193217129e-03,
+                            -9.077578783035e-02,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [1.0000, 0.0080, 0.0000, -0.0014],
-                        [-0.0074, 0.9258, 0.3780, -0.1982],
-                        [0.0030, -0.3779, 0.9258, -0.0158],
-                        [0.0000, 0.0000, 0.0000, 1.0000],
+                        [
+                            9.999683499336e-01,
+                            -3.478643761934e-10,
+                            -7.958209142089e-03,
+                            -1.412980025634e-03,
+                        ],
+                        [
+                            -7.367914076895e-03,
+                            3.779509067535e-01,
+                            -9.257963299751e-01,
+                            -1.982017606497e-01,
+                        ],
+                        [
+                            3.007812658325e-03,
+                            9.258256554604e-01,
+                            3.779389560223e-01,
+                            -1.575836539268e-02,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [0.9999, 0.0104, 0.0000, -0.0019],
-                        [-0.0074, 0.7107, 0.7035, 0.8109],
-                        [0.0073, -0.7035, 0.7107, 0.0613],
-                        [0.0000, 0.0000, 0.0000, 1.0000],
+                        [
+                            9.999456405640e-01,
+                            -4.558640964714e-10,
+                            -1.042895484716e-02,
+                            -1.851661014371e-03,
+                        ],
+                        [
+                            -7.411775179207e-03,
+                            7.035031914711e-01,
+                            -7.106534838676e-01,
+                            8.108599185944e-01,
+                        ],
+                        [
+                            7.336803711951e-03,
+                            7.106921076775e-01,
+                            7.034649252892e-01,
+                            6.129327416420e-02,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                 ]
             ),
         ),
         (
-            "kinematic_model_ideal_1",
+            "kinematics_model_ideal_1",
             torch.tensor(
                 [
                     [0.0, -10.0, 0.0, 1.0],
@@ -304,90 +424,160 @@ def kinematic_model_ideal_2(
             torch.tensor(
                 [
                     [
-                        [1, 0, 0, 0],
                         [
-                            0,
-                            torch.cos(torch.tensor(-torch.pi / 4)),
-                            -torch.sin(torch.tensor(-torch.pi / 4)),
-                            0,
+                            1.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
                         ],
                         [
-                            0,
-                            torch.sin(torch.tensor(-torch.pi / 4)),
-                            torch.cos(torch.tensor(-torch.pi / 4)),
-                            0,
+                            0.000000000000e00,
+                            7.071067690849e-01,
+                            -7.071067690849e-01,
+                            0.000000000000e00,
                         ],
-                        [0, 0, 0, 1],
+                        [
+                            0.000000000000e00,
+                            7.071067690849e-01,
+                            7.071067690849e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
                         [
-                            torch.cos(torch.tensor(torch.pi / 4)),
-                            -torch.sin(torch.tensor(torch.pi / 4)),
-                            0.0,
-                            0.0,
+                            7.071067690849e-01,
+                            3.090861966371e-08,
+                            7.071068286896e-01,
+                            0.000000000000e00,
                         ],
                         [
-                            torch.sin(torch.tensor(torch.pi / 4)),
-                            torch.cos(torch.tensor(torch.pi / 4)),
-                            0.0,
-                            0.0,
+                            7.071068286896e-01,
+                            -3.090861966371e-08,
+                            -7.071067690849e-01,
+                            0.000000000000e00,
                         ],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
+                        [
+                            0.000000000000e00,
+                            1.000000000000e00,
+                            -4.371138828674e-08,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [1.0, 0.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
+                        [
+                            1.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            -4.371138828674e-08,
+                            -1.000000000000e00,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            1.000000000000e00,
+                            -4.371138828674e-08,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
                         [
-                            torch.cos(torch.tensor(-torch.pi / 4)),
-                            -torch.sin(torch.tensor(-torch.pi / 4)),
-                            0.0,
-                            0.0,
+                            7.071067690849e-01,
+                            -3.090861966371e-08,
+                            -7.071068286896e-01,
+                            0.000000000000e00,
                         ],
                         [
-                            torch.sin(torch.tensor(-torch.pi / 4)),
-                            torch.cos(torch.tensor(-torch.pi / 4)),
-                            0.0,
-                            0.0,
+                            -7.071068286896e-01,
+                            -3.090861966371e-08,
+                            -7.071067690849e-01,
+                            0.000000000000e00,
                         ],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
+                        [
+                            0.000000000000e00,
+                            1.000000000000e00,
+                            -4.371138828674e-08,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [1.0, 0.0, 0.0, 0.0],
                         [
-                            0.0,
-                            torch.cos(torch.tensor(-torch.pi / 8)),
-                            -torch.sin(torch.tensor(-torch.pi / 8)),
-                            0.0,
+                            1.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
                         ],
                         [
-                            0.0,
-                            torch.sin(torch.tensor(-torch.pi / 8)),
-                            torch.cos(torch.tensor(-torch.pi / 8)),
-                            0.0,
+                            0.000000000000e00,
+                            3.826815783978e-01,
+                            -9.238802790642e-01,
+                            0.000000000000e00,
                         ],
-                        [0.0, 0.0, 0.0, 1.0],
+                        [
+                            0.000000000000e00,
+                            9.238802790642e-01,
+                            3.826815783978e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [1.0, 0.0, 0.0, 0.0],
                         [
-                            0.0,
-                            torch.cos(torch.tensor(-torch.pi / 4)),
-                            -torch.sin(torch.tensor(-torch.pi / 4)),
-                            1.0,
+                            1.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
                         ],
                         [
-                            0.0,
-                            torch.sin(torch.tensor(-torch.pi / 4)),
-                            torch.cos(torch.tensor(-torch.pi / 4)),
-                            0.0,
+                            0.000000000000e00,
+                            7.071067690849e-01,
+                            -7.071067690849e-01,
+                            1.000000000000e00,
                         ],
-                        [0.0, 0.0, 0.0, 1.0],
+                        [
+                            0.000000000000e00,
+                            7.071067690849e-01,
+                            7.071067690849e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
                         [1.0, 0.0, 0.0, 0.0],
@@ -460,7 +650,7 @@ def kinematic_model_ideal_2(
 )
 def test_incident_ray_direction_to_orientation(
     request: pytest.FixtureRequest,
-    kinematic_model_fixture: str,
+    kinematics_model_fixture: str,
     aim_points: torch.Tensor,
     incident_ray_directions: torch.Tensor,
     expected: torch.Tensor,
@@ -473,8 +663,8 @@ def test_incident_ray_direction_to_orientation(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    kinematic_model_fixture : str
-        The kinematic model fixture used to select the kinematic model used in the test case.
+    kinematics_model_fixture : str
+        The kinematics model fixture used to select the kinematics model used in the test case.
     aim_points : torch.Tensor
         The aim points for the heliostats.
     incident_ray_directions : torch.Tensor
@@ -489,46 +679,46 @@ def test_incident_ray_direction_to_orientation(
     AssertionError
         If test does not complete as expected.
     """
-    kinematic = request.getfixturevalue(kinematic_model_fixture)
+    kinematics = request.getfixturevalue(kinematics_model_fixture)
 
     active_heliostats_mask = torch.ones(
-        kinematic.number_of_heliostats, dtype=torch.int32, device=device
+        kinematics.number_of_heliostats, dtype=torch.int32, device=device
     )
 
-    kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematic.active_heliostat_positions = (
-        kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematics.number_of_active_heliostats = active_heliostats_mask.sum().item()
+    kinematics.active_heliostat_positions = (
+        kinematics.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_initial_orientations = (
-        kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematics.active_initial_orientations = (
+        kinematics.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_translation_deviation_parameters = (
-        kinematic.translation_deviation_parameters.repeat_interleave(
+    kinematics.active_translation_deviation_parameters = (
+        kinematics.translation_deviation_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.active_rotation_deviation_parameters = (
-        kinematic.rotation_deviation_parameters.repeat_interleave(
+    kinematics.active_rotation_deviation_parameters = (
+        kinematics.rotation_deviation_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_non_optimizable_parameters = (
-        kinematic.actuators.non_optimizable_parameters.repeat_interleave(
+    kinematics.actuators.active_non_optimizable_parameters = (
+        kinematics.actuators.non_optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    if kinematic.actuators.active_optimizable_parameters.numel() > 0:
-        kinematic.actuators.active_optimizable_parameters = (
-            kinematic.actuators.optimizable_parameters.repeat_interleave(
+    if kinematics.actuators.active_optimizable_parameters.numel() > 0:
+        kinematics.actuators.active_optimizable_parameters = (
+            kinematics.actuators.optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
     else:
-        kinematic.actuators.active_optimizable_parameters = torch.tensor(
+        kinematics.actuators.active_optimizable_parameters = torch.tensor(
             [], requires_grad=True
         )
 
-    orientation_matrix = kinematic.incident_ray_directions_to_orientations(
+    orientation_matrix = kinematics.incident_ray_directions_to_orientations(
         incident_ray_directions=incident_ray_directions.to(device),
         aim_points=aim_points.to(device),
         device=device,
@@ -539,10 +729,10 @@ def test_incident_ray_direction_to_orientation(
 
 
 @pytest.mark.parametrize(
-    "kinematic_model_fixture, motor_positions, expected",
+    "kinematics_model_fixture, motor_positions, expected",
     [
         (
-            "kinematic_model_linear",
+            "kinematics_model_linear",
             torch.tensor(
                 [
                     [0.0, 0.0],
@@ -556,84 +746,324 @@ def test_incident_ray_direction_to_orientation(
             torch.tensor(
                 [
                     [
-                        [5.7358e-01, -8.1915e-01, 0.0000e00, 1.4544e-01],
-                        [2.5715e-07, 1.8006e-07, 1.0000e00, -8.9500e-02],
-                        [-8.1915e-01, -5.7358e-01, 3.1392e-07, 1.0184e-01],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            5.735765099525e-01,
+                            3.580627350175e-08,
+                            8.191520571709e-01,
+                            1.454404443502e-01,
+                        ],
+                        [
+                            2.571453308065e-07,
+                            1.000000000000e00,
+                            -2.237665057692e-07,
+                            -8.950003981590e-02,
+                        ],
+                        [
+                            -8.191520571709e-01,
+                            3.389882863303e-07,
+                            5.735765099525e-01,
+                            1.018384844065e-01,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [5.9221e-01, -8.0578e-01, 0.0000e00, 1.4307e-01],
-                        [8.2862e-05, 6.0899e-05, 1.0000e00, -8.9511e-02],
-                        [-8.0578e-01, -5.9221e-01, 1.0283e-04, 1.0514e-01],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            5.922092795372e-01,
+                            3.522194802486e-08,
+                            8.057842254639e-01,
+                            1.430669873953e-01,
+                        ],
+                        [
+                            8.305405208375e-05,
+                            1.000000000000e00,
+                            -6.108410161687e-05,
+                            -8.951085805893e-02,
+                        ],
+                        [
+                            -8.057842254639e-01,
+                            1.030982093653e-04,
+                            5.922092795372e-01,
+                            1.051375344396e-01,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [5.7434e-01, -8.1862e-01, 0.0000e00, 1.4535e-01],
-                        [1.6830e-04, 1.1808e-04, 1.0000e00, -8.9521e-02],
-                        [-8.1862e-01, -5.7434e-01, 2.0559e-04, 1.0196e-01],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            5.743377208710e-01,
+                            3.578294993645e-08,
+                            8.186184763908e-01,
+                            1.453457176685e-01,
+                        ],
+                        [
+                            1.681064895820e-04,
+                            1.000000000000e00,
+                            -1.179862010758e-04,
+                            -8.952096104622e-02,
+                        ],
+                        [
+                            -8.186184763908e-01,
+                            2.053789939964e-04,
+                            5.743377208710e-01,
+                            1.019552871585e-01,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [5.7358e-01, -8.1915e-01, 0.0000e00, 1.4544e-01],
-                        [2.5715e-07, 1.8006e-07, 1.0000e00, -8.9500e-02],
-                        [-8.1915e-01, -5.7358e-01, 3.1392e-07, 1.0184e-01],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            5.735765099525e-01,
+                            3.580627350175e-08,
+                            8.191520571709e-01,
+                            1.454404443502e-01,
+                        ],
+                        [
+                            2.571453308065e-07,
+                            1.000000000000e00,
+                            -2.237665057692e-07,
+                            -8.950003981590e-02,
+                        ],
+                        [
+                            -8.191520571709e-01,
+                            3.389882863303e-07,
+                            5.735765099525e-01,
+                            1.018384844065e-01,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [5.9221e-01, -8.0578e-01, 0.0000e00, 1.4307e-01],
-                        [8.2862e-05, 6.0899e-05, 1.0000e00, -8.9511e-02],
-                        [-8.0578e-01, -5.9221e-01, 1.0283e-04, 1.0514e-01],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            5.922092795372e-01,
+                            3.522194802486e-08,
+                            8.057842254639e-01,
+                            1.430669873953e-01,
+                        ],
+                        [
+                            8.305405208375e-05,
+                            1.000000000000e00,
+                            -6.108410161687e-05,
+                            -8.951085805893e-02,
+                        ],
+                        [
+                            -8.057842254639e-01,
+                            1.030982093653e-04,
+                            5.922092795372e-01,
+                            1.051375344396e-01,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [5.7434e-01, -8.1862e-01, 0.0000e00, 1.4535e-01],
-                        [1.6830e-04, 1.1808e-04, 1.0000e00, 9.1048e-01],
-                        [-8.1862e-01, -5.7434e-01, 2.0559e-04, 1.0196e-01],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            5.743377208710e-01,
+                            3.578294993645e-08,
+                            8.186184763908e-01,
+                            1.453457176685e-01,
+                        ],
+                        [
+                            1.681064895820e-04,
+                            1.000000000000e00,
+                            -1.179862010758e-04,
+                            9.104790687561e-01,
+                        ],
+                        [
+                            -8.186184763908e-01,
+                            2.053789939964e-04,
+                            5.743377208710e-01,
+                            1.019552871585e-01,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
-                ],
+                ]
             ),
         ),
         (
-            "kinematic_model_ideal_1",
+            "kinematics_model_ideal_1",
             torch.tensor([[26651, 15875]]),
             torch.tensor(
                 [
                     [
-                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
-                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
-                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            -8.616312146187e-01,
+                            -2.218505557039e-08,
+                            -5.075349211693e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.274583220482e-01,
+                            7.640190720558e-01,
+                            -5.559191107750e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.877663612366e-01,
+                            -6.451936960220e-01,
+                            -6.583026647568e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
-                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
-                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            -8.616312146187e-01,
+                            -2.218505557039e-08,
+                            -5.075349211693e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.274583220482e-01,
+                            7.640190720558e-01,
+                            -5.559191107750e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.877663612366e-01,
+                            -6.451936960220e-01,
+                            -6.583026647568e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
-                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
-                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            -8.616312146187e-01,
+                            -2.218505557039e-08,
+                            -5.075349211693e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.274583220482e-01,
+                            7.640190720558e-01,
+                            -5.559191107750e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.877663612366e-01,
+                            -6.451936960220e-01,
+                            -6.583026647568e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
-                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
-                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            -8.616312146187e-01,
+                            -2.218505557039e-08,
+                            -5.075349211693e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.274583220482e-01,
+                            7.640190720558e-01,
+                            -5.559191107750e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.877663612366e-01,
+                            -6.451936960220e-01,
+                            -6.583026647568e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
-                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 0.0000e00],
-                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            -8.616312146187e-01,
+                            -2.218505557039e-08,
+                            -5.075349211693e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.274583220482e-01,
+                            7.640190720558e-01,
+                            -5.559191107750e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.877663612366e-01,
+                            -6.451936960220e-01,
+                            -6.583026647568e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
-                        [-8.6163e-01, 5.0753e-01, 0.0000e00, 0.0000e00],
-                        [3.2746e-01, 5.5592e-01, 7.6402e-01, 1.0000e00],
-                        [3.8777e-01, 6.5830e-01, -6.4519e-01, 0.0000e00],
-                        [0.0000e00, 0.0000e00, 0.0000e00, 1.0000e00],
+                        [
+                            -8.616312146187e-01,
+                            -2.218505557039e-08,
+                            -5.075349211693e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            3.274583220482e-01,
+                            7.640190720558e-01,
+                            -5.559191107750e-01,
+                            1.000000000000e00,
+                        ],
+                        [
+                            3.877663612366e-01,
+                            -6.451936960220e-01,
+                            -6.583026647568e-01,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
                         [-8.6163e-01, -2.2185e-08, -5.0753e-01, 0.0000e00],
@@ -663,40 +1093,60 @@ def test_incident_ray_direction_to_orientation(
             ),
         ),
         (
-            "kinematic_model_ideal_2",
+            "kinematics_model_ideal_2",
             torch.tensor([[0.0, 0.0], [5.0, 1000.0], [10.0, 40.0]]),
             torch.tensor(
                 [
                     [
-                        [1.0, 0.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 0.0, 1.0],
+                        [
+                            1.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            -4.371138828674e-08,
+                            -1.000000000000e00,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            1.000000000000e00,
+                            -4.371138828674e-08,
+                            0.000000000000e00,
+                        ],
+                        [
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
+                        ],
                     ],
                     [
                         [
-                            0.562379062176,
-                            -0.826879560947,
-                            0.000000000000,
-                            0.000000000000,
+                            5.623790621758e-01,
+                            3.614405486019e-08,
+                            8.268795609474e-01,
+                            0.000000000000e00,
                         ],
                         [
-                            0.234554469585,
-                            0.159525677562,
-                            0.958924293518,
-                            1.000000000000,
+                            2.345544546843e-01,
+                            9.589242935181e-01,
+                            -1.595257073641e-01,
+                            1.000000000000e00,
                         ],
                         [
-                            -0.792914927006,
-                            -0.539278924465,
-                            0.283662199974,
-                            0.000000000000,
+                            -7.929149270058e-01,
+                            2.836621999741e-01,
+                            5.392789244652e-01,
+                            0.000000000000e00,
                         ],
                         [
-                            0.000000000000,
-                            0.000000000000,
-                            0.000000000000,
-                            1.000000000000,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            0.000000000000e00,
+                            1.000000000000e00,
                         ],
                     ],
                     [
@@ -712,7 +1162,7 @@ def test_incident_ray_direction_to_orientation(
 )
 def test_motor_positions_to_orientations(
     request: pytest.FixtureRequest,
-    kinematic_model_fixture: str,
+    kinematics_model_fixture: str,
     motor_positions: torch.Tensor,
     expected: torch.Tensor,
     device: torch.device,
@@ -724,8 +1174,8 @@ def test_motor_positions_to_orientations(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    kinematic_model_fixture : str
-        The kinematic model fixture used to select the kinematic model used in the test case.
+    kinematics_model_fixture : str
+        The kinematics model fixture used to select the kinematics model used in the test case.
     motor_positions : torch.Tensor
         The motor positions.
     expected : torch.Tensor
@@ -738,46 +1188,46 @@ def test_motor_positions_to_orientations(
     AssertionError
         If test does not complete as expected.
     """
-    kinematic = request.getfixturevalue(kinematic_model_fixture)
+    kinematics = request.getfixturevalue(kinematics_model_fixture)
 
     active_heliostats_mask = torch.ones(
-        kinematic.number_of_heliostats, dtype=torch.int32, device=device
+        kinematics.number_of_heliostats, dtype=torch.int32, device=device
     )
 
-    kinematic.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematic.active_heliostat_positions = (
-        kinematic.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematics.number_of_active_heliostats = active_heliostats_mask.sum().item()
+    kinematics.active_heliostat_positions = (
+        kinematics.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_initial_orientations = (
-        kinematic.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    kinematics.active_initial_orientations = (
+        kinematics.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
     )
-    kinematic.active_translation_deviation_parameters = (
-        kinematic.translation_deviation_parameters.repeat_interleave(
+    kinematics.active_translation_deviation_parameters = (
+        kinematics.translation_deviation_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.active_rotation_deviation_parameters = (
-        kinematic.rotation_deviation_parameters.repeat_interleave(
+    kinematics.active_rotation_deviation_parameters = (
+        kinematics.rotation_deviation_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    kinematic.actuators.active_non_optimizable_parameters = (
-        kinematic.actuators.non_optimizable_parameters.repeat_interleave(
+    kinematics.actuators.active_non_optimizable_parameters = (
+        kinematics.actuators.non_optimizable_parameters.repeat_interleave(
             active_heliostats_mask, dim=0
         )
     )
-    if kinematic.actuators.active_optimizable_parameters.numel() > 0:
-        kinematic.actuators.active_optimizable_parameters = (
-            kinematic.actuators.optimizable_parameters.repeat_interleave(
+    if kinematics.actuators.active_optimizable_parameters.numel() > 0:
+        kinematics.actuators.active_optimizable_parameters = (
+            kinematics.actuators.optimizable_parameters.repeat_interleave(
                 active_heliostats_mask, dim=0
             )
         )
     else:
-        kinematic.actuators.active_optimizable_parameters = torch.tensor(
+        kinematics.actuators.active_optimizable_parameters = torch.tensor(
             [], requires_grad=True
         )
 
-    orientation_matrix = kinematic.motor_positions_to_orientations(
+    orientation_matrix = kinematics.motor_positions_to_orientations(
         motor_positions=motor_positions.to(device),
         device=device,
     )

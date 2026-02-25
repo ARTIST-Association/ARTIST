@@ -76,10 +76,10 @@ heliostat at specific indices. This results in the following important tensors:
      - Initial orientations of all heliostats.
    * - ``translation_deviation_parameters``
      - ``torch.Size([N, K_t])``
-     - Kinematic translation deviation parameters for each heliostat.
+     - Kinematics translation deviation parameters for each heliostat.
    * - ``rotation_deviation_parameters``
      - ``torch.Size([N, K_r])``
-     - Kinematic rotation deviation parameters for each heliostat.
+     - Kinematics rotation deviation parameters for each heliostat.
    * - ``non_optimizable_parameters``
      - ``torch.Size([N, A_param_non_optimizable, A_num])``
      - Non-optimizable actuator parameters for each heliostat.
@@ -123,9 +123,9 @@ with:
    * - ``P``
      - The number of surface points (or surface normals) per heliostat.
    * - ``K_t``
-     - The number of kinematic translation parameters.
+     - The number of kinematics translation parameters.
    * - ``K_r``
-     - The number of kinematic rotation parameters.
+     - The number of kinematics rotation parameters.
    * - ``F``
      - The number of facets per heliostat.
    * - ``u``
@@ -137,7 +137,7 @@ with:
    * - ``A_param_optimizable``
      - The number of optimizable actuator parameters for this actuator type.
    * - ``A_num``
-     - The number of actuators for the selected kinematic type.
+     - The number of actuators for the selected kinematics type.
    * - ``N_active``
      - The number of active heliostats.
 
@@ -156,16 +156,16 @@ Heliostat Groups
 ----------------
 
 In a Solar Tower Power Plant, a heliostat field may consist of multiple types of heliostats with varying designs. For
-example, heliostats can be equipped with different numbers of actuators or varying kinematic models. The batch processing
+example, heliostats can be equipped with different numbers of actuators or varying kinematics models. The batch processing
 in ``ARTIST``, which processes multiple heliostats at once, requires that all heliostats behave in the same way. This is
-not the case with different actuator and kinematic types per heliostat.
+not the case with different actuator and kinematics types per heliostat.
 
 This is why ``ARTIST`` internally implements heliostat groups. A single ``HeliostatGroup`` includes all heliostats
-within the field that use the same combination of actuator and kinematic types. Multiple different groups may exist.
+within the field that use the same combination of actuator and kinematics types. Multiple different groups may exist.
 Within each group, batch processing is possible, and the groups are processed sequentially. For the heliostat groups,
 actuators, and kinematics, ``ARTIST`` provides abstract base classes that define common methods implemented by each
 subtype.
 
 When initializing a ``HeliostatGroup`` in ``ARTIST``, the type of the heliostat group is automatically inferred by
-checking the provided actuator and kinematic types. To summarize: you should never have to worry about creating a
+checking the provided actuator and kinematics types. To summarize: you should never have to worry about creating a
 heliostat group yourself; they exist and are handled automatically!

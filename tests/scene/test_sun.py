@@ -251,7 +251,7 @@ def test_load_sun_and_get_distortions(
             )
             distortions_u, distortions_e = sun.get_distortions(
                 number_of_points=further_params_dict["num_points"],
-                number_of_heliostats=further_params_dict["num_heliostats"],
+                number_of_active_heliostats=further_params_dict["num_heliostats"],
                 random_seed=further_params_dict["random_seed"],
             )
             expected_u, expected_e = calculate_expected(

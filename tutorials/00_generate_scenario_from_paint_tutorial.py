@@ -101,6 +101,7 @@ nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     threshold_mode="abs",
 )
 
+# Use this configuration for deflectometry surfaces.
 heliostat_list_config, prototype_config = (
     paint_scenario_parser.extract_paint_heliostats_fitted_surface(
         paths=heliostat_files_list,
@@ -115,6 +116,16 @@ heliostat_list_config, prototype_config = (
         device=device,
     )
 )
+
+# Use this configuration for ideal surfaces.
+# heliostat_list_config, prototype_config = (
+#     paint_scenario_parser.extract_paint_heliostats_ideal_surface(
+#         paths=heliostat_files_list,
+#         power_plant_position=power_plant_config.power_plant_position,
+#         number_of_nurbs_control_points=number_of_nurbs_control_points,
+#         device=device,
+#     )
+# )
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""

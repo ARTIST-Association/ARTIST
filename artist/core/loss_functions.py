@@ -3,7 +3,7 @@ from typing import Any
 import torch
 
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, utils
+from artist.util import index_mapping, utils
 from artist.util.environment_setup import get_device
 
 
@@ -64,6 +64,10 @@ class VectorLoss(Loss):
     ----------
     loss_function : torch.nn.Module
         A torch module implementing a loss.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self) -> None:
@@ -116,7 +120,7 @@ class VectorLoss(Loss):
 
 class FocalSpotLoss(Loss):
     """
-    A loss defined as the elementwise squared distance (Euclidean distance) between predicted focal spots and the ground truth.
+    A loss defined as Euclidean distance between the predicted focal spot coordinate and the ground-truth coordinate.
 
     Attributes
     ----------
@@ -124,6 +128,10 @@ class FocalSpotLoss(Loss):
         A torch module implementing a loss.
     scenario : Scenario
         The scenario.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self, scenario: Scenario) -> None:
@@ -135,7 +143,7 @@ class FocalSpotLoss(Loss):
         scenario : Scenario
             The scenario.
         """
-        super().__init__(loss_function=torch.nn.MSELoss(reduction="none"))
+        super().__init__(loss_function=None)
         self.scenario = scenario
 
     def __call__(
@@ -160,7 +168,7 @@ class FocalSpotLoss(Loss):
             Tensor of shape [number_of_samples, 4].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the focal spot loss.
+            The ``reduction_dimensions``, ``target_area_mask`` and ``device`` are expected keyword arguments for the focal spot loss.
 
         Raises
         ------
@@ -170,7 +178,7 @@ class FocalSpotLoss(Loss):
         Returns
         -------
         torch.Tensor
-            The summed MSE focal spot loss reduced along the specified dimensions.
+            The focal spot loss.
             Tensor of shape [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
@@ -200,14 +208,14 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        loss = self.loss_function(focal_spot, ground_truth)
+        loss = torch.norm(focal_spot[:, :3] - ground_truth[:, :3], dim=1)
 
-        return loss.sum(dim=kwargs["reduction_dimensions"])
+        return loss
 
 
 class PixelLoss(Loss):
     """
-    A loss defined as the elementwise squared distance (Euclidean distance) between each pixel of predicted bitmaps and the ground truth.
+    A loss defined as the elementwise squared error between each pixel of predicted bitmaps and the ground truth.
 
     Attributes
     ----------
@@ -215,6 +223,10 @@ class PixelLoss(Loss):
         A torch module implementing a loss.
     scenario : Scenario
         The scenario.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self, scenario: Scenario) -> None:
@@ -275,40 +287,7 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        device = get_device(device=kwargs["device"])
-
-        target_area_mask = kwargs["target_area_mask"]
-
-        normalized_predictions = utils.normalize_bitmaps(
-            flux_distributions=prediction,
-            target_area_widths=self.scenario.target_areas.dimensions[target_area_mask][
-                :, index_mapping.target_area_width
-            ],
-            target_area_heights=self.scenario.target_areas.dimensions[target_area_mask][
-                :, index_mapping.target_area_height
-            ],
-            number_of_rays=self.scenario.light_sources.light_source_list[
-                index_mapping.first_light_source
-            ].number_of_rays,
-        )
-        normalized_ground_truth = utils.normalize_bitmaps(
-            flux_distributions=ground_truth,
-            target_area_widths=torch.full(
-                (ground_truth.shape[index_mapping.heliostat_dimension],),
-                config_dictionary.utis_crop_width,
-                device=device,
-            ),
-            target_area_heights=torch.full(
-                (ground_truth.shape[index_mapping.heliostat_dimension],),
-                config_dictionary.utis_crop_height,
-                device=device,
-            ),
-            number_of_rays=ground_truth.sum(
-                dim=[index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u]
-            ),
-        )
-
-        loss = self.loss_function(normalized_predictions, normalized_ground_truth)
+        loss = self.loss_function(prediction, ground_truth)
 
         return loss.sum(dim=kwargs["reduction_dimensions"])
 
@@ -326,7 +305,7 @@ class KLDivergenceLoss(Loss):
     def __init__(self) -> None:
         """Initialize the Kullback-Leibler divergence loss."""
         super().__init__(
-            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=False)
+            loss_function=torch.nn.KLDivLoss(reduction="none", log_target=True)
         )
 
     def __call__(
@@ -339,14 +318,14 @@ class KLDivergenceLoss(Loss):
         Compute the Kullback-Leibler divergence loss :math:`D_{\mathrm{KL}}(P \parallel Q)`.
 
         The elements in the prediction and ground truth are normalized and shifted, to be greater or
-        equal to zero. The kl-divergence is defined by:
+        equal to zero. The KL-divergence is defined by:
 
         .. math::
 
             D_{\mathrm{KL}}(P \parallel Q) = \sum_{x} P(x) \log \frac{P(x)}{Q(x)},
 
         where :math:`P` is the ground truth distribution and :math:`Q` is the approximation or prediction
-        of :math:`Q`. The kl-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
+        of :math:`Q`. The KL-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
         has the following effect:
         :math:`P \parallel Q` Penalizes extra mass in the prediction where the ground truth has none.
         :math:`Q \parallel P` Penalizes missing mass in the prediction where the ground truth has mass.
@@ -361,7 +340,7 @@ class KLDivergenceLoss(Loss):
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the kl-divergence loss.
+            The ``reduction_dimensions`` is an expected keyword argument for the KL-divergence loss.
 
         Raises
         ------
@@ -371,23 +350,16 @@ class KLDivergenceLoss(Loss):
         Returns
         -------
         torch.Tensor
-            The summed kl-divergence loss reduced along the specified dimensions.
+            The summed KL-divergence loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions"]
         for key in expected_kwargs:
             if key not in kwargs:
                 raise ValueError(
-                    f"The kl-divergence loss expects {key} as keyword argument. Please add this argument."
+                    f"The KL-divergence loss expects {key} as keyword argument. Please add this argument."
                 )
 
-        # Scale to make distributions non-negative.
-        if ground_truth.min() < 0:
-            ground_truth = ground_truth - ground_truth.min()
-        if prediction.min() < 0:
-            prediction = prediction - prediction.min()
-
-        # Normalize.
         eps = 1e-12
         ground_truth_distributions = torch.nn.functional.normalize(
             ground_truth,
@@ -404,7 +376,7 @@ class KLDivergenceLoss(Loss):
 
         loss = self.loss_function(
             torch.log(predicted_distributions + eps),
-            ground_truth_distributions,
+            torch.log(ground_truth_distributions + eps),
         )
 
         return loss.sum(dim=kwargs["reduction_dimensions"])
@@ -418,6 +390,10 @@ class AngleLoss(Loss):
     ----------
     loss_function : torch.nn.Module
         A torch module implementing a loss.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
     """
 
     def __init__(self) -> None:
@@ -450,8 +426,8 @@ class AngleLoss(Loss):
             The summed loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
-        cos_sim = self.loss_function(prediction, ground_truth)
+        cosine_similarity = self.loss_function(prediction, ground_truth)
 
-        loss = 1.0 - cos_sim
+        loss = 1.0 - cosine_similarity
 
         return loss

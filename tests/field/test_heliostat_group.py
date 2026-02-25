@@ -32,14 +32,16 @@ def heliostat_group(device: torch.device) -> HeliostatGroupRigidBody:
         ),
         surface_points=torch.rand((3, 100, 4), device=device),
         surface_normals=torch.rand((3, 100, 4), device=device),
+        canting=torch.rand((3, 4, 2, 4), device=device),
+        facet_translations=torch.rand((3, 4, 4), device=device),
         initial_orientations=torch.tensor(
             [[0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
             device=device,
         ),
         nurbs_control_points=torch.empty((3, 4, 10, 10, 4), device=device),
         nurbs_degrees=torch.tensor([2, 2], device=device),
-        kinematic_translation_deviation_parameters=torch.rand((3, 9), device=device),
-        kinematic_rotation_deviation_parameters=torch.rand((3, 4), device=device),
+        kinematics_translation_deviation_parameters=torch.rand((3, 9), device=device),
+        kinematics_rotation_deviation_parameters=torch.rand((3, 4), device=device),
         actuator_parameters_non_optimizable=non_optimizable_parameters,
         device=device,
     )
@@ -90,7 +92,7 @@ def test_activate_heliostats(
     assert heliostat_group.number_of_active_heliostats == expected_size
 
     group_attributes = ["active_surface_points", "active_surface_normals"]
-    kinematic_attributes = [
+    kinematics_attributes = [
         "active_heliostat_positions",
         "active_initial_orientations",
         "active_translation_deviation_parameters",
@@ -101,12 +103,12 @@ def test_activate_heliostats(
         parameter = getattr(heliostat_group, attribute)
         assert parameter.shape[0] == expected_size
 
-    for attribute in kinematic_attributes:
-        parameter = getattr(heliostat_group.kinematic, attribute)
+    for attribute in kinematics_attributes:
+        parameter = getattr(heliostat_group.kinematics, attribute)
         assert parameter.shape[0] == expected_size
 
     assert (
-        heliostat_group.kinematic.actuators.active_non_optimizable_parameters.shape[0]
+        heliostat_group.kinematics.actuators.active_non_optimizable_parameters.shape[0]
         == expected_size
     )
 
@@ -135,6 +137,8 @@ def test_abstract_align(
         ),
         surface_points=torch.rand((3, 100, 4), device=device),
         surface_normals=torch.rand((3, 100, 4), device=device),
+        canting=torch.rand((3, 4, 2, 4), device=device),
+        facet_translations=torch.rand((3, 4, 4), device=device),
         initial_orientations=torch.tensor(
             [[0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
             device=device,

@@ -442,59 +442,22 @@ def decompose_rotations(
     return theta_components[:, 0], theta_components[:, 1], theta_components[:, 2]
 
 
-def angle_between_vectors(
-    vector_1: torch.Tensor, vector_2: torch.Tensor
-) -> torch.Tensor:
-    """
-    Calculate the angle between two vectors.
-
-    Parameters
-    ----------
-    vector_1 : torch.Tensor
-        The first vector.
-    vector_2 : torch.Tensor
-        The second vector.
-
-    Return
-    ------
-    torch.Tensor
-        The angle between the input vectors.
-    """
-    dot_product = torch.dot(vector_1, vector_2)
-
-    norm_u = torch.norm(vector_1)
-    norm_v = torch.norm(vector_2)
-
-    angle = dot_product / (norm_u * norm_v)
-
-    angle = torch.clamp(angle, -1.0, 1.0)
-
-    angle = torch.acos(angle)
-
-    return angle
-
-
-def transform_initial_angle(
-    initial_angle: torch.Tensor,
-    initial_orientation: torch.Tensor,
+def rotation_angle_and_axis(
+    from_orientation: torch.Tensor,
+    to_orientation: torch.Tensor,
     device: torch.device | None = None,
-) -> torch.Tensor:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute the transformed angle of an initial angle in a rotated coordinate system.
-
-    This function accounts for a known offset, the initial angle, in the
-    initial orientation vector. The offset represents a rotation around the
-    east-axis. When the coordinate system is rotated to align
-    the initial orientation with the ``ARTIST`` standard orientation, the axis for
-    the offset rotation also changes. This function calculates the equivalent
-    transformed angle for the offset in the rotated coordinate system.
+    Compute the rotation axis and angle between to orientations.
 
     Parameters
     ----------
-    initial_angle : torch.Tensor
-        The initial angle, or offset along the east-axis.
-    initial_orientation : torch.Tensor
-        The initial orientation of the coordinate system.
+    from_orientation : torch.Tensor
+        The original orientation.
+        Tensor of shape [4].
+    to_orientation : torch.Tensor
+        The rotated orientation.
+        Tensor of shape [4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -503,29 +466,28 @@ def transform_initial_angle(
     Returns
     -------
     torch.Tensor
-        The transformed angle in the rotated coordinate system.
+        The rotation axis.
+        Tensor of shape [3].
+    torch.Tensor
+        The angle of the rotation.
+        Tensor of shape [1].
     """
     device = get_device(device=device)
 
-    # ARTIST is oriented towards the south ([0.0, -1.0, 0.0]) ENU.
-    artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
+    from_orientation = from_orientation[:3] / torch.norm(from_orientation[:3])
+    to_orientation = to_orientation[:3] / torch.norm(to_orientation[:3])
 
-    # Apply the rotation by the initial angle to the initial orientation.
-    initial_orientation_with_offset = initial_orientation @ rotate_e(
-        e=initial_angle,
-        device=device,
-    ).squeeze(index_mapping.unbatched_tensor_values)
-
-    # Compute the transformed angle relative to the reference orientation.
-    transformed_initial_angle = angle_between_vectors(
-        initial_orientation[: index_mapping.slice_fourth_dimension],
-        initial_orientation_with_offset[: index_mapping.slice_fourth_dimension],
-    ) - angle_between_vectors(
-        initial_orientation[: index_mapping.slice_fourth_dimension],
-        artist_standard_orientation[: index_mapping.slice_fourth_dimension],
+    axis = torch.linalg.cross(from_orientation, to_orientation)
+    axis_norm = torch.norm(axis)
+    if axis_norm < 1e-6:
+        return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(
+            0.0, device=device
+        )
+    axis = axis / axis_norm
+    angle = torch.acos(
+        torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
     )
-
-    return transformed_initial_angle
+    return axis, angle
 
 
 def get_center_of_mass(
@@ -750,121 +712,69 @@ def create_ideal_canted_nurbs_control_points(
     control_points[:, :, :, index_mapping.n] = control_points_n
     control_points[:, :, :, index_mapping.u] = 0
 
-    # The control points for each facet are initialized as a flat equidistant grid centered around the origin.
-    # Each facet needs to be canted according to the provided angles and translated to the actual facet position.
-    rotation_matrix = torch.zeros((number_of_facets, 4, 4), device=device)
-
-    rotation_matrix[:, :, index_mapping.e] = torch.nn.functional.normalize(
-        canting[:, index_mapping.e]
-    )
-    rotation_matrix[:, :, index_mapping.n] = torch.nn.functional.normalize(
-        canting[:, index_mapping.n]
-    )
-    rotation_matrix[:, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
-        torch.nn.functional.normalize(
-            torch.linalg.cross(
-                rotation_matrix[
-                    :, : index_mapping.slice_fourth_dimension, index_mapping.e
-                ],
-                rotation_matrix[
-                    :, : index_mapping.slice_fourth_dimension, index_mapping.n
-                ],
-            ),
-            dim=0,
-        )
-    )
-
-    rotation_matrix[
-        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
-    ] = 1.0
-
-    canted_points = (
-        convert_3d_points_to_4d_format(points=control_points, device=device).reshape(
-            number_of_facets, -1, 4
-        )
-        @ rotation_matrix.mT
-    ).reshape(
-        number_of_facets,
-        control_points.shape[index_mapping.control_points_u_facet_batched],
-        control_points.shape[index_mapping.control_points_v_facet_batched],
-        4,
-    )
-
-    canted_with_translation = (
-        canted_points + facet_translation_vectors[:, None, None, :]
-    )
-
-    return canted_with_translation[:, :, :, : index_mapping.slice_fourth_dimension]
+    return control_points
 
 
-def normalize_bitmaps(
-    flux_distributions: torch.Tensor,
-    target_area_widths: torch.Tensor,
-    target_area_heights: torch.Tensor,
-    number_of_rays: torch.Tensor | int,
+def perform_canting(
+    canting_angles: torch.Tensor,
+    data: torch.Tensor,
+    inverse: bool = False,
+    device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Normalize a bitmap.
+    Perform canting (rotation) on data like surface points or surface normals.
 
     Parameters
     ----------
-    flux_distributions : torch.Tensor
-        The flux distributions to be normalized.
-        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
-    target_area_widths : torch.Tensor
-        The target area widths.
-        Tensor of shape [number_of_bitmaps].
-    target_area_heights : torch.Tensor
-        The target area heights.
-        Tensor of shape [number_of_bitmaps].
-    number_of_rays : torch.Tensor | int
-        The number of rays used to generate the flux.
-        Tensor of shape [number_of_bitmaps].
+    canting_angles : torch.Tensor
+        Canting angles.
+        Tensor of shape [number_of_surfaces, number_of_facets, 2, 4].
+    data : torch.Tensor
+        Data to be canted.
+        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+    inverse : bool
+        Indicates the direction of the rotation. Use inverse=False for canting and inverse=True for decanting (default is False).
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
     torch.Tensor
-        The normalized and scaled flux density distributions.
-        Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
+        The (de-)canted data.
+        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
     """
-    plane_areas = target_area_widths * target_area_heights
-    num_pixels = (
-        flux_distributions.shape[index_mapping.batched_bitmap_e]
-        * flux_distributions.shape[index_mapping.batched_bitmap_u]
+    number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
+    number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
+    rotation_matrix = torch.zeros(
+        (number_of_surfaces, number_of_facets_per_surface, 4, 4), device=device
     )
-    plane_area_per_pixel = plane_areas / num_pixels
 
-    normalized_fluxes = flux_distributions / (
-        number_of_rays * plane_area_per_pixel
-    ).unsqueeze(-1).unsqueeze(-1)
+    e = canting_angles[:, :, index_mapping.e, : index_mapping.slice_fourth_dimension]
+    n = canting_angles[:, :, index_mapping.n, : index_mapping.slice_fourth_dimension]
+    u = torch.linalg.cross(e, n, dim=2)
 
-    std = torch.std(
-        normalized_fluxes,
-        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-        keepdim=True,
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = (
+        torch.nn.functional.normalize(e, dim=-1)
     )
-    std = std + 1e-6
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.n] = (
+        torch.nn.functional.normalize(n, dim=-1)
+    )
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
+        torch.nn.functional.normalize(u, dim=-1)
+    )
 
-    standardized = (
-        normalized_fluxes
-        - torch.mean(
-            normalized_fluxes,
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-            keepdim=True,
-        )
-    ) / std
+    rotation_matrix[
+        :, :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+    ] = 1.0
 
-    valid_mask = (
-        flux_distributions.sum(
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
-            keepdim=True,
-        )
-        != 0
-    ).float()
+    if inverse:
+        canted_data = data @ rotation_matrix
+    else:
+        canted_data = data @ rotation_matrix.mT
 
-    result = standardized * valid_mask
-
-    return result
+    return canted_data
 
 
 def trapezoid_distribution(

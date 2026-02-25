@@ -25,7 +25,7 @@ def generate_reconstruction_scenario(
     device: torch.device | None = None,
 ) -> None:
     """
-    Generate a scenario for the kinematic reconstruction plots.
+    Generate a scenario for the kinematics reconstruction plots.
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def generate_reconstruction_scenario(
 
 if __name__ == "__main__":
     """
-    Generate a scenario for the kinematic reconstruction plots.
+    Generate a scenario for the kinematics reconstruction plots.
 
     This script generates a scenario based on the viable heliostats list previously generated.
 
@@ -138,8 +138,10 @@ if __name__ == "__main__":
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
-    results_dir_default = config.get("results_dir", "./results")
-    scenarios_dir_default = config.get("scenarios_dir", "./scenarios")
+    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    scenarios_dir_default = config.get(
+        "scenarios_dir", "./examples/paint_plots/scenarios"
+    )
 
     parser.add_argument(
         "--device",

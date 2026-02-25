@@ -172,6 +172,19 @@ cython_debug/
 .vscode/settings.json
 examples/paint_plots/data/
 examples/paint_plots/plots/
+examples/paint_plots/results/
+examples/paint_plots/scenarios/
+examples/field_optimizations
+examples/field_optimizations/data_for_stral/
+examples/field_optimizations/measured_data/
+examples/field_optimizations/plots/
+examples/field_optimizations/results/
+examples/field_optimizations/scenarios/
+examples/field_optimizations/metadata
+examples/hyperparameter_optimization/logs
+examples/hyperparameter_optimization/scenarios
+examples/hyperparameter_optimization/results
+examples/hyperparameter_optimization/plots/
 
 # Local config files.
 **/config.local.json

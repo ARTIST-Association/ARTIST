@@ -7,7 +7,6 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
-from artist.core.regularizers import IdealSurfaceRegularizer, TotalVariationRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -16,17 +15,23 @@ from artist.util import config_dictionary
 
 
 @pytest.mark.parametrize(
-    "loss_class, data_parser, early_stopping_delta",
+    "loss_class, early_stopping_window, data_parser, scheduler",
     [
-        (KLDivergenceLoss, PaintCalibrationDataParser(), 1e-4),
-        (PixelLoss, PaintCalibrationDataParser(), 1e-4),
-        (PixelLoss, CalibrationDataParser(), 1e-4),
+        (
+            KLDivergenceLoss,
+            40,
+            PaintCalibrationDataParser(),
+            config_dictionary.reduce_on_plateau,
+        ),
+        (PixelLoss, 20, PaintCalibrationDataParser(), config_dictionary.cyclic),
+        (PixelLoss, 10, CalibrationDataParser(), config_dictionary.cyclic),
     ],
 )
 def test_surface_reconstructor(
     loss_class: Loss,
+    early_stopping_window: int,
     data_parser: CalibrationDataParser | PaintCalibrationDataParser,
-    early_stopping_delta: float,
+    scheduler: str,
     ddp_setup_for_testing: dict[str, Any],
     device: torch.device,
 ) -> None:
@@ -37,10 +42,12 @@ def test_surface_reconstructor(
     ----------
     loss_class : Loss
         The loss class.
+    early_stopping_window : int
+        Number of epochs used to estimate loss trend.
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
-    early_stopping_delta : float
-        The minimum required improvement to prevent early stopping.
+    scheduler : str
+        Scheduler name.
     ddp_setup_for_testing : dict[str, Any]
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
@@ -54,49 +61,37 @@ def test_surface_reconstructor(
     torch.manual_seed(7)
     torch.cuda.manual_seed(7)
 
-    scheduler_parameters = {
-        config_dictionary.min: 1e-4,
-        config_dictionary.reduce_factor: 0.9,
-        config_dictionary.patience: 100,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 20,
-    }
-
-    # Configure regularizers and their weights.
-    ideal_surface_regularizer = IdealSurfaceRegularizer(
-        weight=0.5, reduction_dimensions=(1, 2, 3)
-    )
-    total_variation_regularizer_points = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
-        surface=config_dictionary.surface_points,
-        number_of_neighbors=64,
-        sigma=1e-3,
-    )
-    total_variation_regularizer_normals = TotalVariationRegularizer(
-        weight=0.5,
-        reduction_dimensions=(1,),
-        surface=config_dictionary.surface_normals,
-        number_of_neighbors=64,
-        sigma=1e-3,
-    )
-
-    regularizers = [
-        ideal_surface_regularizer,
-        total_variation_regularizer_points,
-        total_variation_regularizer_normals,
-    ]
-
-    optimization_configuration = {
+    optimizer_dict = {
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 5e-4,
-        config_dictionary.max_epoch: 15,
+        config_dictionary.max_epoch: 50,
+        config_dictionary.batch_size: 30,
         config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: early_stopping_delta,
-        config_dictionary.early_stopping_patience: 13,
-        config_dictionary.scheduler: config_dictionary.reduce_on_plateau,
-        config_dictionary.scheduler_parameters: scheduler_parameters,
-        config_dictionary.regularizers: regularizers,
+        config_dictionary.early_stopping_delta: 1.0,
+        config_dictionary.early_stopping_patience: 2,
+        config_dictionary.early_stopping_window: early_stopping_window,
+    }
+    scheduler_dict = {
+        config_dictionary.scheduler_type: scheduler,
+        config_dictionary.min: 1e-6,
+        config_dictionary.max: 1e-3,
+        config_dictionary.step_size_up: 500,
+        config_dictionary.reduce_factor: 0.8,
+        config_dictionary.patience: 10,
+        config_dictionary.threshold: 1e-4,
+        config_dictionary.cooldown: 5,
+    }
+    constraint_dict = {
+        config_dictionary.initial_lambda_energy: 0.1,
+        config_dictionary.rho_energy: 1.0,
+        config_dictionary.energy_tolerance: 0.01,
+        config_dictionary.weight_smoothness: 0.005,
+        config_dictionary.weight_ideal_surface: 0.005,
+    }
+    optimization_configuration = {
+        config_dictionary.optimization: optimizer_dict,
+        config_dictionary.scheduler: scheduler_dict,
+        config_dictionary.constraints: constraint_dict,
     }
 
     scenario_path = (
@@ -124,11 +119,15 @@ def test_surface_reconstructor(
             "AA31",
             [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_1.json"
+                / "tests/data/field_data/AA31-calibration-properties_1.json",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-calibration-properties_2.json",
             ],
             [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-flux-centered_1.png"
+                / "tests/data/field_data/AA31-flux-centered_1.png",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA31-flux-centered_2.png",
             ],
         ),
     ]
@@ -144,11 +143,19 @@ def test_surface_reconstructor(
 
     with h5py.File(scenario_path, "r") as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
-            scenario_file=scenario_file, device=device
+            scenario_file=scenario_file,
+            change_number_of_control_points_per_facet=torch.tensor(
+                [7, 7], device=device
+            ),
+            device=device,
         )
 
     ddp_setup_for_testing[config_dictionary.device] = device
     ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+    ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {
+        0: [0],
+        1: [0],
+    }
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(
@@ -187,7 +194,7 @@ def test_surface_reconstructor(
             expected_path = (
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/expected_reconstructed_surfaces"
-                / f"{loss_name}_group_{index}_{device.type}.pt"
+                / f"{loss_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
             )
 
             expected = torch.load(expected_path, map_location=device, weights_only=True)

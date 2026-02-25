@@ -6,7 +6,7 @@ Understanding Heliostats
 ``ARTIST`` is a digital twin for concentrating solar tower power plants. One of the most important aspects of these plants
 are the **heliostats** - the mirrors that reflect light onto the receiver. Heliostats aren't just perfect flat mirrors; they are
 complex structures that must be accurately modeled. In ``ARTIST``, we model heliostats using three key components: a
-**surface**, a **kinematic model**, and **actuators**. This page provides a brief overview of how we include heliostats
+**surface**, a **kinematics model**, and **actuators**. This page provides a brief overview of how we include heliostats
 in ``ARTIST`` and details the specific models we support.
 
 Surfaces
@@ -25,35 +25,35 @@ Most commonly, heliostats in ``ARTIST`` consist of four facets, as shown in the 
 As you can see, each facet has a ``position`` relative to the heliostat's center and canting direction vectors
 (``canting_e``, ``canting_n``) that define its orientation.
 
-Kinematic
+Kinematics
 ^^^^^^^^^
-The heliostat's kinematic model describes the motion of its mechanical system. It's used to predict the final orientation
-of the heliostat surface based on variable inputs. The kinematic model is also used to calculate the aligned surface points
-and normals for a predicted orientation. The choice of kinematic type can depend on the type and number of actuators or
+The heliostat's kinematics model describes the motion of its mechanical system. It's used to predict the final orientation
+of the heliostat surface based on variable inputs. The kinematics model is also used to calculate the aligned surface points
+and normals for a predicted orientation. The choice of kinematics type can depend on the type and number of actuators or
 the availability of a dataset on the positions, orientations, and movements of the heliostat's mechanical system.
 
-The abstract class ``Kinematic`` contains a method to align the heliostat surface, which internally first computes the
-desired orientation for a given input. All derived kinematic types override this method.
+The abstract class ``Kinematics`` contains a method to align the heliostat surface, which internally first computes the
+desired orientation for a given input. All derived kinematics types override this method.
 
-``ARTIST`` currently supports the following kinematic type:
+``ARTIST`` currently supports the following kinematics type:
 
 - ``RigidBody``
 
-This rigid body kinematic model uses a two-actuator structure, allowing movement in two directions. These actuators
+This rigid body kinematics model uses a two-actuator structure, allowing movement in two directions. These actuators
 introduce mechanical offsets, described by translation vectors for three components: joint one, joint two, and the concentrator.
 These vectors point in the east, north, and up directions, as shown in the image below.
 
-.. figure:: ./images/kinematic_translation.pdf
-   :alt: Kinematic Translations Overview
+.. figure:: ./images/kinematics_translation.pdf
+   :alt: Kinematics Translations Overview
    :width: 55%
    :align: center
 
 In ``ARTIST`` these translations, as well as possible rotations of each joint, are included in the ``translation_deviation_parameters``
-and ``rotation_deviation_parameters`` tensors (see :py:class:`artist.field.kinematic_rigid_body.RigidBody`), allowing multiple rigid body
+and ``rotation_deviation_parameters`` tensors (see :py:class:`artist.field.kinematics_rigid_body.RigidBody`), allowing multiple rigid body
 kinematics with slightly different translations and rotations to be effectively modeled.
 Joint one and two and the concentrator all have translations in the east north and up direction, making the ``translation_deviation_parameters``
 a 9-dimensional tensor. Only joint one and two have ``rotation_deviation_parameters``. Joint one has these deviations only in the north and
-up direction, whereas joint two has them only in east and north, making this a 4-dimensional parameter for the rigid body kinematic.
+up direction, whereas joint two has them only in east and north, making this a 4-dimensional parameter for the rigid body kinematics.
 
 Actuators
 ^^^^^^^^^
