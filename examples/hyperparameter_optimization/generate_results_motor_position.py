@@ -71,7 +71,7 @@ def data_for_flux_plots(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Dictionary containing kinematics data per heliostat.
+        Kinematics data per heliostat.
     """
     device = get_device(device)
 
@@ -103,7 +103,7 @@ def data_for_flux_plots(
             device=device,
         )
 
-        # Align Heliostats.
+        # Align heliostats.
         if id == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
                 aim_points=scenario.target_areas.centers[target_area_mask],
@@ -414,4 +414,4 @@ if __name__ == "__main__":
         results_path.parent.mkdir(parents=True, exist_ok=True)
 
     torch.save(optimization_results, results_path)
-    print(f"Reconstruction results saved to {results_path}")
+    print(f"Reconstruction results saved to {results_path}.")

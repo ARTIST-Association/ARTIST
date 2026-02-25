@@ -102,7 +102,7 @@ in the generated image individually.
     loss_definition = KLDivergenceLoss()
 
 
-Optimizer, Scheduler, Regularizer and Constraints Configuration
+Optimizer, Scheduler, Regularizer, and Constraints Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The surface reconstruction internally uses the ``torch.optim.Adam`` optimizer. Depending on the data you use, different
@@ -139,11 +139,11 @@ an cyclic or reduce on plateau scheduler:
 Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and similar to an ideal
 surface. In the surface reconstruction we consider two regularizers:
 
-- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here, is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learnt surface should be similar to the ideal surface, apart from these minute deviations.
-- ``SmoothnessRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularize is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularize to both the NURBS control points.
+- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learned surface should be similar to the ideal surface, apart from these minute deviations.
+- ``SmoothnessRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularizer is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularizer to both the NURBS control points.
 
 These regularizers are initialized automatically within the ``SurfaceReconstructor``. We can adjust their influence by setting their weights inside the constraints dict.
-Weight of zero deactivate the regularizers completely.
+Weights of zero deactivate the regularizers completely.
 
 .. code-block::
 
@@ -155,12 +155,12 @@ Weight of zero deactivate the regularizers completely.
         config_dictionary.energy_tolerance: 0.01,
     }
 
-As you can see, there are further parameters in the ``constraints`` dictionary than necessary for the two regularizers mentioned before. To further stabilize the reconstruction there is one additional constraints.
+As you can see, there are further parameters in the constraints dictionary that are not required for the two regularizers mentioned before. To further stabilize the reconstruction, there is one additional constraint.
 This constraint considers the flux integral of the raytraced flux images from the predicted surfaces. During reconstruction the flux integral may not change significantly.
 The parameters ``initial_lambda_energy`` and ``rho_energy`` are the Augmented Lagrangian coefficients used to enforce this energy conservation constraint.
 The multiplier ``lambda_energy`` represents the Lagrange multiplier associated with the energy integral constraint. It linearly penalizes violations and is updated iteratively during optimization based on the current constraint violation.
 If the predicted energy deviates from the reference energy, lambda increases, thereby strengthening the enforcement of the constraint in the next iteration.
-The parameter rho is the quadratic penalty weight. It controls how strongly deviations from the reference energy are penalized through the squared constraint term.
+The parameter ``rho_energy`` is the quadratic penalty weight. It controls how strongly deviations from the reference energy are penalized through the squared constraint term.
 The ``energy_tolerance`` describes how much the flux integral may vary relative to the initial surface.
 We can now define the combined optimization parameters in the ``optimization_configuration`` dictionary:
 

@@ -49,7 +49,7 @@ def create_flux_plot(id: str) -> None:
             device=device,
         )
 
-        # Align Heliostats.
+        # Align heliostats.
         if id == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
                 aim_points=scenario.target_areas.centers[target_area_mask],

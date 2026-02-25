@@ -88,7 +88,7 @@ def find_heliostats(
     Parameters
     ----------
     heliostat_properties_list : list[tuple[str, pathlib.Path]]
-        List of heliostat names and paths.
+        Heliostat names and paths.
     power_plant_position : torch.Tensor
         Tower position in WGS84.
         Tensor of shape [3].
@@ -166,7 +166,7 @@ def generate_ideal_scenario(
     tower_file_path : pathlib.Path
         Path to the tower measurements file.
     heliostat_properties_list : list[tuple[str, pathlib.Path]]
-        List of heliostat names and their property files to include in the scenario.
+        Heliostat names and their property files to include in the scenario.
     number_of_heliostats : int
         Number of heliostats to select.
     device : torch.device | None
@@ -177,7 +177,7 @@ def generate_ideal_scenario(
     Returns
     -------
     list[tuple[str, pathlib.Path]]
-        List of selected heliostats.
+        Selected heliostats.
     """
     device = get_device(device=device)
 
@@ -250,7 +250,7 @@ def generate_fitted_scenario(
     tower_file_path : pathlib.Path
         Path to the tower data file.
     selected_heliostats_list : list[tuple[str, pathlib.Path]],
-        List of heliostat names to include in the scenario.
+        Heliostat names to include in the scenario.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate

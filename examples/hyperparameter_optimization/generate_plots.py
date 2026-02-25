@@ -32,7 +32,7 @@ def plot_kinematics_reconstruction_fluxes(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
@@ -142,11 +142,11 @@ def plot_error_distribution(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
-    # Set Plot style.
+    # Set plot style.
     plt.rcParams["text.usetex"] = True
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
     plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
@@ -156,7 +156,7 @@ def plot_error_distribution(
         data["loss"] for data in reconstruction_results["loss"].values()
     ]
 
-    # Convert to angular error in mrad
+    # Convert to angular error in mrad.
     positions = np.array(
         [data["position"] for data in reconstruction_results["loss"].values()],
         dtype=float,
@@ -222,7 +222,7 @@ def plot_linear_and_angular_error_against_distance(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     number_of_points_to_plot : int
         Number of points to randomly select and plot.
     save_dir : pathlib.Path
@@ -320,7 +320,7 @@ def plot_motor_pos_fluxes(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
@@ -345,7 +345,7 @@ def plot_motor_pos_fluxes(
     )
     axes = []
 
-    # Compute global min and max for shared color scale
+    # Compute global min and max for shared color scale.
     all_flux_data = [
         reconstruction_results[key].cpu().detach()
         for key in ["flux_before", "flux_after", "target_distribution"]
@@ -374,8 +374,8 @@ def plot_motor_pos_fluxes(
     axes[1].set_title(r"\textbf{Aim Points Optimized}", fontsize=18, ha="center")
     axes[2].set_title(r"\textbf{Target Distribution}", fontsize=18, ha="center")
 
-    # Add a single horizontal colorbar beneath all subplots
-    cbar_ax = fig.add_subplot(gs[1, :])  # spans all columns
+    # Add a single horizontal colorbar beneath all subplots.
+    cbar_ax = fig.add_subplot(gs[1, :])  # Spans all columns
     cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
     cbar.ax.tick_params(labelsize=14)
 

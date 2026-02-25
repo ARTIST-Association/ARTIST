@@ -98,7 +98,7 @@ class SurfaceReconstructor:
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
-            The parameters for the optimizer, learning rate scheduler, early stopping and constraints.
+            The parameters for the optimizer, learning rate scheduler, early stopping, and constraints.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces (default is torch.tensor([50,50])).
             Tensor of shape [2].
@@ -543,7 +543,7 @@ class SurfaceReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
                         )
 
-                    # Early stopping when loss did not improve since a predefined number of epochs.
+                    # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
 
                     if stop:
