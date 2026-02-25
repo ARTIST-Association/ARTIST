@@ -143,7 +143,7 @@ def plot_error_distribution(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
