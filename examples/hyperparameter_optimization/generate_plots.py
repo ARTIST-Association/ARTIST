@@ -378,8 +378,8 @@ def plot_motor_pos_fluxes(
     axes[1].set_title(r"\textbf{Aim Points Optimized}", fontsize=18, ha="center")
     axes[2].set_title(r"\textbf{Target Distribution}", fontsize=18, ha="center")
 
-    # Add a single horizontal colorbar beneath all subplots
-    cbar_ax = fig.add_subplot(gs[1, :])  # spans all columns
+    # Add a single horizontal colorbar beneath all subplots.
+    cbar_ax = fig.add_subplot(gs[1, :])  # Spans all columns
     cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
     cbar.ax.tick_params(labelsize=14)
 
