@@ -105,8 +105,8 @@ specific use case. In this tutorial we define the following scheduler and optimi
         config_dictionary.constraints: constraint_dict,
     }
 
-The optimization configuration is a combination of optimizer parameters, scheduler parameters and the learning constraints.
-For the motor position optimization we have two constraints. With ``rho_energy`` and ``lambda_lr`` we define the parameters for Augmented Lagrangian coefficients.
+The optimization configuration is a combination of optimizer parameters, scheduler parameters, and the learning constraints.
+For the motor position optimization, we have two constraints. With ``rho_energy`` and ``lambda_lr`` we define the parameters for Augmented Lagrangian coefficients.
 They enforce that the flux integral strives to maximize itself during the optimization.
 Furthermore there are the ``max_flux_density`` and ``rho_pixel`` parameters.
 They constrain the flux at the pixel level. The parameter ``max_flux_density`` defines the maximum allowable flux density per pixel.
