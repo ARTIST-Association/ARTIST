@@ -157,7 +157,7 @@ def plot_error_distribution(
         data["loss"] for data in reconstruction_results["loss"].values()
     ]
 
-    # Convert to angular error in mrad
+    # Convert to angular error in mrad.
     positions = np.array(
         [data["position"] for data in reconstruction_results["loss"].values()],
         dtype=float,
