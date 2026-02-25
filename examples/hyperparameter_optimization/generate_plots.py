@@ -223,7 +223,7 @@ def plot_linear_and_angular_error_against_distance(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     number_of_points_to_plot : int
         Number of points to randomly select and plot.
     save_dir : pathlib.Path
