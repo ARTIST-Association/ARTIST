@@ -324,7 +324,7 @@ def plot_motor_pos_fluxes(
     Parameters
     ----------
     reconstruction_results : dict[str, dict[str, Any]]
-        A dictionary containing the reconstruction results.
+        The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
     """
