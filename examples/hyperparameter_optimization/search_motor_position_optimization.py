@@ -367,7 +367,7 @@ if __name__ == "__main__":
     # Save hpo results in format to be used by plots.
     if not hpo_result_file.exists():
         raise FileNotFoundError(
-            f"The hpo results located at {hpo_result_file} could not be not found! Please run the hpo script again to generate the results."
+            f"The HPO results located at {hpo_result_file} could not be not found! Please run the HPO script again to generate the results."
         )
 
     with open(hpo_result_file, "rb") as results:
