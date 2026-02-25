@@ -733,7 +733,7 @@ def perform_canting(
         Data to be canted.
         Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
     inverse : bool
-        Indicating the direction of the rotation. Use inverse=False for canting and inverse=True for decanting (default is False).
+        Indicates the direction of the rotation. Use inverse=False for canting and inverse=True for decanting (default is False).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
