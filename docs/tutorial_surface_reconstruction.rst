@@ -155,7 +155,7 @@ Weights of zero deactivate the regularizers completely.
         config_dictionary.energy_tolerance: 0.01,
     }
 
-As you can see, there are further parameters in the ``constraints`` dictionary than necessary for the two regularizers mentioned before. To further stabilize the reconstruction there is one additional constraints.
+As you can see, there are further parameters in the constraints dictionary that are not required for the two regularizers mentioned before. To further stabilize the reconstruction, there is one additional constraint.
 This constraint considers the flux integral of the raytraced flux images from the predicted surfaces. During reconstruction the flux integral may not change significantly.
 The parameters ``initial_lambda_energy`` and ``rho_energy`` are the Augmented Lagrangian coefficients used to enforce this energy conservation constraint.
 The multiplier ``lambda_energy`` represents the Lagrange multiplier associated with the energy integral constraint. It linearly penalizes violations and is updated iteratively during optimization based on the current constraint violation.
