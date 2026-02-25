@@ -160,7 +160,7 @@ This constraint considers the flux integral of the raytraced flux images from th
 The parameters ``initial_lambda_energy`` and ``rho_energy`` are the Augmented Lagrangian coefficients used to enforce this energy conservation constraint.
 The multiplier ``lambda_energy`` represents the Lagrange multiplier associated with the energy integral constraint. It linearly penalizes violations and is updated iteratively during optimization based on the current constraint violation.
 If the predicted energy deviates from the reference energy, lambda increases, thereby strengthening the enforcement of the constraint in the next iteration.
-The parameter rho is the quadratic penalty weight. It controls how strongly deviations from the reference energy are penalized through the squared constraint term.
+The parameter ``rho_energy`` is the quadratic penalty weight. It controls how strongly deviations from the reference energy are penalized through the squared constraint term.
 The ``energy_tolerance`` describes how much the flux integral may vary relative to the initial surface.
 We can now define the combined optimization parameters in the ``optimization_configuration`` dictionary:
 
