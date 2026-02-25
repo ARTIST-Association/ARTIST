@@ -349,7 +349,7 @@ def plot_motor_pos_fluxes(
     )
     axes = []
 
-    # Compute global min and max for shared color scale
+    # Compute global min and max for shared color scale.
     all_flux_data = [
         reconstruction_results[key].cpu().detach()
         for key in ["flux_before", "flux_after", "target_distribution"]
