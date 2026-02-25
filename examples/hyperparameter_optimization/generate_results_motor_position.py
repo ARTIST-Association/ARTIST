@@ -52,7 +52,7 @@ def data_for_flux_plots(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Dictionary containing kinematic data per heliostat.
+        Kinematics data per heliostat.
     """
     device = get_device(device)
 
