@@ -148,7 +148,6 @@ constraint_dict = {
     config_dictionary.rho_energy: 1.0,
     config_dictionary.max_flux_density: 1e10,
     config_dictionary.rho_pixel: 1.0,
-    config_dictionary.lambda_lr: 0.1,
 }
 # Combine configurations.
 optimization_configuration = {

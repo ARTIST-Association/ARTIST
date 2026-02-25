@@ -123,9 +123,8 @@ def test_motor_positions_optimizer(
     }
     constraint_dict = {
         config_dictionary.rho_energy: 1.0,
-        config_dictionary.max_flux_density: 3,
         config_dictionary.rho_pixel: 1.0,
-        config_dictionary.lambda_lr: 0.1,
+        config_dictionary.max_flux_density: 3,
     }
     # Combine configurations.
     optimization_configuration = {

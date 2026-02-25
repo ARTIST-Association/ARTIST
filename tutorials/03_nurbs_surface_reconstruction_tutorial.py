@@ -423,7 +423,6 @@ scheduler_dict = {
 constraint_dict = {
     config_dictionary.weight_smoothness: 0.005,
     config_dictionary.weight_ideal_surface: 0.005,
-    config_dictionary.initial_lambda_energy: 0.1,
     config_dictionary.rho_energy: 1.0,
     config_dictionary.energy_tolerance: 0.01,
 }
