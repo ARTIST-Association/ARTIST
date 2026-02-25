@@ -51,7 +51,7 @@ def distribution(device: torch.device) -> torch.Tensor:
     )
 
     ground_truth = torch.load(path, map_location=device, weights_only=True)
-    
+
     # Scale bitmap intensity to account for the dni and ray magnitude set in this test.
     return ground_truth * 19400
 
