@@ -279,11 +279,12 @@ class MotorPositionsOptimizer:
             relative=True,
         )
 
-        lambda_energy = None
+        # Set up constraints.
+        lambda_energy = 0.0
+        lambda_pixel = 0.0
         rho_energy = self.constraint_dict[config_dictionary.rho_energy]
-        max_flux_density = self.constraint_dict[config_dictionary.max_flux_density]
         rho_pixel = self.constraint_dict[config_dictionary.rho_pixel]
-        lambda_lr = self.constraint_dict[config_dictionary.lambda_lr]
+        max_flux_density = self.constraint_dict[config_dictionary.max_flux_density]
 
         # Start the optimization.
         loss = torch.inf
@@ -417,34 +418,34 @@ class MotorPositionsOptimizer:
                 loss = flux_loss
 
             if isinstance(loss_definition, KLDivergenceLoss):
-                # Augmented Lagrangian energy integral.
+                # Augmented Lagrangian to ensure that flux integral is maximized, i.e., intensity increases or stays the same.
+                # Using 0.5 * rho * (g + lambda / rho)**2 - 0.5 * (lambda**2)/rho
+                # is mathematically equivalent to lambda * g + 0.5 * rho * g**2,
+                # but writing it as a completed square is more stable because its gradient ∂L/∂g = rho * (g + lambda/rho) 
+                # varies linearly and continuously with g, avoiding abrupt jumps from separately adding linear and quadratic terms.
                 energy_integral_prediction = total_flux.sum()
                 energy_integral_ground_truth = self.ground_truth.sum()
-                g_energy = torch.relu(
-                    (energy_integral_ground_truth - energy_integral_prediction)
-                    / (energy_integral_ground_truth + self.epsilon)
+                g_energy = energy_integral_ground_truth - energy_integral_prediction
+                g_energy_positive = torch.clamp(g_energy, min=0.0)
+                energy_constraint = (
+                    0.5 * rho_energy * (g_energy_positive + lambda_energy / rho_energy)**2
+                    - 0.5 * (lambda_energy**2) / rho_energy
                 )
-                # Regularizer, maximum allowable flux density.
-                pixel_violation = (total_flux - max_flux_density) / (
-                    max_flux_density + self.epsilon
+                # Augmented Lagrangian to ensure that local heat spikes are avoided.
+                g_pixel = total_flux - max_flux_density
+                g_pixel_positive = torch.clamp(g_pixel, min=0.0)
+                pixel_constraint = (
+                    0.5 * rho_pixel * (g_pixel_positive + lambda_pixel / rho_pixel)**2
+                    - 0.5 * (lambda_pixel**2) / rho_pixel
                 )
-                pixel_violation = torch.clamp(pixel_violation, min=0.0)
-                pixel_constraint_loss = rho_pixel * (pixel_violation**2).mean()
-
-                if lambda_energy is None:
-                    lambda_energy = torch.clamp(
-                        flux_loss.detach() / (g_energy + 1e-12), min=1.0
-                    )
                 loss = (
                     flux_loss
-                    + lambda_energy * g_energy
-                    + 0.5 * rho_energy * (g_energy**2)
-                    + pixel_constraint_loss
+                    + energy_constraint
+                    + pixel_constraint
                 )
                 with torch.no_grad():
-                    lambda_energy = torch.clamp(
-                        lambda_energy + lambda_lr * g_energy.detach(), min=0.0
-                    )
+                    lambda_energy = torch.clamp(lambda_energy + rho_energy * g_energy, min=0.0)
+                    self.lambda_pixel = torch.clamp(self.lambda_pixel + rho_pixel * g_pixel, min=0.0)
 
             loss.backward()
 

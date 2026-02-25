@@ -255,13 +255,14 @@ class SurfaceReconstructor:
                     relative=True,
                 )
 
-                # Set up energy constraints.
-                energy_per_flux_reference = torch.zeros_like(active_heliostats_mask)
-                initial_lambda_energy = self.constraint_dict[
-                    config_dictionary.initial_lambda_energy
-                ]
-                lambda_energy = None
+                # Set up constraints.
+                energy_per_flux_reference = torch.zeros(heliostat_group.number_of_active_heliostats, device=device)
+                lambda_energy = torch.zeros(torch.count_nonzero(active_heliostats_mask), device=device)
                 rho_energy = self.constraint_dict[config_dictionary.rho_energy]
+                energy_tolerance = self.constraint_dict[
+                    config_dictionary.energy_tolerance
+                ]
+
                 # Set up regularizers.
                 ideal_surface_regularizer = IdealSurfaceRegularizer(
                     reduction_dimensions=(1,)
@@ -417,33 +418,22 @@ class SurfaceReconstructor:
                         energy_per_flux_reference = cropped_flux_distributions.sum(
                             dim=(1, 2)
                         ).detach()
-                    energy_difference = (
+                    g_energy = (
                         cropped_flux_distributions.sum(dim=(1, 2))
                         - energy_per_flux_reference
                     ) / (energy_per_flux_reference + self.epsilon)
-
-                    energy_constraint = (
-                        torch.clamp(
-                            energy_difference,
-                            min=-energy_tolerance,
-                            max=energy_tolerance,
-                        )
-                        - energy_difference
-                    )
-                    energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
-                        loss_per_sample=energy_constraint,
+                    g_energy_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=g_energy,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )
-                    if lambda_energy is None:
-                        lambda_energy = torch.full_like(
-                            energy_constraint_per_heliostat,
-                            initial_lambda_energy,
-                            dtype=torch.float32,
-                            device=device,
-                        )
-                    constraint = (
-                        lambda_energy.detach() * energy_constraint_per_heliostat
-                        + 0.5 * rho_energy * energy_constraint_per_heliostat**2
+                    g_energy_positive = torch.clamp(torch.abs(g_energy) - energy_tolerance, min=0.0)
+                    g_energy_positive_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=g_energy_positive,
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                    )
+                    energy_constraint = (
+                        0.5 * rho_energy * (g_energy_positive_per_heliostat + lambda_energy / rho_energy)**2
+                        - 0.5 * (lambda_energy**2) / rho_energy
                     )
 
                     # Regularization terms.
@@ -486,13 +476,16 @@ class SurfaceReconstructor:
 
                     total_loss_per_heliostat = (
                         flux_loss_per_heliostat
-                        + constraint
+                        + energy_constraint
                         + alpha * smoothness_loss_per_heliostat
                         + beta * ideal_surface_loss_per_heliostat
                     )
 
                     total_loss = total_loss_per_heliostat.mean()
                     total_loss.backward()
+
+                    with torch.no_grad():
+                        lambda_energy = torch.clamp(lambda_energy + rho_energy * g_energy_per_heliostat, min=0.0)
 
                     if self.ddp_setup[config_dictionary.is_nested]:
                         # Reduce gradients within each heliostat group.
@@ -529,12 +522,6 @@ class SurfaceReconstructor:
                         scheduler.step(total_loss.detach())
                     else:
                         scheduler.step()
-
-                    with torch.no_grad():
-                        lambda_energy += (
-                            rho_energy * energy_constraint_per_heliostat.detach()
-                        )
-                        lambda_energy.clamp_(min=0.0)
 
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
