@@ -66,7 +66,7 @@ def find_heliostats(
     Parameters
     ----------
     heliostat_properties_list : list[tuple[str, pathlib.Path]]
-        List of heliostat names and paths.
+        Heliostat names and paths.
     power_plant_position : torch.Tensor
         Tower position in WGS84.
         Tensor of shape [3].
