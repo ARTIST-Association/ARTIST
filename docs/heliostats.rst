@@ -26,7 +26,7 @@ As you can see, each facet has a ``position`` relative to the heliostat's center
 (``canting_e``, ``canting_n``) that define its orientation.
 
 Kinematics
-^^^^^^^^^
+^^^^^^^^^^
 The heliostat's kinematics model describes the motion of its mechanical system. It's used to predict the final orientation
 of the heliostat surface based on variable inputs. The kinematics model is also used to calculate the aligned surface points
 and normals for a predicted orientation. The choice of kinematics type can depend on the type and number of actuators or

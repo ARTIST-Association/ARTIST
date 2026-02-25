@@ -103,7 +103,7 @@ in the generated image individually.
 
 
 Optimizer, Scheduler, Regularizer, and Constraints Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The surface reconstruction internally uses the ``torch.optim.Adam`` optimizer. Depending on the data you use, different
 parameters may perform better for the optimizer - including a different learning rate scheduler. Therefore, we first have
