@@ -1,3 +1,27 @@
+"""
+Generate list of viable heliostats for the hyperparameter optimizations.
+
+This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
+the optimization process.
+
+Parameters
+----------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+minimum_number_of_measurements : int
+    Minimum number of calibration measurements per heliostat required.
+kinematics_reconstruction_image_type : str
+    Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
+surface_reconstruction_image_type : str
+    Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
+"""
+
 import argparse
 import json
 import pathlib
@@ -151,29 +175,6 @@ def find_viable_heliostats(
 
 
 if __name__ == "__main__":
-    """
-    Generate list of viable heliostats for the hyperparameter optimizations.
-
-    This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the optimization process.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    minimum_number_of_measurements : int
-        Minimum number of calibration measurements per heliostat required.
-    kinematics_reconstruction_image_type : str
-        Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
-    surface_reconstruction_image_type : str
-        Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"

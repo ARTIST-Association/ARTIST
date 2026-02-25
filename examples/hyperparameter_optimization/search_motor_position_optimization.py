@@ -1,3 +1,27 @@
+"""
+Perform the hyperparameter search for the motor position optimization and save the results.
+
+This script executes the hyperparameter search with ``propulate`` and saves the result for
+further inspection.
+
+Parameters
+----------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+propulate_logs_dir : str
+    Path to the directory where propulate will write log messages.
+parameter_ranges_motor_positions : dict[str, str | int | float]
+    The reconstruction parameters.
+"""
+
 import argparse
 import json
 import logging
@@ -22,7 +46,7 @@ from artist.util import config_dictionary, utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the hyper parameter search."""
+"""A logger for the hyperparameter search."""
 
 
 def motor_position_optimizer_for_hpo(
@@ -153,29 +177,6 @@ def motor_position_optimizer_for_hpo(
 
 
 if __name__ == "__main__":
-    """
-    Perform the hyperparameter search for the motor position optimization and save the results.
-
-    This script executes the hyperparameter search with ``propulate`` and saves the result for
-    further inspection.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    propulate_logs_dir : str
-        Path to the directory where propulate will write log messages.
-    parameter_ranges_motor_positions : dict[str, str | int | float]
-        The reconstruction parameters.
-    """
     comm = MPI.COMM_WORLD
 
     rank = comm.Get_rank()
@@ -364,10 +365,10 @@ if __name__ == "__main__":
     hpo_result_file = propulate_logs_dir / "island_0_ckpt.pickle"
     optimized_parameters_file = results_dir / "hpo_results_motor_positions.json"
 
-    # Save hpo results in format to be used by plots.
+    # Save HPO results in format to be used by plots.
     if not hpo_result_file.exists():
         raise FileNotFoundError(
-            f"The hpo results located at {hpo_result_file} could not be not found! Please run the hpo script again to generate the results."
+            f"The HPO results located at {hpo_result_file} could not be not found! Please run the HPO script again to generate the results."
         )
 
     with open(hpo_result_file, "rb") as results:

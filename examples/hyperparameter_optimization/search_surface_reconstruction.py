@@ -25,7 +25,7 @@ from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the hyper parameter search."""
+"""A logger for the hyperparameter search."""
 
 
 def surface_reconstructor_for_hpo(
@@ -442,10 +442,10 @@ if __name__ == "__main__":
     hpo_result_file = propulate_logs_dir / "island_0_ckpt.pickle"
     optimized_parameters_file = results_dir / "hpo_results_surface.json"
 
-    # Save hpo results in format to be used by plots.
+    # Save HPO results in format to be used by plots.
     if not hpo_result_file.exists():
         raise FileNotFoundError(
-            f"The hpo results located at {hpo_result_file} could not be not found! Please run the hpo script again to generate the results."
+            f"The HPO results located at {hpo_result_file} could not be not found! Please run the HPO script again to generate the results."
         )
 
     with open(hpo_result_file, "rb") as results:

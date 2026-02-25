@@ -25,10 +25,9 @@ def plot_kinematics_reconstruction_fluxes(
     reconstruction_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
 ) -> None:
     """
-    Plot the distribution of reconstruction errors.
+    Plot kinematic reconstruction flux comparison.
 
-    This function plots histograms and kernel density estimations of the pointing errors in reconstruction when comparing
-    HeliOS and UTIS as methods for focal spot centroid extraction.
+    The measured fluxes, fluxes with default kinematics and reconstructed kinematics are plotted side by side.
 
     Parameters
     ----------
@@ -316,10 +315,7 @@ def plot_motor_pos_fluxes(
     reconstruction_results: dict[str, Any], save_dir: pathlib.Path
 ) -> None:
     """
-    Plot the distribution of reconstruction errors.
-
-    This function plots histograms and kernel density estimations of the pointing errors in reconstruction when comparing
-    HeliOS and UTIS as methods for focal spot centroid extraction.
+    Plot the flux comparison of the optimized and unoptimized fluxes.
 
     Parameters
     ----------

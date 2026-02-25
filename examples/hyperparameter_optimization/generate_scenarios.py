@@ -1,3 +1,25 @@
+"""
+Generate scenarios for the hyperparameter optimizations.
+
+This will generate ideal surface scenarios for the hyperparameter searches.
+For the surface evaluation a deflectometry scenario will also be created.
+
+Parameters
+----------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+tower_file_name : str
+    Name of the file containing the tower measurements.
+results_dir : str
+    Path to the results directory containing the viable heliostats list.
+scenarios_dir : str
+    Path to the directory for saving the generated scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -173,7 +195,7 @@ def generate_ideal_scenario(
     )
 
     # Set up light source configuration.
-    light_source1_config = LightSourceConfig(
+    light_source_config = LightSourceConfig(
         light_source_key="sun_1",
         light_source_type=config_dictionary.sun_key,
         number_of_rays=10,
@@ -181,7 +203,7 @@ def generate_ideal_scenario(
         mean=0.0,
         covariance=4.3681e-06,
     )
-    light_source_list = [light_source1_config]
+    light_source_list = [light_source_config]
     light_source_list_config = LightSourceListConfig(
         light_source_list=light_source_list
     )
@@ -321,27 +343,6 @@ def generate_fitted_scenario(
 
 
 if __name__ == "__main__":
-    """
-    Generate scenarios for the hyperparameter optimizations.
-
-    This will generate ideal surface scenarios for the hyperparameter searches.
-    For the surface evaluation a deflectometry scenario will also be created.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    tower_file_name : str
-        Name of the file containing the tower measurements.
-    results_dir : str
-        Path to the results directory containing the viable heliostats list.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
