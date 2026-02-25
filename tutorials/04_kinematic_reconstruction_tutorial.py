@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -112,9 +112,9 @@ def create_plots(
     Parameters
     ----------
     flux_before : torch.Tensor
-        Flux before kinematic reconstruction.
+        Flux before kinematics reconstruction.
     flux_after : torch.Tensor
-        Flux after kinematic reconstruction.
+        Flux after kinematics reconstruction.
     flux_measured : torch.Tensor
         Measured flux reference.
     """
@@ -260,19 +260,19 @@ with setup_distributed_environment(
         data_parser=data_parser_plots,
     )
 
-    # Create the kinematic reconstructor.
-    kinematic_reconstructor = KinematicReconstructor(
+    # Create the kinematics reconstructor.
+    kinematics_reconstructor = KinematicsReconstructor(
         ddp_setup=ddp_setup,
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        reconstruction_method=config_dictionary.kinematic_reconstruction_raytracing,
+        reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
     )
 
     loss_definition = FocalSpotLoss(scenario=scenario)
 
-    # Reconstruct the kinematic.
-    final_loss_per_heliostat = kinematic_reconstructor.reconstruct_kinematic(
+    # Reconstruct the kinematics.
+    final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
         loss_definition=loss_definition, device=device
     )
 

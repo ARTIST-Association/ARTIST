@@ -231,16 +231,16 @@ class MotorPositionsOptimizer:
 
             # Reparametrization of the motor positions (optimizable parameter).
             initial_motor_positions = (
-                group.kinematic.active_motor_positions.detach().clone()
+                group.kinematics.active_motor_positions.detach().clone()
             )
             initial_motor_positions_all_groups.append(initial_motor_positions)
             motor_positions_minimum = (
-                group.kinematic.actuators.non_optimizable_parameters[
+                group.kinematics.actuators.non_optimizable_parameters[
                     :, index_mapping.actuator_min_motor_position
                 ]
             )
             motor_positions_maximum = (
-                group.kinematic.actuators.non_optimizable_parameters[
+                group.kinematics.actuators.non_optimizable_parameters[
                     :, index_mapping.actuator_max_motor_position
                 ]
             )
@@ -322,7 +322,7 @@ class MotorPositionsOptimizer:
                         "params"
                     ][heliostat_group_index]
                 )
-                heliostat_alignment_group.kinematic.motor_positions = (
+                heliostat_alignment_group.kinematics.motor_positions = (
                     initial_motor_positions_all_groups[heliostat_group_index]
                     + motor_positions_normalized
                     * scales_all_groups[heliostat_group_index]
@@ -338,7 +338,7 @@ class MotorPositionsOptimizer:
 
                 # Align heliostats.
                 heliostat_alignment_group.align_surfaces_with_motor_positions(
-                    motor_positions=heliostat_alignment_group.kinematic.active_motor_positions,
+                    motor_positions=heliostat_alignment_group.kinematics.active_motor_positions,
                     active_heliostats_mask=active_heliostats_masks_all_groups[
                         heliostat_group_index
                     ],
@@ -419,10 +419,10 @@ class MotorPositionsOptimizer:
             if isinstance(loss_definition, KLDivergenceLoss):
                 # Augmented Lagrangian energy integral.
                 energy_integral_prediction = total_flux.sum()
-                energy_integral_target = self.ground_truth.sum()
+                energy_integral_ground_truth = self.ground_truth.sum()
                 g_energy = torch.relu(
-                    (energy_integral_target - energy_integral_prediction)
-                    / (energy_integral_target + self.epsilon)
+                    (energy_integral_ground_truth - energy_integral_prediction)
+                    / (energy_integral_ground_truth + self.epsilon)
                 )
                 # Regularizer, maximum allowable flux density.
                 pixel_violation = (total_flux - max_flux_density) / (
@@ -489,7 +489,7 @@ class MotorPositionsOptimizer:
                     index
                 ]
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.motor_positions,
+                    heliostat_group.kinematics.motor_positions,
                     src=source[index_mapping.first_rank_from_group],
                 )
 

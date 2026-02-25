@@ -10,7 +10,7 @@ from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
     HeliostatListConfig,
-    KinematicConfig,
+    KinematicsConfig,
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
@@ -109,22 +109,28 @@ class H5ScenarioGenerator:
         """
         unique_groups = set()
         for heliostat_config in self.heliostat_list_config.heliostat_list:
-            if isinstance(heliostat_config.kinematic, KinematicConfig):
-                selected_kinematic_type = heliostat_config.kinematic.type
+            if isinstance(heliostat_config.kinematics, KinematicsConfig):
+                selected_kinematics_type = heliostat_config.kinematics.type
             else:
-                selected_kinematic_type = self.prototype_config.kinematic_prototype.type
+                selected_kinematics_type = (
+                    self.prototype_config.kinematics_prototype.type
+                )
             if isinstance(heliostat_config.actuators, ActuatorListConfig):
                 for actuator_config in heliostat_config.actuators.actuator_list:
                     assert isinstance(actuator_config, ActuatorConfig)
                     selected_actuator_type = actuator_config.type
-                    unique_groups.add((selected_kinematic_type, selected_actuator_type))
+                    unique_groups.add(
+                        (selected_kinematics_type, selected_actuator_type)
+                    )
             else:
                 for (
                     actuator_config
                 ) in self.prototype_config.actuators_prototype.actuator_list:
                     assert isinstance(actuator_config, ActuatorConfig)
                     selected_actuator_type = actuator_config.type
-                    unique_groups.add((selected_kinematic_type, selected_actuator_type))
+                    unique_groups.add(
+                        (selected_kinematics_type, selected_actuator_type)
+                    )
         return len(unique_groups)
 
     def _check_equal_facet_numbers(self):

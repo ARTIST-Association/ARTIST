@@ -29,7 +29,7 @@ def data_for_flux_plots(
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
-    Extract heliostat kinematic information.
+    Extract heliostat kinematics information.
 
     Parameters
     ----------
@@ -52,7 +52,7 @@ def data_for_flux_plots(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Dictionary containing kinematic data per heliostat.
+        Dictionary containing kinematics data per heliostat.
     """
     device = get_device(device)
 
@@ -94,7 +94,7 @@ def data_for_flux_plots(
             )
         elif id == "after":
             heliostat_group.align_surfaces_with_motor_positions(
-                motor_positions=heliostat_group.kinematic.active_motor_positions,
+                motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
@@ -150,9 +150,9 @@ def generate_reconstruction_results(
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematic reconstruction in ``ARTIST`` and save results.
+    Perform kinematics reconstruction in ``ARTIST`` and save results.
 
-    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
+    This function performs the kinematics reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
     focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
     for plotting later.
 

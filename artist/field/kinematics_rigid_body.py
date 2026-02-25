@@ -1,19 +1,19 @@
 import torch
 
 import artist.util.index_mapping
-from artist.field.kinematic import Kinematic
+from artist.field.kinematics import Kinematics
 from artist.util import config_dictionary, index_mapping, type_mappings, utils
 from artist.util.environment_setup import get_device
 
 
-class RigidBody(Kinematic):
+class RigidBody(Kinematics):
     """
-    Implement a rigid body kinematic model.
+    Implement a rigid body kinematics model.
 
     Attributes
     ----------
     number_of_heliostats : int
-        The number of total heliostats using this rigid body kinematic.
+        The number of total heliostats using this rigid body kinematics.
     heliostat_positions : torch.Tensor
         The positions of all heliostats.
         Tensor of shape [number_of_heliostats, 4].
@@ -21,10 +21,10 @@ class RigidBody(Kinematic):
         The initial orientation offsets of all heliostats.
         Tensor of shape [number_of_heliostats, 4].
     translation_deviation_parameters : torch.Tensor
-        Kinematic translation deviation parameter.
+        Kinematics translation deviation parameter.
         Tensor of shape [number_of_heliostats, 9].
     rotation_deviation_parameters : torch.Tensor
-        Kinematic rotation deviation parameter.
+        Kinematics rotation deviation parameter.
         Tensor of shape [number_of_heliostats, 4].
     number_of_active_heliostats : int
         The number of active heliostats.
@@ -35,19 +35,19 @@ class RigidBody(Kinematic):
         The initial orientations of all active heliostats.
         Tensor of shape [number_of_active_heliostats, 4].
     translation_deviation_parameters : torch.Tensor
-        Kinematic translation deviation parameter of all active heliostats.
+        Kinematics translation deviation parameter of all active heliostats.
         Tensor of shape [number_of_active_heliostats, 9].
     rotation_deviation_parameters : torch.Tensor
-        Kinematic rotation deviation parameter of all active heliostats.
+        Kinematics rotation deviation parameter of all active heliostats.
         Tensor of shape [number_of_active_heliostats, 4].
     active_motor_positions : torch.Tensor
         The motor positions of active heliostats.
         Tensor of shape [number_of_active_heliostats, 2].
     artist_standard_orientation : torch.Tensor
-        The standard orientation of the kinematic.
+        The standard orientation of the kinematics.
         Tensor of shape [4].
     actuators : Actuators
-        The actuators used in the kinematic.
+        The actuators used in the kinematics.
 
     Methods
     -------
@@ -58,7 +58,7 @@ class RigidBody(Kinematic):
 
     See Also
     --------
-    :class:`Kinematic` : Reference to the parent class.
+    :class:`Kinematics` : Reference to the parent class.
     """
 
     def __init__(
@@ -73,14 +73,14 @@ class RigidBody(Kinematic):
         device: torch.device | None = None,
     ) -> None:
         """
-        Initialize a rigid body kinematic.
+        Initialize a rigid body kinematics.
 
-        The rigid body kinematic determines transformation matrices that are applied to the heliostat surfaces in order to
+        The rigid body kinematics determines transformation matrices that are applied to the heliostat surfaces in order to
         align them. The heliostats then reflect the incoming light according to the provided aim points. The rigid body
-        kinematic works for heliostats equipped with two actuators that turn the heliostat surfaces.
-        Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematic.
+        kinematics works for heliostats equipped with two actuators that turn the heliostat surfaces.
+        Furthermore, initial orientation offsets and deviation parameters determine the specific behavior of the kinematics.
 
-        The kinematic deviations are split into translation and rotation parameters. There are three translation parameters
+        The kinematics deviations are split into translation and rotation parameters. There are three translation parameters
         for each joint and for the concentrator. One translation deviation in the east, north and up direction respectively.
         For joint one and two there are also rotation deviations. For joint one in the north and up direction and for joint
         two in the east and north direction.
@@ -88,7 +88,7 @@ class RigidBody(Kinematic):
         Parameters
         ----------
         number_of_heliostats : int
-            The number of heliostats using this rigid body kinematic.
+            The number of heliostats using this rigid body kinematics.
         heliostat_positions : torch.Tensor
             The positions of all heliostats.
             Tensor of shape [number_of_heliostats, 4].
@@ -96,10 +96,10 @@ class RigidBody(Kinematic):
             The initial orientation offsets of all heliostats.
             Tensor of shape [number_of_heliostats, 4].
         translation_deviation_parameters : torch.Tensor
-            Kinematic translation deviation parameter.
+            Kinematics translation deviation parameter.
             Tensor of shape [number_of_heliostats, 9].
         rotation_deviation_parameters : torch.Tensor
-            Kinematic rotation deviation parameter.
+            Kinematics rotation deviation parameter.
             Tensor of shape [number_of_heliostats, 4].
         actuator_parameters_non_optimizable : torch.Tensor
             The non-optimizable actuator parameters.

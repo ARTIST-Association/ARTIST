@@ -238,13 +238,13 @@ The ``heliostat_list_config`` is a list of ``HeliostatConfig`` objects which inc
 - The numerical ``id`` of the heliostat.
 - The ``position`` of the heliostat.
 - The configuration for the ``surface`` of the heliostat (see :py:class:`artist.scenario.configuration_classes.SurfaceConfig`).
-- The configuration for the ``kinematic`` of the heliostat (see :py:class:`artist.scenario.configuration_classes.KinematicConfig`).
+- The configuration for the ``kinematics`` of the heliostat (see :py:class:`artist.scenario.configuration_classes.KinematicsConfig`).
 - A list of configurations for the ``actuators`` required by the heliostat (see :py:class:`artist.scenario.configuration_classes.ActuatorConfig`).
 
 The ``prototype_config`` is a ``PrototypeConfig`` object, containing information on:
 
 - The ``surface_prototype`` used in the scenario, for heliostats without individual surface configurations (see :py:class:`artist.scenario.configuration_classes.SurfacePrototypeConfig`).
-- The ``kinematic_prototype`` used in the scenario, for heliostats without individual kinematic configurations (see :py:class:`artist.scenario.configuration_classes.KinematicPrototypeConfig`).
+- The ``kinematics_prototype`` used in the scenario, for heliostats without individual kinematics configurations (see :py:class:`artist.scenario.configuration_classes.KinematicsPrototypeConfig`).
 - A list of ``actuators_prototype`` used in the scenario, for heliostats without individual actuator configurations (see :py:class:`artist.scenario.configuration_classes.ActuatorPrototypeConfig`).
 
 Different Surface Options
@@ -265,7 +265,7 @@ is available an ideal surface can also be applied. To generate heliostats with i
             )
         )
 
-It is also not necessary to define and optimizer in this setting.
+It is also not necessary to define an optimizer in this setting.
 
 It is also possible to generate scenarios containing both fitted and ideal surfaces with the function ``extract_paint_heliostats_mixed_surface()``.
 In this case, the type of surface created depends on the mapping derived above. More specifically, if you provide a path
@@ -411,7 +411,7 @@ Generating a light source when using ``STRAL`` data is identical to ``PAINT`` da
 
 Prototypes
 ----------
-In ``STRAL`` prototypes need to be defined manually. A prototype always contains a surface prototype, a kinematic
+In ``STRAL`` prototypes need to be defined manually. A prototype always contains a surface prototype, a kinematics
 prototype, and an actuator prototype.
 
 We start with the surface prototype. We first need to extract information regarding the facet translation vectors, the
@@ -479,28 +479,28 @@ contained in the `SurfaceConfig` object created above:
 
     surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
 
-The next prototype object we consider is the kinematic prototype. The kinematic modeled in ``ARTIST`` assumes that
+The next prototype object we consider is the kinematics prototype. The kinematics modeled in ``ARTIST`` assumes that
 all heliostats are initially pointing in the south direction; however, depending on the CSP considered, the heliostats may
 initially be orientated in a different direction. For our scenario, we want the heliostats to initially be orientated upwards,
-i.e., they point directly at the sky. A further element of a kinematic configuration is ``KinematicDeviations`` which are small
-disturbance parameters to represent offsets caused by the two-joint kinematic modeled in ``ARTIST``. However, in this tutorial
-we ignore these deviations. Therefore, we can now create the kinematic prototype by generating a ``KinematicPrototypeConfig`` object:
+i.e., they point directly at the sky. A further element of a kinematics configuration is ``KinematicsDeviations`` which are small
+disturbance parameters to represent offsets caused by the two-joint kinematics modeled in ``ARTIST``. However, in this tutorial
+we ignore these deviations. Therefore, we can now create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` object:
 
 .. code-block::
 
-    kinematic_prototype_config = KinematicPrototypeConfig(
+    kinematics_prototype_config = KinematicsPrototypeConfig(
         type=config_dictionary.rigid_body_key,
         initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
     )
 
 This object defines:
 
-- The ``type`` applied in the scenario; in this case, we are using a rigid body kinematic.
+- The ``type`` applied in the scenario; in this case, we are using a rigid body kinematics.
 - The ``initial_orientation`` which is the direction we defined above.
-- If we have ``KinematicDeviations``, we would also include them in this definition.
+- If we have ``KinematicsDeviations``, we would also include them in this definition.
 
-With the kinematic prototype defined, the final prototype we require is the actuator prototype. For the rigid body
-kinematic applied in this scenario, we require exactly two actuators. These actuators require min and max motor positions
+With the kinematics prototype defined, the final prototype we require is the actuator prototype. For the rigid body
+kinematics applied in this scenario, we require exactly two actuators. These actuators require min and max motor positions
 which are not included in the ``STRAL`` data, therefore we have to define them manually. Here we use the min amd max motor
 positions that are relevant for Jülich
 
@@ -558,7 +558,7 @@ combines all the above configurations into one object, as shown below:
     # Include the final prototype config.
     prototype_config = PrototypeConfig(
         surface_prototype=surface_prototype_config,
-        kinematic_prototype=kinematic_prototype_config,
+        kinematics_prototype=kinematics_prototype_config,
         actuator_prototype=actuator_prototype_config,
     )
 
@@ -582,7 +582,7 @@ This heliostat configuration requires:
 - The ``position`` which defines the position of the heliostat in the field. Note the one in the fourth
   dimension according to the previously discussed :ref:'coordinate convention <coordinates>'.
 
-In this setting, the heliostat does not have any individual surface, kinematic, or actuator parameters, and will
+In this setting, the heliostat does not have any individual surface, kinematics, or actuator parameters, and will
 automatically use the parameters defined in the prototype. However, since ``ARTIST`` is designed to load multiple
 heliostats, we do need to wrap our heliostat configuration in a list and create a ``HeliostatListConfig`` object as shown below:
 
@@ -593,7 +593,7 @@ heliostats, we do need to wrap our heliostat configuration in a list and create 
     # Create the configuration for all heliostats.
     heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
-If we wanted heliostats with individual measurements, we would have to define the individual surface, kinematic, and
+If we wanted heliostats with individual measurements, we would have to define the individual surface, kinematics, and
 actuator configurations for each heliostat.
 
 Creating the HDF5 File

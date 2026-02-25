@@ -30,7 +30,7 @@ class HeliostatField:
     The heliostat field.
 
     A heliostat field consists of one or multiple heliostat groups. Each heliostat group contains all
-    heliostats with a specific kinematic type and actuator type. The heliostats in the field are aligned
+    heliostats with a specific kinematics type and actuator type. The heliostats in the field are aligned
     individually to reflect the incoming light in a way that ensures maximum efficiency for the whole power plant.
 
     Attributes
@@ -83,7 +83,7 @@ class HeliostatField:
         cls,
         config_file: h5py.File,
         prototype_surface: "SurfaceConfig",
-        prototype_kinematic: dict[str, str | torch.Tensor],
+        prototype_kinematics: dict[str, str | torch.Tensor],
         prototype_actuators: dict[str, str | torch.Tensor],
         number_of_surface_points_per_facet: torch.Tensor,
         change_number_of_control_points_per_facet: torch.Tensor | None = None,
@@ -98,8 +98,8 @@ class HeliostatField:
             The HDF5 file containing the configuration to be loaded.
         prototype_surface : SurfaceConfig
             The prototype for the surface configuration to be used if a heliostat has no individual surface.
-        prototype_kinematic : dict[str, str | torch.Tensor]
-            The prototype for the kinematic, including type, initial orientation and deviations.
+        prototype_kinematics : dict[str, str | torch.Tensor]
+            The prototype for the kinematics, including type, initial orientation and deviations.
         prototype_actuators : dict[str, str | torch.Tensor]
             The prototype for the actuators, including type and parameters.
         number_of_surface_points_per_facet : torch.Tensor
@@ -166,24 +166,24 @@ class HeliostatField:
                 surface_config = prototype_surface
 
             if (
-                config_dictionary.heliostat_kinematic_key
+                config_dictionary.heliostat_kinematics_key
                 in single_heliostat_config.keys()
             ):
                 initial_orientation = torch.tensor(
-                    single_heliostat_config[config_dictionary.heliostat_kinematic_key][
-                        config_dictionary.kinematic_initial_orientation
+                    single_heliostat_config[config_dictionary.heliostat_kinematics_key][
+                        config_dictionary.kinematics_initial_orientation
                     ][()],
                     dtype=torch.float,
                     device=device,
                 )
-                kinematic_type = single_heliostat_config[
-                    config_dictionary.heliostat_kinematic_key
-                ][config_dictionary.kinematic_type][()].decode("utf-8")
+                kinematics_type = single_heliostat_config[
+                    config_dictionary.heliostat_kinematics_key
+                ][config_dictionary.kinematics_type][()].decode("utf-8")
 
                 translation_deviations, rotation_deviations, number_of_actuators = (
-                    h5_scenario_parser.kinematic_deviations(
+                    h5_scenario_parser.kinematics_deviations(
                         prototype=False,
-                        kinematic_type=kinematic_type,
+                        kinematics_type=kinematics_type,
                         scenario_file=single_heliostat_config,
                         log=log,
                         heliostat_name=heliostat_name,
@@ -191,23 +191,25 @@ class HeliostatField:
                     )
                 )
             else:
-                if prototype_kinematic is None:
+                if prototype_kinematics is None:
                     raise ValueError(
-                        "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!"
+                        "If the heliostat does not have an individual kinematics, a kinematics prototype must be provided!"
                     )
                 if rank == 0:
                     log.info(
-                        "Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype."
+                        "Individual kinematics configuration not provided - loading a heliostat with the kinematics prototype."
                     )
-                kinematic_type = prototype_kinematic[config_dictionary.kinematic_type]
-
-                initial_orientation = prototype_kinematic[
-                    config_dictionary.kinematic_initial_orientation
+                kinematics_type = prototype_kinematics[
+                    config_dictionary.kinematics_type
                 ]
-                translation_deviations = prototype_kinematic[
+
+                initial_orientation = prototype_kinematics[
+                    config_dictionary.kinematics_initial_orientation
+                ]
+                translation_deviations = prototype_kinematics[
                     config_dictionary.translation_deviations
                 ]
-                rotation_deviations = prototype_kinematic[
+                rotation_deviations = prototype_kinematics[
                     config_dictionary.rotation_deviations
                 ]
 
@@ -231,10 +233,10 @@ class HeliostatField:
 
                 unique_actuators = {a for a in actuator_type_list}
 
-                if kinematic_type == config_dictionary.rigid_body_key:
+                if kinematics_type == config_dictionary.rigid_body_key:
                     if len(unique_actuators) > 1:
                         raise ValueError(
-                            "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
+                            "When using the rigid body kinematics, all actuators for a given heliostat must have the same type."
                         )
                     else:
                         actuator_type = actuator_type_list[index_mapping.actuator_type]
@@ -245,7 +247,6 @@ class HeliostatField:
                         scenario_file=single_heliostat_config,
                         actuator_type=actuator_type,
                         number_of_actuators=number_of_actuators,
-                        initial_orientation=initial_orientation,
                         log=log,
                         heliostat_name=heliostat_name,
                         device=device,
@@ -320,14 +321,14 @@ class HeliostatField:
                     device=device,
                 )
 
-            heliostat_group_key = f"{kinematic_type}_{actuator_type}"
+            heliostat_group_key = f"{kinematics_type}_{actuator_type}"
 
             grouped_field_data[heliostat_group_key][config_dictionary.names].append(
                 heliostat_name
             )
             grouped_field_data[heliostat_group_key][
                 config_dictionary.heliostat_group_type
-            ] = [kinematic_type, actuator_type]
+            ] = [kinematics_type, actuator_type]
 
             grouped_field_data[heliostat_group_key][config_dictionary.positions].append(
                 torch.tensor(
@@ -385,7 +386,7 @@ class HeliostatField:
             for key in grouped_field_data[group]:
                 if key not in [
                     config_dictionary.names,
-                    config_dictionary.kinematic_type,
+                    config_dictionary.kinematics_type,
                     config_dictionary.actuator_type_key,
                 ]:
                     grouped_field_data[group][key] = torch.stack(
@@ -430,10 +431,10 @@ class HeliostatField:
                     initial_orientations=grouped_field_data[heliostat_group_name][
                         config_dictionary.initial_orientations
                     ],
-                    kinematic_translation_deviation_parameters=grouped_field_data[
+                    kinematics_translation_deviation_parameters=grouped_field_data[
                         heliostat_group_name
                     ][config_dictionary.translation_deviations],
-                    kinematic_rotation_deviation_parameters=grouped_field_data[
+                    kinematics_rotation_deviation_parameters=grouped_field_data[
                         heliostat_group_name
                     ][config_dictionary.rotation_deviations],
                     actuator_parameters_non_optimizable=grouped_field_data[
@@ -447,7 +448,7 @@ class HeliostatField:
             )
             if rank == 0:
                 log.info(
-                    f"Added a heliostat group with kinematic type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
+                    f"Added a heliostat group with kinematics type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
                 )
 
         return cls(heliostat_groups=heliostat_groups, device=device)

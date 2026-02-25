@@ -8,8 +8,8 @@
   "width": 3.2200000286102295,
   "initial_orientation": [
     0.0,
-    0.0,
-    1.0
+    -1.0,
+    0.0
   ],
   "kinematic_properties": {
     "actuators": [

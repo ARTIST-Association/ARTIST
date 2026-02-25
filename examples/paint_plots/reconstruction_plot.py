@@ -248,7 +248,7 @@ def plot_error_against_distance(
 
 if __name__ == "__main__":
     """
-    Generate plots based on the kinematic reconstruction results.
+    Generate plots based on the kinematics reconstruction results.
 
     This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
     using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
 
     results_path = (
-        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
     if not results_path.exists():
         raise FileNotFoundError(

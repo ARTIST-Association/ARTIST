@@ -59,7 +59,7 @@ def create_flux_plot(id: str) -> None:
             )
         elif id == "after":
             heliostat_group.align_surfaces_with_motor_positions(
-                motor_positions=heliostat_group.kinematic.active_motor_positions,
+                motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )

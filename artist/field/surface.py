@@ -31,7 +31,7 @@ class Surface:
         Initialize the surface of one heliostat.
 
         The heliostat surface consists of one or more facets. The surface only describes the mirrors
-        on the heliostat, not the whole heliostat. The surface can be aligned through the kinematic and
+        on the heliostat, not the whole heliostat. The surface can be aligned through the kinematics and
         its actuators. Each surface and thus each facet is defined through NURBS, the discrete surface
         points and surface normals can be retrieved.
 

@@ -414,17 +414,23 @@ class SurfaceReconstructor:
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )
 
-                    # Augmented Lagrangian.
+                    # Augmented Lagrangian to ensure that flux integral is conserved, i.e., intensity does not get lost.
                     if epoch == 0:
                         energy_per_flux_reference = cropped_flux_distributions.sum(
                             dim=(1, 2)
                         ).detach()
-                    g_energy = (
+                    energy_difference = (
                         cropped_flux_distributions.sum(dim=(1, 2))
                         - energy_per_flux_reference
                     ) / (energy_per_flux_reference + self.epsilon)
-                    energy_constraint = torch.minimum(
-                        g_energy + energy_tolerance, torch.zeros_like(g_energy)
+
+                    energy_constraint = (
+                        torch.clamp(
+                            energy_difference,
+                            min=-energy_tolerance,
+                            max=energy_tolerance,
+                        )
+                        - energy_difference
                     )
                     energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=energy_constraint,

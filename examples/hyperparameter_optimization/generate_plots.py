@@ -21,7 +21,7 @@ plot_colors = {
 }
 
 
-def plot_kinematic_reconstruction_fluxes(
+def plot_kinematics_reconstruction_fluxes(
     reconstruction_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
 ) -> None:
     """
@@ -71,8 +71,8 @@ def plot_kinematic_reconstruction_fluxes(
 
     col_labels = [
         "Calibration Flux",
-        "Default\\\\Kinematic",
-        "Reconstructed\\\\Kinematic",
+        "Default\\\\Kinematics",
+        "Reconstructed\\\\Kinematics",
     ]
     heliostat_names = [list(results.keys())[-1]]
     positions = [
@@ -124,7 +124,7 @@ def plot_kinematic_reconstruction_fluxes(
 
     if not save_dir.is_dir():
         save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / "reconstruction_kinematic_fluxes.pdf"
+    filename = save_dir / "reconstruction_kinematics_fluxes.pdf"
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -559,7 +559,7 @@ def plot_surface_reconstruction(
 
 def plot_heliostat_positions(
     surface_scenario: dict[str, Any],
-    kinematic_scenario: dict[str, Any],
+    kinematics_scenario: dict[str, Any],
     save_dir: pathlib.Path,
 ) -> None:
     """
@@ -569,8 +569,8 @@ def plot_heliostat_positions(
     ----------
     surface_scenario : dict[str, Any]
         Results of surface reconstruction.
-    kinematic_scenario : dict[str, Any]
-        Results of kinematic reconstruction.
+    kinematics_scenario : dict[str, Any]
+        Results of kinematics reconstruction.
     save_dir : pathlib.Path
         Directory to save the plots.
     """
@@ -578,7 +578,7 @@ def plot_heliostat_positions(
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
     plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
 
-    for scenario in [surface_scenario, kinematic_scenario]:
+    for scenario in [surface_scenario, kinematics_scenario]:
         positions_list = [data["position"] for data in scenario["loss"].values()]
 
         index = [i for i, d in enumerate(scenario["loss"].keys()) if "BD32" in d]
@@ -623,7 +623,7 @@ def plot_heliostat_positions(
 
 if __name__ == "__main__":
     """
-    Generate plots based on the kinematic reconstruction results.
+    Generate plots based on the kinematics reconstruction results.
 
     This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
     using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
@@ -715,7 +715,7 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
 
     results_path = (
-        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
     if not results_path.exists():
         raise FileNotFoundError(
@@ -772,7 +772,7 @@ if __name__ == "__main__":
         random_seed=args.random_seed,
     )
 
-    plot_kinematic_reconstruction_fluxes(
+    plot_kinematics_reconstruction_fluxes(
         reconstruction_results=reconstruction_results, save_dir=plots_path
     )
 
@@ -784,6 +784,6 @@ if __name__ == "__main__":
 
     plot_heliostat_positions(
         surface_scenario=results_surface,
-        kinematic_scenario=reconstruction_results,
+        kinematics_scenario=reconstruction_results,
         save_dir=plots_path,
     )

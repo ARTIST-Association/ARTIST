@@ -18,14 +18,14 @@ log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
 
 
-class KinematicReconstructor:
+class KinematicsReconstructor:
     """
-    An optimizer used to reconstruct real-world kinematic deviation parameters.
+    An optimizer used to reconstruct real-world kinematics deviation parameters.
 
-    The kinematic reconstructor learns kinematic parameters. These parameters are
-    specific to a certain kinematic type and can for example include the four
-    kinematic rotation deviation parameters as well as the two initial actuator parameters
-    for each actuator of a rigid body kinematic.
+    The kinematics reconstructor learns kinematics parameters. These parameters are
+    specific to a certain kinematics type and can for example include the four
+    kinematics rotation deviation parameters as well as the two initial actuator parameters
+    for each actuator of a rigid body kinematics.
 
     Attributes
     ----------
@@ -48,8 +48,8 @@ class KinematicReconstructor:
 
     Methods
     -------
-    reconstruct_kinematic()
-        Reconstruct the kinematic parameters.
+    reconstruct_kinematics()
+        Reconstruct the kinematics parameters.
     """
 
     def __init__(
@@ -62,10 +62,10 @@ class KinematicReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        reconstruction_method: str = config_dictionary.kinematic_reconstruction_raytracing,
+        reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
     ) -> None:
         """
-        Initialize the kinematic optimizer.
+        Initialize the kinematics optimizer.
 
         Parameters
         ----------
@@ -82,7 +82,7 @@ class KinematicReconstructor:
         """
         rank = ddp_setup[config_dictionary.rank]
         if rank == 0:
-            log.info("Create a kinematic reconstructor.")
+            log.info("Create a kinematics reconstructor.")
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
@@ -92,15 +92,15 @@ class KinematicReconstructor:
 
         if (
             reconstruction_method
-            == config_dictionary.kinematic_reconstruction_raytracing
+            == config_dictionary.kinematics_reconstruction_raytracing
         ):
             self.reconstruction_method = reconstruction_method
         else:
             raise ValueError(
-                f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                f"ARTIST currently only supports the {config_dictionary.kinematics_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
             )
 
-    def reconstruct_kinematic(
+    def reconstruct_kinematics(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
@@ -120,31 +120,31 @@ class KinematicReconstructor:
         Returns
         -------
         torch.Tensor
-            The final loss of the kinematic reconstruction for each heliostat in each group.
+            The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
         """
         device = get_device(device=device)
 
         if (
             self.reconstruction_method
-            == config_dictionary.kinematic_reconstruction_raytracing
+            == config_dictionary.kinematics_reconstruction_raytracing
         ):
-            loss = self._reconstruct_kinematic_parameters_with_raytracing(
+            loss = self._reconstruct_kinematics_parameters_with_raytracing(
                 loss_definition=loss_definition,
                 device=device,
             )
 
         return loss
 
-    def _reconstruct_kinematic_parameters_with_raytracing(
+    def _reconstruct_kinematics_parameters_with_raytracing(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
-        Reconstruct the kinematic parameters using ray tracing.
+        Reconstruct the kinematics parameters using ray tracing.
 
-        This reconstruction method optimizes the kinematic parameters by extracting the focal points
+        This reconstruction method optimizes the kinematics parameters by extracting the focal points
         of calibration images and using heliostat-tracing.
 
         Parameters
@@ -159,7 +159,7 @@ class KinematicReconstructor:
         Returns
         -------
         torch.Tensor
-            The final loss of the kinematic reconstruction for each heliostat in each group.
+            The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
         """
         device = get_device(device=device)
@@ -167,7 +167,7 @@ class KinematicReconstructor:
         rank = self.ddp_setup[config_dictionary.rank]
 
         if rank == 0:
-            log.info("Beginning kinematic reconstruction with ray tracing.")
+            log.info("Beginning kinematics reconstruction with ray tracing.")
 
         final_loss_per_heliostat = torch.full(
             (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
@@ -214,8 +214,8 @@ class KinematicReconstructor:
                 # Create the optimizer.
                 optimizer = torch.optim.Adam(
                     [
-                        heliostat_group.kinematic.rotation_deviation_parameters.requires_grad_(),
-                        heliostat_group.kinematic.actuators.optimizable_parameters.requires_grad_(),
+                        heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+                        heliostat_group.kinematics.actuators.optimizable_parameters.requires_grad_(),
                     ],
                     lr=float(
                         self.optimizer_dict[config_dictionary.initial_learning_rate]
@@ -342,12 +342,12 @@ class KinematicReconstructor:
                                     ]
 
                     torch.nn.utils.clip_grad_norm_(
-                        [heliostat_group.kinematic.rotation_deviation_parameters],
+                        [heliostat_group.kinematics.rotation_deviation_parameters],
                         max_norm=1.0,
                     )
 
                     torch.nn.utils.clip_grad_norm_(
-                        [heliostat_group.kinematic.actuators.optimizable_parameters],
+                        [heliostat_group.kinematics.actuators.optimizable_parameters],
                         max_norm=1.0,
                     )
 
@@ -391,7 +391,7 @@ class KinematicReconstructor:
 
                 final_loss_per_heliostat[final_indices] = loss_per_heliostat
 
-                log.info(f"Rank: {rank}, Kinematic reconstructed.")
+                log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
@@ -401,17 +401,17 @@ class KinematicReconstructor:
                     index
                 ]
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.rotation_deviation_parameters,
+                    heliostat_group.kinematics.rotation_deviation_parameters,
                     src=source[index_mapping.first_rank_from_group],
                 )
                 torch.distributed.broadcast(
-                    heliostat_group.kinematic.actuators.optimizable_parameters,
+                    heliostat_group.kinematics.actuators.optimizable_parameters,
                     src=source[index_mapping.first_rank_from_group],
                 )
             torch.distributed.all_reduce(
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
-            log.info(f"Rank: {rank}, synchronized after kinematic reconstruction.")
+            log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
         return final_loss_per_heliostat

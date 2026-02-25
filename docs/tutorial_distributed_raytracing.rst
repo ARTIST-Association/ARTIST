@@ -22,7 +22,7 @@ Initial Setup
 -------------
 
 ``ARTIST`` is designed for parallel computation. To enable this (even when considering different types of heliostats
-with different kinematic and actuator configurations) we require ``HeliostatGroups``. Detailed information on heliostat
+with different kinematics and actuator configurations) we require ``HeliostatGroups``. Detailed information on heliostat
 groups and how ``ARTIST`` is designed can be found in this description of :ref:`what is happening under the hood<artist_under_hood>`
 in ``ARTIST``.
 

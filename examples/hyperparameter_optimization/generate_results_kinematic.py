@@ -10,7 +10,7 @@ import yaml
 
 from artist.core import loss_functions
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
@@ -95,7 +95,7 @@ def data_for_flux_plots(
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
-    Extract heliostat kinematic information.
+    Extract heliostat kinematics information.
 
     Parameters
     ----------
@@ -113,7 +113,7 @@ def data_for_flux_plots(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Dictionary containing kinematic data per heliostat.
+        Dictionary containing kinematics data per heliostat.
     """
     device = get_device(device)
 
@@ -198,7 +198,7 @@ def generate_reconstruction_results(
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematic reconstruction in ``ARTIST`` and save results.
+    Perform kinematics reconstruction in ``ARTIST`` and save results.
 
     Parameters
     ----------
@@ -246,8 +246,8 @@ def generate_reconstruction_results(
             _, indices = torch.topk(closest, k=1, largest=False)
             heliostats.extend(names[i] for i in indices.tolist())
 
-        kinematic_reconstruction_method = (
-            config_dictionary.kinematic_reconstruction_raytracing
+        kinematics_reconstruction_method = (
+            config_dictionary.kinematics_reconstruction_raytracing
         )
 
         optimizer_dict = {
@@ -304,12 +304,12 @@ def generate_reconstruction_results(
 
         loss_definition = loss_functions.FocalSpotLoss(scenario=scenario)
 
-        kinematic_reconstructor = KinematicReconstructor(
+        kinematics_reconstructor = KinematicsReconstructor(
             ddp_setup=ddp_setup,
             scenario=scenario,
             data=data,
             optimization_configuration=optimization_configuration,
-            reconstruction_method=kinematic_reconstruction_method,
+            reconstruction_method=kinematics_reconstruction_method,
         )
 
         flux_plot_data_before = data_for_flux_plots(
@@ -319,7 +319,7 @@ def generate_reconstruction_results(
             device=device,
         )
 
-        per_heliostat_losses = kinematic_reconstructor.reconstruct_kinematic(
+        per_heliostat_losses = kinematics_reconstructor.reconstruct_kinematics(
             loss_definition=loss_definition, device=device
         )
 
@@ -435,14 +435,14 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematic.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematics.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_kinematic.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_kinematics.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
@@ -457,12 +457,12 @@ if __name__ == "__main__":
         (
             item["name"],
             [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["kinematic_reconstruction_flux_images"]],
+            [pathlib.Path(p) for p in item["kinematics_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
     ]
 
-    with open(results_dir / "hpo_results_kinematic.json", "r") as file:
+    with open(results_dir / "hpo_results_kinematics.json", "r") as file:
         hyperparameters = json.load(file)
 
     reconstruction_results = generate_reconstruction_results(
@@ -473,7 +473,7 @@ if __name__ == "__main__":
     )
 
     results_path = (
-        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)

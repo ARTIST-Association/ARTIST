@@ -76,23 +76,23 @@ def surface_config(
     return surface_config
 
 
-def kinematic_deviations(
+def kinematics_deviations(
     prototype: bool,
-    kinematic_type: str,
+    kinematics_type: str,
     scenario_file: h5py.File,
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, int]:
     """
-    Load kinematic deviations from an HDF5 scenario file.
+    Load kinematics deviations from an HDF5 scenario file.
 
     Parameters
     ----------
     prototype : bool
-        Loading prototype or individual kinematic deviations.
-    kinematic_type : str
-        The kinematic type.
+        Loading prototype or individual kinematics deviations.
+    kinematics_type : str
+        The kinematics type.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
     log : logging.Logger
@@ -107,29 +107,29 @@ def kinematic_deviations(
     Raises
     ------
     ValueError
-        If the kinematic type in the scenario file is unknown.
+        If the kinematics type in the scenario file is unknown.
 
     Returns
     -------
     torch.Tensor
-        Translation deviation parameters for the kinematic.
+        Translation deviation parameters for the kinematics.
     torch.Tensor
-        Rotation deviation parameters for the kinematic.
+        Rotation deviation parameters for the kinematics.
     int
-        The number of actuators needed for this kinematic type.
+        The number of actuators needed for this kinematics type.
     """
     device = get_device(device=device)
 
     if prototype:
-        kinematic_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.kinematic_prototype_key
+        kinematics_config = scenario_file[config_dictionary.prototype_key][
+            config_dictionary.kinematics_prototype_key
         ]
     else:
-        kinematic_config = scenario_file[config_dictionary.heliostat_kinematic_key]
+        kinematics_config = scenario_file[config_dictionary.heliostat_kinematics_key]
 
-    if kinematic_type == config_dictionary.rigid_body_key:
+    if kinematics_type == config_dictionary.rigid_body_key:
         translation_deviations, rotation_deviations = rigid_body_deviations(
-            kinematic_config=kinematic_config,
+            kinematics_config=kinematics_config,
             log=log,
             heliostat_name=heliostat_name,
             device=device,
@@ -137,24 +137,24 @@ def kinematic_deviations(
         number_of_actuators = config_dictionary.rigid_body_number_of_actuators
     else:
         raise ValueError(
-            f"The kinematic type: {kinematic_type} is not yet implemented!"
+            f"The kinematics type: {kinematics_type} is not yet implemented!"
         )
 
     return translation_deviations, rotation_deviations, number_of_actuators
 
 
 def rigid_body_deviations(
-    kinematic_config: h5py.File,
+    kinematics_config: h5py.File,
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Load kinematic deviations for a rigid body kinematic from an HDF5 scenario file.
+    Load kinematics deviations for a rigid body kinematics from an HDF5 scenario file.
 
     Parameters
     ----------
-    kinematic_config : h5py.File
+    kinematics_config : h5py.File
         The opened scenario HDF5 file containing the information.
     log : logging.Logger
         The logger for the scenario loader.
@@ -168,10 +168,10 @@ def rigid_body_deviations(
     Returns
     -------
     torch.Tensor
-        Translation deviation parameters for the kinematic.
+        Translation deviation parameters for the kinematics.
         Tensor of shape [9].
     torch.Tensor
-        Rotation deviation parameters for the kinematic.
+        Rotation deviation parameters for the kinematics.
         Tensor of shape [4].
     """
     device = get_device(device=device)
@@ -188,56 +188,56 @@ def rigid_body_deviations(
         device=device,
     )
 
-    first_joint_translation_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    first_joint_translation_e = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.first_joint_translation_e}"
     )
-    first_joint_translation_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    first_joint_translation_n = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.first_joint_translation_n}"
     )
-    first_joint_translation_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    first_joint_translation_u = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.first_joint_translation_u}"
     )
-    first_joint_tilt_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    first_joint_tilt_n = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.first_joint_tilt_n}"
     )
-    first_joint_tilt_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    first_joint_tilt_u = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.first_joint_tilt_u}"
     )
-    second_joint_translation_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    second_joint_translation_e = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.second_joint_translation_e}"
     )
-    second_joint_translation_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    second_joint_translation_n = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.second_joint_translation_n}"
     )
-    second_joint_translation_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    second_joint_translation_u = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.second_joint_translation_u}"
     )
-    second_joint_tilt_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    second_joint_tilt_e = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.second_joint_tilt_e}"
     )
-    second_joint_tilt_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    second_joint_tilt_n = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.second_joint_tilt_n}"
     )
-    concentrator_translation_e = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    concentrator_translation_e = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.concentrator_translation_e}"
     )
-    concentrator_translation_n = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    concentrator_translation_n = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.concentrator_translation_n}"
     )
-    concentrator_translation_u = kinematic_config.get(
-        f"{config_dictionary.kinematic_deviations}/"
+    concentrator_translation_u = kinematics_config.get(
+        f"{config_dictionary.kinematics_deviations}/"
         f"{config_dictionary.concentrator_translation_u}"
     )
 
@@ -249,67 +249,67 @@ def rigid_body_deviations(
 
     if first_joint_translation_e is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_translation_n is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_translation_u is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_tilt_n is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_tilt_u is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_translation_e is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_translation_n is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_translation_u is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_tilt_e is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_tilt_n is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if concentrator_translation_e is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if concentrator_translation_n is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if concentrator_translation_u is None and rank == 0:
         log.warning(
-            f"No individual kinematic {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
+            f"No individual kinematics {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
 
@@ -388,7 +388,6 @@ def actuator_parameters(
     scenario_file: h5py.File,
     actuator_type: str,
     number_of_actuators: int,
-    initial_orientation: torch.Tensor,
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
@@ -406,8 +405,6 @@ def actuator_parameters(
         The actuator type.
     number_of_actuators : int
         The number of actuators.
-    initial_orientation : torch.Tensor
-        The initial orientation of the heliostat.
     log : logging.Logger
         The logger for the scenario loader.
     heliostat_name : str | None
@@ -443,7 +440,6 @@ def actuator_parameters(
             linear_actuators(
                 actuator_config=actuator_config,
                 number_of_actuators=number_of_actuators,
-                initial_orientation=initial_orientation,
                 log=log,
                 heliostat_name=heliostat_name,
                 device=device,
@@ -466,7 +462,6 @@ def actuator_parameters(
 def linear_actuators(
     actuator_config: h5py.File,
     number_of_actuators: int,
-    initial_orientation: torch.Tensor,
     log: logging.Logger,
     heliostat_name: str | None = None,
     device: torch.device | None = None,
@@ -479,9 +474,7 @@ def linear_actuators(
     actuator_config : h5py.File
         The opened scenario HDF5 file containing the information.
     number_of_actuators : int
-        The number of actuators used for a specific kinematic.
-    initial_orientation : torch.Tensor
-        The initial orientation of the heliostat.
+        The number of actuators used for a specific kinematics.
     log : logging.Logger
         The logger for the scenario loader.
     heliostat_name : str | None
@@ -494,7 +487,7 @@ def linear_actuators(
     Raises
     ------
     ValueError
-        If the file contains the wrong amount of actuators for a heliostat with a specific kinematic type.
+        If the file contains the wrong amount of actuators for a heliostat with a specific kinematics type.
 
     Returns
     -------
@@ -507,7 +500,7 @@ def linear_actuators(
 
     if len(actuator_config.keys()) != number_of_actuators:
         raise ValueError(
-            f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type."
+            f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematics type."
             f" Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuator(s)."
         )
 
@@ -639,7 +632,7 @@ def linear_actuators(
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
 
-    # For all linear actuators in the rigid body kinematic:
+    # For all linear actuators in the rigid body kinematics:
     # Adapt the initial angle of actuator number one according to the initial surface orientation.
     # - ARTIST always expects heliostats to be initially oriented to the south -> artist_standard_orientation = [0.0, -1.0, 0.0] (in ENU).
     # - The first actuator rotates along the east-axis.
@@ -681,7 +674,7 @@ def ideal_actuators(
     actuator_config : h5py.File
         The opened scenario HDF5 file containing the information.
     number_of_actuators : int
-        The number of actuators used for a specific kinematic.
+        The number of actuators used for a specific kinematics.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -690,7 +683,7 @@ def ideal_actuators(
     Raises
     ------
     ValueError
-        If the file contains the wrong number of actuators for a heliostat with a specific kinematic type.
+        If the file contains the wrong number of actuators for a heliostat with a specific kinematics type.
 
     Returns
     -------
@@ -703,7 +696,7 @@ def ideal_actuators(
 
     if len(actuator_config.keys()) != number_of_actuators:
         raise ValueError(
-            f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematic type."
+            f"This scenario file contains the wrong amount of actuators for this heliostat and its kinematics type."
             f" Expected {number_of_actuators} actuators, found {len(actuator_config.keys())} actuator(s)."
         )
 

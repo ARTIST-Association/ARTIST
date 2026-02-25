@@ -133,7 +133,7 @@ def find_viable_heliostats(
 
 if __name__ == "__main__":
     """
-    Generate list of viable heliostats for kinematic reconstruction.
+    Generate list of viable heliostats for kinematics reconstruction.
 
     This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
     the reconstruction process.

@@ -179,7 +179,7 @@ def test_motor_positions_optimizer(
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(
-            heliostat_group.kinematic.motor_positions,
+            heliostat_group.kinematics.motor_positions,
             expected,
             atol=5e-3,
             rtol=5e-2,

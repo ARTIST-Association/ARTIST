@@ -8,7 +8,7 @@ from artist.scenario.configuration_classes import (
     ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
-    KinematicPrototypeConfig,
+    KinematicsPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
     PowerPlantConfig,
@@ -127,8 +127,8 @@ surface_config = surface_generator.generate_fitted_surface_config(
 
 surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
 
-# Include the kinematic prototype configuration.
-kinematic_prototype_config = KinematicPrototypeConfig(
+# Include the kinematics prototype configuration.
+kinematics_prototype_config = KinematicsPrototypeConfig(
     type=config_dictionary.rigid_body_key,
     initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
@@ -164,7 +164,7 @@ actuator_prototype_config = ActuatorPrototypeConfig(
 # Include the final prototype config.
 prototype_config = PrototypeConfig(
     surface_prototype=surface_prototype_config,
-    kinematic_prototype=kinematic_prototype_config,
+    kinematics_prototype=kinematics_prototype_config,
     actuators_prototype=actuator_prototype_config,
 )
 

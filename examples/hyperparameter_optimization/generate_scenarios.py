@@ -420,7 +420,7 @@ if __name__ == "__main__":
     data_dir = pathlib.Path(args.data_dir)
     tower_file = data_dir / args.tower_file_name
 
-    for case in ["kinematic", "surface"]:
+    for case in ["kinematics", "surface"]:
         viable_heliostats_data = (
             pathlib.Path(args.results_dir) / f"viable_heliostats_{case}.json"
         )

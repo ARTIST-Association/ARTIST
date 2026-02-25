@@ -15,9 +15,9 @@ from artist.scenario.configuration_classes import (
     ActuatorPrototypeConfig,
     HeliostatConfig,
     HeliostatListConfig,
-    KinematicConfig,
-    KinematicDeviations,
-    KinematicPrototypeConfig,
+    KinematicsConfig,
+    KinematicsDeviations,
+    KinematicsPrototypeConfig,
     PowerPlantConfig,
     PrototypeConfig,
     SurfaceConfig,
@@ -75,7 +75,7 @@ def extract_paint_tower_measurements(
 
     for target_area in list(tower_dict.keys())[1:]:
         prefix = (
-            "receiver_outer_"
+            "receiver_inner_"
             if target_area == config_dictionary.target_area_receiver
             else ""
         )
@@ -157,7 +157,7 @@ def extract_paint_heliostat_properties(
     torch.Tensor,
     torch.Tensor,
     torch.Tensor,
-    KinematicDeviations,
+    KinematicsDeviations,
     torch.Tensor,
     list[tuple[str, bool, list[float], ActuatorParameters]],
 ]:
@@ -187,8 +187,8 @@ def extract_paint_heliostat_properties(
     torch.Tensor
         The facet canting vectors in east and north direction.
         Tensor of shape [number_of_facets, 2, 4].
-    KinematicDeviations
-        The kinematic deviation parameters.
+    KinematicsDeviations
+        The kinematics deviation parameters.
     torch.Tensor
         The initial orientation.
         Tensor of shape [4].
@@ -248,7 +248,7 @@ def extract_paint_heliostat_properties(
     )
     canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
 
-    kinematic_deviations = KinematicDeviations(
+    kinematics_deviations = KinematicsDeviations(
         first_joint_translation_e=torch.tensor(
             heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
                 paint_mappings.FIRST_JOINT_TRANSLATION_E_KEY
@@ -309,7 +309,7 @@ def extract_paint_heliostat_properties(
         ),
     )
 
-    # Include the initial orientation for the kinematic.
+    # Include the initial orientation for the kinematics.
     initial_orientation = utils.convert_3d_directions_to_4d_format(
         torch.tensor(
             heliostat_dict[paint_mappings.INITIAL_ORIENTATION_KEY],
@@ -368,7 +368,7 @@ def extract_paint_heliostat_properties(
         heliostat_position,
         facet_translation_vectors,
         canting,
-        kinematic_deviations,
+        kinematics_deviations,
         initial_orientation,
         actuator_parameters_list,
     )
@@ -610,7 +610,7 @@ def _process_heliostats_from_paths(
     device = get_device(device=device)
 
     prototype_surface = None
-    prototype_kinematic = None
+    prototype_kinematics = None
     prototype_actuator_list = None
     heliostat_config_list = []
 
@@ -620,7 +620,7 @@ def _process_heliostats_from_paths(
             heliostat_position,
             facet_translation_vectors,
             canting,
-            kinematic_deviations,
+            kinematics_deviations,
             initial_orientation,
             actuator_parameters_list,
         ) = extract_paint_heliostat_properties(
@@ -640,12 +640,12 @@ def _process_heliostats_from_paths(
         )
         prototype_surface = surface_config
 
-        kinematic_config = KinematicConfig(
+        kinematics_config = KinematicsConfig(
             type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
-            deviations=kinematic_deviations,
+            deviations=kinematics_deviations,
         )
-        prototype_kinematic = kinematic_config
+        prototype_kinematics = kinematics_config
 
         actuator_list = []
         for actuator_index, actuator_parameters_tuple in enumerate(
@@ -680,7 +680,7 @@ def _process_heliostats_from_paths(
             id=heliostat_index,
             position=heliostat_position,
             surface=surface_config,
-            kinematic=kinematic_config,
+            kinematics=kinematics_config,
             actuators=actuators_list_config,
         )
         heliostat_config_list.append(heliostat_config)
@@ -689,10 +689,10 @@ def _process_heliostats_from_paths(
         surface_prototype_config = SurfacePrototypeConfig(
             facet_list=prototype_surface.facet_list
         )
-        kinematic_prototype_config = KinematicPrototypeConfig(
-            type=prototype_kinematic.type,
-            initial_orientation=prototype_kinematic.initial_orientation,
-            deviations=prototype_kinematic.deviations,
+        kinematics_prototype_config = KinematicsPrototypeConfig(
+            type=prototype_kinematics.type,
+            initial_orientation=prototype_kinematics.initial_orientation,
+            deviations=prototype_kinematics.deviations,
         )
         actuator_prototype_config = ActuatorPrototypeConfig(
             actuator_list=prototype_actuator_list
@@ -700,7 +700,7 @@ def _process_heliostats_from_paths(
 
     prototype_config = PrototypeConfig(
         surface_prototype=surface_prototype_config,
-        kinematic_prototype=kinematic_prototype_config,
+        kinematics_prototype=kinematics_prototype_config,
         actuators_prototype=actuator_prototype_config,
     )
     heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_config_list)

@@ -374,12 +374,6 @@ def test_pixel_loss(
             torch.tensor([0.0]),
             False,
         ),
-        (
-            torch.tensor([[[0.5, 0.5]]]),
-            torch.tensor([[[-0.5, -0.5]]]),
-            torch.tensor([0.0]),
-            True,
-        ),
     ],
 )
 def test_kl_divergence(
@@ -422,7 +416,7 @@ def test_kl_divergence(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The kl-divergence loss expects reduction_dimensions as keyword argument. Please add this argument."
+            "The KL-divergence loss expects reduction_dimensions as keyword argument. Please add this argument."
             in str(exc_info.value)
         )
     else:

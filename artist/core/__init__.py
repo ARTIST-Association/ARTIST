@@ -5,7 +5,7 @@ from artist.core.heliostat_ray_tracer import (
     HeliostatRayTracer,
     RestrictedDistributedSampler,
 )
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 
@@ -13,7 +13,7 @@ __all__ = [
     "HeliostatRayTracer",
     "DistortionsDataset",
     "RestrictedDistributedSampler",
-    "KinematicReconstructor",
+    "KinematicsReconstructor",
     "SurfaceReconstructor",
     "MotorPositionsOptimizer",
 ]

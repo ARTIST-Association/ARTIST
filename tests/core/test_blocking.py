@@ -160,7 +160,6 @@ def test_create_blocking_primitives_rectangle(
     corners, spans, normals = blocking.create_blocking_primitives_rectangle(
         blocking_heliostats_surface_points=blocking_surface_points.to(device),
         blocking_heliostats_active_surface_points=active_surface_points.to(device),
-        epsilon=0.1,
         device=device,
     )
 

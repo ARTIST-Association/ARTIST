@@ -1,4 +1,4 @@
-"""Kinematic modules in ``ARTIST``."""
+"""Kinematics modules in ``ARTIST``."""
 
 from typing import Optional
 
@@ -7,9 +7,9 @@ import torch
 from artist.util.environment_setup import get_device
 
 
-class Kinematic(torch.nn.Module):
+class Kinematics(torch.nn.Module):
     """
-    Abstract base class for all kinematic modules.
+    Abstract base class for all kinematics modules.
 
     Methods
     -------
@@ -18,15 +18,15 @@ class Kinematic(torch.nn.Module):
     motor_positions_to_orientations()
         Compute orientation matrices given the motor positions.
     forward()
-        Specify the forward operation of the kinematic, i.e., calculate orientation matrices given the incident ray directions.
+        Specify the forward operation of the kinematics, i.e., calculate orientation matrices given the incident ray directions.
     """
 
     def __init__(self) -> None:
         """
-        Initialize the kinematic.
+        Initialize the kinematics.
 
-        The abstract kinematic implements a template for the construction of inheriting kinematics which currently
-        can only be rigid body kinematics. The kinematic is concerned with the mechanics and motion of the heliostats
+        The abstract kinematics implements a template for the construction of inheriting kinematics which currently
+        can only be rigid body kinematics. The kinematics is concerned with the mechanics and motion of the heliostats
         and their actuators. The abstract base class defines two methods to determine orientation matrices, which all
         kinematics need to overwrite.
         """
@@ -91,7 +91,7 @@ class Kinematic(torch.nn.Module):
         device: Optional[torch.device] = None,
     ) -> torch.Tensor:
         """
-        Specify the forward operation of the kinematic, i.e., calculate orientation matrices given the incident ray directions.
+        Specify the forward operation of the kinematics, i.e., calculate orientation matrices given the incident ray directions.
 
         Parameters
         ----------
