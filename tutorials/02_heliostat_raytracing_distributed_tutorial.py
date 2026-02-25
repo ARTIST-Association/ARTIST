@@ -66,7 +66,7 @@ with setup_distributed_environment(
         device=device,
     )
 
-    # Since each individual heliostat group has individual kinematic and actuator types, they must be
+    # Since each individual heliostat group has individual kinematics and actuator types, they must be
     # processed separately. If a distributed environment exists, they can be processed in parallel,
     # otherwise each heliostat group results will be computed sequentially.
     # For blocking to work correctly, all heliostat groups have to be aligned before any group can be raytraced.
@@ -108,61 +108,64 @@ with setup_distributed_environment(
         heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
         ]
-        (
-            active_heliostats_mask,
-            target_area_mask,
-            incident_ray_directions,
-        ) = scenario.index_mapping(
-            heliostat_group=heliostat_group,
-            string_mapping=heliostat_target_light_source_mapping,
-            device=device,
-        )
-
-        # Create a parallelized ray tracer.
-        ray_tracer = HeliostatRayTracer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            blocking_active=False,
-            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-            rank=ddp_setup[config_dictionary.heliostat_group_rank],
-            batch_size=heliostat_group.number_of_active_heliostats,
-            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
-            bitmap_resolution=bitmap_resolution,
-        )
-
-        # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-
-        sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
-        # Plot the bitmaps of each single heliostat.
-        for i in range(bitmaps_per_heliostat.shape[0]):
-            expanded_names = [
-                name
-                for name, m in zip(heliostat_group.names, active_heliostats_mask)
-                for _ in range(m)
-            ]
-            plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
-            plt.axis("off")
-            plt.title(
-                f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_mask[i]]}"
-            )
-            plt.savefig(
-                f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
+        if heliostat_group.active_heliostats_mask.sum() > 0:
+            (
+                active_heliostats_mask,
+                target_area_mask,
+                incident_ray_directions,
+            ) = scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                string_mapping=heliostat_target_light_source_mapping,
+                device=device,
             )
 
-        # Get the flux distributions per target.
-        bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
-            bitmaps_per_heliostat=bitmaps_per_heliostat,
-            target_area_mask=target_area_mask[sample_indices_for_local_rank],
-            device=device,
-        )
+            # Create a parallelized ray tracer.
+            ray_tracer = HeliostatRayTracer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                blocking_active=False,
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                batch_size=heliostat_group.number_of_active_heliostats,
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+                bitmap_resolution=bitmap_resolution,
+            )
 
-        combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
+            # Perform heliostat-based ray tracing.
+            bitmaps_per_heliostat = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask=target_area_mask,
+                device=device,
+            )
+
+            sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+            # Plot the bitmaps of each single heliostat.
+            for i in range(bitmaps_per_heliostat.shape[0]):
+                expanded_names = [
+                    name
+                    for name, m in zip(heliostat_group.names, active_heliostats_mask)
+                    for _ in range(m)
+                ]
+                plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
+                plt.axis("off")
+                plt.title(
+                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_mask[i]]}"
+                )
+                plt.savefig(
+                    f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
+                )
+
+            # Get the flux distributions per target.
+            bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
+                bitmaps_per_heliostat=bitmaps_per_heliostat,
+                target_area_mask=target_area_mask[sample_indices_for_local_rank],
+                device=device,
+            )
+
+            combined_bitmaps_per_target = (
+                combined_bitmaps_per_target + bitmaps_per_target
+            )
 
     # It is possible to skip this nested reduction step. The reduction within the outer process group would take
     # care of it but to see how the nested process group it is nice to look at the intermediate reduction results.

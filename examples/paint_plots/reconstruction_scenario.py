@@ -25,7 +25,7 @@ def generate_reconstruction_scenario(
     device: torch.device | None = None,
 ) -> None:
     """
-    Generate a scenario for the kinematic reconstruction plots.
+    Generate a scenario for the kinematics reconstruction plots.
 
     Parameters
     ----------
@@ -86,7 +86,7 @@ def generate_reconstruction_scenario(
 
 if __name__ == "__main__":
     """
-    Generate a scenario for the kinematic reconstruction plots.
+    Generate a scenario for the kinematics reconstruction plots.
 
     This script generates a scenario based on the viable heliostats list previously generated.
 

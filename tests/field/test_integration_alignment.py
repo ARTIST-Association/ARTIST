@@ -21,7 +21,7 @@ from artist.scenario.scenario import Scenario
                 ("heliostat_1", "receiver", torch.tensor([1.0, 0.0, 0.0, 0.0])),
                 ("heliostat_1", "receiver", torch.tensor([0.0, 0.0, -1.0, 0.0])),
             ],
-            "test_scenario_stral_single_heliostat_prototype",
+            "test_scenario_stral_single_heliostat",
         ),
         (
             [
@@ -61,7 +61,7 @@ def test_integration_alignment(
     device: torch.device,
 ) -> None:
     """
-    Align heliostats from different scenarios using the kinematic module to test the alignment process.
+    Align heliostats from different scenarios using the kinematics module to test the alignment process.
 
     With the aligned surface and the light direction, reflect the rays at every normal on the heliostat surface to
     calculate the preferred reflection direction. Then perform heliostat based ray tracing.

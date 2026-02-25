@@ -99,7 +99,7 @@ class SurfaceReconstructor:
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
-            The parameters for the optimizer, learning rate scheduler, early stopping and constraints.
+            The parameters for the optimizer, learning rate scheduler, early stopping, and constraints.
         number_of_surface_points : torch.Tensor
             The number of surface points of the reconstructed surfaces (default is torch.tensor([50,50])).
             Tensor of shape [2].
@@ -412,18 +412,23 @@ class SurfaceReconstructor:
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )
 
-                    # Augmented Lagrangian.
+                    # Augmented Lagrangian to ensure that flux integral is conserved, i.e., intensity does not get lost.
                     if epoch == 0:
                         energy_per_flux_reference = cropped_flux_distributions.sum(
                             dim=(1, 2)
                         ).detach()
-                    g_energy = (
+                    energy_difference = (
                         cropped_flux_distributions.sum(dim=(1, 2))
                         - energy_per_flux_reference
                     ) / (energy_per_flux_reference + self.epsilon)
-                    energy_constraint = torch.clamp(
-                        torch.abs(g_energy) - 0.02,
-                        min=0.0
+
+                    energy_constraint = (
+                        torch.clamp(
+                            energy_difference,
+                            min=-energy_tolerance,
+                            max=energy_tolerance,
+                        )
+                        - energy_difference
                     )
                     energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
                         loss_per_sample=energy_constraint,
@@ -536,29 +541,7 @@ class SurfaceReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
                         )
 
-                    if rank == 0 and epoch % 50 == 0:
-                        fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
-
-                        for i in range(cropped_flux_distributions.shape[0]):
-                            # Compute min/max across the pair for shared color scale
-                            vmin = min(cropped_flux_distributions[i].detach().min(), measured_flux_distributions[i].detach().min()).item()
-                            vmax = max(cropped_flux_distributions[i].detach().max(), measured_flux_distributions[i].detach().max()).item()
-
-                            im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
-                            axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
-                            axes[i, 0].axis('off')
-
-                            im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
-                            axes[i, 1].set_title(f"Ground Truth {i}")
-                            axes[i, 1].axis('off')
-
-                            # Shared colorbar for the pair
-                            #fig.colorbar(im1, ax=axes[i, :], orientation='vertical', fraction=0.05)
-
-                            plt.tight_layout()
-                            plt.savefig(f"epoch_{epoch}")
-
-                    # Early stopping when loss did not improve since a predefined number of epochs.
+                    # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
 
                     if stop:

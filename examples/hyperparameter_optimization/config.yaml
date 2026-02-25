@@ -8,7 +8,7 @@ plots_dir: "./examples/hyperparameter_optimization/plots"
 propulate_logs_dir: "./examples/hyperparameter_optimization/logs"
 minimum_number_of_measurements: 6
 number_of_points_to_plot: 200
-kinematic_reconstruction_image_type: "flux"
+kinematics_reconstruction_image_type: "flux"
 surface_reconstruction_image_type: "flux-centered"
 excluded_heliostats_for_reconstruction: ["BE20", "AP14", "AG21"]
 parameter_ranges_kinematic:

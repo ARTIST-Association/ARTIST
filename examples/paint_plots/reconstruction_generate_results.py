@@ -10,7 +10,7 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -29,9 +29,9 @@ def generate_reconstruction_results(
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematic reconstruction in ``ARTIST`` and save results.
+    Perform kinematics reconstruction in ``ARTIST`` and save results.
 
-    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
+    This function performs the kinematics reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
     focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
     for plotting later.
 
@@ -70,8 +70,8 @@ def generate_reconstruction_results(
         device=device,
     ) as ddp_setup:
         # Select calibration via raytracing.
-        kinematic_reconstruction_method = (
-            config_dictionary.kinematic_reconstruction_raytracing
+        kinematics_reconstruction_method = (
+            config_dictionary.kinematics_reconstruction_raytracing
         )
 
         # Configure the optimization.
@@ -119,15 +119,15 @@ def generate_reconstruction_results(
                 config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
             }
 
-            kinematic_reconstructor = KinematicReconstructor(
+            kinematics_reconstructor = KinematicsReconstructor(
                 ddp_setup=ddp_setup,
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
-                reconstruction_method=kinematic_reconstruction_method,
+                reconstruction_method=kinematics_reconstruction_method,
             )
 
-            per_heliostat_losses = kinematic_reconstructor.reconstruct_kinematic(
+            per_heliostat_losses = kinematics_reconstructor.reconstruct_kinematics(
                 loss_definition=loss_definition, device=device
             )
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     """
     Generate reconstruction results and save them.
 
-    This script performs kinematic reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
+    This script performs kinematics reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
     plots.
 
     Parameters
@@ -258,7 +258,7 @@ if __name__ == "__main__":
     )
 
     results_path = (
-        pathlib.Path(args.results_dir) / "kinematic_reconstruction_results.pt"
+        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)

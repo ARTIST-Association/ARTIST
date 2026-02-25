@@ -33,17 +33,17 @@ The Scenario structure of ``ARTIST`` has five main elements:
    - **Heliostats:** A Concentrating Solar Power Plant (CSP) relies on mirrors, so-called *heliostats*, to reflect the
      light onto the receiver. Therefore, an ``ARTIST`` scenario must contain at least one (and usually multiple)
      heliostats. Besides its unique ID, its position, and the aim point it is focusing on, a heliostat
-     requires a *surface*, a *kinematic*, and at least one *actuator*. The surface is the reflective surface of the
+     requires a *surface*, a *kinematics*, and at least one *actuator*. The surface is the reflective surface of the
      heliostat and is made up of multiple *facets*. Each of these facets is modeled by Non-Uniform Rational B-Splines
-     (NURBS) and, therefore, the parameters required to load the NURBS must be defined in the HDF5 file. The kinematic
+     (NURBS) and, therefore, the parameters required to load the NURBS must be defined in the HDF5 file. The kinematics
      defines how the heliostat can be orientated, i.e., where are the axes of rotation, how many of these axes exist and
-     what directions of movement are allowed. Each kinematic also contains at least one actuator which is responsible
+     what directions of movement are allowed. Each kinematics also contains at least one actuator which is responsible
      for performing the orientation changes.
    - **Prototypes:** Typically, *almost all heliostats are identical* for a realistic CSP. This
      is because CSP operators often source their heliostats from one manufacturer to reduce maintenance costs and
      simplify the acquisition process. In such a setting, it would be inefficient to save identical heliostat parameters
      for every heliostat in the scenario. Therefore, an ``ARTIST`` scenario also contains *prototypes* for the surface,
-     kinematic, and actuators. If an individual heliostat does not have any individual configuration parameters in the
+     kinematics, and actuators. If an individual heliostat does not have any individual configuration parameters in the
      scenario, then ``ARTIST`` will automatically load the heliostat prototype.
 
 These five elements result in an ``ARTIST`` scenario HDF5 file with the following structure:
@@ -91,7 +91,7 @@ These five elements result in an ``ARTIST`` scenario HDF5 file with the followin
     │   │   │       ├── facet_2
     │   │   │       │   └── ...
     │   │   │       └── ...
-    │   │   ├── kinematic [0,1]
+    │   │   ├── kinematics [0,1]
     │   │   │   ├── type [1,1]
     │   │   │   ├── initial_orientation [1,1]
     │   │   │   └── deviations [0,1]
@@ -125,7 +125,7 @@ These five elements result in an ``ARTIST`` scenario HDF5 file with the followin
         │       ├── facet_2
         │       │   └── ...
         │       └── ...
-        ├── kinematic [1,1]
+        ├── kinematics [1,1]
         │   ├── type [1,1]
         │   ├── initial_orientation [1,1]
         │   └── deviations [0,1]

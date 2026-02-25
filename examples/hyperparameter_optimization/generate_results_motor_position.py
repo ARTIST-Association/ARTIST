@@ -1,3 +1,22 @@
+"""
+Generate results with the optimized parameters.
+
+Parameters
+----------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+heliostat_for_reconstruction : dict[str, list[int]]
+    The heliostat and its calibration numbers.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -29,7 +48,7 @@ def data_for_flux_plots(
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
-    Extract heliostat kinematic information.
+    Extract heliostat kinematics information.
 
     Parameters
     ----------
@@ -52,7 +71,7 @@ def data_for_flux_plots(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Dictionary containing kinematic data per heliostat.
+        Kinematics data per heliostat.
     """
     device = get_device(device)
 
@@ -84,7 +103,7 @@ def data_for_flux_plots(
             device=device,
         )
 
-        # Align Heliostats.
+        # Align heliostats.
         if id == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
                 aim_points=scenario.target_areas.centers[target_area_mask],
@@ -94,7 +113,7 @@ def data_for_flux_plots(
             )
         elif id == "after":
             heliostat_group.align_surfaces_with_motor_positions(
-                motor_positions=heliostat_group.kinematic.active_motor_positions,
+                motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
@@ -150,9 +169,9 @@ def generate_reconstruction_results(
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematic reconstruction in ``ARTIST`` and save results.
+    Perform kinematics reconstruction in ``ARTIST`` and save results.
 
-    This function performs the kinematic reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
+    This function performs the kinematics reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
     focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
     for plotting later.
 
@@ -277,24 +296,6 @@ def generate_reconstruction_results(
 
 
 if __name__ == "__main__":
-    """
-    Generate results with the optimized parameters.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    heliostat_for_reconstruction : dict[str, list[int]]
-        The heliostat and its calibration numbers.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
@@ -413,4 +414,4 @@ if __name__ == "__main__":
         results_path.parent.mkdir(parents=True, exist_ok=True)
 
     torch.save(optimization_results, results_path)
-    print(f"Reconstruction results saved to {results_path}")
+    print(f"Reconstruction results saved to {results_path}.")

@@ -287,10 +287,7 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        normalized_predictions = prediction
-        normalized_ground_truth = ground_truth
-
-        loss = self.loss_function(normalized_predictions, normalized_ground_truth)
+        loss = self.loss_function(prediction, ground_truth)
 
         return loss.sum(dim=kwargs["reduction_dimensions"])
 
@@ -321,14 +318,14 @@ class KLDivergenceLoss(Loss):
         Compute the Kullback-Leibler divergence loss :math:`D_{\mathrm{KL}}(P \parallel Q)`.
 
         The elements in the prediction and ground truth are normalized and shifted, to be greater or
-        equal to zero. The kl-divergence is defined by:
+        equal to zero. The KL-divergence is defined by:
 
         .. math::
 
             D_{\mathrm{KL}}(P \parallel Q) = \sum_{x} P(x) \log \frac{P(x)}{Q(x)},
 
         where :math:`P` is the ground truth distribution and :math:`Q` is the approximation or prediction
-        of :math:`Q`. The kl-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
+        of :math:`Q`. The KL-divergence is an asymmetric function. Switching :math:`P` and :math:`Q`
         has the following effect:
         :math:`P \parallel Q` Penalizes extra mass in the prediction where the ground truth has none.
         :math:`Q \parallel P` Penalizes missing mass in the prediction where the ground truth has mass.
@@ -343,7 +340,7 @@ class KLDivergenceLoss(Loss):
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the kl-divergence loss.
+            The ``reduction_dimensions`` is an expected keyword argument for the KL-divergence loss.
 
         Raises
         ------
@@ -353,21 +350,15 @@ class KLDivergenceLoss(Loss):
         Returns
         -------
         torch.Tensor
-            The summed kl-divergence loss reduced along the specified dimensions.
+            The summed KL-divergence loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
         expected_kwargs = ["reduction_dimensions"]
         for key in expected_kwargs:
             if key not in kwargs:
                 raise ValueError(
-                    f"The kl-divergence loss expects {key} as keyword argument. Please add this argument."
+                    f"The KL-divergence loss expects {key} as keyword argument. Please add this argument."
                 )
-
-        # Scale to make distributions non-negative.
-        if ground_truth.min() < 0:
-            ground_truth = ground_truth - ground_truth.min()
-        if prediction.min() < 0:
-            prediction = prediction - prediction.min()
 
         eps = 1e-12
         ground_truth_distributions = torch.nn.functional.normalize(

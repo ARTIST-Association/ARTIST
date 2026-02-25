@@ -10,7 +10,6 @@ from artist.util.environment_setup import get_device
 def create_blocking_primitives_rectangle(
     blocking_heliostats_surface_points: torch.Tensor,
     blocking_heliostats_active_surface_points: torch.Tensor,
-    epsilon: float = 0.05,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -40,8 +39,6 @@ def create_blocking_primitives_rectangle(
     blocking_heliostats_active_surface_points : torch.Tensor
         The aligned surface points of all heliostats that might block other heliostats.
         Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
-    epsilon : float
-        A small value (default is 0.05).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -263,6 +260,7 @@ def soft_ray_blocking_mask(
         A soft blocking mask.
         Shape is [number_of_blocking_primitives, number_of_rays, number_of_combined_surface_points_all_facets].
     """
+    # Dimensions [#heliostats, #rays, #surface_points, #blocking_primitives, 3D coordinates].
     ray_origins = ray_origins[:, None, :, None, :3]
     ray_directions = ray_directions[:, :, :, None, :3]
 
@@ -271,6 +269,7 @@ def soft_ray_blocking_mask(
     span_v = blocking_primitives_spans[None, None, None, :, 1, :3]
     blocking_primitives_normals = blocking_primitives_normals[None, None, None, :, :3]
 
+    # Solve the plane equation.
     denominator = torch.sum(ray_directions * blocking_primitives_normals, dim=-1)
     distances_to_blocking_planes = torch.sum(
         (corner_0 - ray_origins) * blocking_primitives_normals, dim=-1
@@ -408,14 +407,14 @@ def morton_codes(
     # Normalize coordinates to [0,1 - epsilon).
     spans = bounding_box_max - bounding_box_min
     spans[spans == 0] = 1.0
-    norm = (coordinates - bounding_box_min[None, :]) / spans[None, :]
-    norm = norm.clamp(0.0, 1.0 - epsilon)
+    coordinates_normed = (coordinates - bounding_box_min[None, :]) / spans[None, :]
+    coordinates_normed = coordinates_normed.clamp(0.0, 1.0 - epsilon)
 
     # Determine number of discrete positions along each axis (1024).
     scale = float(1 << bits)
 
     # Scale normalized coordinates to integer values from 0 to 1024.
-    qi = (norm * scale).to(torch.int64)
+    qi = (coordinates_normed * scale).to(torch.int64)
     xi = qi[:, 0].to(torch.int64)
     yi = qi[:, 1].to(torch.int64)
     zi = qi[:, 2].to(torch.int64)
@@ -573,7 +572,7 @@ def build_linear_bounding_volume_hierarchies(
     blocking_primitives_corners: torch.Tensor, device: torch.device | None = None
 ) -> dict[str, torch.Tensor]:
     """
-    Build linear bounding volume heirachies (LBVHs).
+    Build linear bounding volume hierarchies (LBVHs).
 
     Reference: Tero Karras. Maximizing Parallelism in the Construction of BVHs, Octrees, and k‑d Trees.
     In Proceedings of the Fourth ACM SIGGRAPH / Eurographics Symposium on High‑Performance Graphics (HPG 2012)
@@ -591,10 +590,10 @@ def build_linear_bounding_volume_hierarchies(
     Returns
     -------
     dict[str, torch.Tensor]
-        - left, right: Indices of the left and right child of each LBVH node (-1 if leave).
-        - aabb_min, aabb_max: axis aligned bounding boxes.
-        - is_leaf: boolean, indicating whether a node is a leaf node.
-        - primitive_index: indicates which primitives are contained.
+        - left, right: Indices of the left and right child of each LBVH node (-1 if leaf).
+        - aabb_min, aabb_max: Axis aligned bounding boxes.
+        - is_leaf: Boolean, indicating whether a node is a leaf node.
+        - primitive_index: Indicates which primitives are contained.
     """
     device = get_device(device=device)
 
@@ -627,8 +626,9 @@ def build_linear_bounding_volume_hierarchies(
     codes = morton_codes(coordinates=centroids, epsilon=1e-6, device=device)
     sorted_codes, sorted_primitive_indices = torch.sort(codes)
 
-    # Analyse similarities between Morton codes and determine the direction to the more similar Morton codes, in the sorted array: -1 = to the left, +1 = to the right.
-    # The similarity is evaluated by computing leading common prefix lengths for all neighboring pairs of Morton codes.
+    # Analyze similarities between Morton codes and determine the direction to the more similar Morton codes,
+    # in the sorted array: -1 = to the left, +1 = to the right. The similarity is evaluated by computing leading
+    # common prefix lengths for all neighboring pairs of Morton codes.
     if number_of_blocking_primitives > 1:
         lcp_right = longest_common_prefix(
             codes=sorted_codes,
@@ -654,10 +654,9 @@ def build_linear_bounding_volume_hierarchies(
         -torch.ones(number_of_blocking_primitives, dtype=torch.int64, device=device),
     )
 
-    # Find threshold (delta_min) for node expansion by determining how similar the next Morton code in the chosen direction is.
-    # Find the range of blocking primitives that share a common prefix larger than delta_min.
     # Find the contiguous range of Morton codes that belong together.
-    # In the exponential search (the step size doubles in each iteration), find the farthest index j along direction d[i] where LCP > delta_min[i].
+    # Find threshold (delta_min) for node expansion by determining how different the next Morton code in the direction of the less similar neighbor is.
+    # Find the range of blocking primitives that share a common prefix larger than delta_min.
     neighbor_indices = blocker_ids - direction_to_similar_codes
     mask_out_of_bounds = (neighbor_indices >= 0) & (
         neighbor_indices < number_of_blocking_primitives
@@ -673,7 +672,8 @@ def build_linear_bounding_volume_hierarchies(
         mask_out_of_bounds, delta_min, torch.full_like(delta_min, -1, device=device)
     )
 
-    max = (
+    # In the exponential search (the step size doubles in each iteration), find the farthest index j along direction d[i] where LCP > delta_min[i].
+    max_index = (
         math.ceil(math.log2(number_of_blocking_primitives))
         if number_of_blocking_primitives > 1
         else 1
@@ -681,8 +681,7 @@ def build_linear_bounding_volume_hierarchies(
     farthest_expansion = torch.zeros(
         number_of_blocking_primitives, dtype=torch.int64, device=device
     )
-
-    for k in range(0, max + 1):
+    for k in range(0, max_index + 1):
         step = 1 << k
         candidate_indices = blocker_ids + direction_to_similar_codes * (
             farthest_expansion + step

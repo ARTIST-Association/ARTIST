@@ -218,7 +218,7 @@ def test_extract_paint_heliostats_ideal_surface(
         expected_heliostat[3].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].kinematic.initial_orientation,
+        extracted_list[0].heliostat_list[0].kinematics.initial_orientation,
         expected_heliostat[4].to(device),
     )
     torch.testing.assert_close(
@@ -358,7 +358,7 @@ def test_extract_paint_heliostats_fitted_surface(
         expected_heliostat[3].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[0].heliostat_list[0].kinematic.initial_orientation,
+        extracted_list[0].heliostat_list[0].kinematics.initial_orientation,
         expected_heliostat[4].to(device),
     )
     torch.testing.assert_close(
@@ -537,7 +537,7 @@ def test_extract_paint_heliostats_mixed_surface(
         expected_heliostat_ideal[3].to(device),
     )
     torch.testing.assert_close(
-        ideal_heliostat.kinematic.initial_orientation,
+        ideal_heliostat.kinematics.initial_orientation,
         expected_heliostat_ideal[4].to(device),
     )
     torch.testing.assert_close(
@@ -563,7 +563,7 @@ def test_extract_paint_heliostats_mixed_surface(
         expected_heliostat_fitted[3].to(device),
     )
     torch.testing.assert_close(
-        fitted_heliostat.kinematic.initial_orientation,
+        fitted_heliostat.kinematics.initial_orientation,
         expected_heliostat_fitted[4].to(device),
     )
     torch.testing.assert_close(

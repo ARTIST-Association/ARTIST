@@ -8,8 +8,8 @@
   "width": 3.2200000286102295,
   "initial_orientation": [
     0.0,
-    0.0,
-    1.0
+    -1.0,
+    0.0
   ],
   "kinematic_properties": {
     "actuators": [
@@ -53,7 +53,7 @@
     "joint_translation_n_2": 0.0,
     "joint_translation_u_2": 0.0,
     "concentrator_translation_e": 0.0,
-    "concentrator_translation_n": -0.175,
+    "concentrator_translation_n": 0.175,
     "concentrator_translation_u": 0.0
   },
   "facet_properties": {

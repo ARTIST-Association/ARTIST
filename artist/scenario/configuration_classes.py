@@ -469,9 +469,9 @@ class SurfacePrototypeConfig(SurfaceConfig):
         super().__init__(facet_list=facet_list)
 
 
-class KinematicDeviations:
+class KinematicsDeviations:
     """
-    Store the kinematic deviations.
+    Store the kinematics deviations.
 
     Attributes
     ----------
@@ -504,8 +504,8 @@ class KinematicDeviations:
 
     Methods
     -------
-    create_kinematic_deviations_dict()
-        Create a dictionary containing the configuration parameters for the kinematic deviations.
+    create_kinematics_deviations_dict()
+        Create a dictionary containing the configuration parameters for the kinematics deviations.
     """
 
     def __init__(
@@ -525,7 +525,7 @@ class KinematicDeviations:
         concentrator_translation_u: torch.Tensor | None = None,
     ) -> None:
         """
-        Initialize the kinematic deviations.
+        Initialize the kinematics deviations.
 
         Parameters
         ----------
@@ -570,14 +570,14 @@ class KinematicDeviations:
         self.concentrator_translation_n = concentrator_translation_n
         self.concentrator_translation_u = concentrator_translation_u
 
-    def create_kinematic_deviations_dict(self) -> dict[str, Any]:
+    def create_kinematics_deviations_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the kinematic deviations.
+        Create a dictionary containing the configuration parameters for the kinematics deviations.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the kinematic deviations.
+            A dictionary containing the configuration parameters for the kinematics deviations.
         """
         deviations_dict = {}
         if self.first_joint_translation_e is not None:
@@ -653,95 +653,95 @@ class KinematicDeviations:
         return deviations_dict
 
 
-class KinematicConfig:
+class KinematicsConfig:
     """
-    Store the configuration parameters for the kinematic.
+    Store the configuration parameters for the kinematics.
 
     Attributes
     ----------
     type : str
-        The type of kinematic used.
+        The type of kinematics used.
     initial_orientation : torch.Tensor
-        The initial orientation of the kinematic configuration.
-    deviations : KinematicDeviations | None
-        The kinematic deviations.
+        The initial orientation of the kinematics configuration.
+    deviations : KinematicsDeviations | None
+        The kinematics deviations.
 
     Methods
     -------
-    create_kinematic_dict()
-        Create a dictionary containing the configuration parameters for the kinematic.
+    create_kinematics_dict()
+        Create a dictionary containing the configuration parameters for the kinematics.
     """
 
     def __init__(
         self,
         type: str,
         initial_orientation: torch.Tensor,
-        deviations: KinematicDeviations | None = None,
+        deviations: KinematicsDeviations | None = None,
     ) -> None:
         """
-        Initialize the kinematic configuration.
+        Initialize the kinematics configuration.
 
         Parameters
         ----------
         type : str
-            The type of kinematic used.
+            The type of kinematics used.
         initial_orientation : torch.Tensor
-            The initial orientation of the kinematic configuration.
-        deviations : KinematicDeviations | None
-            The kinematic deviations.
+            The initial orientation of the kinematics configuration.
+        deviations : KinematicsDeviations | None
+            The kinematics deviations.
         """
         self.type = type
         self.initial_orientation = initial_orientation
         self.deviations = deviations
 
-    def create_kinematic_dict(self) -> dict[str, Any]:
+    def create_kinematics_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the kinematic.
+        Create a dictionary containing the configuration parameters for the kinematics.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the kinematic.
+            A dictionary containing the configuration parameters for the kinematics.
         """
-        kinematic_dict: dict[str, Any] = {
-            config_dictionary.kinematic_type: self.type,
-            config_dictionary.kinematic_initial_orientation: self.initial_orientation,
+        kinematics_dict: dict[str, Any] = {
+            config_dictionary.kinematics_type: self.type,
+            config_dictionary.kinematics_initial_orientation: self.initial_orientation,
         }
         if self.deviations is not None:
-            kinematic_dict.update(
+            kinematics_dict.update(
                 {
-                    config_dictionary.kinematic_deviations: self.deviations.create_kinematic_deviations_dict()
+                    config_dictionary.kinematics_deviations: self.deviations.create_kinematics_deviations_dict()
                 }
             )
-        return kinematic_dict
+        return kinematics_dict
 
 
-class KinematicPrototypeConfig(KinematicConfig):
+class KinematicsPrototypeConfig(KinematicsConfig):
     """
-    Store the configuration parameters for the kinematic prototype.
+    Store the configuration parameters for the kinematics prototype.
 
     See Also
     --------
-    :class:`KinematicConfig` : Reference to the parent class.
+    :class:`KinematicsConfig` : Reference to the parent class.
     """
 
     def __init__(
         self,
         type: str,
         initial_orientation: torch.Tensor,
-        deviations: KinematicDeviations | None = None,
+        deviations: KinematicsDeviations | None = None,
     ) -> None:
         """
-        Initialize the kinematic prototype configuration.
+        Initialize the kinematics prototype configuration.
 
         Parameters
         ----------
         type : str
-            The type of kinematic used.
+            The type of kinematics used.
         initial_orientation : torch.Tensor
-            The initial orientation of the kinematic configuration.
-        deviations : KinematicDeviations | None
-            The kinematic deviations.
+            The initial orientation of the kinematics configuration.
+        deviations : KinematicsDeviations | None
+            The kinematics deviations.
         """
         super().__init__(
             type=type,
@@ -750,37 +750,37 @@ class KinematicPrototypeConfig(KinematicConfig):
         )
 
 
-class KinematicLoadConfig:
+class KinematicsLoadConfig:
     """
-    Store the configuration parameters for the kinematic when loaded in ``ARTIST``.
+    Store the configuration parameters for the kinematics when loaded in ``ARTIST``.
 
     Attributes
     ----------
     type : str
-        The type of kinematic used.
+        The type of kinematics used.
     initial_orientation : torch.Tensor
-        The initial orientation of the kinematic configuration.
-    deviations : KinematicDeviations
-        The kinematic deviations.
+        The initial orientation of the kinematics configuration.
+    deviations : KinematicsDeviations
+        The kinematics deviations.
     """
 
     def __init__(
         self,
         type: str,
         initial_orientation: torch.Tensor,
-        deviations: KinematicDeviations,
+        deviations: KinematicsDeviations,
     ) -> None:
         """
-        Initialize the kinematic configuration for loading in ``ARTIST``.
+        Initialize the kinematics configuration for loading in ``ARTIST``.
 
         Parameters
         ----------
         type : str
-            The type of kinematic used.
+            The type of kinematics used.
         initial_orientation : torch.Tensor
-            The initial orientation of the kinematic configuration.
-        deviations : KinematicDeviations
-            The kinematic deviations.
+            The initial orientation of the kinematics configuration.
+        deviations : KinematicsDeviations
+            The kinematics deviations.
         """
         self.type = type
         self.initial_orientation = initial_orientation
@@ -1029,8 +1029,8 @@ class PrototypeConfig:
     ----------
     surface_prototype : SurfacePrototypeConfig
         The prototype for the surface.
-    kinematic_prototype : KinematicPrototypeConfig
-        The prototype for the kinematic.
+    kinematics_prototype : KinematicsPrototypeConfig
+        The prototype for the kinematics.
     actuators_prototype : ActuatorPrototypeConfig
         The prototype for the actuators.
 
@@ -1043,7 +1043,7 @@ class PrototypeConfig:
     def __init__(
         self,
         surface_prototype: SurfacePrototypeConfig,
-        kinematic_prototype: KinematicPrototypeConfig,
+        kinematics_prototype: KinematicsPrototypeConfig,
         actuators_prototype: ActuatorPrototypeConfig,
     ) -> None:
         """
@@ -1053,13 +1053,13 @@ class PrototypeConfig:
         ----------
         surface_prototype : SurfacePrototypeConfig
             The prototype for the surface.
-        kinematic_prototype : KinematicPrototypeConfig
-            The prototype for the kinematic.
+        kinematics_prototype : KinematicsPrototypeConfig
+            The prototype for the kinematics.
         actuators_prototype : ActuatorPrototypeConfig
             The prototype for the actuators.
         """
         self.surface_prototype = surface_prototype
-        self.kinematic_prototype = kinematic_prototype
+        self.kinematics_prototype = kinematics_prototype
         self.actuators_prototype = actuators_prototype
 
     def create_prototype_dict(self) -> dict[str, Any]:
@@ -1073,7 +1073,7 @@ class PrototypeConfig:
         """
         return {
             config_dictionary.surface_prototype_key: self.surface_prototype.create_surface_dict(),
-            config_dictionary.kinematic_prototype_key: self.kinematic_prototype.create_kinematic_dict(),
+            config_dictionary.kinematics_prototype_key: self.kinematics_prototype.create_kinematics_dict(),
             config_dictionary.actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
         }
 
@@ -1092,8 +1092,8 @@ class HeliostatConfig:
         The position of the heliostat.
     surface : SurfaceConfig | None
         An optional individual surface config for the heliostat.
-    kinematic : KinematicConfig | None
-        An optional kinematic config for the heliostat.
+    kinematics : KinematicsConfig | None
+        An optional kinematics config for the heliostat.
     actuators : ActuatorListConfig | None
         An optional actuator list config for the heliostat.
 
@@ -1109,7 +1109,7 @@ class HeliostatConfig:
         id: int,
         position: torch.Tensor,
         surface: SurfaceConfig | None = None,
-        kinematic: KinematicConfig | None = None,
+        kinematics: KinematicsConfig | None = None,
         actuators: ActuatorListConfig | None = None,
     ) -> None:
         """
@@ -1125,8 +1125,8 @@ class HeliostatConfig:
             The position of the heliostat.
         surface : SurfaceConfig | None
             An optional individual surface config for the heliostat.
-        kinematic : KinematicConfig | None
-            An optional kinematic config for the heliostat.
+        kinematics : KinematicsConfig | None
+            An optional kinematics config for the heliostat.
         actuators : ActuatorListConfig | None
             An optional actuator list config for the heliostat.
         """
@@ -1134,7 +1134,7 @@ class HeliostatConfig:
         self.id = id
         self.position = position
         self.surface = surface
-        self.kinematic = kinematic
+        self.kinematics = kinematics
         self.actuators = actuators
 
     def create_heliostat_config_dict(self) -> dict[str, Any]:
@@ -1156,10 +1156,10 @@ class HeliostatConfig:
                     config_dictionary.heliostat_surface_key: self.surface.create_surface_dict()
                 }
             )
-        if self.kinematic is not None:
+        if self.kinematics is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_kinematic_key: self.kinematic.create_kinematic_dict()
+                    config_dictionary.heliostat_kinematics_key: self.kinematics.create_kinematics_dict()
                 }
             )
         if self.actuators is not None:

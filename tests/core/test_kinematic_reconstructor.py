@@ -7,7 +7,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -20,7 +20,7 @@ from artist.util import config_dictionary
     [
         # Test normal behavior.
         (
-            config_dictionary.kinematic_reconstruction_raytracing,
+            config_dictionary.kinematics_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             50,
@@ -28,7 +28,7 @@ from artist.util import config_dictionary
         ),
         # Test early stopping.
         (
-            config_dictionary.kinematic_reconstruction_raytracing,
+            config_dictionary.kinematics_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             10,
@@ -36,7 +36,7 @@ from artist.util import config_dictionary
         ),
         # Test invalid centroid extraction.
         (
-            config_dictionary.kinematic_reconstruction_raytracing,
+            config_dictionary.kinematics_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             "invalid",
             10,
@@ -52,7 +52,7 @@ from artist.util import config_dictionary
         ),
         # Test invalid parser.
         (
-            config_dictionary.kinematic_reconstruction_raytracing,
+            config_dictionary.kinematics_reconstruction_raytracing,
             CalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             10,
@@ -60,7 +60,7 @@ from artist.util import config_dictionary
         ),
     ],
 )
-def test_kinematic_reconstructor(
+def test_kinematics_reconstructor(
     reconstruction_method: str,
     data_parser: CalibrationDataParser,
     centroid_extraction_method: str,
@@ -70,7 +70,7 @@ def test_kinematic_reconstructor(
     device: torch.device,
 ) -> None:
     """
-    Test the kinematic calibration methods.
+    Test the kinematics reconstruction methods.
 
     Parameters
     ----------
@@ -192,7 +192,7 @@ def test_kinematic_reconstructor(
 
         if reconstruction_method == "invalid":
             with pytest.raises(ValueError) as exc_info:
-                _ = KinematicReconstructor(
+                _ = KinematicsReconstructor(
                     ddp_setup=ddp_setup_for_testing,
                     scenario=scenario,
                     data=data,
@@ -200,11 +200,11 @@ def test_kinematic_reconstructor(
                     reconstruction_method=reconstruction_method,
                 )
                 assert (
-                    f"ARTIST currently only supports the {config_dictionary.kinematic_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                    f"ARTIST currently only supports the {config_dictionary.kinematics_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
                     in str(exc_info.value)
                 )
         else:
-            kinematic_reconstructor = KinematicReconstructor(
+            kinematics_reconstructor = KinematicsReconstructor(
                 ddp_setup=ddp_setup_for_testing,
                 scenario=scenario,
                 data=data,
@@ -214,16 +214,16 @@ def test_kinematic_reconstructor(
 
             loss_definition = FocalSpotLoss(scenario=scenario)
 
-            # Reconstruct the kinematic.
+            # Reconstruct the kinematics.
             if not isinstance(data_parser, PaintCalibrationDataParser):
                 with pytest.raises(NotImplementedError) as exc_info:
-                    _ = kinematic_reconstructor.reconstruct_kinematic(
+                    _ = kinematics_reconstructor.reconstruct_kinematics(
                         loss_definition=loss_definition, device=device
                     )
 
                     assert "Must be overridden!" in str(exc_info.value)
             else:
-                _ = kinematic_reconstructor.reconstruct_kinematic(
+                _ = kinematics_reconstructor.reconstruct_kinematics(
                     loss_definition=loss_definition, device=device
                 )
 
@@ -232,7 +232,7 @@ def test_kinematic_reconstructor(
                 ):
                     expected_path = (
                         pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/expected_reconstructed_kinematic_parameters"
+                        / "tests/data/expected_reconstructed_kinematics_parameters"
                         / f"group_{index}_{early_stopping_window}_{device.type}.pt"
                     )
 
@@ -241,13 +241,13 @@ def test_kinematic_reconstructor(
                     )
 
                     torch.testing.assert_close(
-                        heliostat_group.kinematic.rotation_deviation_parameters,
+                        heliostat_group.kinematics.rotation_deviation_parameters,
                         expected["rotation_deviations"],
                         atol=5e-4,
                         rtol=5e-4,
                     )
                     torch.testing.assert_close(
-                        heliostat_group.kinematic.actuators.optimizable_parameters,
+                        heliostat_group.kinematics.actuators.optimizable_parameters,
                         expected["optimizable_parameters"],
                         atol=6e-2,
                         rtol=7e-1,

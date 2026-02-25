@@ -1,3 +1,29 @@
+"""
+Perform the hyperparameter search for the kinematics reconstruction and save the results.
+
+This script executes the hyperparameter search with ``propulate`` and saves the result for
+further inspection.
+
+Parameters
+----------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+heliostat_for_reconstruction : dict[str, list[int]]
+    The heliostat and its calibration numbers.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+propulate_logs_dir : str
+    Path to the directory where propulate will write log messages.
+parameter_ranges_kinematics : dict[str, int | float]
+    The reconstruction parameters.
+"""
+
 import argparse
 import json
 import logging
@@ -16,7 +42,7 @@ from propulate import Propulator
 from propulate.utils import get_default_propagator, set_logger_config
 
 from artist.core import loss_functions
-from artist.core.kinematic_reconstructor import KinematicReconstructor
+from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
@@ -24,25 +50,25 @@ from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the hyper parameter search."""
+"""A logger for the hyperparameter search."""
 
 
-def kinematic_reconstructor_for_hpo(
+def kinematics_reconstructor_for_hpo(
     params: dict[str, float],
     scenario_path: pathlib.Path,
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ) -> float:
     """
-    Set up a kinematic reconstructor used in a hyperparameter search.
+    Set up a kinematics reconstructor used in a hyperparameter search.
 
     Parameters
     ----------
     params : dict[str, float]
         Combination of reconstruction parameters.
     scenario_path : pathlib.Path
-        Path to the kinematic reconstruction scenario.
+        Path to the kinematics reconstruction scenario.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-        Data mapping from heliostat to calibration files used to reconstruct the kinematic.
+        Data mapping from heliostat to calibration files used to reconstruct the kinematics.
 
     Returns
     -------
@@ -123,19 +149,19 @@ def kinematic_reconstructor_for_hpo(
         config_dictionary.scheduler: scheduler_dict,
     }
 
-    # Create the kinematic reconstructor.
-    kinematic_reconstructor = KinematicReconstructor(
+    # Create the kinematics reconstructor.
+    kinematics_reconstructor = KinematicsReconstructor(
         ddp_setup=ddp_setup,
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        reconstruction_method=config_dictionary.kinematic_reconstruction_raytracing,
+        reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
     )
 
     loss_definition = loss_functions.FocalSpotLoss(scenario=scenario)
 
-    # Reconstruct the kinematic.
-    final_loss_per_heliostat = kinematic_reconstructor.reconstruct_kinematic(
+    # Reconstruct the kinematics.
+    final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
         loss_definition=loss_definition, device=device
     )
 
@@ -145,31 +171,6 @@ def kinematic_reconstructor_for_hpo(
 
 
 if __name__ == "__main__":
-    """
-    Perform the hyperparameter search for the kinematic reconstruction and save the results.
-
-    This script executes the hyperparameter search with ``propulate`` and saves the result for
-    further inspection.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    heliostat_for_reconstruction : dict[str, list[int]]
-        The heliostat and its calibration numbers.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    propulate_logs_dir : str
-        Path to the directory where propulate will write log messages.
-    parameter_ranges_kinematic : dict[str, int | float]
-        The reconstruction parameters.
-    """
     comm = MPI.COMM_WORLD
 
     rank = comm.Get_rank()
@@ -214,7 +215,7 @@ if __name__ == "__main__":
         "propulate_logs_dir", "./examples/hyperparameter_optimization/logs"
     )
     parameter_ranges_default = config.get(
-        "parameter_ranges_kinematic",
+        "parameter_ranges_kinematics",
         {
             "initial_learning_rate": [1e-9, 1e-2],
             "scheduler": ["exponential", "reduce_on_plateau", "cyclic"],
@@ -261,7 +262,7 @@ if __name__ == "__main__":
         default=propulate_logs_dir_default,
     )
     parser.add_argument(
-        "--parameter_ranges_kinematic",
+        "--parameter_ranges_kinematics",
         type=eval,
         help="Parameters used for the reconstruction.",
         default=parameter_ranges_default,
@@ -272,11 +273,11 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
-    propulate_logs_dir = pathlib.Path(args.propulate_logs_dir) / "kinematic"
+    propulate_logs_dir = pathlib.Path(args.propulate_logs_dir) / "kinematics"
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_hpo.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematics.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -292,14 +293,13 @@ if __name__ == "__main__":
     )
 
     log = logging.getLogger(__name__)
-    rank = comm.Get_rank()
     log.info(rank)
 
     seed = 7
     rng = random.Random(seed + comm.rank)
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_kinematics.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
@@ -314,7 +314,7 @@ if __name__ == "__main__":
         (
             item["name"],
             [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["kinematic_reconstruction_flux_images"]],
+            [pathlib.Path(p) for p in item["kinematics_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
     ]
@@ -323,7 +323,7 @@ if __name__ == "__main__":
         str, tuple[int, ...] | tuple[float, ...] | tuple[str, ...]
     ] = {}
 
-    for key, value in args.parameter_ranges_kinematic.items():
+    for key, value in args.parameter_ranges_kinematics.items():
         if all(isinstance(x, (int, float)) for x in value):
             if all(
                 isinstance(x, int) or (isinstance(x, float) and x.is_integer())
@@ -351,7 +351,7 @@ if __name__ == "__main__":
     )
 
     loss_fn = partial(
-        kinematic_reconstructor_for_hpo,
+        kinematics_reconstructor_for_hpo,
         scenario_path=scenario_file,
         heliostat_data_mapping=heliostat_data_mapping,
     )
@@ -377,12 +377,12 @@ if __name__ == "__main__":
     )
 
     hpo_result_file = propulate_logs_dir / "island_0_ckpt.pickle"
-    optimized_parameters_file = results_dir / "hpo_results_kinematic.json"
+    optimized_parameters_file = results_dir / "hpo_results_kinematics.json"
 
-    # Save hpo results in format to be used by plots.
+    # Save HPO results in format to be used by plots.
     if not hpo_result_file.exists():
         raise FileNotFoundError(
-            f"The hpo results located at {hpo_result_file} could not be not found! Please run the hpo script again to generate the results."
+            f"The HPO results located at {hpo_result_file} could not be not found! Please run the HPO script again to generate the results."
         )
 
     with open(hpo_result_file, "rb") as results:

@@ -318,9 +318,13 @@ class HeliostatRayTracer:
             )
             blocking_heliostat_surfaces_active_list = []
             for group in self.scenario.heliostat_field.heliostat_groups:
-                if group.active_heliostats_mask.sum() <= 0:
+                if group.active_heliostats_mask.sum() == 0:
                     blocking_heliostat_surfaces_active_list.append(
                         group.surface_points + group.positions.unsqueeze(1)
+                    )
+                    log.warning(
+                        "Not all heliostat groups have been aligned yet."
+                        "Use unaligned, i.e., horizontal heliostats as approximated blocking planes in raytracing."
                     )
                 if group.active_heliostats_mask.sum() > 0:
                     heliostat_mask = torch.cumsum(group.active_heliostats_mask, dim=0)
@@ -423,6 +427,7 @@ class HeliostatRayTracer:
         )
 
         if self.blocking_active:
+            # Compute the heliostat blocking primitives.
             (
                 blocking_primitives_corners,
                 blocking_primitives_spans,
@@ -485,6 +490,7 @@ class HeliostatRayTracer:
                     number_of_heliostats, device=device
                 ).repeat_interleave(number_of_rays * number_of_points)
 
+                # Filter out the blocking primitives that are relevant for blocking.
                 filtered_blocking_primitive_indices = (
                     blocking.lbvh_filter_blocking_planes(
                         points_at_ray_origins=points_at_ray_origins,
@@ -497,7 +503,7 @@ class HeliostatRayTracer:
                         device=device,
                     )
                 )
-
+                # Create the blocked ray mask based on the relevant blocking primitive indices.
                 if filtered_blocking_primitive_indices.numel() > 0:
                     blocked = blocking.soft_ray_blocking_mask(
                         ray_origins=self.heliostat_group.active_surface_points[

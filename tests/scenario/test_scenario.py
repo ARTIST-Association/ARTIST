@@ -60,7 +60,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
                 device=device,
             )
     assert (
-        "There is an error in the prototype. When using the Rigid Body Kinematic, all actuators for this prototype must have the same type."
+        "There is an error in the prototype. When using the rigid body kinematics, all actuators for this prototype must have the same type."
         in str(exc_info.value)
     )
 
@@ -78,7 +78,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
                 device=device,
             )
     assert (
-        "When using the Rigid Body Kinematic, all actuators for a given heliostat must have the same type."
+        "When using the rigid body kinematics, all actuators for a given heliostat must have the same type."
         in str(exc_info.value)
     )
 

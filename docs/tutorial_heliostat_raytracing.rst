@@ -13,7 +13,7 @@ heliostat. The tutorial will run through some basic concepts necessary to unders
 
 - How to load a scenario.
 - How to select specific heliostats for alignment and raytracing.
-- Activating the kinematic in the heliostats to align the heliostats for ray tracing.
+- Activating the kinematics in the heliostats to align the heliostats for ray tracing.
 - Performing heliostat ray tracing to generate flux density images on the target areas on the tower.
 
 .. warning::
@@ -57,29 +57,29 @@ When loading the scenario, a large number of log messages are generated:
     [2025-09-11 15:37:53,799][artist.scene.light_source_array][INFO] - Loading a light source array from an HDF5 file.
     [2025-09-11 15:37:53,799][artist.scene.sun][INFO] - Loading sun_1 from an HDF5 file.
     [2025-09-11 15:37:53,800][artist.scene.sun][INFO] - Initializing a sun modeled with a multivariate normal distribution.
-    [2025-09-11 15:37:53,920][artist.scenario.scenario][WARNING] - No individual kinematic first_joint_translation_e for None set. Using default values!
-    [2025-09-11 15:37:53,920][artist.scenario.scenario][WARNING] - No individual kinematic first_joint_translation_n for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic first_joint_translation_u for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic first_joint_tilt_e for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic first_joint_tilt_n for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic first_joint_tilt_u for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic second_joint_translation_e for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic second_joint_translation_n for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic second_joint_translation_u for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic second_joint_tilt_e for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic second_joint_tilt_n for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic second_joint_tilt_u for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic concentrator_translation_e for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic concentrator_translation_u for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic concentrator_translation_n for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic concentrator_tilt_e for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic concentrator_tilt_n for None set. Using default values!
-    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematic concentrator_tilt_u for None set. Using default values!
+    [2025-09-11 15:37:53,920][artist.scenario.scenario][WARNING] - No individual kinematics first_joint_translation_e for None set. Using default values!
+    [2025-09-11 15:37:53,920][artist.scenario.scenario][WARNING] - No individual kinematics first_joint_translation_n for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics first_joint_translation_u for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics first_joint_tilt_e for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics first_joint_tilt_n for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics first_joint_tilt_u for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics second_joint_translation_e for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics second_joint_translation_n for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics second_joint_translation_u for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics second_joint_tilt_e for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics second_joint_tilt_n for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics second_joint_tilt_u for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics concentrator_translation_e for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics concentrator_translation_u for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics concentrator_translation_n for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics concentrator_tilt_e for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics concentrator_tilt_n for None set. Using default values!
+    [2025-09-11 15:37:53,921][artist.scenario.scenario][WARNING] - No individual kinematics concentrator_tilt_u for None set. Using default values!
     [2025-09-11 15:37:53,921][artist.field.heliostat_field][INFO] - Loading a heliostat field from an HDF5 file.
     [2025-09-11 15:37:53,922][artist.field.heliostat_field][INFO] - Individual surface parameters not provided - loading a heliostat with the surface prototype.
-    [2025-09-11 15:37:53,922][artist.field.heliostat_field][INFO] - Individual kinematic configuration not provided - loading a heliostat with the kinematic prototype.
+    [2025-09-11 15:37:53,922][artist.field.heliostat_field][INFO] - Individual kinematics configuration not provided - loading a heliostat with the kinematics prototype.
     [2025-09-11 15:37:53,922][artist.field.heliostat_field][INFO] - Individual actuator configurations not provided - loading a heliostat with the actuator prototype.
-    [2025-09-11 15:37:53,940][artist.field.heliostat_field][INFO] - Added a heliostat group with kinematic type: rigid_body, and actuator type: ideal, to the heliostat field.
+    [2025-09-11 15:37:53,940][artist.field.heliostat_field][INFO] - Added a heliostat group with kinematics type: rigid_body, and actuator type: ideal, to the heliostat field.
 
 These log messages consist of three brackets:
 
@@ -91,7 +91,7 @@ These log messages consist of three brackets:
 Whilst there are quite a few log messages, there are two important aspects you should note:
 
    1. The majority of the messages are warnings – however, this is not a problem. We are considering a simplistic
-      scenario, and as a result do not include specific kinematic or actuator parameters or deviations. Therefore,
+      scenario, and as a result do not include specific kinematics or actuator parameters or deviations. Therefore,
       ``ARTIST`` automatically uses the default values. In this case, this is the desired behavior, and we can ignore the
       warnings!
    2. The remaining messages are info messages. These messages are informing us of the names of the objects being
@@ -182,11 +182,11 @@ Therefore, we make use of our knowledge regarding the:
 
 - Position of the heliostats,
 - Aim points, and
-- Kinematic model,
+- Kinematics model,
 
 to align the heliostats in an optimal position for reflection. To perform this orientation, we need an incident ray
 direction, i.e., a direction vector, originating in the light source position and pointing towards the heliostat field.
-``ARTIST`` can accommodate heliostats with various kinematic and actuator types. Since each kinematic type and
+``ARTIST`` can accommodate heliostats with various kinematics and actuator types. Since each kinematics type and
 actuator type computes the orientations of aligned heliostats slightly different, we need to separate the heliostats into
 ``HeliostatGroup`` groups. ``ARTIST`` handles this automatically.
 

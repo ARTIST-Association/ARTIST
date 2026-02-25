@@ -3,19 +3,19 @@ import logging
 import torch
 
 from artist.field.heliostat_group import HeliostatGroup
-from artist.field.kinematic_rigid_body import RigidBody
+from artist.field.kinematics_rigid_body import RigidBody
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the heliostat groups with a rigid body kinematic."""
+"""A logger for the heliostat groups with a rigid body kinematics."""
 
 
 class HeliostatGroupRigidBody(HeliostatGroup):
     """
-    The groups of heliostats using a rigid body kinematic.
+    The groups of heliostats using a rigid body kinematics.
 
-    The rigid body kinematic works with either linear or ideal actuators. Heliostats with
-    differing actuator types belong to different groups even if the kinematic type is the same.
+    The rigid body kinematics works with either linear or ideal actuators. Heliostats with
+    differing actuator types belong to different groups even if the kinematics type is the same.
     The `HeliostatGroupRigidBody` can be used for the initialization of both groups.
     Individual heliostats in the same group are not saved as separate entities, instead
     separate tensors for each heliostat property exist. Each property tensor or list contains
@@ -47,8 +47,8 @@ class HeliostatGroupRigidBody(HeliostatGroup):
     nurbs_degrees : torch.Tensor
         The spline degrees for NURBS surfaces in u and then in v direction, for all heliostats in the group.
         Tensor of shape [2].
-    kinematic : RigidBody
-        The kinematic (rigid body kinematic) of all heliostats in the group.
+    kinematics : RigidBody
+        The kinematics (rigid body kinematics) of all heliostats in the group.
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostats_mask : torch.Tensor
@@ -92,14 +92,14 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         initial_orientations: torch.Tensor,
         nurbs_control_points: torch.Tensor,
         nurbs_degrees: torch.Tensor,
-        kinematic_translation_deviation_parameters: torch.Tensor,
-        kinematic_rotation_deviation_parameters: torch.Tensor,
+        kinematics_translation_deviation_parameters: torch.Tensor,
+        kinematics_rotation_deviation_parameters: torch.Tensor,
         actuator_parameters_non_optimizable: torch.Tensor,
         actuator_parameters_optimizable: torch.Tensor = torch.tensor([]),
         device: torch.device | None = None,
     ) -> None:
         """
-        Initialize a heliostat group with a rigid body kinematic and linear or ideal actuator type.
+        Initialize a heliostat group with a rigid body kinematics and linear or ideal actuator type.
 
         Parameters
         ----------
@@ -123,11 +123,11 @@ class HeliostatGroupRigidBody(HeliostatGroup):
         nurbs_degrees : torch.Tensor
             The spline degrees for NURBS surfaces in u and then in v direction, for all heliostats in the group.
             Tensor of shape [2].
-        kinematic_translation_deviation_parameters : torch.Tensor
-            The kinematic translation deviation parameters of all heliostats in the group.
+        kinematics_translation_deviation_parameters : torch.Tensor
+            The kinematics translation deviation parameters of all heliostats in the group.
             Tensor of shape [number_of_heliostats, 9].
-        kinematic_rotation_deviation_parameters : torch.Tensor
-            The kinematic rotation deviation parameters of all heliostats in the group.
+        kinematics_rotation_deviation_parameters : torch.Tensor
+            The kinematics rotation deviation parameters of all heliostats in the group.
             Tensor of shape [number_of_heliostats, 4].
         actuator_parameters_non_optimizable : torch.Tensor
             The non-optimizable actuator parameters.
@@ -153,12 +153,12 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             device=device,
         )
 
-        self.kinematic = RigidBody(
+        self.kinematics = RigidBody(
             number_of_heliostats=self.number_of_heliostats,
             heliostat_positions=self.positions,
             initial_orientations=self.initial_orientations,
-            translation_deviation_parameters=kinematic_translation_deviation_parameters,
-            rotation_deviation_parameters=kinematic_rotation_deviation_parameters,
+            translation_deviation_parameters=kinematics_translation_deviation_parameters,
+            rotation_deviation_parameters=kinematics_rotation_deviation_parameters,
             actuator_parameters_non_optimizable=actuator_parameters_non_optimizable,
             actuator_parameters_optimizable=actuator_parameters_optimizable.to(device),
             device=device,
@@ -206,7 +206,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             "Some heliostats were not activated and cannot be aligned."
         )
 
-        orientations = self.kinematic.incident_ray_directions_to_orientations(
+        orientations = self.kinematics.incident_ray_directions_to_orientations(
             incident_ray_directions=incident_ray_directions,
             aim_points=aim_points,
             device=device,
@@ -255,7 +255,7 @@ class HeliostatGroupRigidBody(HeliostatGroup):
             "Some heliostats were not activated and cannot be aligned."
         )
 
-        orientations = self.kinematic.motor_positions_to_orientations(
+        orientations = self.kinematics.motor_positions_to_orientations(
             motor_positions=motor_positions,
             device=device,
         )

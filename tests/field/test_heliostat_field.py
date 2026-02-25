@@ -29,7 +29,7 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.mark.parametrize(
-    "prototype_surface, prototype_kinematic, prototype_actuators, error",
+    "prototype_surface, prototype_kinematics, prototype_actuators, error",
     [
         (
             None,
@@ -41,13 +41,13 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
             prototype_mock_generator,
             None,
             None,
-            "If the heliostat does not have an individual kinematic, a kinematic prototype must be provided!",
+            "If the heliostat does not have an individual kinematics, a kinematics prototype must be provided!",
         ),
         (
             prototype_mock_generator,
             {
-                config_dictionary.kinematic_type: config_dictionary.rigid_body_key,
-                config_dictionary.kinematic_initial_orientation: torch.rand(4, 4),
+                config_dictionary.kinematics_type: config_dictionary.rigid_body_key,
+                config_dictionary.kinematics_initial_orientation: torch.rand(4, 4),
                 config_dictionary.translation_deviations: torch.rand(4, 9),
                 config_dictionary.rotation_deviations: torch.rand(4, 4),
             },
@@ -59,7 +59,7 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
 def test_heliostat_field_load_from_hdf5_errors(
     mocker: MockerFixture,
     prototype_surface: SurfaceConfig,
-    prototype_kinematic: dict[str, str | torch.Tensor],
+    prototype_kinematics: dict[str, str | torch.Tensor],
     prototype_actuators: dict[str, str | torch.Tensor],
     error: str,
     device: torch.device,
@@ -73,8 +73,8 @@ def test_heliostat_field_load_from_hdf5_errors(
         A pytest-mocker fixture used to create mock objects.
     prototype_surface : SurfaceConfig
         The mock prototype surface.
-    prototype_kinematic : dict[str, str | torch.Tensor]
-        The mock prototype kinematic.
+    prototype_kinematics : dict[str, str | torch.Tensor]
+        The mock prototype kinematics.
     prototype_actuators : dict[str, str | torch.Tensor]
         The mock prototype actuator.
     error : str
@@ -98,7 +98,7 @@ def test_heliostat_field_load_from_hdf5_errors(
         HeliostatField.from_hdf5(
             config_file=mock_h5_file,
             prototype_surface=prototype_surface,
-            prototype_kinematic=prototype_kinematic,
+            prototype_kinematics=prototype_kinematics,
             prototype_actuators=prototype_actuators,
             number_of_surface_points_per_facet=torch.tensor([50, 50], device=device),
             device=device,

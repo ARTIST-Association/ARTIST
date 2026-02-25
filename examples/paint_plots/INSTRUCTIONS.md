@@ -22,13 +22,13 @@ Here is an overview of the configuration parameters contained within the configu
 - `data_dir`: The directory in which all ``PAINT`` data will be saved. This data is required for the plots.
 - `tower_file_name`: The name of the file containing the tower measurements. If you do not change anything, the STAC client from ``PAINT`` will automatically download this data to the file "WRI1030197-tower-measurements.json" saved within the data directory.
 - `scenarios_dir`: The name of the directory to save the ``ARTIST`` scenarios required for generating results.
-- `results_dir`: The name of the directory to save the results from the kinematic reconstruction or flux prediction scenarios before plotting.
+- `results_dir`: The name of the directory to save the results from the kinematics reconstruction or flux prediction scenarios before plotting.
 - `plots_dir`: The name of the directory to save the plots.
 - `minimum_number_of_measurements`: The minimum number of calibration measurements required for an individual heliostat. Heliostats with samples less than this number will not be considered.
-- `maximum_number_of_heliostats_for_reconstruction`: The maximum number of heliostats to be considered for the kinematic reconstruction plot.
+- `maximum_number_of_heliostats_for_reconstruction`: The maximum number of heliostats to be considered for the kinematics reconstruction plot.
 - `calibration_image_type`: The calibration image type to be used as a reference. If you do not change anything the ``flux`` type fill be used.
 - `heliostats_for_raytracing`: A dictionary containing a mapping from a "heliostat ID" to a "calibration measurement ID". This is required for the flux prediction plot, where only certain heliostats are considered for ray tracing and a reference image is required for the plot.
-- `number_of_points_to_plot`: The number of data points to plot in the kinematic reconstruction distance error plot.
+- `number_of_points_to_plot`: The number of data points to plot in the kinematics reconstruction distance error plot.
 - `random_seed`: Random seed for the selection of points to plot.
 - `device`: The device used for the computation.
 
@@ -44,14 +44,14 @@ Regardless of which plot you wish to generate, you must first run the code to do
 1. ``download_metadata.py``: This script will download all the metadata associated with the ``PAINT`` database. It will take a while to run.
 2. ``download_data.py``: Based on the metadata, this script will now download all the required calibration, deflectometry, and tower data from the ``PAINT`` database required for the plots. It will also take a while to run.
 
-### Kinematic Reconstruction Plot
+### Kinematics Reconstruction Plot
 
-To replicate the kinematic reconstruction plots, please run the following scripts in the correct order:
+To replicate the kinematics reconstruction plots, please run the following scripts in the correct order:
 
-1. ``reconstruction_generate_viable_heliostats_list.py``: This script will iterate through the downloaded data and populate a list with file names that contain the measurements required to run the kinematic reconstruction in ``ARTIST``.
-2. ``reconstruction_scenario.py``: This script will generate the ``ARTIST`` scenario required for the kinematic reconstruction result calculation.
-3. ``reconstruction_generate_results.py``: This script will perform kinematic reconstruction in ``ARTIST`` and save the results ready for plotting.
-4. ``reconstruction_plot.py``: This script will generate the kinematic reconstruction error distribution plots and save them.
+1. ``reconstruction_generate_viable_heliostats_list.py``: This script will iterate through the downloaded data and populate a list with file names that contain the measurements required to run the kinematics reconstruction in ``ARTIST``.
+2. ``reconstruction_scenario.py``: This script will generate the ``ARTIST`` scenario required for the kinematics reconstruction result calculation.
+3. ``reconstruction_generate_results.py``: This script will perform kinematics reconstruction in ``ARTIST`` and save the results ready for plotting.
+4. ``reconstruction_plot.py``: This script will generate the kinematics reconstruction error distribution plots and save them.
 
 ### Flux Prediction Plot
 

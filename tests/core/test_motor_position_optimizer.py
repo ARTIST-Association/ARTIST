@@ -52,6 +52,7 @@ def distribution(device: torch.device) -> torch.Tensor:
 
     ground_truth = torch.load(path, map_location=device, weights_only=True)
 
+    # Scale bitmap intensity to account for the dni and ray magnitude set in this test.
     return ground_truth * 19400
 
 
@@ -179,7 +180,7 @@ def test_motor_positions_optimizer(
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(
-            heliostat_group.kinematic.motor_positions,
+            heliostat_group.kinematics.motor_positions,
             expected,
             atol=5e-3,
             rtol=5e-2,
