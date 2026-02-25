@@ -102,7 +102,7 @@ def data_for_flux_plots(
     scenario : Scenario
         The scenario.
     ddp_setup : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     heliostat_data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         Heliostat and calibration measurement data.
     device : torch.device | None
