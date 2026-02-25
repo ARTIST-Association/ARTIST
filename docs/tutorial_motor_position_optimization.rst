@@ -108,7 +108,7 @@ specific use case. In this tutorial we define the following scheduler and optimi
 The optimization configuration is a combination of optimizer parameters, scheduler parameters, and the learning constraints.
 For the motor position optimization, we have two constraints. With ``rho_energy`` and ``lambda_lr`` we define the parameters for Augmented Lagrangian coefficients.
 They enforce that the flux integral strives to maximize itself during the optimization.
-Furthermore there are the ``max_flux_density`` and ``rho_pixel`` parameters.
+Furthermore, there are the ``max_flux_density`` and ``rho_pixel`` parameters.
 They constrain the flux at the pixel level. The parameter ``max_flux_density`` defines the maximum allowable flux density per pixel.
 The parameter ``rho_pixel`` controls the strength of the penalty applied when this limit is exceeded.
 This is particularly important because, in a real power plant, the receiver is subject to strict safety limits on the allowable flux density. Exceeding this limit could lead to material damage.
