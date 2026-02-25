@@ -228,7 +228,7 @@ def generate_fitted_scenario(
     tower_file_path : pathlib.Path
         Path to the tower data file.
     selected_heliostats_list : list[tuple[str, pathlib.Path]],
-        List of heliostat names to include in the scenario.
+        Heliostat names to include in the scenario.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
