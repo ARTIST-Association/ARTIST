@@ -75,7 +75,7 @@ control points are:
 
 In the figure below, we see how the control points influence the shape of the NURBS curve.
 
-.. figure:: ./images/nurbs_ControlPoints.jpg
+.. figure:: ./images/nurbs_control_points.jpg
    :width: 100 %
    :align: center
 
@@ -108,7 +108,7 @@ influences the NURBS curve at time :math:`t`.
 
 To better understand basis functions, let us consider the following image:
 
-.. figure:: ./images/nurbs_BasisFunction.jpg
+.. figure:: ./images/nurbs_basis_function.jpg
    :width: 100 %
    :align: center
 
@@ -148,14 +148,14 @@ By varying the relative lengths of the intervals, the amount of time each contro
 To understand this in more detail, let's look at some examples. First, a *uniform knot vector* implies that all knots are
 equidistant and as a result all basis functions cover equal intervals of time. This is illustrated below:
 
-.. figure:: ./images/nurbs_Uniform.jpg
+.. figure:: ./images/nurbs_uniform.jpg
    :width: 100 %
    :align: center
 
 On the other hand, a *non-uniform knot vector* contains knot spans of different sizes which means that the basis
 functions cover different intervals of time as shown below:
 
-.. figure:: ./images/nurbs_NonUniform.jpg
+.. figure:: ./images/nurbs_nonuniform.jpg
    :width: 100 %
    :align: center
 
