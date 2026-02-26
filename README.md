@@ -24,26 +24,27 @@ The ``ARTIST`` package provides an implementation of a fully differentiable ray 
 machine-learning framework in ``Python``. Leveraging automatic differentiation and GPU computation, ``ARTIST`` enables
 gradient-based optimization within a differentiable solar tower power plant model using smooth parametric descriptions
 of heliostats. While the underlying framework is designed to support the optimization of arbitrary plant components,
-including towers or receivers, the current implementation focuses on data-driven heliostat surface reconstruction and
+including towers and receivers, the current implementation focuses on data-driven heliostat surface reconstruction and
 alignment.
 
 **Our contributions include:**
 
-- **Efficient heliostat calibration:** We develop a parallelized geometric kinematics model of heliostats that enables
-    efficient calibration via either ray tracing-based or motor position data. This offers a flexible and robust
-    approach to heliostat calibration.
+- **Efficient heliostat calibration:** ``ARTIST`` combines a differentiable geometric model of heliostat kinematics with
+  parallelized computation to enable efficient heliostat reconstruction from receiver flux measurements. This results in
+  a flexible and robust calibration approach.
 
-- **Surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS),
-  `ARTIST` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power plants.
-  Thus, we can achieve sub-millimeter accuracy in mirror reconstruction from focal spot images, contributing to improved
-  operational safety and efficiency. The reconstructed surfaces can be used for predicting unique heliostat flux densities
-  with state-of-the-art accuracy. Check out [this paper](https://doi.org/10.1038/s41467-024-51019-z) for more details:
+- **Accurate surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS),
+  `ARTIST` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power
+  plants. Thus, we can achieve sub-millimeter accuracy in mirror reconstruction from focal spot images, contributing to
+  improved operational safety and efficiency. The reconstructed surfaces can be used for predicting unique heliostat
+  flux densities with state-of-the-art accuracy. Check out [this paper](https://doi.org/10.1038/s41467-024-51019-z) for
+  more details:
 
   > M. Pargmann, J. Ebert, M. Götz et al. Automatic heliostat learning for in situ concentrating solar power plant
   metrology with differentiable ray tracing. Nat Commun 15, 6997 (2024). https://doi.org/10.1038/s41467-024-51019-z
 
-- **Immediate deployment**: `ARTIST` enables deployment at the beginning of a solar thermal plant's operation,
-  allowing for in situ calibration and subsequent improvements in energy efficiencies and cost reductions.
+- **Immediate deployment**: `ARTIST` can be deployed from the beginning of a solar thermal power plant's operation,
+  enabling in situ calibration and subsequent improvements in energy efficiency and cost reduction..
 
 - **Optimized flux density:** ``ARTIST`` enables flux density optimization across an entire heliostat field by adjusting
   heliostat motor positions to obtain an optimal flux distribution on the receiver.

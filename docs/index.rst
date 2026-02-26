@@ -5,52 +5,48 @@
 
 Welcome to ``ARTIST``
 =====================
-``ARTIST`` stands for **AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar
-Tower Digital Twins**.
-The ``ARTIST`` package provides an implementation of a fully differentiable ray tracer using the `PyTorch`_
-machine-learning framework in ``Python``. Leveraging automatic differentiation and GPU computation, it facilitates the
-optimization of heliostats, towers, and camera parameters within a solar field by combining gradient-based optimization
-methods with smooth parametric descriptions of heliostats.
+``ARTIST`` stands for **AI-Enhanced Differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins**.
+The ``ARTIST`` package provides an implementation of a fully differentiable ray tracer using the PyTorch_
+machine-learning framework in ``Python``. Leveraging automatic differentiation and GPU computation, ``ARTIST`` enables
+gradient-based optimization within a differentiable solar tower power plant model using smooth parametric descriptions
+of heliostats. While the underlying framework is designed to support the optimization of arbitrary plant components,
+including towers and receivers, the current implementation focuses on data-driven heliostat surface reconstruction and
+alignment.
 
 .. figure:: ./images/juelich.png
    :width: 100 %
    :align: center
 
-   *The concentrating solar power plant in Jülich, Germany.*
+   *The concentrating solar power (CSP) plant in Jülich, Germany.*
 
 |:sunny:| Our key contributions include:
 
-* **Immediate deployment:** ``ARTIST`` enables deployment at the beginning of a solar thermal plant's operation,
-  allowing for in-situ calibration and subsequent improvements in energy efficiencies and cost reductions.
+- **Efficient heliostat calibration:** ``ARTIST`` combines a differentiable geometric model of heliostat kinematics with
+  parallelized computation to enable efficient heliostat reconstruction from receiver flux measurements. This results in
+  a flexible and robust calibration approach.
 
-* **Neural-network driven heliostat calibration:** A two-layer hybrid model for most efficient heliostat calibration.
-  It comprises a robust geometric model for pre-alignment and a neural network disturbance model, which gradually adapts
-  its impact via regularization sweeps. In this way, high data requirements of data-centric methods are overcome while
-  maintaining flexibility for modeling complex real-world systems. Check out this paper for more details |:point_down:|:
-
-  *M. Pargmann, M. Leibauer, V. Nettelroth, D. M. Quinto, & R. Pitz-Paal (2023). Enhancing heliostat calibration
-  on low data by fusing robotic rigid body kinematics with neural networks. Solar Energy, 264, 111962.*
-  `https://doi.org/10.1016/j.solener.2023.111962`_
-
-* **Surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS),
+- **Accurate surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS),
   ``ARTIST`` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal
   power plants. Thus, we can achieve sub-millimeter accuracy in mirror reconstruction from focal spot images,
   contributing to improved operational safety and efficiency. The reconstructed surfaces can be used for predicting
-  unique heliostat flux densities with state-of-the-art accuracy. Check out this paper for more details |:point_down:|:
+  unique heliostat flux densities with state-of-the-art accuracy. Check out this paper_ for more details:
 
-  *M. Pargmann, J. Ebert, D. M. Quinto, R. Pitz-Paal, & S. Kesselheim (2023). In-Situ Solar Tower Power Plant
-  Optimization by Differentiable Raytracing. Under review at Nature Communications.*
-  `https://doi.org/10.21203/rs.3.rs-2554998/v1`_
+     `M. Pargmann, J. Ebert, M. Götz et al. Automatic heliostat learning for in situ concentrating solar power plant
+     metrology with differentiable ray tracing. Nat Commun 15, 6997 (2024).`
 
-* **Optimized flux density:** Coming soon, so stay tuned |:rocket:|!
+- **Immediate deployment**: ``ARTIST`` can be deployed from the beginning of a solar thermal power plant's operation,
+  enabling in situ calibration and subsequent improvements in energy efficiency and cost reduction.
+
+- **Optimized flux density:** ``ARTIST`` enables flux density optimization across an entire heliostat field by adjusting
+  heliostat motor positions to obtain an optimal flux distribution on the receiver.
 
 Quick Install
 =============
-To install ``ARTIST``, run the following in your terminal:
+To install the latest stable release from PyPI_, run the following in your terminal:
 
 .. code-block:: console
 
-    $ pip install artist
+    $ pip install artist-csp
 
 You can check whether your installation was successful by importing ``ARTIST`` in ``Python``:
 
@@ -60,7 +56,7 @@ You can check whether your installation was successful by importing ``ARTIST`` i
 
 You can find more detailed installation instructions in :ref:`installation`.
 
-* To find out more about to how to use artist check out :ref:`usage`.
+Check out :ref:`usage` to find out more about to how to use ``ARTIST``.
 
 .. toctree::
    :maxdepth: 1
@@ -74,9 +70,8 @@ You can find more detailed installation instructions in :ref:`installation`.
 
 .. Links
 .. _PyTorch: https://pytorch.org/
-.. _https://doi.org/10.1016/j.solener.2023.111962: https://doi.org/10.1016/j.solener.2023.111962
-.. _https://doi.org/10.21203/rs.3.rs-2554998/v1: https://doi.org/10.21203/rs.3.rs-2554998/v1
-.. _https://doi.org/10.21203/rs.3.rs-2898838/v1: https://doi.org/10.21203/rs.3.rs-2898838/v1
+.. _paper: https://doi.org/10.1038/s41467-024-51019-z
+.. _PyPI: https://pypi.org/project/artist-csp/
 
 Indices and Tables
 ==================
