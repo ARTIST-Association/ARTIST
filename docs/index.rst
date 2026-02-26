@@ -17,7 +17,7 @@ alignment.
    :width: 100 %
    :align: center
 
-   *The concentrating solar power (CSP) plant in Jülich, Germany.*
+   The concentrating solar power (CSP) plant in Jülich, Germany.
 
 |:sunny:| Our key contributions include:
 
