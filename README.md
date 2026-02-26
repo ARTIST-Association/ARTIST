@@ -29,9 +29,9 @@ alignment.
 
 **Our contributions include:**
 
-- **Efficient heliostat calibration:** We develop a parallelized geometric kinematics model that enables efficient
-    calibration via either ray tracing-based or motor position data. This offers a flexible and robust approach to
-    heliostat calibration.
+- **Efficient heliostat calibration:** We develop a parallelized geometric kinematics model of heliostats that enables
+    efficient calibration via either ray tracing-based or motor position data. This offers a flexible and robust
+    approach to heliostat calibration.
 
 - **Surface reconstruction and flux density prediction:** Leveraging learning Non-Uniform Rational B-Splines (NURBS),
   `ARTIST` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power plants.
