@@ -2,7 +2,7 @@
 <img src="https://raw.githubusercontent.com/ARTIST-Association/ARTIST/main/logos/artist_logo.svg" alt="logo" width="500"/>
 </p>
 
-# AI-enhanced differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
+# AI-Enhanced Differentiable Ray Tracer for Irradiation Prediction in Solar Tower Digital Twins
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17381222.svg)](https://doi.org/10.5281/zenodo.17381222)
 ![PyPI](https://img.shields.io/pypi/v/artist-csp)
@@ -20,10 +20,12 @@
 
 ## What ``ARTIST`` can do for you
 
-The ``ARTIST`` package provides an implementation of a differentiable ray tracer using the `PyTorch` machine-learning
-framework in `Python`. Leveraging automatic differentiation and GPU computation, it facilitates the optimization of
-heliostats, towers, and camera parameters within a solar field by combining gradient-based optimization methods with
-smooth parametric descriptions of heliostats.
+The ``ARTIST`` package provides an implementation of a fully differentiable ray tracer using the ``PyTorch``
+machine-learning framework in ``Python``. Leveraging automatic differentiation and GPU computation, ``ARTIST`` enables
+gradient-based optimization within a differentiable solar tower power plant model using smooth parametric descriptions
+of heliostats. While the underlying framework is designed to support the optimization of arbitrary plant components,
+including towers or receivers, the current implementation focuses on data-driven heliostat surface reconstruction and
+alignment.
 
 **Our contributions include:**
 
@@ -35,22 +37,29 @@ smooth parametric descriptions of heliostats.
   `ARTIST` reconstructs heliostat surfaces accurately using calibration images commonly available in solar thermal power plants.
   Thus, we can achieve sub-millimeter accuracy in mirror reconstruction from focal spot images, contributing to improved
   operational safety and efficiency. The reconstructed surfaces can be used for predicting unique heliostat flux densities
-  with state-of-the-art accuracy. Check out [this paper](https://doi.org/10.21203/rs.3.rs-2554998/v1) for more details.
+  with state-of-the-art accuracy. Check out [this paper](https://doi.org/10.1038/s41467-024-51019-z) for more details:
+
+  > M. Pargmann, J. Ebert, M. Götz et al. Automatic heliostat learning for in situ concentrating solar power plant
+  metrology with differentiable ray tracing. Nat Commun 15, 6997 (2024). https://doi.org/10.1038/s41467-024-51019-z
 
 - **Immediate deployment**: `ARTIST` enables deployment at the beginning of a solar thermal plant's operation,
   allowing for in situ calibration and subsequent improvements in energy efficiencies and cost reductions.
 
-- **Optimized flux density:** ``ARTIST`` enables flux density optimization across an entire heliostat field by optimizing
-  the motor positions of all heliostats to distribute the flux optimally over the receiver.
+- **Optimized flux density:** ``ARTIST`` enables flux density optimization across an entire heliostat field by adjusting
+  heliostat motor positions to obtain an optimal flux distribution on the receiver.
 
 
 ## Installation
-We heavily recommend installing the `ARTIST` package in a dedicated `Python3.10+` virtual environment. You can
-install ``ARTIST`` directly from the GitHub repository via:
+We recommend installing the `ARTIST` package in a dedicated `Python3.10+` virtual environment. You can install the
+latest stable release from [PyPI](https://pypi.org/project/artist-csp/):
 ```bash
-pip install artist
+pip install artist-csp
 ```
-Alternatively, you can install ``ARTIST`` locally. To achieve this, there are two steps you need to follow:
+If you need the latest updates, you can also install ``ARTIST`` directly from the main branch via:
+```bash
+pip install git+https://github.com/ARTIST-Association/ARTIST.git
+```
+To install `ARTIST` locally, there are two steps you need to follow:
 1. Clone the `ARTIST` repository:
    ```bash
    git clone https://github.com/ARTIST-Association/ARTIST.git
@@ -66,24 +75,24 @@ The ``ARTIST`` repository is structured as shown below:
 .
 ├── artist # Parent package
 │   ├── core # Core functionality of ARTIST, e.g. raytracing, optimizers etc.
-│   ├── data_loader # Deals with loading data into ARTIST from different sources.
-│   ├── field # Objects in the field, e.g. heliostats and target areas like receivers and calibration targets.
+│   ├── data_loader # Deals with loading data into ARTIST from different sources
+│   ├── field # Objects in the field, e.g. heliostats and target areas like receivers and calibration targets
 │   ├── scenario # Functionality to create and load scenarios in ARTIST.
-│   ├── scene # Light sources and factors influencing the surroundings.
+│   ├── scene # Light sources and factors influencing the surroundings
 │   └── util
 ├── tests
 │   ├── data
-│   │   ├── field_data # Real measurements from the PAINT database and STRAL that can be used in ARTIST.
-│   │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
+│   │   ├── field_data # Real measurements from the PAINT database and STRAL that can be used in ARTIST
+│   │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST
 │   │   └── ...
 │   ├── core
 │   ├── data_loader
 │   └── ...
-└── tutorials # Tutorials to help you get started with ARTIST.
-    ├── data # Data accessed in the tutorials.
-    │   ├── paint # Real measurements from the PAINT database.
-    │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST.
-    │   └── stral Real # Measurements from STRAL.
+└── tutorials # Tutorials to help you get started with ARTIST
+    ├── data # Data accessed in the tutorials
+    │   ├── paint # Real measurements from the PAINT database
+    │   ├── scenarios # Scenarios describing an environment that can be loaded by ARTIST
+    │   └── stral Real # Measurements from STRAL
     └── ...
 ```
 
