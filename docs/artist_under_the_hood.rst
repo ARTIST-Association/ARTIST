@@ -29,14 +29,15 @@ distributions to directly guide parameter updates during optimization.
    (2024). https://doi.org/10.1038/s41467-024-51019-z
 
 
-Differentiable ray tracing in ``ARTIST`` is designed to be robust, work effectively `in parallel`, and take advantage of
-`GPU acceleration`. While most of our design decisions are handled automatically, a few points are worth noting. This page
-provides a brief overview of some of the core principles governing how ``ARTIST`` handles processes and data internally.
+Differentiable ray tracing in ``ARTIST`` is designed to be robust, work effectively *in parallel*, and take advantage of
+*GPU acceleration*. While most of our design decisions are handled automatically, a few points are worth noting. This
+page provides a brief overview of some of the core principles governing how ``ARTIST`` handles processes and data
+internally.
 
 Coordinates
 -----------
 
-``ARTIST`` uses the east, north, up (ENU) coordinate system in a **four-dimensional** format. To understand the
+``ARTIST`` uses the *east, north, up (ENU) coordinate system* in a *four-dimensional* format. To understand the
 implications of this, consider two example tensors:
 
 .. code-block:: console
@@ -46,21 +47,21 @@ implications of this, consider two example tensors:
 
 Both tensors have the same first three elements:
 
-* The first element is the **east** coordinate.
-* The second element is the **north** coordinate.
-* The third element is the **up** coordinate.
+* The first element is the *east* coordinate.
+* The second element is the *north* coordinate.
+* The third element is the *up* coordinate.
 
-However, the fourth element is an extension to a **4D** representation of **3D** coordinates. This enables ``ARTIST`` to
+However, the fourth element is an extension to a 4D representation of 3D coordinates. This enables ``ARTIST`` to
 perform *rotations* and *translations* efficiently within a single *affine transformation matrix*.
-With this **4D** representation, it is important to understand:
+With this 4D representation, it is important to understand:
 
-* The final element in a tensor representing a point **is always 1**.
-* The final element in a tensor representing a direction **is always 0**.
+* The final element in a tensor representing a point *is always 1*.
+* The final element in a tensor representing a direction *is always 0*.
 
 Batch Processing
 ----------------
 
-``ARTIST`` leverages `batch processing` to align thousands of heliostats and trace millions of rays in parallel. This is
+``ARTIST`` leverages *batch processing* to align thousands of heliostats and trace millions of rays in parallel. This is
 made possible by representing all data in ray tracing scenarios as tensors. ``PyTorch`` tensors are highly efficient
 for large-scale computations and matrix operations, particularly on GPUs. By contrast, performing the same tensor
 operations on CPUs is significantly slower, which is why GPU execution is strongly recommended. Even on a single GPU,
@@ -80,7 +81,7 @@ For a heliostat field with *N* = 2000 heliostats, ``ARTIST`` does not create 200
 each property is stored as a single multidimensional tensor, with the property value for a specific heliostat placed at
 a specific index.
 
-This approach is an example of a `Structure of Arrays` (SoA) layout, as opposed to the traditional Array of Structures
+This approach is an example of a *Structure of Arrays* (SoA) layout, as opposed to the traditional Array of Structures
 (AoS) approach, where each heliostat would be an object containing all its properties. In SoA:
 
 - Memory for each property is contiguous, allowing coalesced memory access on GPUs.
@@ -91,7 +92,7 @@ This approach is an example of a `Structure of Arrays` (SoA) layout, as opposed 
 By contrast, an AoS layout (one object per heliostat) would scatter memory across many objects, making GPU
 parallelization inefficient and increasing memory overhead.
 
-This SoA scheme enables highly parallelized computations and results in the following key tensors:
+The SoA scheme enables highly parallelized computations and results in the following key tensors:
 
 .. list-table:: Key Tensors in ``ARTIST``
    :widths: 25 25 50
@@ -130,7 +131,7 @@ This SoA scheme enables highly parallelized computations and results in the foll
      - Control points for NURBS surfaces for all heliostats
    * - ``nurbs_degrees``
      - ``torch.Size([2])``
-     - Spline degrees for NURBS surfaces in the u and v directions
+     - Spline degrees for NURBS surfaces in the u- and v-direction
    * - ``active_heliostats_mask``
      - ``torch.Size([N])``
      - A boolean mask indicating which heliostats are active
@@ -185,29 +186,29 @@ the total number of surface points is internally distributed uniformly among the
 surface point is associated with exactly one surface normal. Consequently, the number of surface points is always equal
 to the number of surface normals.
 
-A parameter that may require additional explanation is ``N_active``, which denotes the number of `active` heliostats.
+A parameter that may require additional explanation is ``N_active``, which denotes the number of *active* heliostats.
 This parameter allows specific heliostats to be addressed during operational tasks, such as calibration or optimization.
 ``N_active`` can even be larger than ``N``, since a single heliostat can be duplicated multiple times to represent
 different training data samples in the optimization process. In this case, ``N_active`` counts all active heliostats
 including their duplicates.
 
-To better understand this concept, we need to consider `heliostat groups`, which we discuss in the next section.
+To better understand this concept, we need to consider *heliostat groups*, which we discuss in the next section.
 
 Heliostat Groups
 ----------------
 
 In a solar tower power plant, a heliostat field may consist of multiple heliostat types with different mechanical
 designs. For example, heliostats may be equipped with different numbers of actuators or different kinematics models.
-However, batch processing in ``ARTIST`` --where multiple heliostats are processed simultaneously -- requires that all
+However, batch processing in ``ARTIST`` -- where multiple heliostats are processed simultaneously -- requires that all
 heliostats behave identically. This is not the case when heliostats use different actuator or kinematics types.
 
-That is why ``ARTIST`` internally organizes heliostats into `heliostat groups`. A single ``HeliostatGroup`` contains all
+That is why ``ARTIST`` internally organizes heliostats into *heliostat groups*. A single ``HeliostatGroup`` contains all
 heliostats in the field that share the same combination of actuator and kinematics types. Multiple different groups may
 exist within a single heliostat field. Batch processing is performed within each group, while different groups are
 processed sequentially.
 
-To support heliostat groups, actuators, and kinematics models, ``ARTIST`` provides abstract base classes that define
-common methods implemented by each subtype.
+``ARTIST`` provides abstract base classes for heliostat groups, actuators, and kinematics models that define common
+methods to be implemented by each subtype.
 
 When initializing a ``HeliostatGroup`` in ``ARTIST``, its type is automatically inferred by checking the provided
 actuator and kinematics types. In practice, this means that you never have to worry about creating a heliostat group
