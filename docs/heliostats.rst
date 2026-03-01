@@ -133,3 +133,30 @@ the linear actuator to model real actuator behavior accurately and efficiently.
 
 The ``IdealActuators`` model has no optimizable parameters. The non-optimizable parameters only include ``type``,
 ``clockwise_axis_movement``, ``min_motor_pos``, and ``max_motor_pos``.
+
+
+Heliostat Blocking
+^^^^^^^^^^^^^^^^^^
+
+``ARTIST`` supports *heliostat blocking*, which models the obstruction of reflected rays by other heliostats in the
+field. Blocking occurs when a ray reflected from one heliostat toward the receiver intersects another heliostat before
+reaching the target. Blocking is therefore a heliostat-field effect that depends on the relative positions and
+orientations of neighboring heliostats.
+
+Blocking is distinct from shading. By definition, shading occurs when incoming sunlight is obstructed before reaching a
+heliostat, i.e., between the light source and the reflecting surface. Blocking, in contrast, occurs after reflection,
+between the heliostat and the receiver. Currently, only blocking is implemented in ``ARTIST``.
+
+Blocking is computed using ray–geometry intersection tests accelerated by a linear bounding volume hierarchy (LBVH).
+This acceleration structure follows the approach proposed by Karras_ and enables efficient intersection queries even for
+heliostat fields containing thousands of mirrors. The use of an LBVH allows blocking to be evaluated with good
+scalability while maintaining efficient GPU execution.
+
+Ray extinction due to blocking is handled globally. Rays that intersect blocking geometry are removed from the
+simulation and do not contribute to the predicted flux distribution on the receiver.
+
+Blocking is enabled during motor position optimization, where accurate flux prediction is required. For surface and
+kinematics reconstruction tasks, blocking is automatically disabled to reduce computational cost and improve
+optimization stability. This behavior is fixed internally and cannot be modified through user input.
+
+.. _Karras: https://doi.org/10.2312/EGGH/HPG12/033-037
