@@ -1,6 +1,8 @@
 import logging
 from typing import Any
 
+from matplotlib import pyplot as plt
+import numpy as np
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -280,11 +282,16 @@ class MotorPositionsOptimizer:
         )
 
         # Set up constraints.
-        lambda_energy = 0.0
         lambda_pixel = 0.0
-        rho_energy = self.constraint_dict[config_dictionary.rho_energy]
         rho_pixel = self.constraint_dict[config_dictionary.rho_pixel]
         max_flux_density = self.constraint_dict[config_dictionary.max_flux_density]
+        energy_integral_reference = 0.0
+
+        # For the loss plot.
+        flux_loss_history = []
+        energy_gain = []
+        energy_term = []
+        pixel_constraint_history = []
 
         # Start the optimization.
         loss = torch.inf
@@ -418,34 +425,31 @@ class MotorPositionsOptimizer:
                 loss = flux_loss
 
             if isinstance(loss_definition, KLDivergenceLoss):
-                # Augmented Lagrangian to ensure that flux integral is maximized, i.e., intensity increases or stays the same.
+                # Ensure that flux integral is maximized, i.e., intensity increases or stays the same.
+                if epoch == 0:
+                    energy_integral_reference = total_flux.sum().detach()
+                    alpha = (flux_loss.item() / (energy_integral_reference + 1e-8)) * 5
+                energy_difference = torch.clamp(energy_integral_reference * 1.1 - total_flux.sum(), min=0.0)
+                energy_reward = alpha * energy_difference
+                
+                # Augmented Lagrangian to ensure that local heat spikes are avoided.
                 # Using 0.5 * rho * (g + lambda / rho)**2 - 0.5 * (lambda**2)/rho
                 # is mathematically equivalent to lambda * g + 0.5 * rho * g**2,
                 # but writing it as a completed square is more stable because its gradient ∂L/∂g = rho * (g + lambda/rho) 
                 # varies linearly and continuously with g, avoiding abrupt jumps from separately adding linear and quadratic terms.
-                energy_integral_prediction = total_flux.sum()
-                energy_integral_ground_truth = self.ground_truth.sum()
-                g_energy = energy_integral_ground_truth - energy_integral_prediction
-                g_energy_positive = torch.clamp(g_energy, min=0.0)
-                energy_constraint = (
-                    0.5 * rho_energy * (g_energy_positive + lambda_energy / rho_energy)**2
-                    - 0.5 * (lambda_energy**2) / rho_energy
-                )
-                # Augmented Lagrangian to ensure that local heat spikes are avoided.
                 g_pixel = total_flux - max_flux_density
                 g_pixel_positive = torch.clamp(g_pixel, min=0.0)
                 pixel_constraint = (
                     0.5 * rho_pixel * (g_pixel_positive + lambda_pixel / rho_pixel)**2
                     - 0.5 * (lambda_pixel**2) / rho_pixel
-                )
+                ).sum()
                 loss = (
                     flux_loss
-                    + energy_constraint
+                    + energy_reward
                     + pixel_constraint
                 )
                 with torch.no_grad():
-                    lambda_energy = torch.clamp(lambda_energy + rho_energy * g_energy, min=0.0)
-                    self.lambda_pixel = torch.clamp(self.lambda_pixel + rho_pixel * g_pixel, min=0.0)
+                    lambda_pixel = torch.clamp(lambda_pixel + rho_pixel * g_pixel, min=0.0)
 
             loss.backward()
 
@@ -470,6 +474,11 @@ class MotorPositionsOptimizer:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
+            
+            if epoch % 2 == 0:
+                flux_loss_history.append(flux_loss.detach().cpu().item())
+                energy_gain.append((100 / energy_integral_reference * (total_flux.sum()-energy_integral_reference)).detach().cpu().item())
+                pixel_constraint_history.append(pixel_constraint.detach().cpu().item())
 
             # Early stopping when loss did not improve since a predefined number of epochs.
             stop = early_stopper.step(loss)
@@ -479,8 +488,23 @@ class MotorPositionsOptimizer:
                 break
 
             epoch += 1
-
+        
         log.info(f"Rank: {rank}, motor positions optimized.")
+        
+        epochs = np.arange(0, len(flux_loss_history) * 2, 2)
+        fig, ax1 = plt.subplots(figsize=(8,5))
+        ax1.plot(epochs, flux_loss_history, label="KL-Div", color="#002864")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("KL-Div Flux / Energy Term")
+        ax1.legend(loc="upper left")
+        ax1.grid(True)
+        ax2 = ax1.twinx()
+        ax2.plot(epochs, energy_gain, label="Energy Gain", color="#14c8ff")
+        ax2.set_ylabel("Energy Gain in %")
+        ax2.legend(loc="upper right")
+        plt.title("Loss Contributions")
+        plt.tight_layout()
+        plt.savefig("aim_point_optimization")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(

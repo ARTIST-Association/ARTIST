@@ -3,6 +3,7 @@ import pathlib
 from typing import Any, cast
 
 from matplotlib import pyplot as plt
+import numpy as np
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -256,13 +257,15 @@ class SurfaceReconstructor:
                 )
 
                 # Set up constraints.
-                energy_per_flux_reference = torch.zeros(heliostat_group.number_of_active_heliostats, device=device)
-                lambda_energy = torch.zeros(torch.count_nonzero(active_heliostats_mask), device=device)
+                energy_per_flux_reference = torch.zeros_like(active_heliostats_mask)
+                initial_lambda_energy = self.constraint_dict[
+                    config_dictionary.initial_lambda_energy
+                ]
+                lambda_energy = None
                 rho_energy = self.constraint_dict[config_dictionary.rho_energy]
                 energy_tolerance = self.constraint_dict[
                     config_dictionary.energy_tolerance
                 ]
-
                 # Set up regularizers.
                 ideal_surface_regularizer = IdealSurfaceRegularizer(
                     reduction_dimensions=(1,)
@@ -276,6 +279,13 @@ class SurfaceReconstructor:
                 weight_ideal_surface = self.constraint_dict[
                     config_dictionary.weight_ideal_surface
                 ]
+
+                # Set up plot.
+                flux_loss_history = []
+                energy_history = []
+                smoothness_history = []
+                ideal_history = []
+                energy_gain = []
 
                 # Start the optimization.
                 loss = torch.inf
@@ -418,22 +428,33 @@ class SurfaceReconstructor:
                         energy_per_flux_reference = cropped_flux_distributions.sum(
                             dim=(1, 2)
                         ).detach()
-                    g_energy = (
+                    energy_difference = (
                         cropped_flux_distributions.sum(dim=(1, 2))
                         - energy_per_flux_reference
                     ) / (energy_per_flux_reference + self.epsilon)
-                    g_energy_per_heliostat = core_utils.mean_loss_per_heliostat(
-                        loss_per_sample=g_energy,
-                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
-                    )
-                    g_energy_positive = torch.clamp(torch.abs(g_energy) - energy_tolerance, min=0.0)
-                    g_energy_positive_per_heliostat = core_utils.mean_loss_per_heliostat(
-                        loss_per_sample=g_energy_positive,
-                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
-                    )
+
                     energy_constraint = (
-                        0.5 * rho_energy * (g_energy_positive_per_heliostat + lambda_energy / rho_energy)**2
-                        - 0.5 * (lambda_energy**2) / rho_energy
+                        torch.clamp(
+                            energy_difference,
+                            min=-energy_tolerance,
+                            max=energy_tolerance,
+                        )
+                        - energy_difference
+                    )
+                    energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=energy_constraint,
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                    )
+                    if lambda_energy is None:
+                        lambda_energy = torch.full_like(
+                            energy_constraint_per_heliostat,
+                            initial_lambda_energy,
+                            dtype=torch.float32,
+                            device=device,
+                        )
+                    constraint = (
+                        lambda_energy.detach() * energy_constraint_per_heliostat
+                        + 0.5 * rho_energy * energy_constraint_per_heliostat**2
                     )
 
                     # Regularization terms.
@@ -473,19 +494,16 @@ class SurfaceReconstructor:
                         * flux_loss_per_heliostat.mean()
                         / (ideal_surface_loss_per_heliostat.mean() + self.epsilon)
                     )
-
+                    
                     total_loss_per_heliostat = (
                         flux_loss_per_heliostat
-                        + energy_constraint
+                        + constraint
                         + alpha * smoothness_loss_per_heliostat
                         + beta * ideal_surface_loss_per_heliostat
                     )
 
                     total_loss = total_loss_per_heliostat.mean()
                     total_loss.backward()
-
-                    with torch.no_grad():
-                        lambda_energy = torch.clamp(lambda_energy + rho_energy * g_energy_per_heliostat, min=0.0)
 
                     if self.ddp_setup[config_dictionary.is_nested]:
                         # Reduce gradients within each heliostat group.
@@ -523,11 +541,39 @@ class SurfaceReconstructor:
                     else:
                         scheduler.step()
 
+                    with torch.no_grad():
+                        lambda_energy += (
+                            rho_energy * energy_constraint_per_heliostat.detach()
+                        )
+                        lambda_energy.clamp_(min=0.0)
+
+
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
                         )
 
+                    if epoch % 2 == 0:
+                        flux_loss_history.append(flux_loss_per_heliostat.mean().detach().cpu().item())
+                        energy_gain.append(energy_difference.mean().detach().cpu().item())
+                        smoothness_history.append((alpha * smoothness_loss_per_heliostat).mean().detach().cpu().item())
+                        ideal_history.append((beta * ideal_surface_loss_per_heliostat).mean().detach().cpu().item())
+                        energy_history.append(energy_constraint.mean().detach().cpu().item())
+                    if epoch % 250 == 0:
+                        fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
+
+                        for i in range(cropped_flux_distributions.shape[0]):
+                            # Compute min/max across the pair for shared color scale
+                            im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
+                            axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
+                            axes[i, 0].axis('off')
+
+                            im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
+                            axes[i, 1].set_title(f"Ground Truth {i}")
+                            axes[i, 1].axis('off')
+
+                            plt.tight_layout()
+                            plt.savefig(f"epoch_{epoch}")
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
 
@@ -551,6 +597,25 @@ class SurfaceReconstructor:
                 final_loss_per_heliostat[final_indices] = total_loss_per_heliostat
 
                 log.info(f"Rank: {rank}, Surfaces reconstructed.")
+        
+        epochs = np.arange(0, len(flux_loss_history) * 2, 2)
+        fig, ax1 = plt.subplots(figsize=(8,5))
+        ax1.plot(epochs, flux_loss_history, label="KL-Div", color="#002864")
+        ax1.plot(epochs, smoothness_history, label="Smoothness", color="red")
+        ax1.plot(epochs, ideal_history, label="Ideal", color="pink")
+        ax1.plot(epochs, energy_history, label="Energy", color="green")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("KL-Div Flux / Regularizers")
+        ax1.legend(loc="upper left")
+        ax1.grid(True)
+        ax2 = ax1.twinx()
+        ax2.plot(epochs, energy_gain, label="Energy Gain", color="#14c8ff")
+        #ax2.axhline(100-(energy_tolerance*100), color='red', linestyle='--', linewidth=2)
+        ax2.set_ylabel("Energy Gain in %")
+        ax2.legend(loc="upper right")
+        plt.title("Loss Contributions")
+        plt.tight_layout()
+        plt.savefig("surface_optimization")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
