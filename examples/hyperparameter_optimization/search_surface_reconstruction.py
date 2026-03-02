@@ -158,11 +158,10 @@ def surface_reconstructor_for_hpo(
     ]
     constraint_dict = {
         config_dictionary.regularizers: regularizers,
-        config_dictionary.initial_lambda_energy: 0.1,
-        config_dictionary.rho_energy: 1.0,
+        config_dictionary.rho_energy: params["rho_energy"],
         config_dictionary.energy_tolerance: 0.01,
-        config_dictionary.weight_smoothness: 0.005,
-        config_dictionary.weight_ideal_surface: 0.005,
+        config_dictionary.weight_smoothness: params["weight_smoothness"],
+        config_dictionary.weight_ideal_surface: params["weight_ideal_surface"],
     }
     optimization_configuration = {
         config_dictionary.optimization: optimizer_dict,
@@ -277,6 +276,9 @@ if __name__ == "__main__":
             "threshold": [1e-6, 1e-3],
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
+            "weight_smoothness": [0.0, 1.0],
+            "weight_ideal_surface": [0.0, 1.0],
+            "rho_energy": [0.1, 1.0],
         },
     )
 

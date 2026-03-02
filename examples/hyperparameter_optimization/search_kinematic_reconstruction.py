@@ -172,7 +172,6 @@ def kinematics_reconstructor_for_hpo(
 
 if __name__ == "__main__":
     comm = MPI.COMM_WORLD
-
     rank = comm.Get_rank()
 
     # Set default location for configuration file.

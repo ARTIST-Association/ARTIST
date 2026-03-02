@@ -264,7 +264,7 @@ def generate_reconstruction_results(
         )
 
         with h5py.File(
-            pathlib.Path(scenario_path.parent) / "deflectometry_scenario_surface.h5",
+            pathlib.Path(scenario_path.parent) / "deflectometry_scenario.h5",
             "r",
         ) as deflectometry_scenario_file:
             scenario_deflectometry = Scenario.load_scenario_from_hdf5(
@@ -282,16 +282,16 @@ def generate_reconstruction_results(
             )
 
         selected_heliostats = [
-            "AC43",
-            "AH31",
+            "AC33",
+            "AD42",
+            "AH28",
             "AI21",
-            "AM56",
-            "AP38",
+            "AU61",
             "AU69",
-            "AW38",
-            "BD35",
+            "AW39",
+            "BB21",
+            "BE40",
             "BF26",
-            "BG24",
         ]
 
         scenario.set_number_of_rays(
@@ -309,12 +309,12 @@ def generate_reconstruction_results(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 200,
-            config_dictionary.batch_size: 8,
+            config_dictionary.max_epoch: 350,
+            config_dictionary.batch_size: 12,
             config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
-            config_dictionary.early_stopping_patience: 150,
-            config_dictionary.early_stopping_window: 150,
+            config_dictionary.early_stopping_patience: 300,
+            config_dictionary.early_stopping_window: 300,
         }
         scheduler_dict = {
             config_dictionary.scheduler_type: hyperparameters["scheduler"],
@@ -327,16 +327,10 @@ def generate_reconstruction_results(
             config_dictionary.threshold: hyperparameters["threshold"],
             config_dictionary.cooldown: hyperparameters["cooldown"],
         }
-        ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
-        smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
-        regularizers = [
-            ideal_surface_regularizer,
-            smoothness_regularizer,
-        ]
         constraint_dict = {
-            config_dictionary.regularizers: regularizers,
-            config_dictionary.initial_lambda_energy: hyperparameters["initial_lambda_energy"],
             config_dictionary.rho_energy: hyperparameters["rho_energy"],
+            config_dictionary.energy_tolerance: 0.001,
+            config_dictionary.initial_lambda_energy: 0.1,
             config_dictionary.weight_smoothness: hyperparameters["weight_smoothness"],
             config_dictionary.weight_ideal_surface: hyperparameters["weight_ideal_surface"],
         }
@@ -353,11 +347,7 @@ def generate_reconstruction_results(
             config_dictionary.data_parser: PaintCalibrationDataParser(
                 sample_limit=hyperparameters["sample_limit"],
             ),
-            config_dictionary.heliostat_data_mapping: [
-                mapping
-                for mapping in heliostat_data_mapping
-                if mapping[0] in selected_heliostats
-            ],
+            config_dictionary.heliostat_data_mapping: heliostat_data_mapping
         }
 
         data_plot: dict[
@@ -369,9 +359,8 @@ def generate_reconstruction_results(
                 sample_limit=1,
             ),
             config_dictionary.heliostat_data_mapping: [
-                mapping
-                for mapping in heliostat_data_mapping
-                if mapping[0] in selected_heliostats
+                (name, [list1[2]], [list2[2]])
+                for name, list1, list2 in heliostat_data_mapping
             ],
         }
 

@@ -163,12 +163,12 @@ def find_viable_heliostats(
             found_heliostats.append(
                 (
                     heliostat_name,
-                    valid_calibration_files[-minimum_number_of_measurements:],
+                    valid_calibration_files[:minimum_number_of_measurements],
                     flux_images_kinematics_reconstruction[
-                        -minimum_number_of_measurements:
+                        :minimum_number_of_measurements
                     ],
                     flux_images_surface_reconstruction[
-                        -minimum_number_of_measurements:
+                        :minimum_number_of_measurements
                     ],
                     properties_path,
                 )
@@ -300,7 +300,7 @@ if __name__ == "__main__":
         "surface_reconstruction_image_type", "flux-centered"
     )
     excluded_heliostats_default = config.get(
-        "excluded_heliostats_for_reconstruction", ["BE20", "AP14"]
+        "excluded_heliostats_for_reconstruction", ["BE20", "AP14", "AG21"]
     )
 
     parser.add_argument(

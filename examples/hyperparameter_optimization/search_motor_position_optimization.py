@@ -126,10 +126,9 @@ def motor_position_optimizer_for_hpo(
         config_dictionary.gamma: params["gamma"],
     }
     constraint_dict = {
-        config_dictionary.rho_energy: 1.0,
+        config_dictionary.rho_energy: params["rho_energy"],
+        config_dictionary.rho_pixel: params["rho_pixel"],
         config_dictionary.max_flux_density: 3,
-        config_dictionary.rho_pixel: 1.0,
-        config_dictionary.lambda_lr: 0.1,
     }
     optimization_configuration = {
         config_dictionary.optimization: optimizer_dict,
@@ -233,6 +232,8 @@ if __name__ == "__main__":
             "threshold": [1e-6, 1e-3],
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
+            "rho_energy": [0.1, 1.0],
+            "rho_pixel": [0.1, 1.0]
         },
     )
 
