@@ -509,14 +509,14 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_hpo.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematics.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_kinematics.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(

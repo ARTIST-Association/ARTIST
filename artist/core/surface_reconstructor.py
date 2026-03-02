@@ -559,21 +559,21 @@ class SurfaceReconstructor:
                         smoothness_history.append((alpha * smoothness_loss_per_heliostat).mean().detach().cpu().item())
                         ideal_history.append((beta * ideal_surface_loss_per_heliostat).mean().detach().cpu().item())
                         energy_history.append(energy_constraint.mean().detach().cpu().item())
-                    if epoch % 250 == 0:
-                        fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
+                    # if epoch % 250 == 0:
+                    #     fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
 
-                        for i in range(cropped_flux_distributions.shape[0]):
-                            # Compute min/max across the pair for shared color scale
-                            im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
-                            axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
-                            axes[i, 0].axis('off')
+                    #     for i in range(cropped_flux_distributions.shape[0]):
+                    #         # Compute min/max across the pair for shared color scale
+                    #         im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
+                    #         axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
+                    #         axes[i, 0].axis('off')
 
-                            im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
-                            axes[i, 1].set_title(f"Ground Truth {i}")
-                            axes[i, 1].axis('off')
+                    #         im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
+                    #         axes[i, 1].set_title(f"Ground Truth {i}")
+                    #         axes[i, 1].axis('off')
 
-                            plt.tight_layout()
-                            plt.savefig(f"epoch_{epoch}")
+                    #         plt.tight_layout()
+                    #         plt.savefig(f"epoch_{epoch}")
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
 
