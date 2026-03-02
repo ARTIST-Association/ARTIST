@@ -281,19 +281,6 @@ def generate_reconstruction_results(
                 device=device,
             )
 
-        selected_heliostats = [
-            "AC33",
-            "AD42",
-            "AH28",
-            "AI21",
-            "AU61",
-            "AU69",
-            "AW39",
-            "BB21",
-            "BE40",
-            "BF26",
-        ]
-
         scenario.set_number_of_rays(
             number_of_rays=int(hyperparameters["number_of_rays"])
         )
@@ -539,12 +526,19 @@ if __name__ == "__main__":
     with open(results_dir / "hpo_results_surface.json", "r") as file:
         hyperparameters = json.load(file)
 
-    reconstruction_results = generate_reconstruction_results(
-        scenario_path=scenario_file,
-        heliostat_data_mapping=heliostat_data_mapping,
-        hyperparameters=hyperparameters,
-        device=device,
-    )
+    reconstruction_results_batched = []
+    batch_size = 50
+    for i in range(0, len(heliostat_data_mapping), batch_size):
+        batch = heliostat_data_mapping[i : i + batch_size]
+
+        reconstruction_results = generate_reconstruction_results(
+            scenario_path=scenario_file,
+            heliostat_data_mapping=batch,
+            hyperparameters=hyperparameters,
+            device=device,
+        )
+
+        reconstruction_results_batched.append(reconstruction_results)
 
     results_path = pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
     if not results_path.parent.is_dir():
