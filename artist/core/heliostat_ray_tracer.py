@@ -499,7 +499,7 @@ class HeliostatRayTracer:
                             ..., :3
                         ],
                         ray_to_heliostat_mapping=ray_to_heliostat_mapping,
-                        max_stack_size=128,
+                        max_stack_size=64,
                         device=device,
                     )
                 )

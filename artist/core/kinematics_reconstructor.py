@@ -245,6 +245,8 @@ class KinematicsReconstructor:
                     relative=True,
                 )
 
+                loss_history = []
+
                 # Start the optimization.
                 loss = torch.inf
                 epoch = 0
@@ -363,6 +365,8 @@ class KinematicsReconstructor:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
+                    
+                    loss_history.append(loss.detach().cpu().item())
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
@@ -372,6 +376,10 @@ class KinematicsReconstructor:
                         break
 
                     epoch += 1
+
+                loss_history = {
+                    "total_loss_history": loss_history,
+                }
 
                 local_indices = (
                     sample_indices_for_local_rank[::number_of_samples_per_heliostat]
@@ -414,4 +422,4 @@ class KinematicsReconstructor:
 
             log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
-        return final_loss_per_heliostat
+        return final_loss_per_heliostat, loss_history

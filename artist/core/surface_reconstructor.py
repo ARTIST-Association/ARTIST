@@ -281,6 +281,7 @@ class SurfaceReconstructor:
                 ]
 
                 # Set up plot.
+                total_loss_history = []
                 flux_loss_history = []
                 energy_history = []
                 smoothness_history = []
@@ -553,27 +554,13 @@ class SurfaceReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
                         )
 
-                    if epoch % 2 == 0:
-                        flux_loss_history.append(flux_loss_per_heliostat.mean().detach().cpu().item())
-                        energy_gain.append(energy_difference.mean().detach().cpu().item())
-                        smoothness_history.append((alpha * smoothness_loss_per_heliostat).mean().detach().cpu().item())
-                        ideal_history.append((beta * ideal_surface_loss_per_heliostat).mean().detach().cpu().item())
-                        energy_history.append(energy_constraint.mean().detach().cpu().item())
-                    # if epoch % 250 == 0:
-                    #     fig, axes = plt.subplots(nrows=cropped_flux_distributions.shape[0], ncols=2, figsize=(6, 3*cropped_flux_distributions.shape[0]))
+                    total_loss_history.append(total_loss.detach().cpu().item())
+                    flux_loss_history.append(flux_loss_per_heliostat.mean().detach().cpu().item())
+                    energy_gain.append(energy_difference.mean().detach().cpu().item())
+                    smoothness_history.append((alpha * smoothness_loss_per_heliostat).mean().detach().cpu().item())
+                    ideal_history.append((beta * ideal_surface_loss_per_heliostat).mean().detach().cpu().item())
+                    energy_history.append(constraint.mean().detach().cpu().item())
 
-                    #     for i in range(cropped_flux_distributions.shape[0]):
-                    #         # Compute min/max across the pair for shared color scale
-                    #         im0 = axes[i, 0].imshow(cropped_flux_distributions[i].detach().cpu(), cmap='inferno',) #vmin=vmin, vmax=vmax)
-                    #         axes[i, 0].set_title(f"Predicted {cropped_flux_distributions[i].detach().cpu().sum()}")
-                    #         axes[i, 0].axis('off')
-
-                    #         im1 = axes[i, 1].imshow(measured_flux_distributions[i].detach().cpu(), cmap='inferno',) # vmin=vmin, vmax=vmax)
-                    #         axes[i, 1].set_title(f"Ground Truth {i}")
-                    #         axes[i, 1].axis('off')
-
-                    #         plt.tight_layout()
-                    #         plt.savefig(f"epoch_{epoch}")
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
 
@@ -582,6 +569,15 @@ class SurfaceReconstructor:
                         break
 
                     epoch += 1
+
+                loss_history = {
+                    "total_loss_history": total_loss_history,
+                    "flux_loss_history": flux_loss_history,
+                    "smoothness_history": smoothness_history,
+                    "ideal_history": ideal_history,
+                    "energy_gain": energy_gain,
+                    "energy_history": energy_history
+                }
 
                 global_active_indices = torch.nonzero(
                     active_heliostats_mask != 0, as_tuple=True
@@ -597,25 +593,6 @@ class SurfaceReconstructor:
                 final_loss_per_heliostat[final_indices] = total_loss_per_heliostat
 
                 log.info(f"Rank: {rank}, Surfaces reconstructed.")
-        
-        epochs = np.arange(0, len(flux_loss_history) * 2, 2)
-        fig, ax1 = plt.subplots(figsize=(8,5))
-        ax1.plot(epochs, flux_loss_history, label="KL-Div", color="#002864")
-        ax1.plot(epochs, smoothness_history, label="Smoothness", color="red")
-        ax1.plot(epochs, ideal_history, label="Ideal", color="pink")
-        ax1.plot(epochs, energy_history, label="Energy", color="green")
-        ax1.set_xlabel("Epoch")
-        ax1.set_ylabel("KL-Div Flux / Regularizers")
-        ax1.legend(loc="upper left")
-        ax1.grid(True)
-        ax2 = ax1.twinx()
-        ax2.plot(epochs, energy_gain, label="Energy Gain", color="#14c8ff")
-        #ax2.axhline(100-(energy_tolerance*100), color='red', linestyle='--', linewidth=2)
-        ax2.set_ylabel("Energy Gain in %")
-        ax2.legend(loc="upper right")
-        plt.title("Loss Contributions")
-        plt.tight_layout()
-        plt.savefig("surface_optimization")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
@@ -636,7 +613,7 @@ class SurfaceReconstructor:
 
         self.scenario.heliostat_field.update_surfaces(device=device)
 
-        return final_loss_per_heliostat
+        return final_loss_per_heliostat, loss_history
 
     @staticmethod
     def lock_control_points_on_outer_edges(

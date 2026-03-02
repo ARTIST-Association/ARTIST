@@ -918,7 +918,7 @@ def lbvh_filter_blocking_planes(
     ray_directions: torch.Tensor,
     blocking_primitives_corners: torch.Tensor,
     ray_to_heliostat_mapping: torch.Tensor,
-    max_stack_size: int = 128,
+    max_stack_size: int = 64,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """

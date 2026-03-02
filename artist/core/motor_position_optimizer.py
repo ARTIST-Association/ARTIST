@@ -288,9 +288,10 @@ class MotorPositionsOptimizer:
         energy_integral_reference = 0.0
 
         # For the loss plot.
+        total_loss_history = []
         flux_loss_history = []
         energy_gain = []
-        energy_term = []
+        energy_reward_history = []
         pixel_constraint_history = []
 
         # Start the optimization.
@@ -474,11 +475,11 @@ class MotorPositionsOptimizer:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
-            
-            if epoch % 2 == 0:
-                flux_loss_history.append(flux_loss.detach().cpu().item())
-                energy_gain.append((100 / energy_integral_reference * (total_flux.sum()-energy_integral_reference)).detach().cpu().item())
-                pixel_constraint_history.append(pixel_constraint.detach().cpu().item())
+            total_loss_history.append(loss.detach().cpu().item())
+            flux_loss_history.append(flux_loss.detach().cpu().item())
+            energy_gain.append((100 / energy_integral_reference * (total_flux.sum()-energy_integral_reference)).detach().cpu().item())
+            energy_reward_history.append(energy_reward.detach().cpu().item())
+            pixel_constraint_history.append(pixel_constraint.detach().cpu().item())
 
             # Early stopping when loss did not improve since a predefined number of epochs.
             stop = early_stopper.step(loss)
@@ -489,22 +490,14 @@ class MotorPositionsOptimizer:
 
             epoch += 1
         
+        loss_history = {
+            "total_loss_history": total_loss_history,
+            "flux_loss_history": flux_loss_history,
+            "energy_reward_history": energy_reward_history,
+            "pixel_constraint_history": pixel_constraint_history,
+            "energy_gain": energy_gain
+        }
         log.info(f"Rank: {rank}, motor positions optimized.")
-        
-        epochs = np.arange(0, len(flux_loss_history) * 2, 2)
-        fig, ax1 = plt.subplots(figsize=(8,5))
-        ax1.plot(epochs, flux_loss_history, label="KL-Div", color="#002864")
-        ax1.set_xlabel("Epoch")
-        ax1.set_ylabel("KL-Div Flux / Energy Term")
-        ax1.legend(loc="upper left")
-        ax1.grid(True)
-        ax2 = ax1.twinx()
-        ax2.plot(epochs, energy_gain, label="Energy Gain", color="#14c8ff")
-        ax2.set_ylabel("Energy Gain in %")
-        ax2.legend(loc="upper right")
-        plt.title("Loss Contributions")
-        plt.tight_layout()
-        plt.savefig("aim_point_optimization")
 
         if self.ddp_setup[config_dictionary.is_distributed]:
             for index, heliostat_group in enumerate(
@@ -520,4 +513,4 @@ class MotorPositionsOptimizer:
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
 
-        return loss
+        return loss, loss_history
