@@ -2,12 +2,14 @@ import argparse
 import csv
 import json
 import pathlib
+import platform
 import re
 import warnings
 from typing import Any, cast
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
+import psutil
 import torch
 import yaml
 
@@ -15,7 +17,6 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
-from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
@@ -704,13 +705,14 @@ def surface_data(
         ]
 
         for index, heliostat in enumerate(names):
+            heliostat_index_global = heliostat_group.names.index(heliostat)
             data_for_plots[heliostat] = {
                 "measured_flux": measured_fluxes[index],
                 "artist_flux": cropped_flux_distributions[index],
-                "surface_points": heliostat_group.active_surface_points[index],
-                "surface_normals": heliostat_group.active_surface_normals[index],
-                "canting": heliostat_group.active_canting[index],
-                "facet_translations": heliostat_group.active_facet_translations[index],
+                "surface_points": heliostat_group.surface_points[heliostat_index_global],
+                "surface_normals": heliostat_group.surface_normals[heliostat_index_global],
+                "canting": heliostat_group.canting[heliostat_index_global],
+                "facet_translations": heliostat_group.facet_translations[heliostat_index_global],
             }
 
     return data_for_plots
@@ -752,7 +754,7 @@ def ablation_study(
     scenario_path: pathlib.Path,
     results_path: pathlib.Path,
     ablation_study_case: int,
-    basic_config,
+    basic_config: dict[str, Any],
     data_mappings: dict[str, Any] | None = None,
     surface_config: dict[str, Any] | None = None,
     kinematics_config: dict[str, Any] | None = None,
@@ -770,22 +772,18 @@ def ablation_study(
         Path to the scenario being used.
     results_path : pathlib.Path
         Path to where the results are saved.
-    baseline_incident_ray_direction : torch.Tensor
-        Incident ray direction of the baseline measurement.
-    baseline_target_area_index : int
-        Target area index of the baseline measurement.
-    baseline_aim_point : torch.Tensor
-        Aim point of the baseline measurement.
     ablation_study_case : int
         Case number of the ablation study.
+    basic_config : dict[str, Any]
+        Configuration for number of surface points, number of rays and baseline data. 
     data_mappings : dict[str, list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] | None
         Data mappings including heliostat names and their calibration files, for surface reconstruction, kinematic reconstruction
         and the evaluation plots.
-    surface_reconstruction_optimization_configuration : dict[str, int | float | str | dict[str, float | int]] | None
+    surface_config : dict[str, int | float | str | dict[str, float | int]] | None
         Configuration parameters for the surface reconstruction, if None no surfaces are reconstructed (default is None).
-    kinematic_reconstruction_optimization_configuration : dict[str, int | float | str | dict[str, float | int]] | None
+    kinematics_config : dict[str, int | float | str | dict[str, float | int]] | None
         Configuration parameters for the kinematic reconstruction, if None no kinematic is reconstructed (default is None).
-    aimpoint_optimization_configuration : dict[str, int | float | str | dict[str, float | int]] | None
+    aim_point_config : dict[str, int | float | str | dict[str, float | int]] | None
         Configuration parameters for the aim point optimization, if None no aim points are optimized (default is None).
     target_distribution : torch.Tensor | None
         Target distribution to aim for during aim point optimization (default is None).
@@ -1157,12 +1155,6 @@ def ablation_study(
                 results_number=results_number,
             )
 
-        heliostat_positions = []
-
-        for group in scenario.heliostat_field.heliostat_groups:
-            for name, position in zip(group.names, group.positions):
-                heliostat_positions.append(position.clone().detach().cpu().tolist())
-            
         # Save all results.
         results_dict[f"ablation_study_case_{ablation_study_case}"] = {
             "flux": combined_bitmaps_per_target[baseline_target_area_index],
@@ -1170,7 +1162,6 @@ def ablation_study(
             "kinematic_reconstruction_loss_per_heliostat": kinematic_reconstruction_final_loss_per_heliostat,
             "aimpoint_optimization_loss_per_heliostat": aimpoint_optimization_final_loss,
             "loss_histories": (loss_history_surface, loss_history_kinematics, loss_history_aim_points),
-            "heliostat_positions": heliostat_positions,
         }
         torch.save(results_dict, results_path)
 
@@ -1303,6 +1294,43 @@ def create_heliostat_data_mappings(
     }
 
     return data_mappings
+
+
+def parse_runtimes(filepath):
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+
+    start_idx = None
+    for i in range(len(lines) - 1, -1, -1):
+        if "main started" in lines[i]:
+            start_idx = i
+            break
+
+    last_run = lines[start_idx:]
+    ablation_times = []
+    results_file_number = None
+    number_of_heliostats = None
+
+    for line in last_run:
+        if "Results_file_number:" in line:
+            match = re.search(r"Results_file_number:\s*(\d+)", line)
+            if match:
+                results_file_number = int(match.group(1))
+
+        elif "Number of heliostats:" in line:
+            match = re.search(r"Number of heliostats:\s*(\d+)", line)
+            if match:
+                number_of_heliostats = int(match.group(1))
+
+        elif "ablation_study finished in" in line:
+            match = re.search(r"finished in ([\d\.]+)s", line)
+            if match:
+                ablation_times.append(float(match.group(1)))
+            
+    return {
+        "runtimes": ablation_times,
+        "run_id": (results_file_number, number_of_heliostats)
+    }
 
 
 @track_runtime(runtime_log)
@@ -1503,6 +1531,19 @@ def main() -> None:
         results_dict = cast(dict[str, dict[str, torch.Tensor]], loaded)
         target_distribution = results_dict["homogeneous_distribution"]
 
+        # Save heliostat positions.
+        heliostat_positions = {}
+        with h5py.File(scenario_path_ideal) as scenario_file:
+            scenario = Scenario.load_scenario_from_hdf5(
+                scenario_file=scenario_file,
+                device=device,
+            )
+            for group in scenario.heliostat_field.heliostat_groups:
+                for name, position in zip(group.names, group.positions):
+                    heliostat_positions[name] = position.clone().detach().cpu().tolist()
+        results_dict["heliostat_positions"] = heliostat_positions
+        torch.save(results_dict, results_path)
+
         # Logging.
         runtime_log.info(
             f"Number of heliostats: {len(data_mappings['kinematic_reconstruction']['heliostat_data_mapping'])}"
@@ -1613,6 +1654,17 @@ def main() -> None:
             target_distribution=target_distribution,
             device=device,
         )
+
+        run_info = parse_runtimes("runtime_log.txt")
+        loaded = torch.load(results_path, weights_only=False)
+        results_dict = cast(dict[str, dict[str, torch.Tensor]], loaded)
+        results_dict["run_info"] = run_info
+        results_dict["run_info"]["parameters"] = {
+            "surface": surface_optimization_config,
+            "kinematics": kinematic_optimization_config,
+            "aim_points": aim_point_optimization_config
+        }
+        torch.save(results_dict, results_path)
 
 
 if __name__ == "__main__":
