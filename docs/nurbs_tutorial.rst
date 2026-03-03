@@ -13,6 +13,9 @@ NURBS in ``ARTIST``
 
 Here we first consider some **NURBS Theory** before investigating **NURBS in
 ARTIST**.
+All NURBS figures on this page were generated with the tool provided by Yu-Sung Chang (2007), "B-Spline Curve with Knots"
+`Wolfram Demonstrations Project`_.
+
 
 NURBS Theory
 ------------
@@ -247,3 +250,5 @@ For this calculation of the surface points and surface normals, three internal s
    ``basis_function_and_derivatives()``.
 3. Lastly, the surface points and normals are calculated from the basis functions, their derivatives, and the control
    points.
+
+.. _Wolfram Demonstrations Project: https://demonstrations.wolfram.com/BSplineCurveWithKnots/
