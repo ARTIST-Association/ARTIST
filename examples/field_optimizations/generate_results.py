@@ -482,7 +482,7 @@ def merge_data(
     return merged
 
 
-def kinematic_data(
+def kinematics_data(
     scenario: Scenario,
     ddp_setup: dict[str, Any],
     heliostat_data: dict[
@@ -493,7 +493,7 @@ def kinematic_data(
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
-    Extract heliostat kinematic information.
+    Extract heliostat kinematics information.
 
     Parameters
     ----------
@@ -511,7 +511,7 @@ def kinematic_data(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Dictionary containing kinematic data per heliostat.
+        Dictionary containing kinematics data per heliostat.
     """
     device = get_device(device)
 
@@ -717,31 +717,31 @@ def surface_data(
 
 
 def load_kinematics_from_file(
-    kinematic_path: pathlib.Path, scenario: Scenario
+    kinematics_path: pathlib.Path, scenario: Scenario
 ) -> Scenario:
     """
-    Load kinematic data from a file.
+    Load kinematics data from a file.
 
     Parameter
     ---------
-    kinematic_path : pathlib.Path
-        Path to the kinematic data.
+    kinematics_path : pathlib.Path
+        Path to the kinematics data.
     scenario : Scenario
         Scenario containing the rest of the data.
 
     Returns
     -------
     Scenario
-        The scenario overwritten with the loaded kinematic data.
+        The scenario overwritten with the loaded kinematics data.
     """
-    loaded_kinematics = torch.load(kinematic_path, weights_only=False)
-    for heliostat_group, loaded_kinematic in zip(
+    loaded_kinematics = torch.load(kinematics_path, weights_only=False)
+    for heliostat_group, loaded_kinematics in zip(
         scenario.heliostat_field.heliostat_groups, loaded_kinematics
     ):
-        heliostat_group.kinematics.rotation_deviation_parameters = loaded_kinematic[
+        heliostat_group.kinematics.rotation_deviation_parameters = loaded_kinematics[
             "rotation_deviation_parameters"
         ]
-        heliostat_group.kinematics.actuators.optimizable_parameters = loaded_kinematic[
+        heliostat_group.kinematics.actuators.optimizable_parameters = loaded_kinematics[
             "optimizable_parameters"
         ]
     return scenario
@@ -762,7 +762,7 @@ def ablation_study(
     device: torch.device | None = None,
 ) -> None:
     """
-    Optimize the heliostat field with a combination of surface reconstruction, kinematic reconstruction and aim point optimization as part of an ablation study.
+    Optimize the heliostat field with a combination of surface reconstruction, kinematics reconstruction and aim point optimization as part of an ablation study.
 
     Parameters
     ----------
@@ -775,12 +775,12 @@ def ablation_study(
     basic_config : dict[str, Any]
         Configuration for number of surface points, number of rays and baseline data. 
     data_mappings : dict[str, list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] | None
-        Data mappings including heliostat names and their calibration files, for surface reconstruction, kinematic reconstruction
+        Data mappings including heliostat names and their calibration files, for surface reconstruction, kinematics reconstruction
         and the evaluation plots.
     surface_config : dict[str, int | float | str | dict[str, float | int]] | None
         Configuration parameters for the surface reconstruction, if None no surfaces are reconstructed (default is None).
     kinematics_config : dict[str, int | float | str | dict[str, float | int]] | None
-        Configuration parameters for the kinematic reconstruction, if None no kinematic is reconstructed (default is None).
+        Configuration parameters for the kinematics reconstruction, if None no kinematics is reconstructed (default is None).
     aim_point_config : dict[str, int | float | str | dict[str, float | int]] | None
         Configuration parameters for the aim point optimization, if None no aim points are optimized (default is None).
     target_distribution : torch.Tensor | None
@@ -806,7 +806,7 @@ def ablation_study(
     )
 
     surface_reconstruction_final_loss_per_heliostat = None
-    kinematic_reconstruction_final_loss_per_heliostat = None
+    kinematics_reconstruction_final_loss_per_heliostat = None
     aimpoint_optimization_final_loss = None
     loss_history_aim_points = None
     loss_history_surface = None
@@ -815,7 +815,7 @@ def ablation_study(
     reconstructed_surface_path = (
         results_dir / f"reconstructed_surfaces_{results_number}.pt"
     )
-    reconstructed_kinematic_path = (
+    reconstructed_kinematics_path = (
         results_dir / f"reconstructed_kinematics_ideal_surface_{results_number}.pt"
     )
 
@@ -984,33 +984,33 @@ def ablation_study(
             )
             results_dict["surface_reconstruction"] = merged_data_surface
 
-            # Inform kinematic reconstruction, that surfaces have been reconstructed.
-            reconstructed_kinematic_path = (
+            # Inform kinematics reconstruction, that surfaces have been reconstructed.
+            reconstructed_kinematics_path = (
                 results_dir
-                / f"reconstructed_kinematic_reconstructed_surfaces_{results_number}.pt"
+                / f"reconstructed_kinematics_reconstructed_surfaces_{results_number}.pt"
             )
 
-        # Kinematic reconstruction.
+        # Kinematics reconstruction.
         if (
             kinematics_config is not None
             and data_mappings is not None
         ):
-            if reconstructed_kinematic_path.exists():
+            if reconstructed_kinematics_path.exists():
                 print(
-                    "A kinematic reconstruction viable for this case has been previously made. Loading the results."
+                    "A kinematics reconstruction viable for this case has been previously made. Loading the results."
                 )
                 scenario = load_kinematics_from_file(
-                    kinematic_path=reconstructed_kinematic_path,
+                    kinematics_path=reconstructed_kinematics_path,
                     scenario=scenario,
                 )
             else:
-                # Save original kinematic data for plots.
-                bitmaps_for_kinematic_plots_before = kinematic_data(
+                # Save original kinematics data for plots.
+                bitmaps_for_kinematics_plots_before = kinematics_data(
                     scenario=scenario,
                     ddp_setup=ddp_setup,
-                    heliostat_data=data_mappings["kinematic_plot"],
+                    heliostat_data=data_mappings["kinematics_plot"],
                 )
-                # Reconstruct kinematic.
+                # Reconstruct kinematics.
                 scenario.set_number_of_rays(number_of_rays=kinematics_config["number_of_rays"])
                 optimization_configuration_kinematics = {
                     config_dictionary.optimization: {
@@ -1035,40 +1035,40 @@ def ablation_study(
                         config_dictionary.cooldown: kinematics_config["cooldown"],
                     }
                 }
-                kinematic_reconstructor = KinematicsReconstructor(
+                kinematics_reconstructor = KinematicsReconstructor(
                     ddp_setup=ddp_setup,
                     scenario=scenario,
-                    data=data_mappings["kinematic_reconstruction"],
+                    data=data_mappings["kinematics_reconstruction"],
                     optimization_configuration=optimization_configuration_kinematics,
                     reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
                 )
-                kinematic_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
-                    kinematic_reconstructor.reconstruct_kinematics(
+                kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
+                    kinematics_reconstructor.reconstruct_kinematics(
                         loss_definition=FocalSpotLoss(scenario=scenario),
                         device=device,
                     )
                 )
                 if ddp_setup["is_distributed"]:
                     torch.distributed.barrier()
-                # Save reconstructed kinematic data.
-                bitmaps_for_kinematic_plots_after = kinematic_data(
+                # Save reconstructed kinematics data.
+                bitmaps_for_kinematics_plots_after = kinematics_data(
                     scenario=scenario,
                     ddp_setup=ddp_setup,
-                    heliostat_data=data_mappings["kinematic_plot"],
+                    heliostat_data=data_mappings["kinematics_plot"],
                 )
-                merged_data_kinematic = merge_data(
-                    unoptimized_data=bitmaps_for_kinematic_plots_before,
-                    optimized_data=bitmaps_for_kinematic_plots_after,
+                merged_data_kinematics = merge_data(
+                    unoptimized_data=bitmaps_for_kinematics_plots_before,
+                    optimized_data=bitmaps_for_kinematics_plots_after,
                 )
                 surface = (
                     "ideal_surface"
                     if surface_config is None
                     else "reconstructed_surface"
                 )
-                results_dict[f"kinematic_reconstruction_{surface}"] = (
-                    merged_data_kinematic
+                results_dict[f"kinematics_reconstruction_{surface}"] = (
+                    merged_data_kinematics
                 )
-                # Save reconstructed kinematic.
+                # Save reconstructed kinematics.
                 torch.save(
                     [
                         {
@@ -1077,7 +1077,7 @@ def ablation_study(
                         }
                         for heliostat_group in scenario.heliostat_field.heliostat_groups
                     ],
-                    reconstructed_kinematic_path,
+                    reconstructed_kinematics_path,
                 )
 
         # Aim point optimization.
@@ -1157,7 +1157,7 @@ def ablation_study(
         results_dict[f"ablation_study_case_{ablation_study_case}"] = {
             "flux": combined_bitmaps_per_target[baseline_target_area_index],
             "surface_reconstruction_loss_per_heliostat": surface_reconstruction_final_loss_per_heliostat,
-            "kinematic_reconstruction_loss_per_heliostat": kinematic_reconstruction_final_loss_per_heliostat,
+            "kinematics_reconstruction_loss_per_heliostat": kinematics_reconstruction_final_loss_per_heliostat,
             "aimpoint_optimization_loss_per_heliostat": aimpoint_optimization_final_loss,
             "loss_histories": (loss_history_surface, loss_history_kinematics, loss_history_aim_points),
         }
@@ -1202,45 +1202,45 @@ def create_heliostat_data_mappings(
         sample_limit=2, centroid_extraction_method=paint_mappings.UTIS_KEY
     )
 
-    # Data mappings for the kinematic reconstruction plot.
-    path_mapping_kinematic_plot: list[
+    # Data mappings for the kinematics reconstruction plot.
+    path_mapping_kinematics_plot: list[
         tuple[str, list[pathlib.Path], list[pathlib.Path]]
     ] = [
         (
             item["name"],
             [pathlib.Path(item["calibrations"][0])],
-            [pathlib.Path(item["kinematic_reconstruction_flux_images"][0])],
+            [pathlib.Path(item["kinematics_reconstruction_flux_images"][0])],
         )
         for item in viable_heliostats
         if item["name"] in heliostats_for_plots
     ]
-    data_kinematic_plot: dict[
+    data_kinematics_plot: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: path_mapping_kinematic_plot,
+        config_dictionary.heliostat_data_mapping: path_mapping_kinematics_plot,
     }
 
-    # Data mappings for the kinematic reconstruction.
-    path_mapping_kinematic_reconstruction: list[
+    # Data mappings for the kinematics reconstruction.
+    path_mapping_kinematics_reconstruction: list[
         tuple[str, list[pathlib.Path], list[pathlib.Path]]
     ] = [
         (
             item["name"],
             [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["kinematic_reconstruction_flux_images"]],
+            [pathlib.Path(p) for p in item["kinematics_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
     ]
-    data_kinematic_reconstruction: dict[
+    data_kinematics_reconstruction: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_kinematics,
-        config_dictionary.heliostat_data_mapping: path_mapping_kinematic_reconstruction,
+        config_dictionary.heliostat_data_mapping: path_mapping_kinematics_reconstruction,
     }
 
     # Data mappings for the surface reconstruction plot.
@@ -1285,8 +1285,8 @@ def create_heliostat_data_mappings(
     }
 
     data_mappings = {
-        "kinematic_reconstruction": data_kinematic_reconstruction,
-        "kinematic_plot": data_kinematic_plot,
+        "kinematics_reconstruction": data_kinematics_reconstruction,
+        "kinematics_plot": data_kinematics_plot,
         "surface_reconstruction": data_surface_reconstruction,
         "surface_plot": data_surface_plot,
     }
@@ -1381,8 +1381,8 @@ def main() -> None:
     surface_reconstruction_optimization_configuration_default = config.get(
         "surface_reconstruction_optimization_configuration", {}
     )
-    kinematic_reconstruction_optimization_configuration_default = config.get(
-        "kinematic_reconstruction_optimization_configuration", {}
+    kinematics_reconstruction_optimization_configuration_default = config.get(
+        "kinematics_reconstruction_optimization_configuration", {}
     )
     aim_point_optimization_configuration_default = config.get(
         "aim_point_optimization_configuration", {}
@@ -1434,10 +1434,10 @@ def main() -> None:
         default=surface_reconstruction_optimization_configuration_default,
     )
     parser.add_argument(
-        "--kinematic_reconstruction_optimization_configuration",
+        "--kinematics_reconstruction_optimization_configuration",
         type=dict[Any],
         help="Config.",
-        default=kinematic_reconstruction_optimization_configuration_default,
+        default=kinematics_reconstruction_optimization_configuration_default,
     )
     parser.add_argument(
         "--aim_point_optimization_configuration",
@@ -1473,7 +1473,7 @@ def main() -> None:
         data_for_stral_dir.mkdir(parents=True, exist_ok=True)
 
         surface_optimization_config = args.surface_reconstruction_optimization_configuration
-        kinematic_optimization_config = args.kinematic_reconstruction_optimization_configuration
+        kinematics_optimization_config = args.kinematics_reconstruction_optimization_configuration
         aim_point_optimization_config = args.aim_point_optimization_configuration
         basic_config = args.basic_config
 
@@ -1506,7 +1506,7 @@ def main() -> None:
         data_mappings = create_heliostat_data_mappings(
             viable_heliostats_data=viable_heliostats_data,
             heliostats_for_plots=args.heliostats_for_plots,
-            sample_limit_kinematics=kinematic_optimization_config["sample_limit"],
+            sample_limit_kinematics=kinematics_optimization_config["sample_limit"],
             sample_limit_surfaces=surface_optimization_config["sample_limit"]
         )
 
@@ -1544,27 +1544,27 @@ def main() -> None:
 
         # Logging.
         runtime_log.info(
-            f"Number of heliostats: {len(data_mappings['kinematic_reconstruction']['heliostat_data_mapping'])}"
+            f"Number of heliostats: {len(data_mappings['kinematics_reconstruction']['heliostat_data_mapping'])}"
         )
         runtime_log.info(
             f"surface reconstruction: {surface_optimization_config}"
         )
         runtime_log.info(
-            f"kinematic reconstruction: {kinematic_optimization_config}"
+            f"kinematics reconstruction: {kinematics_optimization_config}"
         )
         runtime_log.info(
             f"aim point optimization: {aim_point_optimization_config}"
         )
 
         # Ablation study cases:
-        # 1. Surface: ideal             Kinematic: ideal            Aim Points: center
-        # 2. Surface: ideal             Kinematic: ideal            Aim Points: optimized
-        # 3. Surface: ideal             Kinematic: reconstructed    Aim Points: center
-        # 4. Surface: ideal             Kinematic: reconstructed    Aim Points: optimized
-        # 5. Surface: reconstructed     Kinematic: ideal            Aim Points: center
-        # 6. Surface: reconstructed     Kinematic: ideal            Aim Points: optimized
-        # 7. Surface: reconstructed     Kinematic: reconstructed    Aim Points: center
-        # 8. Surface: reconstructed     Kinematic: reconstructed    Aim Points: optimized
+        # 1. Surface: ideal             Kinematics: ideal            Aim Points: center
+        # 2. Surface: ideal             Kinematics: ideal            Aim Points: optimized
+        # 3. Surface: ideal             Kinematics: reconstructed    Aim Points: center
+        # 4. Surface: ideal             Kinematics: reconstructed    Aim Points: optimized
+        # 5. Surface: reconstructed     Kinematics: ideal            Aim Points: center
+        # 6. Surface: reconstructed     Kinematics: ideal            Aim Points: optimized
+        # 7. Surface: reconstructed     Kinematics: reconstructed    Aim Points: center
+        # 8. Surface: reconstructed     Kinematics: reconstructed    Aim Points: optimized
 
         ablation_study(
             scenario_path=scenario_path_ideal,
@@ -1590,7 +1590,7 @@ def main() -> None:
             basic_config=basic_config,
             ablation_study_case=3,
             data_mappings=data_mappings,
-            kinematics_config=kinematic_optimization_config,
+            kinematics_config=kinematics_optimization_config,
             device=device,
         )
 
@@ -1600,7 +1600,7 @@ def main() -> None:
     	    basic_config=basic_config,
             ablation_study_case=4,
             data_mappings=data_mappings,
-            kinematics_config=kinematic_optimization_config,
+            kinematics_config=kinematics_optimization_config,
             aim_point_config=aim_point_optimization_config,
             target_distribution=target_distribution,
             device=device,
@@ -1635,7 +1635,7 @@ def main() -> None:
             ablation_study_case=7,
             data_mappings=data_mappings,
             surface_config=surface_optimization_config,
-            kinematics_config=kinematic_optimization_config,
+            kinematics_config=kinematics_optimization_config,
             data_for_stral_dir=data_for_stral_dir,
             device=device,
         )
@@ -1647,7 +1647,7 @@ def main() -> None:
             ablation_study_case=8,
             data_mappings=data_mappings,
             surface_config=surface_optimization_config,
-            kinematics_config=kinematic_optimization_config,
+            kinematics_config=kinematics_optimization_config,
             aim_point_config=aim_point_optimization_config,
             target_distribution=target_distribution,
             device=device,
@@ -1659,7 +1659,7 @@ def main() -> None:
         results_dict["run_info"] = run_info
         results_dict["run_info"]["parameters"] = {
             "surface": surface_optimization_config,
-            "kinematics": kinematic_optimization_config,
+            "kinematics": kinematics_optimization_config,
             "aim_points": aim_point_optimization_config
         }
         torch.save(results_dict, results_path)
