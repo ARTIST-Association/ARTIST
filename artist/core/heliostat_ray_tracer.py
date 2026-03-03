@@ -438,19 +438,18 @@ class HeliostatRayTracer:
             )
 
         flux_distributions = []
+        global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
             sampler_indices = list(self.distortions_sampler)
-
+            batch_mask_indices = sampler_indices[
+                batch_index * self.batch_size : (batch_index + 1) * self.batch_size
+            ]
             active_heliostats_mask_batch = torch.zeros(
                 self.heliostat_group.number_of_active_heliostats,
                 dtype=torch.bool,
                 device=device,
             )
-            active_heliostats_mask_batch[
-                sampler_indices[
-                    batch_index * self.batch_size : (batch_index + 1) * self.batch_size
-                ]
-            ] = True
+            active_heliostats_mask_batch[batch_mask_indices] = True
 
             rays = self.scatter_rays(
                 distortion_u=batch_u,
@@ -486,9 +485,10 @@ class HeliostatRayTracer:
                 points_at_ray_origins = self.heliostat_group.active_surface_points[
                     active_heliostats_mask_batch, None, :, :3
                 ].expand(-1, self.light_source.number_of_rays, -1, -1)
-                ray_to_heliostat_mapping = torch.arange(
-                    number_of_heliostats, device=device
-                ).repeat_interleave(number_of_rays * number_of_points)
+                batch_global_indices = global_active_indices[batch_mask_indices]
+                ray_to_heliostat_mapping = batch_global_indices.repeat_interleave(
+                    number_of_rays * number_of_points
+                )
 
                 # Filter out the blocking primitives that are relevant for blocking.
                 filtered_blocking_primitive_indices = (

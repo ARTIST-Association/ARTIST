@@ -2,14 +2,12 @@ import argparse
 import csv
 import json
 import pathlib
-import platform
 import re
 import warnings
 from typing import Any, cast
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
-import psutil
 import torch
 import yaml
 
@@ -1459,7 +1457,7 @@ def main() -> None:
     device = get_device(torch.device(args.device))
 
     # for case in ["baseline", "full_field"]:
-    for case in ["baseline"]:
+    for case in ["full_field"]:
         # Set directory paths.
         results_dir = pathlib.Path(args.results_dir) / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)

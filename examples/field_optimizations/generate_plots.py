@@ -1052,7 +1052,7 @@ if __name__ == "__main__":
         plots_path = pathlib.Path(args.plots_dir) / case
 
         plots_path.mkdir(parents=True, exist_ok=True)
-        results_number = 9
+        results_number = 1
         results_path = pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
 
         if not results_path.exists():
