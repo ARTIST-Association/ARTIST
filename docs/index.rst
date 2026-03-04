@@ -17,7 +17,7 @@ alignment.
    :width: 100 %
    :align: center
 
-   The concentrating solar power (CSP) plant in Jülich, Germany.
+   The concentrating solar power (CSP) plant in Jülich, Germany. Credit: `DLR (CC BY-NC-ND 3.0)`_
 
 |:sunny:| Our key contributions include:
 
@@ -72,6 +72,7 @@ Check out :ref:`usage` to find out more about to how to use ``ARTIST``.
 .. _PyTorch: https://pytorch.org/
 .. _paper: https://doi.org/10.1038/s41467-024-51019-z
 .. _PyPI: https://pypi.org/project/artist-csp/
+.. _DLR (CC BY-NC-ND 3.0): https://www.dlr.de/en/service/imprint
 
 Indices and Tables
 ==================
