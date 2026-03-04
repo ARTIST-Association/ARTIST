@@ -513,4 +513,4 @@ class MotorPositionsOptimizer:
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
 
-        return loss, loss_history
+        return loss.detach().cpu(), loss_history

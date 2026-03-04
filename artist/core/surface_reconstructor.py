@@ -613,7 +613,7 @@ class SurfaceReconstructor:
 
         self.scenario.heliostat_field.update_surfaces(device=device)
 
-        return final_loss_per_heliostat, loss_history
+        return final_loss_per_heliostat.detach().cpu(), loss_history
 
     @staticmethod
     def lock_control_points_on_outer_edges(

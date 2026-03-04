@@ -422,4 +422,4 @@ class KinematicsReconstructor:
 
             log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
-        return final_loss_per_heliostat, loss_history
+        return final_loss_per_heliostat.detach().cpu(), loss_history
