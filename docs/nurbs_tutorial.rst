@@ -80,6 +80,8 @@ neighborhood of that control point.
    :width: 100 %
    :align: center
 
+   Generated with Yu-Sung Chang (2007), "B-Spline Curve with Knots" `Wolfram Demonstrations Project`_.
+
 This example demonstrates a key aspect of NURBS: Each control point only influences the curve in its local neighborhood
 and has little or no effect farther away. Interpreting the curve as the trajectory of a particle, its position at any
 time :math:`t` can be understood as a weighted average of all control points, where nearby control points contribute
@@ -103,6 +105,8 @@ following figure:
 .. figure:: ./images/nurbs_basis_function.jpg
    :width: 100 %
    :align: center
+
+   Generated with Yu-Sung Chang (2007), "B-Spline Curve with Knots" `Wolfram Demonstrations Project`_.
 
 In the figure, we see five distinct basis functions. Three have peaks in the middle of the parameter domain, while two
 are located near the boundaries. These functions correspond to a NURBS curve with five control points, as each control
@@ -151,12 +155,16 @@ domain. This is illustrated below:
    :width: 100 %
    :align: center
 
+   Generated with Yu-Sung Chang (2007), "B-Spline Curve with Knots" `Wolfram Demonstrations Project`_.
+
 In contrast, a *non-uniform knot vector* contains knot spans of different lengths. As a result, the associated basis
 functions cover parameter intervals of different size:
 
 .. figure:: ./images/nurbs_nonuniform.jpg
    :width: 100 %
    :align: center
+
+   Generated with Yu-Sung Chang (2007), "B-Spline Curve with Knots" `Wolfram Demonstrations Project`_.
 
 An important observation is that not all basis functions need to have the same shape. When knot spans differ in size,
 some basis functions become narrower and taller, while others become wider and flatter. Smaller knot spans lead to
@@ -190,73 +198,75 @@ The term uniformity refers to knot vectors that
 - contain only simple knots inbetween,
 - with all interior knot spans having equal length.
 
-For example, the knot vector :math:`{0,0,0,1,2,3,4,4,4}` describes *uniformity* for a curve of degree 3.
+For example, the knot vector :math:`\{0,0,0,1,2,3,4,4,4\}` describes *uniformity* for a curve of degree 3.
 
 Control Weights
 """""""""""""""
 
-The last aspect of NURBS we want to consider are the control weights. The control weights are responsible for the
-*rational* property of NURBS:
+The final component of a NURBS curve is the set of control weights, which determine its rational property:
 
-- If all control weights are 1, the curve is non-rational. Non-rational NURBS are a special case of rational NURBS.
-- If all control weights are equal, this implies that each control point has an equal influence on the shape of
-  the curve.
+- A curve is called rational if at least one control weight differs from 1.
+- If all control weights are equal, the relative influence of the control points is determined solely by the basis
+  functions.
 - Increasing the weight of a specific control point increases its influence and effectively "pulls" the curve towards
   that control point.
-- A curve is called rational if at least one control weight differs from 1.
+- If all control weights are 1, the curve is non-rational. Non-rational NURBS therefore are a special case of rational
+  NURBS.
 
 In ``ARTIST``, all control weights are set to 1. Therefore, only non-rational NURBS are currently used.
 
 The Parametric UV Space of 3D NURBS Surfaces
 --------------------------------------------
 
-Unlike other parts of ``ARTIST``, NURBS surfaces use the parameters :math:`u` and :math:`v` instead of the Cartesian
-coordinates east, north, and up. This reflects the mathematical formulation of NURBS.
+Unlike other parts of ``ARTIST``, NURBS surfaces are formulated using the parameters :math:`u` and :math:`v` rather than
+Cartesian coordinates east, north, and up. This reflects the mathematical description of NURBS.
 
-NURBS are always defined in a parametric space, commonly called the UV space, where the parameters :math:`u` and
-:math:`v` typically range from 0 to 1. Within this domain, the surface is described entirely through control points,
-basis functions, knot vectors, and (optionally) weights. The physical surface in 3D Cartesian space does not exist until
-it is sampled and evaluated. During the sampling, the east, north, up (or :math:`x`, :math:`y`, :math:`z`)
-coordinates are first mapped into the UV domain so that the parametric basis functions can be evaluated, producing the
-actual cartesian surface coordinates. The UV formulation enables NURBS to represent smooth, continuous surfaces in a
-flexible and mathematically consistent way, which makes them particularly well suited for describing heliostat
-geometries in ``ARTIST``.
+NURBS surfaces are defined in a parametric space, commonly called the UV space, where the parameters :math:`u` and
+:math:`v` typically range from 0 to 1. In this domain, the surface is described entirely through control points, basis
+functions, knot vectors, and, optionally, weights. The physical surface in 3D Cartesian space does not exist explicitly
+until it is evaluated. During this evaluation (or sampling) process, the east, north, up
+(or :math:`x`, :math:`y`, :math:`z`) coordinates are first mapped into the UV domain before the parametric basis
+functions can be evaluated, producing the actual Cartesian surface coordinates. The UV formulation enables NURBS to
+represent smooth, continuous surfaces in a flexible and mathematically consistent way, making them well-suited for
+describing heliostat geometries in ``ARTIST``.
 
 NURBS in ``ARTIST``
 -------------------
 
-Now that we know the basics of NURBS, let us look briefly at how ``ARTIST`` makes use of NURBS. Importantly:
+Now that we know how NURBS work in theory, let us look briefly at how they are used in ``ARTIST``. In particular:
 
-- The NURBS in ``ARTIST`` are differentiable.
-- They are primarily used to model the heliostat surfaces, however they can also be used to model other surfaces, such
-  as the receiver.
-- The NURBS in ``ARTIST`` are uniform and non-rational. The name NURBS can therefore be misleading; however, the uniform
-  and non-rational implementation is a subset of NURBS.
+- The NURBS implementation in ``ARTIST`` is fully differentiable.
+- NURBS are primarily used to model heliostat surfaces, but they can also be used to model other surfaces, such as the
+  receiver.
+- The implementation in ``ARTIST`` is restricted to uniform, non-rational NURBS. Strictly speaking, this is a specific
+  subset of general NURBS, so the term "NURBS" may appear slightly broader than the functionality currently implemented.
 
 Code
 ^^^^
 
-The NURBS code in ``ARTIST`` is contained in `nurbs.py` which can be found under `artist/util`. The `nurbs.py` module
-implements the ``NURBSSurface`` class and inherits from ``torch.nn.Module``, allowing for gradient-based calculations.
+The NURBS implementation in ``ARTIST`` is contained in the file ``nurbs.py`` located in ``artist/util``. The module
+defines the ``NURBSSurface`` class, which inherits from ``torch.nn.Module``. This design enables automatic
+differentiation and seamless integration into gradient-based workflows.
 
 Usage
 ^^^^^
 
-Using NURBS in ``ARTIST`` is simple:
+Using NURBS in ``ARTIST`` is straightforward:
 
-- A NURBS surface can be initialized by only providing the desired ``degrees`` in the ``u`` and ``v`` direction, and the
-  associated ``control points``. For a NURBS surface, two degrees are necessary as two NURBS curves span the surface.
-  Internally, the uniform knot vectors are calculated from the input.
-- The user can then simply call ``calculate_surface_points_and_normals()`` on the ``NURBSSurface`` and the surface
-  points and surface normals are calculated and returned.
+- A NURBS surface, i.e., a ``NURBSSurface`` instance, can be initialized by specifying the desired ``degrees`` in the
+  ``u`` and ``v`` direction together with the associated ``control points``. Since a surface is spanned by two NURBS
+  curves, one degree must be provided for each parametric direction. The associated uniform knot vectors are generated
+  internally.
+- The user can then call ``calculate_surface_points_and_normals()`` on the ``NURBSSurface`` object to obtain the surface
+  points and corresponding surface normals.
 
-For this calculation of the surface points and surface normals, three internal steps are executed:
+Internally, this computation proceeds in three main steps:
 
-1. ``find_span()`` is called for both directions to determine which evaluation point corresponds to
-   which knot in the knot vector.
-2. Next, the basis functions and their derivatives are calculated, again for both directions using
+1. ``find_span()`` is called for both parametric directions to determine the corresponding knot span for each evaluation
+   point from the knot vector.
+2. Next, the basis functions and their derivatives are calculated, for both directions using
    ``basis_function_and_derivatives()``.
-3. Lastly, the surface points and normals are calculated from the basis functions, their derivatives, and the control
+3. Finally, the surface points and normals are calculated from the basis functions, their derivatives, and the control
    points.
 
 .. _Wolfram Demonstrations Project: demonstrations.wolfram.com/BSplineCurveWithKnots/
