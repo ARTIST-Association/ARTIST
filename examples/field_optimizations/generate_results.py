@@ -123,10 +123,10 @@ def create_distributions(
 
     if "homogeneous_distribution" not in results_dict.keys():
         e_trapezoid = utils.trapezoid_distribution(
-            total_width=256, slope_width=30, plateau_width=120, device=device #180
+            total_width=256, slope_width=30, plateau_width=180, device=device #180
         )
         u_trapezoid = utils.trapezoid_distribution(
-            total_width=256, slope_width=30, plateau_width=120, device=device
+            total_width=256, slope_width=30, plateau_width=180, device=device
         )
         eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
@@ -236,190 +236,58 @@ def save_heliostat_model(
     results_number : int
         The incremented number of the results file.
     """
-    data: dict[str, list] = {
-        "names": [],
-        "positions": [],
-        "widths": [],
-        "heights": [],
-        "number_of_facets": [],
-        "axis_offsets": [],
-        "mirror_offsets": [],
-        "facet_translations": [],
-        "canting_vectors": [],
-        "surface_points": [],
-        "surface_normals": [],
-    }
+    with torch.no_grad():
+        data: dict[str, list] = {
+            "names": [],
+            "positions": [],
+            "widths": [],
+            "heights": [],
+            "number_of_facets": [],
+            "axis_offsets": [],
+            "mirror_offsets": [],
+            "facet_translations": [],
+            "canting_vectors": [],
+            "surface_points": [],
+            "surface_normals": [],
+        }
 
-    for heliostat_group in scenario.heliostat_field.heliostat_groups:
-        data["names"].extend(heliostat_group.names)
-        data["positions"].extend(
-            tuple(position[:3].tolist()) for position in heliostat_group.positions
-        )
-        start = -torch.norm(heliostat_group.canting, dim=index_mapping.canting)
-        end = torch.norm(heliostat_group.canting, dim=index_mapping.canting)
-        data["widths"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 0] + 0.01)
-        data["heights"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 1] + 0.01)
-        data["number_of_facets"].extend(
-            [(heliostat_group.number_of_facets_per_heliostat, 1)]
-            * heliostat_group.number_of_heliostats
-        )
-        data["axis_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
-        data["mirror_offsets"].extend(
-            heliostat_group.kinematics.translation_deviation_parameters[:, 7].tolist()
-        )
-        data["facet_translations"].extend(heliostat_group.facet_translations)
-        data["canting_vectors"].extend(heliostat_group.canting)
-        data["surface_points"].extend(
-            heliostat_group.surface_points.reshape(
-                heliostat_group.number_of_heliostats,
-                heliostat_group.number_of_facets_per_heliostat,
-                -1,
-                4,
+        for heliostat_group in scenario.heliostat_field.heliostat_groups:
+            data["names"].extend(heliostat_group.names)
+            data["positions"].extend(
+                tuple(position[:3].tolist()) for position in heliostat_group.positions
             )
-        )
-        data["surface_normals"].extend(
-            heliostat_group.surface_normals.reshape(
-                heliostat_group.number_of_heliostats,
-                heliostat_group.number_of_facets_per_heliostat,
-                -1,
-                4,
+            start = -torch.norm(heliostat_group.canting, dim=index_mapping.canting)
+            end = torch.norm(heliostat_group.canting, dim=index_mapping.canting)
+            data["widths"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 0] + 0.01)
+            data["heights"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 1] + 0.01)
+            data["number_of_facets"].extend(
+                [(heliostat_group.number_of_facets_per_heliostat, 1)]
+                * heliostat_group.number_of_heliostats
             )
-        )
-
-    torch.save(data, save_dir / f"reconstructed_heliostats_data_{results_number}.pt")
-
-
-def align_and_trace_rays(
-    scenario: Scenario,
-    ddp_setup: dict[str, Any],
-    incident_ray_direction: torch.Tensor,
-    target_area_index: int,
-    aim_point: torch.Tensor,
-    motor_positions: torch.Tensor | None,
-    batch_size: int,
-    number_of_rays: int,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Align heliostats and trace rays to create a flux density prediction on the target.
-
-    Parameters
-    ----------
-    scenario : Scenario
-        The scenario.
-    ddp_setup : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
-    incident_ray_direction : torch.Tensor
-        The incident ray direction.
-    target_area_index : int
-        The target area index.
-    aim_point : torch.Tensor
-        Aim point of the baseline measurement.
-    motor_positions : torch.Tensor
-        The optimized motor positions, if None the heliostats will be aligned by the incident ray direction (default is None).
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        Flux density distribution on the target.
-    """
-    device = get_device(device)
-
-    bitmap_resolution = torch.tensor([256, 256])
-
-    combined_bitmaps_per_target = torch.zeros(
-        (
-            scenario.target_areas.number_of_target_areas,
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            bitmap_resolution[index_mapping.unbatched_bitmap_u],
-        ),
-        device=device,
-    )
-
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
-    ]:
-        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
-            heliostat_group_index
-        ]
-
-        (
-            active_heliostats_mask,
-            target_area_mask,
-            incident_ray_directions,
-        ) = scenario.index_mapping(
-            heliostat_group=heliostat_group,
-            single_incident_ray_direction=incident_ray_direction,
-            single_target_area_index=target_area_index,
-            device=device,
-        )
-
-        heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask, device=device
-        )
-
-        if motor_positions is None:
-            heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=aim_point.expand(
-                    heliostat_group.number_of_active_heliostats, 4
-                ),
-                incident_ray_directions=incident_ray_directions,
-                active_heliostats_mask=active_heliostats_mask,
-                device=device,
+            data["axis_offsets"].extend([0.0] * heliostat_group.number_of_heliostats)
+            data["mirror_offsets"].extend(
+                heliostat_group.kinematics.translation_deviation_parameters[:, 7].tolist()
+            )
+            data["facet_translations"].extend(heliostat_group.facet_translations)
+            data["canting_vectors"].extend(heliostat_group.canting)
+            data["surface_points"].extend(
+                heliostat_group.surface_points.reshape(
+                    heliostat_group.number_of_heliostats,
+                    heliostat_group.number_of_facets_per_heliostat,
+                    -1,
+                    4,
+                )
+            )
+            data["surface_normals"].extend(
+                heliostat_group.surface_normals.reshape(
+                    heliostat_group.number_of_heliostats,
+                    heliostat_group.number_of_facets_per_heliostat,
+                    -1,
+                    4,
+                )
             )
 
-        else:
-            heliostat_group.align_surfaces_with_motor_positions(
-                motor_positions=motor_positions[heliostat_group_index],
-                active_heliostats_mask=active_heliostats_mask,
-                device=device,
-            )
-
-        scenario.set_number_of_rays(number_of_rays=number_of_rays)
-
-        ray_tracer = HeliostatRayTracer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-            rank=ddp_setup[config_dictionary.heliostat_group_rank],
-            batch_size=batch_size,
-            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
-            bitmap_resolution=bitmap_resolution,
-        )
-
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-
-        bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
-            bitmaps_per_heliostat=bitmaps_per_heliostat,
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-
-        combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
-
-    if ddp_setup[config_dictionary.is_nested]:
-        torch.distributed.all_reduce(
-            combined_bitmaps_per_target,
-            op=torch.distributed.ReduceOp.SUM,
-            group=ddp_setup[config_dictionary.process_subgroup],
-        )
-
-    if ddp_setup[config_dictionary.is_distributed]:
-        torch.distributed.all_reduce(
-            combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
-        )
-
-    return combined_bitmaps_per_target
-
+        torch.save(data, save_dir / f"reconstructed_heliostats_data_{results_number}.pt")
 
 def merge_data(
     unoptimized_data: dict[str, dict[str, torch.Tensor]],
@@ -440,49 +308,47 @@ def merge_data(
     dict[str, dict[str, torch.Tensor]]
         The combined data dictionary.
     """
-    merged = {}
+    with torch.no_grad():
+        merged = {}
 
-    for heliostat in unoptimized_data.keys():
-        fluxes = torch.stack(
-            (
-                unoptimized_data[heliostat]["measured_flux"],
-                unoptimized_data[heliostat]["artist_flux"],
-                optimized_data[heliostat]["artist_flux"],
-            )
-        )
-
-        merged[heliostat] = {
-            "fluxes": fluxes,
-        }
-
-        if len(unoptimized_data[heliostat]) > 2:
-            surface_points = torch.stack(
+        for heliostat in unoptimized_data.keys():
+            fluxes = torch.stack(
                 (
-                    unoptimized_data[heliostat]["surface_points"],
-                    optimized_data[heliostat]["surface_points"],
+                    unoptimized_data[heliostat]["measured_flux"],
+                    unoptimized_data[heliostat]["artist_flux"],
+                    optimized_data[heliostat]["artist_flux"],
                 )
             )
-            surface_normals = torch.stack(
-                (
-                    unoptimized_data[heliostat]["surface_normals"],
-                    optimized_data[heliostat]["surface_normals"],
-                )
-            )
-            canting = optimized_data[heliostat]["canting"]
-            facet_translations = optimized_data[heliostat]["facet_translations"]
-
             merged[heliostat] = {
                 "fluxes": fluxes,
-                "surface_points": surface_points,
-                "surface_normals": surface_normals,
-                "canting": canting,
-                "facet_translations": facet_translations,
             }
+            if len(unoptimized_data[heliostat]) > 2:
+                surface_points = torch.stack(
+                    (
+                        unoptimized_data[heliostat]["surface_points"],
+                        optimized_data[heliostat]["surface_points"],
+                    )
+                )
+                surface_normals = torch.stack(
+                    (
+                        unoptimized_data[heliostat]["surface_normals"],
+                        optimized_data[heliostat]["surface_normals"],
+                    )
+                )
+                canting = optimized_data[heliostat]["canting"]
+                facet_translations = optimized_data[heliostat]["facet_translations"]
+                merged[heliostat] = {
+                    "fluxes": fluxes,
+                    "surface_points": surface_points,
+                    "surface_normals": surface_normals,
+                    "canting": canting,
+                    "facet_translations": facet_translations,
+                }
 
     return merged
 
 
-def kinematics_data(
+def kinematics_plots(
     scenario: Scenario,
     ddp_setup: dict[str, Any],
     heliostat_data: dict[
@@ -513,83 +379,76 @@ def kinematics_data(
     dict[str, dict[str, torch.Tensor]]
         Dictionary containing kinematics data per heliostat.
     """
-    device = get_device(device)
+    with torch.no_grad():
+        device = get_device(device)
+        bitmaps_for_plots = {}
 
-    bitmaps_for_plots = {}
+        for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
+            ddp_setup[config_dictionary.rank]
+        ]:
+            heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
+                heliostat_group_index
+            ]
+            parser = cast(
+                CalibrationDataParser, heliostat_data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
+                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+                heliostat_data[config_dictionary.heliostat_data_mapping],
+            )
+            (
+                measured_fluxes,
+                _,
+                incident_ray_directions,
+                _,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=scenario,
+                device=device,
+            )
+            heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask, device=device
+            )
+            heliostat_group.align_surfaces_with_incident_ray_directions(
+                aim_points=scenario.target_areas.centers[target_area_mask],
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
+            scenario.set_number_of_rays(number_of_rays=100)
+            ray_tracer = HeliostatRayTracer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                blocking_active=False,
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                batch_size=heliostat_group.number_of_active_heliostats,
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+            )
+            bitmaps_per_heliostat = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask=target_area_mask,
+                device=device,
+            )
+            names = [
+                heliostat_group.names[i]
+                for i in torch.nonzero(active_heliostats_mask).squeeze()
+            ]
 
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
-    ]:
-        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
-            heliostat_group_index
-        ]
+            for i, heliostat in enumerate(names):
+                bitmaps_for_plots[heliostat] = {
+                    "artist_flux": bitmaps_per_heliostat[i],
+                    "measured_flux": measured_fluxes[i],
+                }
 
-        parser = cast(
-            CalibrationDataParser, heliostat_data[config_dictionary.data_parser]
-        )
-        heliostat_mapping = cast(
-            list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            heliostat_data[config_dictionary.heliostat_data_mapping],
-        )
-        (
-            measured_fluxes,
-            _,
-            incident_ray_directions,
-            _,
-            active_heliostats_mask,
-            target_area_mask,
-        ) = parser.parse_data_for_reconstruction(
-            heliostat_data_mapping=heliostat_mapping,
-            heliostat_group=heliostat_group,
-            scenario=scenario,
-            device=device,
-        )
-
-        heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask, device=device
-        )
-
-        heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            device=device,
-        )
-
-        scenario.set_number_of_rays(number_of_rays=100)
-
-        ray_tracer = HeliostatRayTracer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            blocking_active=False,
-            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-            rank=ddp_setup[config_dictionary.heliostat_group_rank],
-            batch_size=heliostat_group.number_of_active_heliostats,
-            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
-        )
-
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-
-        names = [
-            heliostat_group.names[i]
-            for i in torch.nonzero(active_heliostats_mask).squeeze()
-        ]
-
-        for i, heliostat in enumerate(names):
-            bitmaps_for_plots[heliostat] = {
-                "artist_flux": bitmaps_per_heliostat[i],
-                "measured_flux": measured_fluxes[i],
-            }
-
-    return bitmaps_for_plots
+        return bitmaps_for_plots
 
 
-def surface_data(
+def surface_plots(
     scenario: Scenario,
     ddp_setup: dict[str, Any],
     heliostat_data: dict[
@@ -622,129 +481,202 @@ def surface_data(
     dict[str, dict[str, torch.Tensor]]
         Dictionary containing surface data per heliostat.
     """
-    device = get_device(device=device)
+    with torch.no_grad():
+        device = get_device(device=device)
+        data_for_plots = {}
 
-    data_for_plots = {}
+        for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
+            ddp_setup[config_dictionary.rank]
+        ]:
+            heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
+                heliostat_group_index
+            ]
+            parser = cast(
+                CalibrationDataParser, heliostat_data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
+                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+                heliostat_data[config_dictionary.heliostat_data_mapping],
+            )
+            (
+                measured_fluxes,
+                _,
+                incident_ray_directions,
+                _,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=scenario,
+                device=device,
+            )
+            heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask, device=device
+            )
+            heliostat_group.align_surfaces_with_incident_ray_directions(
+                aim_points=scenario.target_areas.centers[target_area_mask],
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
+            scenario.set_number_of_rays(number_of_rays=100)
+            ray_tracer = HeliostatRayTracer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                blocking_active=False,
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                batch_size=heliostat_group.number_of_active_heliostats,
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+            )
+            bitmaps_per_heliostat = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask=target_area_mask,
+                device=device,
+            )
+            cropped_flux_distributions = utils.crop_flux_distributions_around_center(
+                flux_distributions=bitmaps_per_heliostat,
+                crop_width=config_dictionary.utis_crop_width,
+                crop_height=config_dictionary.utis_crop_height,
+                target_plane_widths=scenario.target_areas.dimensions[target_area_mask][
+                    :, index_mapping.target_area_width
+                ],
+                target_plane_heights=scenario.target_areas.dimensions[target_area_mask][
+                    :, index_mapping.target_area_height
+                ],
+                device=device,
+            )
+            names = [
+                heliostat_group.names[i]
+                for i in torch.nonzero(active_heliostats_mask).squeeze()
+            ]
 
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
-    ]:
-        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
-            heliostat_group_index
-        ]
+            for index, heliostat in enumerate(names):
+                heliostat_index_global = heliostat_group.names.index(heliostat)
+                data_for_plots[heliostat] = {
+                    "measured_flux": measured_fluxes[index],
+                    "artist_flux": cropped_flux_distributions[index],
+                    "surface_points": heliostat_group.surface_points[heliostat_index_global],
+                    "surface_normals": heliostat_group.surface_normals[heliostat_index_global],
+                    "canting": heliostat_group.canting[heliostat_index_global],
+                    "facet_translations": heliostat_group.facet_translations[heliostat_index_global],
+                }
 
-        parser = cast(
-            CalibrationDataParser, heliostat_data[config_dictionary.data_parser]
-        )
-        heliostat_mapping = cast(
-            list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            heliostat_data[config_dictionary.heliostat_data_mapping],
-        )
-        (
-            measured_fluxes,
-            _,
-            incident_ray_directions,
-            _,
-            active_heliostats_mask,
-            target_area_mask,
-        ) = parser.parse_data_for_reconstruction(
-            heliostat_data_mapping=heliostat_mapping,
-            heliostat_group=heliostat_group,
-            scenario=scenario,
-            device=device,
-        )
-
-        heliostat_group.activate_heliostats(
-            active_heliostats_mask=active_heliostats_mask, device=device
-        )
-
-        heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            device=device,
-        )
-
-        scenario.set_number_of_rays(number_of_rays=100)
-
-        ray_tracer = HeliostatRayTracer(
-            scenario=scenario,
-            heliostat_group=heliostat_group,
-            blocking_active=False,
-            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-            rank=ddp_setup[config_dictionary.heliostat_group_rank],
-            batch_size=heliostat_group.number_of_active_heliostats,
-            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
-        )
-
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
-            incident_ray_directions=incident_ray_directions,
-            active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
-            device=device,
-        )
-
-        cropped_flux_distributions = utils.crop_flux_distributions_around_center(
-            flux_distributions=bitmaps_per_heliostat,
-            crop_width=config_dictionary.utis_crop_width,
-            crop_height=config_dictionary.utis_crop_height,
-            target_plane_widths=scenario.target_areas.dimensions[target_area_mask][
-                :, index_mapping.target_area_width
-            ],
-            target_plane_heights=scenario.target_areas.dimensions[target_area_mask][
-                :, index_mapping.target_area_height
-            ],
-            device=device,
-        )
-
-        names = [
-            heliostat_group.names[i]
-            for i in torch.nonzero(active_heliostats_mask).squeeze()
-        ]
-
-        for index, heliostat in enumerate(names):
-            heliostat_index_global = heliostat_group.names.index(heliostat)
-            data_for_plots[heliostat] = {
-                "measured_flux": measured_fluxes[index],
-                "artist_flux": cropped_flux_distributions[index],
-                "surface_points": heliostat_group.surface_points[heliostat_index_global],
-                "surface_normals": heliostat_group.surface_normals[heliostat_index_global],
-                "canting": heliostat_group.canting[heliostat_index_global],
-                "facet_translations": heliostat_group.facet_translations[heliostat_index_global],
-            }
-
-    return data_for_plots
+        return data_for_plots
 
 
-def load_kinematics_from_file(
-    kinematics_path: pathlib.Path, scenario: Scenario
-) -> Scenario:
+def aim_point_plots(
+    scenario: Scenario,
+    incident_ray_direction: torch.Tensor,
+    target_area_index: int,
+    aim_point,
+    dni: float,
+    id: str,
+    batch_size: int,
+    device: torch.device | None = None,
+) -> dict[str, dict[str, torch.Tensor]]:
     """
-    Load kinematics data from a file.
+    Extract heliostat kinematics information.
 
-    Parameter
-    ---------
-    kinematics_path : pathlib.Path
-        Path to the kinematics data.
+    Parameters
+    ----------
     scenario : Scenario
-        Scenario containing the rest of the data.
+        The scenario.
+    incident_ray_direction : torch.Tensor
+        The incident ray direction during the optimization.
+        Tensor of shape [4].
+    target_area_index : int
+        The index of the target used for the optimization.
+    dni : float
+        Direct normal irradiance in W/m^2.
+    id : str
+        Identifier fluxes.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
-    Scenario
-        The scenario overwritten with the loaded kinematics data.
+    dict[str, dict[str, torch.Tensor]]
+        Kinematics data per heliostat.
     """
-    loaded_kinematics = torch.load(kinematics_path, weights_only=False)
-    for heliostat_group, loaded_kinematics in zip(
-        scenario.heliostat_field.heliostat_groups, loaded_kinematics
-    ):
-        heliostat_group.kinematics.rotation_deviation_parameters = loaded_kinematics[
-            "rotation_deviation_parameters"
-        ]
-        heliostat_group.kinematics.actuators.optimizable_parameters = loaded_kinematics[
-            "optimizable_parameters"
-        ]
-    return scenario
+    with torch.no_grad():
+        device = get_device(device)
+        bitmap_resolution = torch.tensor([256, 256], device=device)
+        total_flux = torch.zeros(
+            (
+                bitmap_resolution[index_mapping.unbatched_bitmap_e],
+                bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            ),
+            device=device,
+        )
+
+        for heliostat_group_index, heliostat_group in enumerate(
+            scenario.heliostat_field.heliostat_groups
+        ):
+            (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+                scenario.index_mapping(
+                    heliostat_group=heliostat_group,
+                    single_incident_ray_direction=incident_ray_direction,
+                    single_target_area_index=target_area_index,
+                    device=device,
+                )
+            )
+            heliostat_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_mask,
+                device=device,
+            )
+            if id == "before":
+                heliostat_group.align_surfaces_with_incident_ray_directions(
+                    aim_points=aim_point,
+                    incident_ray_directions=incident_ray_directions,
+                    active_heliostats_mask=active_heliostats_mask,
+                    device=device,
+                )
+            elif id == "after":
+                heliostat_group.align_surfaces_with_motor_positions(
+                    motor_positions=heliostat_group.kinematics.active_motor_positions,
+                    active_heliostats_mask=active_heliostats_mask,
+                    device=device,
+                )
+
+        for heliostat_group_index, heliostat_group in enumerate(
+            scenario.heliostat_field.heliostat_groups
+        ):
+            (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+                scenario.index_mapping(
+                    heliostat_group=heliostat_group,
+                    single_incident_ray_direction=incident_ray_direction,
+                    single_target_area_index=target_area_index,
+                    device=device,
+                )
+            )
+            scenario.set_number_of_rays(number_of_rays=5)
+            ray_tracer = HeliostatRayTracer(
+                scenario=scenario,
+                heliostat_group=heliostat_group,
+                blocking_active=True,
+                batch_size=batch_size,
+                bitmap_resolution=bitmap_resolution,
+                dni=dni,
+            )
+            bitmaps_per_heliostat = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_mask=target_area_mask,
+                device=device,
+            )
+            flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
+                bitmaps_per_heliostat=bitmaps_per_heliostat,
+                target_area_mask=target_area_mask,
+                device=device,
+            )[target_area_index]
+            total_flux += flux_distribution_on_target
+
+        return total_flux
 
 
 @track_runtime(runtime_log)
@@ -811,7 +743,6 @@ def ablation_study(
     loss_history_aim_points = None
     loss_history_surface = None
     loss_history_kinematics = None
-    motor_positions = None
     reconstructed_surface_path = (
         results_dir / f"reconstructed_surfaces_{results_number}.pt"
     )
@@ -865,13 +796,6 @@ def ablation_study(
             surface_config is not None
             and data_mappings is not None
         ):
-            # Save original surface data for plots.
-            surface_data_before = surface_data(
-                scenario=scenario,
-                ddp_setup=ddp_setup,
-                heliostat_data=data_mappings["surface_plot"],
-                device=device,
-            )
             if reconstructed_surface_path.exists():
                 print(
                     "A surface reconstruction viable for this case has been computed previously. Loading the results."
@@ -885,9 +809,15 @@ def ablation_study(
                 ):
                     heliostat_group.nurbs_control_points = control_points
                 scenario.heliostat_field.update_surfaces(device=device)
-
             else:
                 # Reconstruct surfaces.
+                # Save original surface data for plots.
+                surface_data_before = surface_plots(
+                    scenario=scenario,
+                    ddp_setup=ddp_setup,
+                    heliostat_data=data_mappings["surface_plot"],
+                    device=device,
+                )
                 scenario.set_number_of_rays(
                     number_of_rays=surface_config["number_of_rays"]
                 )
@@ -961,7 +891,6 @@ def ablation_study(
                     loss_history_surface.append(loss_history_surface_part)
                     if ddp_setup["is_distributed"]:
                         torch.distributed.barrier()
-
                 reconstructed_nurbs_control_points = [
                     heliostat_group.nurbs_control_points.detach()
                     for heliostat_group in scenario.heliostat_field.heliostat_groups
@@ -970,24 +899,23 @@ def ablation_study(
                 torch.save(
                     reconstructed_nurbs_control_points, reconstructed_surface_path
                 )
-
-            # Save reconstructed surface data.
-            surface_data_after = surface_data(
-                scenario=scenario,
-                ddp_setup=ddp_setup,
-                heliostat_data=data_mappings["surface_plot"],
-                device=device,
-            )
-            merged_data_surface = merge_data(
-                unoptimized_data=surface_data_before,
-                optimized_data=surface_data_after,
-            )
-            results_dict["surface_reconstruction"] = merged_data_surface
+                # Save reconstructed surface data for plots.
+                surface_data_after = surface_plots(
+                    scenario=scenario,
+                    ddp_setup=ddp_setup,
+                    heliostat_data=data_mappings["surface_plot"],
+                    device=device,
+                )
+                merged_data_surface = merge_data(
+                    unoptimized_data=surface_data_before,
+                    optimized_data=surface_data_after,
+                )
+                results_dict[f"surface_reconstruction_{ablation_study_case}"] = merged_data_surface
 
             # Inform kinematics reconstruction, that surfaces have been reconstructed.
             reconstructed_kinematics_path = (
                 results_dir
-                / f"reconstructed_kinematics_reconstructed_surfaces_{results_number}.pt"
+                / f"reconstructed_kinematics_{ablation_study_case}_{results_number}.pt"
             )
 
         # Kinematics reconstruction.
@@ -999,18 +927,26 @@ def ablation_study(
                 print(
                     "A kinematics reconstruction viable for this case has been previously made. Loading the results."
                 )
-                scenario = load_kinematics_from_file(
-                    kinematics_path=reconstructed_kinematics_path,
-                    scenario=scenario,
-                )
+                loaded_kinematics = torch.load(reconstructed_kinematics_path, weights_only=False)
+                for heliostat_group, loaded_kinematics in zip(
+                    scenario.heliostat_field.heliostat_groups, loaded_kinematics
+                ):
+                    heliostat_group.kinematics.rotation_deviation_parameters = loaded_kinematics[
+                        "rotation_deviation_parameters"
+                    ]
+                    heliostat_group.kinematics.actuators.optimizable_parameters = loaded_kinematics[
+                        "optimizable_parameters"
+                    ]
             else:
+                # Reconstruct kinematics.
                 # Save original kinematics data for plots.
-                bitmaps_for_kinematics_plots_before = kinematics_data(
+                kinematics_data_before = kinematics_plots(
                     scenario=scenario,
                     ddp_setup=ddp_setup,
                     heliostat_data=data_mappings["kinematics_plot"],
+                    device=device
+
                 )
-                # Reconstruct kinematics.
                 scenario.set_number_of_rays(number_of_rays=kinematics_config["number_of_rays"])
                 optimization_configuration_kinematics = {
                     config_dictionary.optimization: {
@@ -1051,21 +987,17 @@ def ablation_study(
                 if ddp_setup["is_distributed"]:
                     torch.distributed.barrier()
                 # Save reconstructed kinematics data.
-                bitmaps_for_kinematics_plots_after = kinematics_data(
+                kinematics_data_after = kinematics_plots(
                     scenario=scenario,
                     ddp_setup=ddp_setup,
                     heliostat_data=data_mappings["kinematics_plot"],
+                    device=device
                 )
                 merged_data_kinematics = merge_data(
-                    unoptimized_data=bitmaps_for_kinematics_plots_before,
-                    optimized_data=bitmaps_for_kinematics_plots_after,
+                    unoptimized_data=kinematics_data_before,
+                    optimized_data=kinematics_data_after,
                 )
-                surface = (
-                    "ideal_surface"
-                    if surface_config is None
-                    else "reconstructed_surface"
-                )
-                results_dict[f"kinematics_reconstruction_{surface}"] = (
+                results_dict[f"kinematics_reconstruction_{ablation_study_case}"] = (
                     merged_data_kinematics
                 )
                 # Save reconstructed kinematics.
@@ -1082,6 +1014,16 @@ def ablation_study(
 
         # Aim point optimization.
         if aim_point_config is not None:
+            aim_point_data_before = aim_point_plots(
+                scenario=scenario,
+                incident_ray_direction=baseline_incident_ray_direction,
+                target_area_index=baseline_target_area_index,
+                aim_point=baseline_aim_point,
+                dni=basic_config["dni"],
+                id="before",
+                batch_size=basic_config["batch_size"],
+                device=device,
+            )
             scenario.set_number_of_rays(number_of_rays=aim_point_config["number_of_rays"])
             optimization_configuration_aim_points = {
                 config_dictionary.optimization: {
@@ -1124,26 +1066,31 @@ def ablation_study(
             aimpoint_optimization_final_loss, loss_history_aim_points = motor_positions_optimizer.optimize(
                 loss_definition=KLDivergenceLoss(), device=device
             )
-            motor_positions = [
-                heliostat_group.kinematics.motor_positions
-                for heliostat_group in scenario.heliostat_field.heliostat_groups
-            ]            
+            aim_point_data_after = aim_point_plots(
+                scenario=scenario,
+                incident_ray_direction=baseline_incident_ray_direction,
+                target_area_index=baseline_target_area_index,
+                aim_point=baseline_aim_point,
+                dni=aim_point_config["dni"],
+                id="after",
+                batch_size=aim_point_config["batch_size"],
+                device=device,
+            )         
             if ddp_setup["is_distributed"]:
                 torch.distributed.barrier()
-
-        # Create final raytracing results of all optimizations combined.
-        scenario.set_number_of_rays(basic_config["number_of_rays"])
-        combined_bitmaps_per_target = align_and_trace_rays(
-            scenario=scenario,
-            ddp_setup=ddp_setup,
-            incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=baseline_target_area_index,
-            aim_point=baseline_aim_point,
-            motor_positions=motor_positions,
-            batch_size=basic_config["batch_size"],
-            number_of_rays=basic_config["number_of_rays"],
-            device=device
-        )
+            results_dict[f"aim_point_optimization_{ablation_study_case}"] = torch.stack((aim_point_data_before, aim_point_data_after))
+        else:
+            aim_point_data = aim_point_plots(
+                scenario=scenario,
+                incident_ray_direction=baseline_incident_ray_direction,
+                target_area_index=baseline_target_area_index,
+                aim_point=baseline_aim_point,
+                dni=basic_config["dni"],
+                id="before",
+                batch_size=basic_config["batch_size"],
+                device=device,
+            )
+            results_dict[f"aim_point_optimization_{ablation_study_case}"] = aim_point_data
 
         # Save data to be used in the STRAL comparison.
         if ablation_study_case == 7 and data_for_stral_dir is not None:
@@ -1154,8 +1101,7 @@ def ablation_study(
             )
 
         # Save all results.
-        results_dict[f"ablation_study_case_{ablation_study_case}"] = {
-            "flux": combined_bitmaps_per_target[baseline_target_area_index],
+        results_dict[f"losses{ablation_study_case}"] = {
             "surface_reconstruction_loss_per_heliostat": surface_reconstruction_final_loss_per_heliostat,
             "kinematics_reconstruction_loss_per_heliostat": kinematics_reconstruction_final_loss_per_heliostat,
             "aimpoint_optimization_loss_per_heliostat": aimpoint_optimization_final_loss,
@@ -1209,7 +1155,7 @@ def create_heliostat_data_mappings(
         (
             item["name"],
             [pathlib.Path(item["calibrations"][0])],
-            [pathlib.Path(item["kinematics_reconstruction_flux_images"][0])],
+            [pathlib.Path(item["kinematic_reconstruction_flux_images"][0])],
         )
         for item in viable_heliostats
         if item["name"] in heliostats_for_plots
@@ -1230,7 +1176,7 @@ def create_heliostat_data_mappings(
         (
             item["name"],
             [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["kinematics_reconstruction_flux_images"]],
+            [pathlib.Path(p) for p in item["kinematic_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
     ]
@@ -1456,8 +1402,8 @@ def main() -> None:
     args = parser.parse_args(args=unknown)
     device = get_device(torch.device(args.device))
 
-    # for case in ["baseline", "full_field"]:
-    for case in ["full_field"]:
+    #for case in ["baseline", "full_field"]:
+    for case in ["baseline"]:
         # Set directory paths.
         results_dir = pathlib.Path(args.results_dir) / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)

@@ -47,8 +47,8 @@ def plot_kinematics_reconstruction_flux(
         Path to the location where the plots are saved.
     """
     reconstructions = [
-        "kinematic_reconstruction_ideal_surface",
-        "kinematic_reconstruction_reconstructed_surface",
+        "kinematics_reconstruction_ideal_surface",
+        "kinematics_reconstruction_reconstructed_surface",
     ]
 
     col_labels = [
@@ -175,7 +175,7 @@ def plot_kinematics_error_distribution(
 
     for case in cases:
         errors_in_meters = np.array(
-            results[case]["kinematic_reconstruction_loss_per_heliostat"].detach().cpu()
+            results[case]["kinematics_reconstruction_loss_per_heliostat"].detach().cpu()
         )
         positions = list(results["heliostat_positions"].values())
         distances = np.linalg.norm(np.array(positions)[:, :3], axis=1)
@@ -248,7 +248,7 @@ def plot_kinematics_error_against_distance(
 
     for plot_index, case in enumerate(cases):
         errors_in_meters = np.array(
-            results[case]["kinematic_reconstruction_loss_per_heliostat"].detach().cpu()
+            results[case]["kinematics_reconstruction_loss_per_heliostat"].detach().cpu()
         )
         positions = list(results["heliostat_positions"].values())
         distances = np.linalg.norm(np.array(positions)[:, :3], axis=1)
@@ -723,8 +723,8 @@ def plot_aim_point_flux(
     """
     measured_flux = results["measured_flux"]
     homogeneous_distribution = results["homogeneous_distribution"]
-    unoptimized_flux = results["ablation_study_case_7"]["flux"].squeeze(0)
-    optimized_flux = results["ablation_study_case_8"]["flux"].squeeze(0)
+    unoptimized_flux = results["aim_point_optimization_8"][0]
+    optimized_flux = results["aim_point_optimization_8"][1]
 
     measured_flux_normed = measured_flux * (unoptimized_flux.sum() / measured_flux.sum())
     homogeneous_distribution_normed = homogeneous_distribution * (optimized_flux.sum() / homogeneous_distribution.sum())
@@ -899,50 +899,118 @@ def plot_aim_point_loss_history(
     print(f"Saved aim point optimization loss history plot at: {filename}.")
 
 
-def plot_tradeoffs(df):
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+def plot_tradeoffs(df, save_path):
 
-    # Panel A: Stacked runtime per task
+    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+
+    # -------------------------
+    # Panel A: Stacked Runtime per Task
+    # -------------------------
+    alpha = 0.5
+    run_ids = df["run_id"].unique()
+    task_order = ["surface", "kinematics", "aim_points"]
+    ablation_case_map = {"surface": 5, "kinematics": 7, "aim_points": 8}
+
+    # Build data for stacked bars
+    stacked_data = pd.DataFrame(index=run_ids, columns=task_order, dtype=float)
+
+    for task in task_order:
+        case = ablation_case_map[task]
+        df_task = df[(df["task"] == task) & (df["ablation_case"] == case)]
+        for run_id in run_ids:
+            val = df_task[df_task["run_id"] == run_id]["runtime"]
+            stacked_data.loc[run_id, task] = val.values[0] if not val.empty else 0.0
+
+    # Plot stacked bars manually
+    bottom = pd.Series(0, index=run_ids)
+    for task, color in zip(task_order, [plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]]):
+        axes[0].bar(
+            x=stacked_data.index,
+            height=stacked_data[task],
+            bottom=bottom,
+            color=color,
+            alpha=alpha,
+            label=task.capitalize()
+        )
+        # Annotate runtime values + parameters
+        for run_id in stacked_data.index:
+            runtime_val = stacked_data.loc[run_id, task]
+            if runtime_val > 0:
+                param_col = f"parameters_{task}"
+                if param_col in df.columns:
+                    # Find the parameters for the matching ablation case
+                    param_dict = df[(df["run_id"] == run_id) & (df["task"] == task) & 
+                                    (df["ablation_case"] == ablation_case_map[task])][param_col].iloc[0]
+                    max_epoch = param_dict.get("max_epoch", "")
+                    number_of_rays = param_dict.get("number_of_rays", "")
+                    if task == "surface":
+                        batch_outer = param_dict.get("batch_size_outer", "")
+                        batch_inner = param_dict.get("batch_size", "")
+                        batch_str = f"({batch_outer},{batch_inner})"
+                    else:
+                        batch_str = str(param_dict.get("batch_size", ""))
+                    annotation = f"{runtime_val:.1f}s\nepochs: {max_epoch}\nrays: {number_of_rays}\nbatch: {batch_str}"
+                else:
+                    annotation = f"{runtime_val:.1f}s"
+                axes[0].text(
+                    x=run_id,
+                    y=bottom[run_id] + runtime_val/2,
+                    s=annotation,
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color="black"
+                )
+        bottom += stacked_data[task]
+
+    # Annotate hardware under each run
+    for run_idx, run_id in enumerate(run_ids):
+        hardware = df[df["run_id"] == run_id]["hardware"].iloc[0]
+        axes[0].text(
+            x=run_idx,
+            y=-0.05*stacked_data.values.max(),
+            s=str(hardware),
+            ha="right",
+            va="top",
+            fontsize=10,
+            rotation=45,
+            color="black"
+        )
+
+    axes[0].set_ylabel("Runtime (s)")
+    axes[0].set_xlabel("Run ID")
+    axes[0].set_title("Stacked Runtime per Task with Parameters")
+    axes[0].set_xticks(range(len(run_ids)))
+    axes[0].set_xticklabels(run_ids, rotation=0, ha="center")
+    axes[0].legend(title="Task", bbox_to_anchor=(1.02, 1), loc="upper left")
+
+    # -------------------------
+    # Panel B: Task-wise Loss (all ablation cases)
+    # -------------------------
     sns.barplot(
-        data=df, x="run_id", y="runtime", hue="task", ax=axes[0,0], ci=None
+        data=df, x="run_id", y="loss", hue="task",
+        ci=None, ax=axes[1],
+        palette=[plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]],
+        alpha=alpha
     )
-    axes[0,0].set_title("Task-wise Runtime")
-
-    # Panel B: Loss per task
-    sns.barplot(
-        data=df, x="run_id", y="loss", hue="optimized", ax=axes[0,1], ci=None
-    )
-    axes[0,1].set_title("Task-wise Loss")
-
-    # Panel C: Total runtime vs total loss
-    # df_runs = df.groupby(["hardware","run_id"]).agg(
-    #     total_runtime=("total_runtime","first"),
-    #     total_loss=("loss","sum")
-    # ).reset_index()
-    # sns.scatterplot(
-    #     data=df_runs, x="total_runtime", y="total_loss",
-    #     hue="hardware", style="run_id", s=100, ax=axes[1,0]
-    # )
-    # axes[1,0].set_title("Runtime vs Cumulative Loss (Pareto)")
-
-    # Panel D: Heatmap example for surface task
-    # df_surface = df[df["task"]=="surface"]
-    # pivot = df_surface.pivot_table(
-    #     index="batch_size_outer", columns="max_epoch", values="runtime", aggfunc="mean"
-    # )
-    # sns.heatmap(pivot, annot=True, ax=axes[1,1])
-    # axes[1,1].set_title("Surface Runtime Heatmap")
+    axes[1].set_title("Task-wise Loss per Run")
+    axes[1].set_xlabel("Run ID")
+    axes[1].set_ylabel("Loss")
+    axes[1].legend(title="Task", bbox_to_anchor=(1.02, 1), loc="upper left")
+    axes[1].set_xticklabels(run_ids, rotation=0, ha="center")
 
     plt.tight_layout()
-    plt.savefig("test")
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)
+
 
 def build_dataframe(results: list[dict[str, Any]], save_dir: pathlib.Path):
     rows = []
-    tasks = {"surface": "surface_reconstruction_loss_per_heliostat", "kinematic": "kinematic_reconstruction_loss_per_heliostat", "aim_points": "aimpoint_optimization_loss_per_heliostat"}
+    tasks = {"surface": "surface_reconstruction_loss_per_heliostat", "kinematics": "kinematics_reconstruction_loss_per_heliostat", "aim_points": "aimpoint_optimization_loss_per_heliostat"}
     parameters = {"surface": ["max_epoch", "batch_size", "batch_size_outer", "number_of_rays"], "kinematics": ["max_epoch", "batch_size", "number_of_rays"], "aim_points": ["max_epoch", "batch_size", "number_of_rays"]}
     
     for run in results:
-        hw = "NVIDIA RTX A6000"
+        hw = run["run_info"]["hardware"]
         run_id = run["run_info"]["run_id"]
         total_runtime = np.sum(run["run_info"]["runtimes"])
         for i in range(1, 9):
@@ -962,11 +1030,38 @@ def build_dataframe(results: list[dict[str, Any]], save_dir: pathlib.Path):
                 }
                 # Add task-specific parameters
                 for parameter in parameters:
-                    row[parameter] = run["run_info"]["parameters"][parameter]
+                    row[f"parameters_{parameter}"] = run["run_info"]["parameters"][parameter]
                 rows.append(row)
     df = pd.DataFrame(rows)
     
-    plot_tradeoffs(df)
+    plot_tradeoffs(df, save_dir)
+
+def plot_runs(save_dir: pathlib.Path, results_paths):
+    counter = 1
+    results_list = []
+    for results_path, hardware in zip(results_paths, ["NVIDIA RTX A6000", "NVIDIA Grace-Hopper"]):
+        if not results_path.exists():
+            raise FileNotFoundError(
+                f"Results directory not found: {results_path}. Please run ``reconstruction_generate_results.py``"
+                f"or adjust the location of the results file and try again!"
+            )
+
+        for file in results_path.iterdir():
+            if file.name.startswith("results_"):
+                data = torch.load(
+                    file,
+                    weights_only=False,
+                    map_location=device,
+                )
+                data["run_info"]["hardware"] = hardware
+                data["run_info"]["run_id"] = counter
+                counter += 1 
+                results_list.append(data)
+
+    build_dataframe(results=results_list, save_dir=save_dir)
+
+
+
 
 if __name__ == "__main__":
     """
@@ -1048,11 +1143,11 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
 
     # for case in ["baseline", "full_field"]:
-    for case in ["baseline"]:
+    for case in ["case_8/baseline"]:
         plots_path = pathlib.Path(args.plots_dir) / case
 
         plots_path.mkdir(parents=True, exist_ok=True)
-        results_number = 1
+        results_number = 2
         results_path = pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
 
         if not results_path.exists():
@@ -1067,20 +1162,18 @@ if __name__ == "__main__":
             map_location=device,
         )
 
-        dataframe_results = [results]
+        #plot_runs(save_dir=plots_path / "runtimes.pdf", results_paths=[pathlib.Path(args.results_dir) / case, pathlib.Path(args.results_dir) / "ftp" / case])
 
-        build_dataframe(results=dataframe_results, save_dir=plots_path)
-
-        #plot_surface_reconstruction_flux(results=results, save_dir=plots_path)        
-        #plot_surface_error_distribution(results=results, save_dir=plots_path)
-        #plot_surface_error_against_distance(results=results, save_dir=plots_path)
-        #plot_surface_loss_history(results=results, save_dir=plots_path)
+        # plot_surface_reconstruction_flux(results=results, save_dir=plots_path)        
+        # plot_surface_error_distribution(results=results, save_dir=plots_path)
+        # plot_surface_error_against_distance(results=results, save_dir=plots_path)
+        # plot_surface_loss_history(results=results, save_dir=plots_path)
 
         # plot_kinematics_reconstruction_flux(results=results, save_dir=plots_path)
         # plot_kinematics_error_distribution(results=results, save_dir=plots_path) 
         # plot_kinematics_error_against_distance(results=results, save_dir=plots_path)
         # plot_kinematics_loss_history(results=results, save_dir=plots_path)
 
-        # plot_aim_point_flux(results=results, save_dir=plots_path)        
-        # plot_aim_point_loss_history(results=results, save_dir=plots_path)
+        plot_aim_point_flux(results=results, save_dir=plots_path)        
+        plot_aim_point_loss_history(results=results, save_dir=plots_path)
         
