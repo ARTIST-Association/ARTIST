@@ -915,7 +915,7 @@ def ablation_study(
             # Inform kinematics reconstruction, that surfaces have been reconstructed.
             reconstructed_kinematics_path = (
                 results_dir
-                / f"reconstructed_kinematics_{ablation_study_case}_{results_number}.pt"
+                / f"reconstructed_kinematic_reconstructed_surfaces_{results_number}.pt"
             )
 
         # Kinematics reconstruction.
