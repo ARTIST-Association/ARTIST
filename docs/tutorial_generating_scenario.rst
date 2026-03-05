@@ -615,7 +615,7 @@ This heliostat configuration specifies:
   A unique identifier that can be used to quickly identify the heliostat within the scenario.
 ``position``
   The heliostat's position in the field. Note the one in the fourth dimension according to the previously discussed
-  :ref:'coordinate convention <coordinates>'.
+  :ref:`coordinate convention <coordinates>`.
 
 Since no individual surface, kinematics, or actuator parameters are provided, this heliostat will automatically use the
 prototype configurations. Since ``ARTIST`` is designed to support multiple heliostats, we need to wrap our heliostat
