@@ -34,6 +34,9 @@ Differentiable ray tracing in ``ARTIST`` is designed to be robust, work effectiv
 page provides a brief overview of some of the core principles governing how ``ARTIST`` handles processes and data
 internally.
 
+
+.. _coordinates:
+
 Coordinates
 -----------
 
