@@ -45,13 +45,14 @@ Choosing A Data Source
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The subsequent steps depend on the data source used to construct the scenario. Data with different input formats from
-different sources requires different preprocessing steps before they can be converted into an ``ARTIST`` scenario.
-may have to be handled differently to create scenarios in ``ARTIST``. This tutorial shows how to convert STRAL and
-PAINT data to create usable scenarios for ``ARTIST``. The solar tower ray tracing laboratory
-`STRAL <https://elib.dlr.de/78440/>`_ is a ray-tracing software, and `PAINT <https://paint-database.org/>`_ is the
-first FAIR database for operational data of concentrating solar power plants.
+different sources requires different preprocessing steps before it can be converted into an ``ARTIST`` scenario.
+This tutorial shows how to convert STRAL and PAINT data to create usable scenarios for ``ARTIST``. The solar tower ray
+tracing laboratory `STRAL <https://elib.dlr.de/78440/>`_ is a ray-tracing software, and
+`PAINT <https://paint-database.org/>`_ is the first FAIR database for operational data of concentrating solar power
+plants.
 
-We will first cover the workflow for PAINT data. If you are only interested in STRAL, please jump to :ref:`stral`.
+We will first cover the workflow for PAINT data. If you are only interested in STRAL, you can jump directly to
+:ref:`stral`.
 
 .. _paint:
 
@@ -64,8 +65,8 @@ To generate an ``ARTIST`` scenario from ``PAINT`` data, you must provide the fol
 - One or more ``heliostat-properties.json`` files
 - One or more ``deflectometry.h5`` files
 
-If you want to include multiple heliostats in your scenario, simply add one set of heliostat-specific files per
-heliostat.
+If you want to include multiple heliostats in your scenario, simply add one set of heliostat-specific files, i.e.,
+properties and deflectometry, per heliostat.
 
 .. code-block::
 
@@ -104,11 +105,9 @@ With the required input files defined, we can now proceed to building the scenar
 
 Power Plant and Target Areas
 ----------------------------
-The power plant location as well as the associated target areas (i.e., the receiver or calibration targets) are loaded
-simultaneously from the ``tower-measurement.json`` file.
-
-We can extract this information using functions from the ``paint_scenario_parser`` module. The function shown below will
-return
+The power plant location and the associated target areas (i.e., the receiver or calibration targets) are loaded
+simultaneously from the ``tower-measurement.json`` file. We can extract this information using functions from the
+``paint_scenario_parser`` module. The function shown below will return
 
 - an instance of ``PowerPlantConfig`` and
 - an instance of ``TowerAreaListConfig``, containing a list of viable target areas.
@@ -122,29 +121,32 @@ return
         )
     )
 
-The ``PowerPlantConfig`` object contains the following attributes:
+The ``PowerPlantConfig`` object provides the power plant's geographic location via the ``power_plant_position``
+attribute. The ``TargetAreaListConfig`` contains a list of multiple ``TargetAreaConfig`` objects. Each defines the
+following attributes:
 
-- ``power_plant_position``: The power plant's geographic location.
-
-The ``TargetAreaListConfig`` contains a list of multiple ``TargetAreaConfig`` objects. Each defines the following
-attributes:
-
-- ``target_area_key``: An identifier used to reference the target area when loading the ``ARTIST`` scenario – in this
+``target_area_key``
+  An identifier used to reference the target area when loading the ``ARTIST`` scenario – in this
   case, a receiver.
-- ``geometry``: The currently modeled geometry – in this case, a planar target area.
-- ``center``: The target area's middle position. Since this is a position tensor, its final element in the 4D
+``geometry``
+  The currently modeled geometry – in this case, a planar target area.
+``center``
+  The target area's middle position. Since this is a position tensor, its final element in the 4D
   representation is a 1 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
-- ``normal_vector``: The target area plane's normal vector. Since this is a direction tensor, its final element in the
+``normal_vector``
+  The target area plane's normal vector. Since this is a direction tensor, its final element in the
   4D representation is a 0 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
-- ``plane_e``: The direction vector defining the target area plane's east direction.
-- ``plane_u``: The direction vector defining the target area plane's up direction.
+``plane_e``
+  The direction vector defining the target area plane's east direction.
+``plane_u``
+  The direction vector defining the target area plane's up direction.
 
 .. _light_source:
 
 Light Source
 ------------
 The light source provides the radiation that is reflected by the heliostats. In most scenarios, this light source
-represents the ``Sun``. However, in certain applications, such as calibration setups, it may be useful to model multiple
+represents the sun. However, in certain applications, such as calibration setups, it may be useful to model multiple
 artificial light sources. Light source information is not read from external files and must be defined manually.
 We define the light source by creating a ``LightSourceConfig`` object as shown below:
 
@@ -162,12 +164,18 @@ We define the light source by creating a ``LightSourceConfig`` object as shown b
 
 This configuration specifies the following light source properties:
 
-- The ``light_source_key`` used to identify the light source when loading the ``ARTIST`` scenario.
-- The ``light_source_type`` which defines what type of light source is used. In this case, it is a ``Sun``.
-- The ``number_of_rays`` to be sampled from the light source for ray tracing.
-- The ``distribution_type`` which models what distribution is used to model the light source. In this case, we use a
-  normal distribution.
-- The ``mean`` and the ``covariance`` parameters of the selected normal distribution.
+``light_source_key``
+  Used to identify the light source when loading the ``ARTIST`` scenario.
+``light_source_type``
+  The type of light source used – in this case, a ``Sun``.
+``number_of_rays``
+  The number of rays to be sampled from the light source for ray tracing.
+``distribution_type``
+  The type of distribution used to model the light source – in this case, a normal distribution.
+``mean``
+  The mean parameter of the selected normal distribution.
+``covariance``
+  The covariance parameter of the selected normal distribution.
 
 Although this example uses only a single light source, ``ARTIST`` scenarios are designed to support multiple sources.
 Therefore, the light source configuration must be wrapped in a list and passed to a ``LightSourceListConfig`` object:
@@ -430,7 +438,7 @@ target areas, we have to manually wrap our target area in a list and create a ``
 
 Light Source
 ------------
-Generating a light source using STRAL data is identical to ``PAINT`` data, please see: :ref:`light_source`.
+Generating a light source using STRAL data is identical to ``PAINT`` data, please see :ref:`light_source`.
 
 Prototypes
 ----------
@@ -495,7 +503,7 @@ surface, we do not need to define an optimizer or scheduler but can simply call:
         device=device,
     )
 
-To create the surface configuration, we simply define a surface configuration prototype based on the list of facets
+To create the surface configuration, we define a surface configuration prototype based on the list of facets
 contained in the `SurfaceConfig` from above:
 
 .. code-block::
@@ -506,7 +514,7 @@ Next, we consider the kinematics prototype. The kinematics in ``ARTIST`` assume 
 point in the south direction; however, depending on the CSP considered, the heliostats may be orientated differently. In
 our scenario, we orient the heliostats upwards, i.e., they point directly at the sky. A further element of a kinematics
 configuration is ``KinematicsDeviations`` which are small disturbance parameters representing offsets caused by the
-two-joint kinematics modeled in ``ARTIST``. In this tutorial, we ignore these deviations for now. Therefore, we can
+two-joint kinematics modeled in ``ARTIST``. In this tutorial, we ignore these deviations. Therefore, we can
 create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` object as:
 
 .. code-block::
@@ -518,9 +526,12 @@ create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` ob
 
 This object defines:
 
-- The ``type`` applied in the scenario; in this case, we are using rigid-body kinematics.
-- The ``initial_orientation`` which is the direction we defined above.
-- ``KinematicsDeviations`` can also be included if needed (ignored here).
+``type``
+  The type used in the scenario – in this case, rigid-body kinematics.
+``initial_orientation``
+  The initial heliostat orientation which is the direction we defined above.
+``KinematicsDeviations``
+  The offsets (ignored here).
 
 With the kinematics prototype defined, the final prototype required is the actuator prototype. For the rigid-body
 kinematics, we need exactly two actuators. Since STRAL data does not include motor position limits, we have to define
@@ -531,7 +542,7 @@ them manually. Here, we use the minimum and maximum motor positions for the Jül
     min_max_motor_positions_actuator_1 = [0.0, 60000.0]
     min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 
-We can now define these actuators with ``ActuatorConfig`` objects as shown below:
+We can now define the actuators using ``ActuatorConfig`` objects as shown below:
 
 .. code-block::
 
@@ -551,10 +562,12 @@ We can now define these actuators with ``ActuatorConfig`` objects as shown below
 
 These configurations define:
 
-- The ``key`` used when loading the actuator from an ``ARTIST`` scenario.
-- The ``type`` which, in this example, is an ideal actuator for both actuators.
-- The ``clockwise_axis_movement`` parameter which defines if the actuator operates per default in a clockwise or
-  counter-clockwise direction.
+``key``
+  The key used when loading the actuator from an ``ARTIST`` scenario.
+``type``
+  The actuator type – in this case, an ideal actuator for both actuators.
+``clockwise_axis_movement``
+  Defines whether the actuator operates in a clockwise or counter-clockwise direction.
 
 For different types of actuators, e.g., a linear actuator, we would also have to define specific actuator parameters.
 However, we will stick to a simple configuration for this tutorial. To complete the actuator prototype, we wrap both
@@ -596,9 +609,12 @@ Having defined the prototype, we can now define our heliostat by creating a ``He
 
 This heliostat configuration specifies:
 
-- A ``name`` used to identify the heliostat when loading the ``ARTIST`` scenario.
-- The ``id``, a unique identifier that can be used to quickly identify the heliostat within the scenario.
-- The heliostat's ``position`` in the field. Note the one in the fourth dimension according to the previously discussed
+``name``
+  A name used to identify the heliostat when loading the ``ARTIST`` scenario.
+``id``
+  A unique identifier that can be used to quickly identify the heliostat within the scenario.
+``position``
+  The heliostat's position in the field. Note the one in the fourth dimension according to the previously discussed
   :ref:'coordinate convention <coordinates>'.
 
 Since no individual surface, kinematics, or actuator parameters are provided, this heliostat will automatically use the
