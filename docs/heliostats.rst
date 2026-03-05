@@ -34,7 +34,7 @@ Once the orientation has been computed, the kinematics model calculates the alig
 the ray tracing. The choice of kinematics model depends on the heliostat design, including the number and type of
 actuators and the available information about the mechanical system.
 
-The abstract class ``Kinematics`` provides a method for aligning the heliostat surface. This method first computes the
+The abstract class ``Kinematics`` provides methods for aligning the heliostat surface. These methods first compute the
 desired heliostat orientation from the input parameters and then applies the corresponding transformation to the surface
 geometry. All kinematics implementations derive from this class and override this method.
 
