@@ -13,7 +13,7 @@ from artist.util import index_mapping, set_logger_config
 from artist.util.environment_setup import get_device
 
 # This is an introductory tutorial to look at some of the basic elements of ARTIST. Therefore, it is designed to only
-# work with a scenario containing a single heliostat. Please use the "single_heliostat_scenario" provided in the
+# work with a scenario containing a single heliostat. Please use the "single_heliostat_scenario.h5" provided in the
 # scenarios folder or create your own scenario that only contains a single heliostat.
 
 # Specify the path to your scenario.h5 file.
@@ -48,11 +48,11 @@ print(
     f"The location of {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].names[index_mapping.first_heliostat]} is: {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].positions[index_mapping.first_heliostat].tolist()}."
 )
 
-# Let's say we only want to consider one Heliostat for the beginning.
-# We will choose the first Heliostat, with index 0 by activating it.
+# We only consider one heliostat for the beginning.
+# Choose the first heliostat with index 0.
 active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 
-# Activate heliostats, only activated heliostats will be aligned or raytraced.
+# Activate the heliostat. Only activated heliostats will be aligned or ray-traced.
 scenario.heliostat_field.heliostat_groups[
     index_mapping.first_heliostat_group
 ].activate_heliostats(
@@ -60,17 +60,17 @@ scenario.heliostat_field.heliostat_groups[
     device=device,
 )
 
-# Each heliostat has an aim point, it makes sense to choose an aimpoint on one of the target areas.
-# We select the first target area as the designated target for this heliostat.
+# Each heliostat has an aim point. We choose an aim point on one of the target areas.
+# Select the first target area as the designated target for this heliostat.
 target_area_mask = torch.tensor([0], device=device)
 
-# We can use this to define our aim point.
+# Use the center of the selected target area as the aim point.
 aim_point = scenario.target_areas.centers[target_area_mask]
 print(f"The initial aim point used for this raytracing is {aim_point.tolist()}.")
 
 # Since we only have one heliostat we need to define a single incident ray direction.
 # When the sun is directly in the south, the rays point directly to the north.
-# Incident ray directions need to be normed.
+# Incident ray directions need to be normalized.
 incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
 
 # Save the original surface points of the one active heliostat.
