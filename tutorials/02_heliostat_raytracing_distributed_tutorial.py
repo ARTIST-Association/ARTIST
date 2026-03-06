@@ -77,7 +77,7 @@ with setup_distributed_environment(
         # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
         (
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
             incident_ray_directions,
         ) = scenario.index_mapping(
             heliostat_group=heliostat_group_alignment,
@@ -95,7 +95,7 @@ with setup_distributed_environment(
 
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
+            aim_points=scenario.target_areas.centers[target_area_indices],
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -111,7 +111,7 @@ with setup_distributed_environment(
         if heliostat_group.active_heliostats_mask.sum() > 0:
             (
                 active_heliostats_mask,
-                target_area_mask,
+                target_area_indices,
                 incident_ray_directions,
             ) = scenario.index_mapping(
                 heliostat_group=heliostat_group,
@@ -135,7 +135,7 @@ with setup_distributed_environment(
             bitmaps_per_heliostat = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
-                target_area_mask=target_area_mask,
+                target_area_indices=target_area_indices,
                 device=device,
             )
 
@@ -150,7 +150,7 @@ with setup_distributed_environment(
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
-                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_mask[i]]}"
+                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_indices[i]]}"
                 )
                 plt.savefig(
                     f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
@@ -159,7 +159,7 @@ with setup_distributed_environment(
             # Get the flux distributions per target.
             bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
-                target_area_mask=target_area_mask[sample_indices_for_local_rank],
+                target_area_indices=target_area_indices[sample_indices_for_local_rank],
                 device=device,
             )
 

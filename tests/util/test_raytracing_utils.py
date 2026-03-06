@@ -169,11 +169,11 @@ def target_area_2(
 
 
 @pytest.fixture(params=[torch.tensor([0]), None])
-def target_area_mask(
+def target_area_indices(
     request: pytest.FixtureRequest, device: torch.device
 ) -> torch.Tensor | None:
     """
-    Create a target area mask or None to use in the test.
+    Create target area indices or None to use in the test.
 
     Parameters
     ----------
@@ -253,7 +253,7 @@ def target_area_mask(
 )
 def test_line_plane_intersection(
     request: pytest.FixtureRequest,
-    target_area_mask: torch.Tensor | None,
+    target_area_indices: torch.Tensor | None,
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
@@ -268,8 +268,8 @@ def test_line_plane_intersection(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    target_area_mask : torch.Tensor | None
-        The target area mask.
+    target_area_indices : torch.Tensor | None
+        The target area indices.
     rays : Rays
         The rays with directions and magnitudes.
     target_areas_fixture : str
@@ -292,7 +292,7 @@ def test_line_plane_intersection(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
     torch.testing.assert_close(

@@ -262,28 +262,32 @@ def test_index_mapping(
                 single_incident_ray_direction is None
                 and single_target_area_index is None
             ):
-                (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
-                    mock_scenario.index_mapping(
-                        self=mock_scenario,
-                        heliostat_group=mock_heliostat_group,
-                        string_mapping=mapping,
-                        device=device,
-                    )
+                (
+                    active_heliostats_mask,
+                    target_area_indices,
+                    incident_ray_directions,
+                ) = mock_scenario.index_mapping(
+                    self=mock_scenario,
+                    heliostat_group=mock_heliostat_group,
+                    string_mapping=mapping,
+                    device=device,
                 )
             else:
-                (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
-                    mock_scenario.index_mapping(
-                        self=mock_scenario,
-                        heliostat_group=mock_heliostat_group,
-                        single_incident_ray_direction=single_incident_ray_direction,
-                        single_target_area_index=single_target_area_index,
-                        device=device,
-                    )
+                (
+                    active_heliostats_mask,
+                    target_area_indices,
+                    incident_ray_directions,
+                ) = mock_scenario.index_mapping(
+                    self=mock_scenario,
+                    heliostat_group=mock_heliostat_group,
+                    single_incident_ray_direction=single_incident_ray_direction,
+                    single_target_area_index=single_target_area_index,
+                    device=device,
                 )
         assert expected in str(exc_info.value)
     else:
         if single_incident_ray_direction is None and single_target_area_index is None:
-            (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            (active_heliostats_mask, target_area_indices, incident_ray_directions) = (
                 mock_scenario.index_mapping(
                     self=mock_scenario,
                     heliostat_group=mock_heliostat_group,
@@ -292,7 +296,7 @@ def test_index_mapping(
                 )
             )
         else:
-            (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            (active_heliostats_mask, target_area_indices, incident_ray_directions) = (
                 mock_scenario.index_mapping(
                     self=mock_scenario,
                     heliostat_group=mock_heliostat_group,
@@ -308,7 +312,7 @@ def test_index_mapping(
             rtol=5e-4,
         )
         torch.testing.assert_close(
-            target_area_mask.to(device), expected[1].to(device), atol=5e-4, rtol=5e-4
+            target_area_indices.to(device), expected[1].to(device), atol=5e-4, rtol=5e-4
         )
         torch.testing.assert_close(
             incident_ray_directions.to(device),

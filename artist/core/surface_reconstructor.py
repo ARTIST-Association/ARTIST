@@ -192,7 +192,7 @@ class SurfaceReconstructor:
                 incident_ray_directions,
                 _,
                 active_heliostats_mask,
-                target_area_mask,
+                target_area_indices,
             ) = parser.parse_data_for_reconstruction(
                 heliostat_data_mapping=heliostat_mapping,
                 heliostat_group=heliostat_group,
@@ -339,7 +339,9 @@ class SurfaceReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[target_area_mask],
+                        aim_points=self.scenario.target_areas.centers[
+                            target_area_indices
+                        ],
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -365,7 +367,7 @@ class SurfaceReconstructor:
                     flux_distributions = ray_tracer.trace_rays(
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
-                        target_area_mask=target_area_mask,
+                        target_area_indices=target_area_indices,
                         device=device,
                     )
 
@@ -385,10 +387,10 @@ class SurfaceReconstructor:
                             crop_width=config_dictionary.utis_crop_width,
                             crop_height=config_dictionary.utis_crop_height,
                             target_plane_widths=self.scenario.target_areas.dimensions[
-                                target_area_mask[sample_indices_for_local_rank]
+                                target_area_indices[sample_indices_for_local_rank]
                             ][:, index_mapping.target_area_width],
                             target_plane_heights=self.scenario.target_areas.dimensions[
-                                target_area_mask[sample_indices_for_local_rank]
+                                target_area_indices[sample_indices_for_local_rank]
                             ][:, index_mapping.target_area_height],
                             device=device,
                         )
@@ -400,7 +402,7 @@ class SurfaceReconstructor:
                         ground_truth=measured_flux_distributions[
                             sample_indices_for_local_rank
                         ],
-                        target_area_mask=target_area_mask[
+                        target_area_indices=target_area_indices[
                             sample_indices_for_local_rank
                         ],
                         reduction_dimensions=(

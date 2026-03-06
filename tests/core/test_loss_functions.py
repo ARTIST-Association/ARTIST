@@ -38,7 +38,7 @@ def test_base_loss(
         base_loss(
             prediction=torch.empty((2, 4), device=device),
             ground_truth=torch.empty((2, 4), device=device),
-            target_area_mask=torch.tensor([0, 1], device=device),
+            target_area_indices=torch.tensor([0, 1], device=device),
             reduction_dimensions=(1,),
             device=device,
         )
@@ -121,7 +121,7 @@ def test_vector_loss(
         result = vector_loss(
             prediction=prediction.to(device),
             ground_truth=ground_truth.to(device),
-            target_area_mask=torch.tensor([0, 1], device=device),
+            target_area_indices=torch.tensor([0, 1], device=device),
             reduction_dimensions=reduction_dimensions,
             device=device,
         )
@@ -192,7 +192,7 @@ def test_focal_spot_loss(
     target_areas.dimensions = (torch.tensor([[2, 2]], device=device),)
     mock_scenario.target_areas = target_areas
 
-    target_area_mask = torch.tensor([0], device=device)
+    target_area_indices = torch.tensor([0], device=device)
 
     focal_spot_loss = FocalSpotLoss(scenario=mock_scenario)
 
@@ -203,14 +203,14 @@ def test_focal_spot_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The focal spot loss expects ['reduction_dimensions', 'device', 'target_area_mask'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_mask as keyword argument."
+            "The focal spot loss expects ['reduction_dimensions', 'device', 'target_area_indices'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_indices as keyword argument."
             in str(exc_info.value)
         )
     else:
         result = focal_spot_loss(
             prediction=prediction.to(device),
             ground_truth=ground_truth.to(device),
-            target_area_mask=target_area_mask,
+            target_area_indices=target_area_indices,
             reduction_dimensions=(1,),
             device=device,
         )
@@ -300,7 +300,7 @@ def test_pixel_loss(
     light_sources.light_source_list = [light_source]
     mock_scenario.light_sources = light_sources
 
-    target_area_mask = torch.tensor([0], device=device)
+    target_area_indices = torch.tensor([0], device=device)
 
     pixel_loss = PixelLoss(scenario=mock_scenario)
 
@@ -311,7 +311,7 @@ def test_pixel_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The vector loss expects ['reduction_dimensions', 'device', 'target_area_mask'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_mask as keyword argument."
+            "The vector loss expects ['reduction_dimensions', 'device', 'target_area_indices'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_indices as keyword argument."
             in str(exc_info.value)
         )
 
@@ -319,7 +319,7 @@ def test_pixel_loss(
         result = pixel_loss(
             prediction=prediction.to(device),
             ground_truth=ground_truth.to(device),
-            target_area_mask=target_area_mask,
+            target_area_indices=target_area_indices,
             reduction_dimensions=(1, 2),
             device=device,
         )
@@ -423,7 +423,7 @@ def test_kl_divergence(
         result = kl_divergence(
             prediction=prediction.to(device),
             ground_truth=ground_truth.to(device),
-            target_area_mask=torch.tensor([0, 1], device=device),
+            target_area_indices=torch.tensor([0, 1], device=device),
             reduction_dimensions=(1, 2),
             device=device,
         )
@@ -489,7 +489,7 @@ def test_angle_loss(
     result = vector_loss(
         prediction=prediction.to(device),
         ground_truth=ground_truth.to(device),
-        target_area_mask=torch.tensor([0, 1], device=device),
+        target_area_indices=torch.tensor([0, 1], device=device),
         reduction_dimensions=reduction_dimensions,
         device=device,
     )

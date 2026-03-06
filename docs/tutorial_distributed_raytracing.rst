@@ -129,7 +129,7 @@ areas are being used -- this is achieved using the ``heliostat_target_light_sour
 
     (
         active_heliostats_mask,
-        target_area_mask,
+        target_area_indices,
         incident_ray_directions,
     ) = scenario.index_mapping(
         heliostat_group=heliostat_group,
@@ -152,7 +152,7 @@ and also align the surfaces for all activated heliostats with the incident ray d
 .. code-block::
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_mask],
+        aim_points=scenario.target_areas.centers[target_area_indices],
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -185,7 +185,7 @@ Now we are ready to perform raytracing! This is still performed on a per-heliost
     bitmaps_per_heliostat = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
@@ -239,7 +239,7 @@ This can be achieved with the ``get_bitmaps_per_target()`` function:
 
     bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
         bitmaps_per_heliostat=bitmaps_per_heliostat,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 

@@ -146,7 +146,7 @@ def test_trace_rays_unaligned_heliostats_error(
                     device=device,
                 ),
                 active_heliostats_mask=active_heliostats_mask,
-                target_area_mask=torch.tensor([0]),
+                target_area_indices=torch.tensor([0]),
                 device=device,
             )
             mock_method.assert_called_once()

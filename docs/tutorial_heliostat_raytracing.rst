@@ -163,7 +163,7 @@ Now, we can define the aim point as this target area's center:
 .. code-block::
 
     # Use the center of the selected target area as the aim point.
-    aim_point = scenario.target_areas.centers[target_area_mask]
+    aim_point = scenario.target_areas.centers[target_area_indices]
     print(f"The initial aim point used for this ray tracing is {aim_point.tolist()}.")
 
 This produces the following output:
@@ -274,7 +274,7 @@ receiver).
     image_south = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
@@ -301,19 +301,19 @@ ray tracing:
     image_east = align_and_trace_rays(
         light_direction=incident_ray_direction_east,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
     image_west = align_and_trace_rays(
         light_direction=incident_ray_direction_west,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
     image_above = align_and_trace_rays(
         light_direction=incident_ray_direction_above,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 

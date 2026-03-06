@@ -177,7 +177,7 @@ class CalibrationDataParser:
                 )
                 # Normalize pixel values from [0, 255] to [0.0, 1.0] (grayscale pixel values are in the range [0, 255]).
                 bitmap_tensor = (
-                    torch.tensor(bitmap_data.getdata(), device=device).view(
+                    torch.tensor(bitmap_data.get_flattened_data(), device=device).view(
                         height, width
                     )
                     / artist.util.index_mapping.bitmap_normalizer

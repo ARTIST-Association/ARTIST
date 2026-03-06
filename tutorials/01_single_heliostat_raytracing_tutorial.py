@@ -62,10 +62,10 @@ scenario.heliostat_field.heliostat_groups[
 
 # Each heliostat has an aim point. We choose an aim point on one of the target areas.
 # Select the first target area as the designated target for this heliostat.
-target_area_mask = torch.tensor([0], device=device)
+target_area_indices = torch.tensor([0], device=device)
 
 # Use the center of the selected target area as the aim point.
-aim_point = scenario.target_areas.centers[target_area_mask]
+aim_point = scenario.target_areas.centers[target_area_indices]
 print(f"The initial aim point used for this raytracing is {aim_point.tolist()}.")
 
 # Since we only have one heliostat we need to define a single incident ray direction.
@@ -205,7 +205,7 @@ ray_tracer = HeliostatRayTracer(
 image_south = ray_tracer.trace_rays(
     incident_ray_directions=incident_ray_directions,
     active_heliostats_mask=active_heliostats_mask,
-    target_area_mask=target_area_mask,
+    target_area_indices=target_area_indices,
     device=device,
 )
 
@@ -220,7 +220,7 @@ plt.savefig("tut_2.png")
 def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
-    target_area_mask: torch.Tensor,
+    target_area_indices: torch.Tensor,
     device: Union[torch.device, str] = "cuda",
 ) -> torch.Tensor:
     """
@@ -232,7 +232,7 @@ def align_and_trace_rays(
         The direction of the incoming light on the heliostat.
     active_heliostats_mask : torch.Tensor
         A mask for the active heliostats.
-    target_area_mask : torch.Tensor
+    target_area_indices : torch.Tensor
         The indices of the target areas for each active heliostat.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
@@ -254,7 +254,7 @@ def align_and_trace_rays(
     scenario.heliostat_field.heliostat_groups[
         index_mapping.first_heliostat_group
     ].align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_mask],
+        aim_points=scenario.target_areas.centers[target_area_indices],
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -264,7 +264,7 @@ def align_and_trace_rays(
     return ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
@@ -326,19 +326,19 @@ incident_ray_direction_above = torch.tensor([[0.0, 0.0, -1.0, 0.0]], device=devi
 image_east = align_and_trace_rays(
     light_direction=incident_ray_direction_east,
     active_heliostats_mask=active_heliostats_mask,
-    target_area_mask=target_area_mask,
+    target_area_indices=target_area_indices,
     device=device,
 )
 image_west = align_and_trace_rays(
     light_direction=incident_ray_direction_west,
     active_heliostats_mask=active_heliostats_mask,
-    target_area_mask=target_area_mask,
+    target_area_indices=target_area_indices,
     device=device,
 )
 image_above = align_and_trace_rays(
     light_direction=incident_ray_direction_above,
     active_heliostats_mask=active_heliostats_mask,
-    target_area_mask=target_area_mask,
+    target_area_indices=target_area_indices,
     device=device,
 )
 
