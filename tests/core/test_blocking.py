@@ -377,7 +377,7 @@ def test_blocking_integration(device: torch.device) -> None:
 
     (
         active_heliostats_mask,
-        target_area_mask,
+        target_area_indices,
         incident_ray_directions,
     ) = scenario.index_mapping(
         heliostat_group=heliostat_group,
@@ -390,7 +390,7 @@ def test_blocking_integration(device: torch.device) -> None:
     )
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_mask],
+        aim_points=scenario.target_areas.centers[target_area_indices],
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -408,7 +408,7 @@ def test_blocking_integration(device: torch.device) -> None:
     bitmaps_per_heliostat = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
@@ -459,7 +459,7 @@ def test_ray_extinction(device: torch.device) -> None:
 
     (
         active_heliostats_mask,
-        target_area_mask,
+        target_area_indices,
         incident_ray_directions,
     ) = scenario.index_mapping(
         heliostat_group=heliostat_group,
@@ -471,7 +471,7 @@ def test_ray_extinction(device: torch.device) -> None:
     )
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_mask],
+        aim_points=scenario.target_areas.centers[target_area_indices],
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -491,7 +491,7 @@ def test_ray_extinction(device: torch.device) -> None:
     bitmaps_per_heliostat_no_extinction = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         ray_extinction_factor=0.0,
         device=device,
     )
@@ -499,7 +499,7 @@ def test_ray_extinction(device: torch.device) -> None:
     bitmaps_per_heliostat_extinction = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         ray_extinction_factor=ray_extinction_factor,
         device=device,
     )

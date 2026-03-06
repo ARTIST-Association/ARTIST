@@ -209,7 +209,7 @@ def align_and_trace_rays(
     aim_points: torch.Tensor,
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
-    target_area_mask: torch.Tensor,
+    target_area_indices: torch.Tensor,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -225,7 +225,7 @@ def align_and_trace_rays(
         Incoming light directions per heliostat.
     active_heliostats_mask : torch.Tensor
         Mask indicating which heliostats are active.
-    target_area_mask : torch.Tensor
+    target_area_indices : torch.Tensor
         Target area indices for each active heliostat.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -265,7 +265,7 @@ def align_and_trace_rays(
     return ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
-        target_area_mask=target_area_mask,
+        target_area_indices=target_area_indices,
         device=device,
     )
 
@@ -362,7 +362,7 @@ def generate_flux_images(
         incident_ray_directions_calibration,
         _,
         heliostats_mask_calibration,
-        target_area_mask_calibration,
+        target_area_indices_calibration,
     ) = calibration_data_parser._parse_calibration_data(
         heliostat_calibration_mapping=[
             (heliostat_name, calibration_properties_paths)
@@ -381,7 +381,7 @@ def generate_flux_images(
         aim_points=focal_spots_calibration,
         light_direction=incident_ray_directions_calibration,
         active_heliostats_mask=heliostats_mask_calibration,
-        target_area_mask=target_area_mask_calibration,
+        target_area_indices=target_area_indices_calibration,
         device=device,
     )
 

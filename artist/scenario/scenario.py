@@ -321,7 +321,7 @@ class Scenario:
             active_heliostats_mask = torch.ones(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
-            target_area_mask = torch.tensor(
+            target_area_indices = torch.tensor(
                 single_target_area_index, dtype=torch.int32, device=device
             ).expand(heliostat_group.number_of_heliostats)
             incident_ray_directions = single_incident_ray_direction.expand(
@@ -369,7 +369,7 @@ class Scenario:
             active_heliostats_mask = torch.zeros(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
-            target_area_mask = torch.empty(
+            target_area_indices = torch.empty(
                 len(filtered_mapping), dtype=torch.int32, device=device
             )
             incident_ray_directions = torch.empty(
@@ -382,7 +382,7 @@ class Scenario:
             active_heliostats_mask = torch.zeros(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
-            target_area_mask = torch.empty(
+            target_area_indices = torch.empty(
                 len(filtered_mapping), dtype=torch.int32, device=device
             )
             incident_ray_directions = torch.empty(
@@ -405,13 +405,13 @@ class Scenario:
                 for target_area_index, incident_ray_direction in data_per_heliostat.get(
                     name, []
                 ):
-                    target_area_mask[index] = target_area_index
+                    target_area_indices[index] = target_area_index
                     incident_ray_directions[index] = incident_ray_direction
                     index += 1
 
         return (
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
             incident_ray_directions,
         )
 

@@ -140,7 +140,7 @@ def data_for_flux_plots(
             incident_ray_directions,
             _,
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
         ) = parser.parse_data_for_reconstruction(
             heliostat_data_mapping=heliostat_mapping,
             heliostat_group=heliostat_group,
@@ -153,7 +153,7 @@ def data_for_flux_plots(
         )
 
         heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
+            aim_points=scenario.target_areas.centers[target_area_indices],
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -174,7 +174,7 @@ def data_for_flux_plots(
         bitmaps_per_heliostat = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
+            target_area_indices=target_area_indices,
             device=device,
         )
 
@@ -182,10 +182,10 @@ def data_for_flux_plots(
             flux_distributions=bitmaps_per_heliostat,
             crop_width=config_dictionary.utis_crop_width,
             crop_height=config_dictionary.utis_crop_height,
-            target_plane_widths=scenario.target_areas.dimensions[target_area_mask][
+            target_plane_widths=scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_width
             ],
-            target_plane_heights=scenario.target_areas.dimensions[target_area_mask][
+            target_plane_heights=scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_height
             ],
             device=device,
