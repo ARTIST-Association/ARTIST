@@ -8,26 +8,27 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/02_heliostat_raytracing_distributed_tutorial.py
 
-This tutorial provides a brief introduction to ``ARTIST`` showcasing how the distributed environment is set up by performing distributed ray tracing.
+This tutorial provides a brief introduction to ``ARTIST`` and demonstrates how to set up a distributed environment and
+perform distributed ray tracing.
 
-It is best if you already know about the following processes in ``ARTIST``
+It is recommended that you are already familiar with the following processes in ``ARTIST``
 
 - How to load a scenario.
 - Aligning heliostats.
 - Performing heliostat ray tracing to generate a flux density image on a target area.
 
-If you need help with this look into our tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
+If you need help with these topics, check our tutorial on :ref:`heliostat raytracing <tutorial_heliostat_raytracing>`.
 
 Initial Setup
 -------------
 
-``ARTIST`` is designed for parallel computation. To enable this (even when considering different types of heliostats
-with different kinematics and actuator configurations) we require ``HeliostatGroups``. Detailed information on heliostat
-groups and how ``ARTIST`` is designed can be found in this description of :ref:`what is happening under the hood<artist_under_hood>`
-in ``ARTIST``.
+``ARTIST`` is designed for parallel computation. To enable parallelization even when considering different types of
+heliostats with different kinematics and actuator configurations, we use ``HeliostatGroups``. Detailed information on
+heliostat groups and how ``ARTIST`` is structured can be found in the description of
+:ref:`what is happening under the hood<artist_under_hood>`.
 
-Therefore, before we do anything we need to make sure we know how many heliostat groups are present. This can be achieved
-by calling the ``get_number_of_heliostat_groups_from_hdf5()`` function in the ``Scenario`` class:
+Before proceeding, we first need to determine how many heliostat groups are present. This can be achieved by calling the
+``get_number_of_heliostat_groups_from_hdf5()`` function of the ``Scenario`` class:
 
 .. code-block::
 
@@ -35,17 +36,18 @@ by calling the ``get_number_of_heliostat_groups_from_hdf5()`` function in the ``
         scenario_path=scenario_path
     )
 
-In the distributed ray tracing the heliostat-tracing process can be distributed and parallelized using Distributed Data
-Parallel. For the distributed ray tracing using DDP, not only are the heliostat groups computed in parallel, but the
-data samples per group can also be computed in parallel. We will see exactly how this works later in the tutorial.
+During distributed ray tracing, the heliostat tracing process can be distributed and parallelized using
+`distributed data parallelism in PyTorch <https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html>`_.
+When using DDP, not only can the heliostat groups be processed in parallel, but the data samples within each group can
+also be handled in parallel. We will see how this works in more details later in the tutorial.
 
 The Distributed Environment
 ---------------------------
 
-Before we start running raytracing, we need to set up the distributed environment. Based on the available devices, the
-environment is initialized with the appropriate communication backend. For computation on GPUs the ``nccl`` backend
-optimized for NVIDIA GPUs is chosen. For computation on CPUs ``gloo`` is used as backend. If the program is run without
-the intention of being distributed, the world size will be set to 1, accordingly the only rank is 0.
+Before we start running ray tracing, we need to set up the distributed environment. Based on the available devices, the
+environment is initialized with the appropriate communication backend. For computation on GPUs, the ``nccl`` backend
+optimized for NVIDIA GPUs is chosen. For computation on CPUs, ``gloo`` is used as backend. If the program is run in
+non-distributed mode, the world size will be set to 1 and the only rank will therefore be 0.
 
 All of this setup is handled automatically via:
 
@@ -56,20 +58,20 @@ All of this setup is handled automatically via:
         device=device,
     ) as ddp_setup:
 
-**Note:** The rest of the tutorial occurs within this ``with`` block. This ensures that the distributed environment is
-running during execution and will be automatically cleaned up afterwards. The dictionary ``ddp_setup`` contains all
-distributed environment parameters.
+**Note:** The rest of the tutorial takes place within this ``with`` block. This ensures that the distributed environment
+remains active during execution and is automatically cleaned up afterwards. The dictionary ``ddp_setup`` contains all
+parameters related to the distributed environment.
 
 
-Mapping between active heliostats, target areas and incident ray directions
+Mapping between Active Heliostats, Target Areas and Incident Ray Directions
 ---------------------------------------------------------------------------
 
-``ARTIST`` offers the flexibility, to activate and deactivate certain heliostats in the scenario, to have some heliostats
-aim at one target area, while others aim elsewhere and also to have different incident ray directions for different heliostats
-in the same alignment and raytracing process. Differing incident ray directions for different heliostats may not make much
-sense in the usual operation of the power plant, but this is very useful for calibration tasks.
+``ARTIST`` offers the flexibility to activate and deactivate certain heliostats in the scenario, to have some heliostats
+aim at one target area while others aim elsewhere, and to use different incident ray directions for different heliostats
+in the same alignment and ray tracing process. Differing incident ray directions for different heliostats may not make
+much sense in the usual operation of a power plant, but this can be very useful for calibration tasks.
 
-To map each heliostat with its designated target area and incident ray direction you can use the following mapping structure:
+To map each heliostat to its designated target area and incident ray direction, we use the following mapping structure:
 
 .. code-block::
 
@@ -79,22 +81,22 @@ To map each heliostat with its designated target area and incident ray direction
         (...)
     ]
 
-However, in this tutorial we want to consider all heliostats and therefore set our mapping to ``None``:
+However, as we want to consider all heliostats in this tutorial, we set our mapping to ``None``:
 
 .. code-block::
 
     heliostat_target_light_source_mapping = None
 
-In this case it is later still possible to set a specific default target area index and a default incident ray direction, however
-if these are not provided then all heliostats are assigned to the first target area found in the scenario with a incident
-ray direction of "north", i.e., the light source position is directly in the south.
+In this case it is still possible to set a specific default target area index and a default incident ray direction
+later. If these are not provided, all heliostats are assigned to the first target area found in the scenario with an
+incident ray direction of "north", i.e., the light source position is directly in the south.
 
 
 Distributed Raytracing
 ----------------------
 
-Now we are almost ready to start the distributed raytracing, however we need to first set the resolution of the generated
-bitmap, and also create a tensor to store the final result:
+Before we can start distributed ray tracing, we need to set the resolution of the generated bitmap and create a tensor
+to store the final result:
 
 .. code-block::
 
@@ -109,9 +111,9 @@ bitmap, and also create a tensor to store the final result:
         device=device,
     )
 
-Now the heliostat groups come in to play. We need to consider each heliostat group separately - in a distributed setting
-these groups can be computed in parallel, otherwise they will be processed sequentially. Therefore, the entire distributed
-raytracing process takes place within a ``for`` loop:
+Now the heliostat groups come in to play. Each heliostat group must be considered separately – in a distributed
+setting, these groups can be computed in parallel; otherwise, they are processed sequentially. Therefore, the entire
+distributed ray tracing process takes place within a ``for`` loop:
 
 .. code-block::
 
@@ -122,8 +124,8 @@ raytracing process takes place within a ``for`` loop:
             heliostat_group_index
         ]
 
-Within this loop, the first step is to determine which heliostats are being considered ("activated") and which target
-areas are being used -- this is achieved using the ``heliostat_target_light_source_mapping`` that we defined earlier:
+Within this loop, the first step is to determine which heliostats are activated and which target areas are used. This is
+done using the ``heliostat_target_light_source_mapping`` defined earlier:
 
 .. code-block::
 
@@ -137,17 +139,18 @@ areas are being used -- this is achieved using the ``heliostat_target_light_sour
         device=device,
     )
 
-We can then activate the heliostats as in the :ref:`previous tutorial on single heliostat raytracing<tutorial_heliostat_raytracing>`:
+We then activate the heliostats as in the
+:ref:`previous tutorial on single heliostat ray tracing<tutorial_heliostat_raytracing>`:
 
 .. code-block::
 
-    # For each index 0 indicates a deactivated heliostat and 1 an activated one.
-    # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
+    # For each index, 0 indicates a deactivated heliostat, 1 indicates an activated one.
+    # An integer greater than 1 means the heliostat at this index is considered multiple times.
     heliostat_group.activate_heliostats(
         active_heliostats_mask=active_heliostats_mask, device=device
     )
 
-and also align the surfaces for all activated heliostats with the incident ray direction:
+and align the surfaces for all activated heliostats with the incident ray direction:
 
 .. code-block::
 
@@ -158,8 +161,8 @@ and also align the surfaces for all activated heliostats with the incident ray d
         device=device,
     )
 
-Now we are ready to create a distributed ``HeliostatRayTracer``. In this case it is important to provide the ``world_size``,
-the ``rank``, the ``batch_size``, and a ``random_seed``:
+Now we are ready to create a distributed ``HeliostatRayTracer``. Here, it is important to provide the ``world_size``,
+ ``rank``, ``batch_size``, and ``random_seed``:
 
 .. code-block::
 
@@ -173,12 +176,13 @@ the ``rank``, the ``batch_size``, and a ``random_seed``:
         bitmap_resolution=bitmap_resolution,
     )
 
-In this tutorial the ``batch_size`` is equal to the number of active heliostats. The ``batch_size`` determines how many heliostats
-are parallelized within this group's raytracing process. If the number of active heliostats is high and your GPUs do not have enough
-memory capacity, you can reduce the ``batch_size`` to prevent ``CUDA out of memory`` errors during runtime. However, this also means
-slightly longer runtimes, as the batches within each group are then also computed sequentially.
+In this tutorial, the ``batch_size`` is equal to the number of active heliostats. The ``batch_size`` determines how many
+heliostats are parallelized within a group's ray tracing process. If the number of active heliostats is high and your
+GPUs do not have enough memory capacity, reduce the ``batch_size`` to prevent ``CUDA out of memory`` errors during
+runtime. However, this increases runtimes as the batches within each group are computed sequentially (while heliostats
+within each batch are handled in parallel).
 
-Now we are ready to perform raytracing! This is still performed on a per-heliostat basis with the function ``trace_rays()``:
+We can now perform ray tracing per heliostat with ``trace_rays()``:
 
 .. code-block::
 
@@ -189,16 +193,16 @@ Now we are ready to perform raytracing! This is still performed on a per-heliost
         device=device,
     )
 
-Consider an example scenario, with two heliostat groups that have two heliostats each:
- - ``Group 0``: ``AA28``, ``AC43``
- - ``Group 1``: ``AA31``, ``AA39``
+Consider an example scenario of two heliostat groups with two heliostats each:
+ - Group 0: ``AA28``, ``AC43``
+ - Group 1: ``AA31``, ``AA39``
 
-The ``world_size`` is three, this means there is ``rank 0``, ``rank 1`` and ``rank 2``. The ranks are distributed among the groups in a
-round-robin fashion, therefore ``Group 0`` is computed on ``rank 0`` and ``rank 2`` while ``Group 1`` is computed on ``rank 1``. Since
-``Group 0`` has 2 ranks available, this group can perform nested parallelization. Heliostat 0 of ``Group 0``, named ``AA28`` is handled
-by ``rank 0`` and heliostat 1 of ``Group 0`` named ``AC43`` is handled by ``rank 2``. ``Group 1`` has two heliostats but only one rank
-assigned, meaning there is no nested parallelization possible.
-The ray tracer method ``trace_rays()`` produces bitmaps per heliostat.
+The ``world_size`` is 3, corresponding to ranks 0, 1, and 2. Ranks are distributed among groups in a round-robin
+fashion: Group 0 is computed on ranks 0 and 2, while group 1 is computed on rank 1. Since group 0 has two ranks
+available, it can perform nested parallelization. Heliostat 0 of group 0, named ``AA28``, is handled by rank 0, and
+heliostat 1 of group 0, named ``AC43``, is handled by rank 2. Group 1 has two heliostats but only one rank assigned,
+thus nested parallelization is not possible.
+The ``trace_rays()`` method produces bitmaps per heliostat.
 
 .. list-table:: Bitmaps per heliostats
    :widths: 33 33 33
@@ -231,9 +235,8 @@ The ray tracer method ``trace_rays()`` produces bitmaps per heliostat.
 
           Rank 2
 
-However, now there may be multiple heliostats in the scenario all focusing on the same target. In this case, we need to
-determine the resulting flux image for that target, i.e., the combined result of all heliostats focusing on this target.
-This can be achieved with the ``get_bitmaps_per_target()`` function:
+When multiple heliostats in the scenarios focus on the same target, we need the combined flux image. This can be
+computed with ``get_bitmaps_per_target()``.
 
 .. code-block::
 
@@ -243,15 +246,15 @@ This can be achieved with the ``get_bitmaps_per_target()`` function:
         device=device,
     )
 
-Since there may also be multiple heliostats in one group, we need to make sure the results from all heliostats are considered in
-this bitmap:
+Since there may also be multiple heliostats in one group, we need to make sure the results from all heliostats are
+considered in the combined bitmap:
 
 .. code-block::
 
     combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
-All heliostats in this example are aimed at the same target area, called the ``multi_focus_tower``, this is the first target area in this scenario.
-This means all bitmaps in the ``combined_bitmaps_per_target`` tensor are empty, except the ones in index 0 (only those will be plotted from now on).
+All heliostats in this example aim at the first target area in the scenario, called the ``multi_focus_tower``. As a
+result, all bitmaps in the ``combined_bitmaps_per_target`` tensor are empty, except the ones at index 0 plotted below:
 
 .. list-table:: Bitmaps per target area (on the ``multi_focus_tower``)
    :widths: 33 33 33
@@ -270,12 +273,12 @@ This means all bitmaps in the ``combined_bitmaps_per_target`` tensor are empty, 
 
           Rank 2
 
-Notice how only the bitmap on ``rank 1`` is actually a combined bitmap of two individual fluxes. This is because both of those fluxes,
-from heliostats ``AA31`` and ``AA39`` were actually computed on the same rank and since the ranks have not been synchronized yet, each
-rank only has the information it computed on its own.
-Neither the ray tracing results within each group, nor the combined results from each group have been synchronized. Therefore, to obtain
-the final bitmap per target we need to perform an ``all_reduce``. One final ``all_reduce`` is sufficient, but for the purpose of this
-tutorial it is interesting to look at intermediate results and the nested ``all_reduce``.
+Initially, each rank only has the results it computed locally, since the ranks have not been synchronized yet. For
+example, in rank 1, the bitmap is already the combined flux of heliostats ``AA31`` and ``AA39`` because both were
+computed on that rank. Neither the ray tracing results within each group nor the combined results across groups is
+available globally at this point. To obtain the final bitmap per target, we need to perform an ``all_reduce``.
+In principle, one final ``all_reduce`` is sufficient, but for the purpose of this tutorial, it is interesting to look at
+intermediate results using a nested ``all_reduce``:
 
 .. code-block::
 
@@ -303,8 +306,8 @@ tutorial it is interesting to look at intermediate results and the nested ``all_
 
           Rank 2
 
-This ``all_reduce`` is performed per process subgroup, meaning it only reduces the results of heliostats within the respective
-group and can be skipped because the global ``all_reduce`` would handle it as well.
+This ``all_reduce`` is performed per process subgroup, meaning it only reduces the results of heliostats within the
+respective group and can be skipped because the global ``all_reduce`` would handle it as well.
 The final bitmap on each target is reduced by:
 
 .. code-block::
