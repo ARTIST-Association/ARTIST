@@ -14,7 +14,7 @@ single heliostat. The tutorial walks through several basic concepts necessary fo
 - How to load a scenario.
 - How to select specific heliostats for alignment and ray tracing.
 - Activating the heliostat kinematics to align the heliostat for ray tracing.
-- Performing heliostat ray tracing to generate flux density images on the tower target areas.
+- Performing heliostat ray tracing to generate flux density images on the tower's target areas.
 
 .. warning::
 
@@ -24,9 +24,9 @@ single heliostat. The tutorial walks through several basic concepts necessary fo
 
 Loading a Scenario
 ------------------
-You can load any scenario for this tutorial, as long as it only contains a single heliostat. In the ``data/scenarios``
-folder located within the tutorials directory, we have included a `single_heliostat_scenario.h5` file that can be used
-with this tutorial.
+You can load any scenario for this tutorial, as long as it only contains a single heliostat. In the ``data/scenarios/``
+folder located within the ``tutorials/`` directory, we have included a `single_heliostat_scenario.h5` file that can be
+used with this tutorial.
 
 Please adjust the path and name of the ``scenario_path`` variable:
 
@@ -35,9 +35,9 @@ Please adjust the path and name of the ``scenario_path`` variable:
     # Specify the path to your scenario.h5 file.
     scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenarios/single_heliostat_scenario.h5")
 
-Once you have adjusted this parameter, you can load a scenario in ``ARTIST`` by calling the
-``load_scenario_from_hdf5()`` method. This method is a ``Python`` ``classmethod`` that initializes a ``Scenario``
-object based on the configuration contained in the HDF5 file:
+Once you have adjusted this path, you can load the scenario by calling the ``load_scenario_from_hdf5()`` method. This
+method is a ``Python`` ``classmethod`` that initializes a ``Scenario`` object based on the configuration contained in
+the HDF5 file:
 
 .. code-block::
 
@@ -93,8 +93,8 @@ While there are quite a few log messages, there are two important aspects you sh
 
    1. The majority of the messages are warnings. However, this is not a problem. We are considering a simplified
       scenario and therefore do not include specific kinematics or actuator parameters or deviations. As a result,
-      ``ARTIST`` automatically uses the default values. In this case, this behavior is expected and we can ignore the
-      warnings.
+      ``ARTIST`` throws a warning and automatically uses the default values. This behavior is expected and we can ignore
+      the warnings.
    2. The remaining messages are info messages. These messages indicate which objects are being loaded from the HDF5
       file and provide additional details about them.
 
@@ -134,8 +134,8 @@ In ``ARTIST``, heliostat information is stored per property. For example, there 
 positions for a specific heliostat group (see :ref:`Artist Under the Hood<artist_under_hood>`). Similarly, there is one
 tensor containing all aim points, and so on. To address a specific heliostat, it is important to know its index.
 
-To activate one or more heliostats for the alignment process or ray tracing, you can mark the entry at the corresponding
-heliostat index with a 1 in the ``active_heliostats_mask`` tensor:
+To activate one or more heliostats for the alignment process or ray tracing, you can mark the corresponding entries in
+the ``active_heliostats_mask`` tensor at the heliostats' indices with a 1 :
 
 .. code-block::
 
@@ -151,7 +151,7 @@ Then we activate these heliostats by calling the ``activate_heliostats()`` metho
         device=device,
     )
 
-The same is true for the target areas.
+The same is true for the target areas. We select the desired target areas directly via their indices:
 
 .. code-block::
 
@@ -180,14 +180,14 @@ Before we can start ray tracing, we need to align the heliostats. In the current
 initialized pointing straight up at the sky. Unfortunately, this orientation is not very useful for reflecting
 sunlight from the sun onto the receiver located in the south (see the aim point above).
 
-Therefore, we make use of our knowledge regarding the
+Therefore, we make use of our knowledge regarding the heliostats'
 
-- position of the heliostats,
+- positions,
 - aim points, and
 - kinematics model
 
-to align the heliostats in an optimal orientation for reflection. To perform this orientation, we need an incident ray
-direction, i.e., a direction vector originating from the light source and pointing towards the heliostat field.
+to align them in an optimal orientation for reflection. To perform this orientation, we need an incident ray direction,
+i.e., a direction vector originating from the light source and pointing towards the heliostat field.
 ``ARTIST`` can accommodate heliostats with various kinematics and actuator types. Since each kinematics type and
 actuator type computes the orientations of aligned heliostats slightly differently, we need to separate the heliostats
 into ``HeliostatGroup`` objects. ``ARTIST`` handles this grouping automatically.
@@ -222,8 +222,8 @@ in the following plot:
    :align: center
 
 Since both the target area (receiver) and the sun are directly to the south of the heliostat field, this alignment is
-completely plausible. The heliostat rotates 90 degrees along the east axis to reflect the incoming sunlight back in the direction
-it is coming from and thus toward the receiver.
+physically plausible. The heliostat rotates 90 degrees along the east axis to reflect the incoming sunlight back in the
+direction it is coming from and thus toward the receiver.
 
 Ray Tracing
 -----------
@@ -231,7 +231,7 @@ With the heliostats now aligned, it is time to perform ray tracing to generate f
 
 In this tutorial, we consider *heliostat ray tracing*. Heliostat ray tracing (as its name suggests) traces rays of
 sunlight starting from the heliostat. If we were to trace rays from the sun, only a small portion would hit the
-heliostat, and an even smaller portion of these rays would reach the receiver. Therefore, heliostat ray tracing can be
+heliostat, and an even smaller portion of these rays would reach the receiver. Therefore, heliostat ray tracing is
 significantly more computationally efficient. Concretely, heliostat ray tracing involves three main steps:
 
 1. We calculate the preferred reflection directions of all heliostats. This preferred reflection direction models the
@@ -247,8 +247,7 @@ significantly more computationally efficient. Concretely, heliostat ray tracing 
 
 Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class. Therefore, ray
 tracing with ``ARTIST`` involves only two simple lines of code. First, we define the ``HeliostatRayTracer``. A
-``HeliostatRayTracer`` requires a ``Scenario`` object and the specification of the ``HeliostatGroup`` that is currently
-being considered.
+``HeliostatRayTracer`` requires a ``Scenario`` object and the currently considered ``HeliostatGroup`` :
 
 .. code-block::
 
@@ -261,11 +260,11 @@ being considered.
 Internally, a ``HeliostatRayTracer`` uses a ``torch.Dataset`` to generate rays, apply distortions to the preferred
 reflection directions, perform line-plane intersections, and compute the resulting flux density images. This process
 runs parallel for all heliostats in the scenario. It is also possible to use a data-parallel setup for the
-``HeliostatRayTracer`` to split the computation across multiple devices. See the tutorial on
-:ref:`distributed raytracing <tutorial_distributed_raytracing>`.
+``HeliostatRayTracer`` to split the computation across multiple devices (see the tutorial on
+:ref:`distributed raytracing <tutorial_distributed_raytracing>`).
 
 With everything now set up, we can generate a flux density image by calling the ``trace_rays()`` function with the
-desired incident ray directions, the active heliostat indices and the target area indices (for this tutorial we use the
+desired incident ray directions, the active heliostat indices, and the target area indices (for this tutorial we use the
 receiver).
 
 .. code-block::
