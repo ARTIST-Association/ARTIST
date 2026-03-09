@@ -44,7 +44,7 @@ with setup_distributed_environment(
     # 0.0 -> no global shading, 1.0 -> full global shading
     ray_extinction_factor = 0.0
 
-    # Use a heliostat-target-light source mapping to specify
+    # Use a heliostat/target/light-source mapping to specify
     # - which heliostat in your scenario should be activated,
     # - which incident ray direction each heliostat should receive for alignment, and
     # - on which target each heliostat will be ray-traced.
@@ -89,10 +89,10 @@ with setup_distributed_environment(
             device=device,
         )
 
-        # The ``active_heliostats_mask`` is a tensor that indicates which heliostats are active.
+        # The ``active_heliostats_mask`` is a tensor of shape [number_of_heliostats_in_group] that indicates which
+        # heliostats are active in a group.
         # For each index, 0 indicates a deactivated heliostat and 1 an activated one.
         # An integer greater than 1 indicates that the heliostat in this index is considered multiple times.
-        # The tensor has the shape [number_of_heliostats_in_group].
         heliostat_group_alignment.activate_heliostats(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
@@ -105,7 +105,7 @@ with setup_distributed_environment(
             device=device,
         )
 
-    # Raytracing happens only on one device for each group.
+    # Ray tracing happens only on one device for each group.
     for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
         ddp_setup[config_dictionary.rank]
     ]:
@@ -123,7 +123,7 @@ with setup_distributed_environment(
                 device=device,
             )
 
-            # Create a parallelized ray tracer.
+            # Create a distributed ray tracer.
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
