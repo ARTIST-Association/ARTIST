@@ -43,13 +43,13 @@ def plot_surface_points_and_angle_map(
     ----------
     surface_points : torch.Tensor
         The surface points for one heliostat.
-        Tensor of shape [1, number_of_combined_surface_points_all_facets, 4].
+        Shape is [1, number_of_combined_surface_points_all_facets, 4].
     surface_normals : torch.Tensor
         The surface normals for one heliostat.
-        Tensor of shape [1, number_of_combined_surface_points_all_facets, 4].
+        Shape is [1, number_of_combined_surface_points_all_facets, 4].
     reference_direction : torch.Tensor
         The reference direction.
-        Tensor of shape [4].
+        Shape is [4].
     name : str
         The name or index of the heliostat.
     """
@@ -121,11 +121,11 @@ def plot_multiple_fluxes(
     Parameters
     ----------
     reconstructed : torch.Tensor
-        The flux density distributions raytraced on the reconstructed surfaces.
-        Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+        The flux density distributions ray-traced on the reconstructed surfaces.
+        Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
     references : torch.Tensor
         The flux density distribution references.
-        Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+        Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
     name : str
         The name or index of the heliostat_group.
     """
