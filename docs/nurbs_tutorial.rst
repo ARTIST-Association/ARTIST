@@ -11,8 +11,8 @@ Using NURBS in ``ARTIST`` is motivated by several key properties:
   manufacturing imperfections and deformations.
 - **Differentiability:** NURBS formulations are differentiable with respect to their control parameters. This enables
   gradient-based learning and optimization of surface parameters within the differentiable ray-tracing framework.
-- **Parameter efficiency:** Compared to point-cloud or deflectometry-based surface representations, NURBS achieve
-  comparable accuracy with significantly fewer parameters.
+- **Parameter efficiency:** Compared to surface representations derived from measured data, such as deflectometry data
+  consisting of surface points and normals, NURBS achieve comparable accuracy with significantly fewer parameters.
 - **Precision and performance:** NURBS offer numerically stable surface evaluation and efficient computation, making them
   suitable for large-scale optimization tasks.
 
