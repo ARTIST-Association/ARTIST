@@ -41,7 +41,7 @@ create a ``heliostat_data_mapping`` list of tuples, where each tuple contains th
 calibration data, which include both a ``.json`` file with calibration properties and a ``.png`` flux image:
 
 
-.. code-block::
+.. code-block:: python
 
     # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]] = [
@@ -76,7 +76,7 @@ calibration data, which include both a ``.json`` file with calibration propertie
 
 This data is then saved into a data dictionary which will be later used in the optimization:
 
-.. code-block::
+.. code-block:: python
 
     # Create dict for the data parser and the heliostat_data_mapping.
     data: dict[
@@ -99,7 +99,7 @@ As in the :ref:`surface reconstruction<tutorial_surface_reconstruction>` tutoria
 ``torch.optim.Adam`` optimizer. Therefore we again need to define the parameters used for the learning rate scheduler
 and the optimization configuration:
 
-.. code-block::
+.. code-block:: python
 
     optimizer_dict = {
         config_dictionary.initial_learning_rate: 0.0005,
@@ -141,7 +141,7 @@ the differentiable ray tracer.
 
 We can create a ``KinematicsReconstructor`` object responsible for the kinematics reconstruction with:
 
-.. code-block::
+.. code-block:: python
 
     kinematics_reconstructor = KinematicsReconstructor(
         ddp_setup=ddp_setup,
@@ -158,13 +158,13 @@ The set up is now complete and the kinematics reconstruction can begin. The kine
 Before starting the reconstruction we need to define the loss, in this tutorial we use the ``FocalSpotLoss`` since we are
 working with raytracing:
 
-.. code-block::
+.. code-block:: python
 
     loss_definition = FocalSpotLoss(scenario=scenario)
 
 Now we can simply perform the reconstruction with the ``reconstruct_kinematics()`` method:
 
-.. code-block::
+.. code-block:: python
 
     final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
         loss_definition=loss_definition, device=device

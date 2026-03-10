@@ -29,7 +29,7 @@ on the solar tower. In this case, we focus on achieving a trapezoid distribution
 to all areas of the receiver receiving the same amount of sunlight. This would lead to and optimal flux distribution and
 improve operation of the power plant. Therefore, we have to define the ground truth with a trapezoid distribution.
 
-.. code-block::
+.. code-block:: python
 
     e_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=110, device=device
@@ -49,13 +49,13 @@ The DNI is a parameter in the ``MotorPositionsOptimizer``, as we will later see.
 You can pass a DNI directly into a ``HeliostatRayTracer`` anywhere else in ``ARTIST`` too, but in the previous two reconstructions it is not necessary.
 The ``ground_truth`` distribution we aim for now needs to be scaled with a ``target_flux_integral`` scalar value.
 
-.. code-block::
+.. code-block:: python
     target_flux_integral = 10000
     ground_truth = (ground_truth / ground_truth.sum()) * target_flux_integral
 
 Next we set the loss function as the ``KLDivergenceLoss``:
 
-.. code-block::
+.. code-block:: python
 
     loss_definition = KLDivergenceLoss()
 
@@ -67,7 +67,7 @@ Before we can perform the optimization, we also need to define the optimization 
 Internally, the ``torch.optim.Adam`` optimizer is used, but the optimal parameters may differ depending on the data or
 specific use case. In this tutorial we define the following scheduler and optimization configuration:
 
-.. code-block::
+.. code-block:: python
     # Set optimizer parameters.
     optimizer_dict = {
         config_dictionary.initial_learning_rate: 3e-4,
@@ -116,7 +116,7 @@ This is particularly important because, in a real power plant, the receiver is s
 Now we are finally done, the final step is to create a ``MotorPositionsOptimizer`` object and to run the ``optimize()``
 method to perform the actual optimization.
 
-.. code-block::
+.. code-block:: python
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(

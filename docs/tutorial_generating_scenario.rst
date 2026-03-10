@@ -36,7 +36,7 @@ Defining the Scenario Path
 Before defining the scenario content, we must specify where the generated HDF5 file will be stored. This is done by
 setting the ``scenario_path`` variable. If the specified directory does not exist, the scenario generation will fail.
 
-.. code-block::
+.. code-block:: python
 
     # Specify the path to your scenario file.
     scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
@@ -68,7 +68,7 @@ To generate an ``ARTIST`` scenario from ``PAINT`` data, you must provide the fol
 If you want to include multiple heliostats in your scenario, simply add one set of heliostat-specific files, i.e.,
 properties and deflectometry, per heliostat.
 
-.. code-block::
+.. code-block:: python
 
     # Specify the path to your tower-measurements.json file.
     tower_file = pathlib.Path(
@@ -112,7 +112,7 @@ simultaneously from the ``tower-measurement.json`` file. We can extract this inf
 - an instance of ``PowerPlantConfig`` and
 - an instance of ``TowerAreaListConfig``, containing a list of viable target areas.
 
-.. code-block::
+.. code-block:: python
 
     # Include the power plant and target area configuration.
     power_plant_config, target_area_list_config = (
@@ -150,7 +150,7 @@ represents the sun. However, in certain applications, such as calibration setups
 artificial light sources. Light source information is not read from external files and must be defined manually.
 We define the light source by creating a ``LightSourceConfig`` object as shown below:
 
-.. code-block::
+.. code-block:: python
 
     # Include the light source configuration.
     light_source1_config = LightSourceConfig(
@@ -180,7 +180,7 @@ This configuration specifies the following light source properties:
 Although this example uses only a single light source, ``ARTIST`` scenarios are designed to support multiple sources.
 Therefore, the light source configuration must be wrapped in a list and passed to a ``LightSourceListConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Create a list of light source configs - in this case only one.
     light_source_list = [light_source1_config]
@@ -198,7 +198,7 @@ The prototypes and list of heliostats can be easily extracted using the ``paint_
 must define a default aim point by selecting one target area from the previously loaded list – typically the
 receiver:
 
-.. code-block::
+.. code-block:: python
 
     target_area = [
         target_area
@@ -217,7 +217,7 @@ controlling the fitting process, such as:
 
 This is shown below:
 
-.. code-block::
+.. code-block:: python
 
     number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
     nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
@@ -242,7 +242,7 @@ With the configuration defined, a single function call :
 - learn the NURBS surfaces, and
 - generates the prototype configuration.
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list_config, prototype_config = (
         paint_scenario_parser.extract_paint_heliostats_fitted_surface(
@@ -285,7 +285,7 @@ Different Surface Options
 :ref:`the NURBS surface reconstructor<tutorial_surface_reconstruction>`). If no information about the true surface
 is available, the ideal surface can simply be used as is. To generate heliostats with ideal surfaces, call:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list_config, prototype_config = (
             paint_scenario_parser.extract_paint_heliostats_ideal_surface(
@@ -303,7 +303,7 @@ provided input mapping. If you provide a path to a deflectometry file, the surfa
 surface will be generated.
 For example, for the following mapping:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_files_list = [
         (
@@ -325,7 +325,7 @@ For example, for the following mapping:
 
 Calling the function:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list_config, prototype_config = (
         paint_scenario_parser.extract_paint_heliostats_mixed_surface(
@@ -355,7 +355,7 @@ Creating the HDF5 File
 At this point, we have all the information needed to generate the HDF5 file and complete the scenario. We can create the
 scenario by running the ``main`` function shown below:
 
-.. code-block::
+.. code-block:: python
 
     if __name__ == "__main__":
         # Generate the scenario given the defined parameters.
@@ -383,7 +383,7 @@ Generating a Scenario with STRAL Data
 
 To generate a scenario from STRAL, you only need a single ``.binp`` file.
 
-.. code-block::
+.. code-block:: python
 
     # Specify the path to your stral_data.binp file.
     stral_file_path = pathlib.Path(
@@ -397,7 +397,7 @@ Power Plant
 -----------
 STRAL data does not include the power plant location, so you must enter the coordinates manually:
 
-.. code-block::
+.. code-block:: python
 
     # Include the power plant configuration.
     power_plant_config = PowerPlantConfig(
@@ -410,7 +410,7 @@ Target Areas
 ------------
 When using STRAL data, we also need to manually define the ``TargetAreaConfig``:
 
-.. code-block::
+.. code-block:: python
 
     # STRAL
     # Include a single tower area (receiver).
@@ -428,7 +428,7 @@ More details on the ``TargetAreaConfig`` class are provided above (see :ref:`pla
 Since our scenario contains only one target area (a receiver), but ``ARTIST`` scenarios are designed to support multiple
 target areas, we have to manually wrap our target area in a list and create a ``TargetAreaListConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Create list of target area configs - in this case only one.
     target_area_config_list = [receiver_config]
@@ -448,7 +448,7 @@ prototype, and an actuator prototype.
 We start with the surface prototype. First, we need to extract information regarding the facet translation vectors, the
 canting, and the surface points and normals from STRAL:
 
-.. code-block::
+.. code-block:: python
 
     (
         facet_translation_vectors,
@@ -462,7 +462,7 @@ canting, and the surface points and normals from STRAL:
 Before we can generate a NURBS surface based on the surface normals and points from STRAL, we need to define the surface
 generator and the optimizer and scheduler to fit the surface:
 
-.. code-block::
+.. code-block:: python
 
     surface_generator = SurfaceGenerator(device=device)
 
@@ -479,7 +479,7 @@ generator and the optimizer and scheduler to fit the surface:
 
 Finally, we can use the configuration to generate a fitted surface:
 
-.. code-block::
+.. code-block:: python
 
     surface_config = surface_generator.generate_fitted_surface_config(
         heliostat_name="heliostat_1",
@@ -495,7 +495,7 @@ Finally, we can use the configuration to generate a fitted surface:
 Alternatively, we can generate an ideal surface that is not fitted based on deflectometry data. To generate such a
 surface, we do not need to define an optimizer or scheduler but can simply call:
 
-.. code-block::
+.. code-block:: python
 
      surface_config = surface_generator.generate_ideal_surface_config(
         facet_translation_vectors=facet_translation_vectors,
@@ -506,7 +506,7 @@ surface, we do not need to define an optimizer or scheduler but can simply call:
 To create the surface configuration, we define a surface configuration prototype based on the list of facets
 contained in the `SurfaceConfig` from above:
 
-.. code-block::
+.. code-block:: python
 
     surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
 
@@ -517,7 +517,7 @@ configuration is ``KinematicsDeviations`` which are small disturbance parameters
 two-joint kinematics modeled in ``ARTIST``. In this tutorial, we ignore these deviations. Therefore, we can
 create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` object as:
 
-.. code-block::
+.. code-block:: python
 
     kinematics_prototype_config = KinematicsPrototypeConfig(
         type=config_dictionary.rigid_body_key,
@@ -537,14 +537,14 @@ With the kinematics prototype defined, the final prototype required is the actua
 kinematics, we need exactly two actuators. Since STRAL data does not include motor position limits, we have to define
 them manually. Here, we use the minimum and maximum motor positions for the Jülich plant:
 
-.. code-block::
+.. code-block:: python
 
     min_max_motor_positions_actuator_1 = [0.0, 60000.0]
     min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 
 We can now define the actuators using ``ActuatorConfig`` objects as shown below:
 
-.. code-block::
+.. code-block:: python
 
     # Include two ideal actuators.
     actuator1_prototype = ActuatorConfig(
@@ -573,7 +573,7 @@ For different types of actuators, e.g., a linear actuator, we would also have to
 However, we will stick to a simple configuration for this tutorial. To complete the actuator prototype, we wrap both
 actuators in a list and generate an ``ActuatorPrototypeConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Create a list of actuators.
     actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
@@ -585,7 +585,7 @@ actuators in a list and generate an ``ActuatorPrototypeConfig`` object:
 
 With all prototypes defined, we can combine them into the final ``PrototypeConfig`` object as shown below:
 
-.. code-block::
+.. code-block:: python
 
     # Include the final prototype config.
     prototype_config = PrototypeConfig(
@@ -598,7 +598,7 @@ Heliostat from ``STRAL``
 ------------------------
 Having defined the prototype, we can now define our heliostat by creating a ``HeliostatConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Include the configuration for a heliostat.
     heliostat1 = HeliostatConfig(
@@ -621,7 +621,7 @@ Since no individual surface, kinematics, or actuator parameters are provided, th
 prototype configurations. Since ``ARTIST`` is designed to support multiple heliostats, we need to wrap our heliostat
 configuration in a list and create a ``HeliostatListConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list = [heliostat1]
 

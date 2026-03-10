@@ -8,32 +8,34 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/03_nurbs_surface_reconstruction_tutorial.py
 
-This tutorial shows how a heliostat surface can be reconstructed using Non-Uniform Rational B-Splines (NURBS) in ``ARTIST``.
+This tutorial demonstrates how a heliostat surface can be reconstructed using Non-Uniform Rational B-Splines (NURBS) in
+``ARTIST``. It introduces the key steps involved in the reconstruction workflow, including:
 
-The tutorial will cover several concepts including:
+- loading the data required for surface reconstruction,
+- defining the loss functions and regularizers used during optimization,
+- configuring the optimizer and learning rate scheduler, and
+- performing the surface reconstruction.
 
-- How to load the data required for the surface reconstruction.
-- How to set up the loss functions and regularizers required for the surface reconstruction.
-- How to configure the optimizer and learning rate scheduler.
-- How to perform the surface reconstruction.
+Before starting this tutorial, make sure you are familiar with how to
+:ref:`load a scenario<tutorial_heliostat_raytracing>`, run ``ARTIST`` in a
+:ref:`distributed environment<tutorial_distributed_raytracing>`, and understand the structure of a
+:ref:`scenario<scenario>`.
 
-Before starting this scenario make sure you already know how to :ref:`load a scenario<tutorial_heliostat_raytracing>`,
-run ``ARTIST`` in a :ref:`distributed environment<tutorial_distributed_raytracing>`, and understand the structure of a
-:ref:`scenario<scenario>`. If you are not using your own scenario, we recommend using the
-"test_scenario_paint_multiple_heliostat_groups_ideal.h5" scenario provided in the "scenarios" folder.
+If you are not using your own scenario, we recommend using the
+``test_scenario_paint_multiple_heliostat_groups_ideal.h5`` scenario provided in the ``scenarios/`` folder.
 
 Loading Data
 ------------
-To begin, you must load the calibration properties and flux images data required to reconstruct the surfaces.
+As a first step, you must load the calibration properties and flux images data required for reconstructing the surfaces.
+This information is specified in the ``heliostat_data_mapping`` list. Each entry in this list is a tuple containing the
+heliostat name and the paths to its calibration data, which include both a calibration properties ``.json`` file and a
+``.png`` flux image.
 
-This information is contained within the ``heliostat_data_mapping`` list of tuples, where each tuple contains the heliostat's
-name and the paths to its calibration data, which include both a ``.json`` file with calibration properties and a ``.png`` flux image.
+If you are not using your own data, you can use the sample data provided in the ``data/`` directory. For example, the
+data for heliostats ``AA31``, ``AA39``, and ``AC43`` will work with the
+``test_scenario_paint_multiple_heliostat_groups_ideal.h5`` scenario:
 
-If you are not using your own data, you can use the sample data provided in the "data", for example for the heliostats
-AA31, AA39, and AC43 - specifically, this data will also work with the "test_scenario_paint_multiple_heliostat_groups_ideal.h5"
-scenario.
-
-.. code-block::
+.. code-block:: python
 
     # Specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
     # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -67,9 +69,10 @@ scenario.
         # ...
     ]
 
-This data is then saved into a data dictionary which will be later used in the optimization:
+The mapping is then stored in a data dictionary together with the data parse. This dictionary will later be used during
+the optimization process:
 
-.. code-block::
+.. code-block:: python
 
     # Create dict for the data parser and the heliostat_data_mapping.
     data: dict[
@@ -80,21 +83,25 @@ This data is then saved into a data dictionary which will be later used in the o
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
 
-Next, you can load the scenario and set up the distributed environment as in previous tutorials.
+Next, you can load the scenario and set up the distributed environment as in the previous tutorials.
 
 Setting up the Optimization
 ---------------------------
-Surface reconstruction in ``ARTIST`` is framed as an optimization problem. This involves defining a loss function to
-quantify the difference between the reconstructed surface and the calibration data, as well as regularizers to constrain
-the solution and ensure a physically plausible result.
+Surface reconstruction in ``ARTIST`` is framed as an optimization problem. The goal is to reconstruct a heliostat
+surface whose simulated flux distribution matches the measured calibration data. To achieve this, we define:
+
+- a loss function to measure the difference between the simulated flux distribution of the reconstructed surface and the
+measured calibration data, as well as
+- regularizers that enforce physically meaningful surfaces, and
+- constraints that stabilize the optimization process.
 
 Loss Functions
 ^^^^^^^^^^^^^^
 
-In this tutorial we use the ``KLDivergenceLoss`` as the loss function. This loss measures how one probability distribution
-is different from a second, reference distribution. In this case, we consider the target flux density image as a discrete
-distribution and use this as our target. Alternatively, you could also use the ``PixelLoss`` which compares each pixel
-in the generated image individually.
+In this tutorial we use the ``KLDivergenceLoss`` as the loss function. This loss measures the difference between two
+probability distributions. In our case, the measured flux density image used as the target is interpreted as a discrete
+probability distribution and serves as the reference distribution. Alternatively, you can use the ``PixelLoss`` which
+compares the simulated and measured flux images pixel-wise.
 
 .. code-block::
 
@@ -105,14 +112,14 @@ in the generated image individually.
 Optimizer, Scheduler, Regularizer, and Constraints Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The surface reconstruction internally uses the ``torch.optim.Adam`` optimizer. Depending on the data you use, different
-parameters may perform better for the optimizer - including a different learning rate scheduler. Therefore, we first have
-to define our learning rate schedular, here we use an exponential schedular, but good results have also been achieved with
-an cyclic or reduce on plateau scheduler:
+The surface reconstruction internally uses the ``torch.optim.Adam`` optimizer. Depending on the dataset and
+reconstruction problem, different optimizer parameters and learning rate schedulers may lead to better results.
+Below, we configure the optimizer parameters and define the learning rate scheduler. In this example, we use an
+exponential scheduler. In practice, cyclic or reduce-on-plateau schedulers have also achieved good results.
 
-.. code-block::
+.. code-block:: python
 
-    # Configure the optimization.
+    # Configure the optimizer.
     optimizer_dict = {
         config_dictionary.initial_learning_rate: 1e-4,
         config_dictionary.tolerance: 1e-5,
@@ -136,16 +143,19 @@ an cyclic or reduce on plateau scheduler:
         config_dictionary.cooldown: 5,
     }
 
-Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and similar to an ideal
-surface. In the surface reconstruction we consider two regularizers:
+Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and remains physically
+plausible, i.e., similar to an ideal surface. In the surface reconstruction we use two regularizers:
 
-- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted surface. The idea here is that we know the general canting and shape of a flat surface and what is unknown is the minute deformations. Therefore, any dramatic changes should be avoided and in general the learned surface should be similar to the ideal surface, apart from these minute deviations.
+- ``IdealSurfaceRegularizer``: Pushes the reconstructed surface towards the shape of an ideal, perfectly flat or canted
+  surface. Since the overall surface shape is typically known from the heliostat design, the reconstruction mainly
+  focuses on small local deformations. This regularizer therefore discourages unrealistic large deviations from an ideal
+  surface.
 - ``SmoothnessRegularizer``: This regularizer promotes smoothness by penalizing large gradients. The idea behind this regularizer is that neighboring points on the surface should be similar, therefore very large differences between points is unrealistic. We apply this regularizer to both the NURBS control points.
 
 These regularizers are initialized automatically within the ``SurfaceReconstructor``. We can adjust their influence by setting their weights inside the constraints dict.
 Weights of zero deactivate the regularizers completely.
 
-.. code-block::
+.. code-block:: python
 
     constraint_dict = {
         config_dictionary.weight_smoothness: 0.005,
@@ -164,7 +174,7 @@ The parameter ``rho_energy`` is the quadratic penalty weight. It controls how st
 The ``energy_tolerance`` describes how much the flux integral may vary relative to the initial surface.
 We can now define the combined optimization parameters in the ``optimization_configuration`` dictionary:
 
-.. code-block::
+.. code-block:: python
 
     optimization_configuration = {
         config_dictionary.optimization: optimizer_dict,

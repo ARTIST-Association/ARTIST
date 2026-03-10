@@ -28,7 +28,7 @@ heliostat groups and how ``ARTIST`` is structured can be found in the descriptio
 
 Before proceeding, we need to determine how many heliostat groups are present in the scenario:
 
-.. code-block::
+.. code-block:: python
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -47,7 +47,7 @@ environment is initialized with an appropriate communication backend. For comput
 backend optimized for NVIDIA GPUs. For computation on CPUs, ``gloo`` is used as backend. All of this setup is handled
 automatically via:
 
-.. code-block::
+.. code-block:: python
 
     with setup_distributed_environment(
         number_of_heliostat_groups=number_of_heliostat_groups,
@@ -69,7 +69,7 @@ to have some heliostats aim at one target area while others aim elsewhere, or to
 for different heliostats in the same alignment and ray tracing process for calibration tasks. To map each heliostat to
 its designated target area and incident ray direction, we use the following mapping structure:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_target_light_source_mapping = [
         ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
@@ -79,7 +79,7 @@ its designated target area and incident ray direction, we use the following mapp
 
 As we want to consider all heliostats in this tutorial, we set our mapping to ``None``:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_target_light_source_mapping = None
 
@@ -94,7 +94,7 @@ Distributed Raytracing
 Before we can start distributed ray tracing, we need to set the resolution of the generated bitmap and create a tensor
 to store the final result:
 
-.. code-block::
+.. code-block:: python
 
     bitmap_resolution = torch.tensor([256, 256])
 
@@ -111,7 +111,7 @@ Now the heliostat groups come in to play. Each heliostat group must be considere
 setting, these groups can be computed in parallel; otherwise, they are processed sequentially. Therefore, the entire
 distributed ray tracing process takes place within a ``for`` loop:
 
-.. code-block::
+.. code-block:: python
 
     for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
         ddp_setup[config_dictionary.rank]
@@ -123,7 +123,7 @@ distributed ray tracing process takes place within a ``for`` loop:
 Within this loop, the first step is to determine which heliostats are activated and which target areas are used. This is
 done using the ``heliostat_target_light_source_mapping`` defined earlier:
 
-.. code-block::
+.. code-block:: python
 
     (
         active_heliostats_mask,
@@ -138,7 +138,7 @@ done using the ``heliostat_target_light_source_mapping`` defined earlier:
 We then activate the heliostats as in the
 :ref:`previous tutorial on single heliostat ray tracing<tutorial_heliostat_raytracing>`:
 
-.. code-block::
+.. code-block:: python
 
     # For each index, 0 indicates a deactivated heliostat, 1 indicates an activated one.
     # An integer greater than 1 means the heliostat at this index is considered multiple times.
@@ -148,7 +148,7 @@ We then activate the heliostats as in the
 
 and align the surfaces for all activated heliostats with the incident ray direction:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
         aim_points=scenario.target_areas.centers[target_area_indices],
@@ -160,7 +160,7 @@ and align the surfaces for all activated heliostats with the incident ray direct
 Now we are ready to create a distributed ``HeliostatRayTracer``. Here, it is important to provide the overall number of
 processes ``world_size``, the individual process ID ``rank``, the ``batch_size``, and a ``random_seed``:
 
-.. code-block::
+.. code-block:: python
 
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
@@ -180,7 +180,7 @@ each batch are handled in parallel).
 
 We can now perform ray tracing per heliostat with ``trace_rays()``:
 
-.. code-block::
+.. code-block:: python
 
     bitmaps_per_heliostat = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
@@ -236,7 +236,7 @@ The ``trace_rays()`` method produces bitmaps per heliostat.
 When multiple heliostats in a scenario focus on the same target, we need to combine their flux image into one resulting
 image with ``get_bitmaps_per_target()``:
 
-.. code-block::
+.. code-block:: python
 
     bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
         bitmaps_per_heliostat=bitmaps_per_heliostat,
@@ -247,7 +247,7 @@ image with ``get_bitmaps_per_target()``:
 Since there may also be multiple heliostats in one group, we need to make sure the results from all heliostats are
 considered in the combined bitmap via:
 
-.. code-block::
+.. code-block:: python
 
     combined_bitmaps_per_target = combined_bitmaps_per_target + bitmaps_per_target
 
@@ -278,7 +278,7 @@ are available globally at this point. To obtain the final bitmap per target, we 
 In principle, one final ``all_reduce`` is sufficient, but for the purpose of this tutorial, it is interesting to look at
 intermediate results using a nested ``all_reduce``:
 
-.. code-block::
+.. code-block:: python
 
     if ddp_setup[config_dictionary.is_nested]:
         torch.distributed.all_reduce(
@@ -309,7 +309,7 @@ respective group.
 
 In practice, the global ``all_reduce`` is sufficient to obtain the final bitmap on each target:
 
-.. code-block::
+.. code-block:: python
 
     if ddp_setup[config_dictionary.is_distributed]:
         torch.distributed.all_reduce(
