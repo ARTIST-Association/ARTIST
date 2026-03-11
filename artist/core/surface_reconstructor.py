@@ -83,6 +83,7 @@ class SurfaceReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
+        dni: float = None,
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         epsilon: float | None = 1e-12,
@@ -128,6 +129,7 @@ class SurfaceReconstructor:
         self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
         self.constraint_dict = optimization_configuration[config_dictionary.constraints]
         self.number_of_surface_points = number_of_surface_points.to(device)
+        self.dni=dni
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
 
@@ -369,6 +371,7 @@ class SurfaceReconstructor:
                             config_dictionary.heliostat_group_rank
                         ],
                         bitmap_resolution=self.bitmap_resolution,
+                        dni=self.dni
                     )
 
                     # Perform heliostat-based ray tracing.
@@ -548,7 +551,6 @@ class SurfaceReconstructor:
                         )
                         lambda_energy.clamp_(min=0.0)
 
-
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
@@ -569,6 +571,19 @@ class SurfaceReconstructor:
                         break
 
                     epoch += 1
+                
+                for i in range(cropped_flux_distributions.shape[0]):
+                    _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+                    axes[0].imshow(cropped_flux_distributions[i].cpu().detach(), cmap="gray")
+                    axes[0].set_title("Reconstruction", fontsize=16)
+                    axes[0].axis("off")
+                    axes[1].imshow(measured_flux_distributions[sample_indices_for_local_rank][i].cpu().detach(), cmap="gray")
+                    axes[1].set_title("Measured", fontsize=16)
+                    axes[1].axis("off")
+                    plt.subplots_adjust(wspace=0.05)
+                    plt.show()
+                    plt.savefig(f"bitmaps/surfaces/sample_{i}.png")
+                    plt.close()
 
                 loss_history = {
                     "total_loss_history": total_loss_history,

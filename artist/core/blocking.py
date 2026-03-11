@@ -198,7 +198,8 @@ def soft_ray_blocking_mask(
     blocking_primitives_normals: torch.Tensor,
     distances_to_target: torch.Tensor,
     epsilon: float = 1e-12,
-    softness: float = 50.0,
+    softness: float = 5000.0,
+    ray_origin_offset = 0.05
 ) -> torch.Tensor:
     r"""
     Compute a mask indicating which rays are blocked, using a soft differentiable approach.
@@ -252,7 +253,10 @@ def soft_ray_blocking_mask(
     epsilon : float
         A small value (default is 1e-12).
     softness : float
-        Controls how soft the sigmoid approximates the blocking (default is 50.0).
+        Controls how soft the sigmoid approximates the blocking (default is 5000.0).
+    ray_origin_offset
+        Shift the ray origins a slight distance away from the heliostat planes to avoid self intersections (default is 0.05).
+        The distance is measured in cm, meaning the default offset pushes the ray origins 5cm along the ray direction.
 
     Returns
     -------
@@ -275,7 +279,7 @@ def soft_ray_blocking_mask(
         (corner_0 - ray_origins) * blocking_primitives_normals, dim=-1
     ) / (denominator + epsilon)
     blocking_planes_in_front_of_heliostats = torch.sigmoid(
-        softness * (distances_to_blocking_planes - 1e-3)
+        softness * (distances_to_blocking_planes - ray_origin_offset)
     )
 
     intersection_points = (

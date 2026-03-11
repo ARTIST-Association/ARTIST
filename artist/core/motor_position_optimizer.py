@@ -282,17 +282,22 @@ class MotorPositionsOptimizer:
         )
 
         # Set up constraints.
-        lambda_pixel = 0.0
-        rho_pixel = self.constraint_dict[config_dictionary.rho_pixel]
+        lambda_local_flux = 0.0
+        lambda_flux_integral = 0.0
+        lambda_spillage = 0.0
+        rho_local_flux = self.constraint_dict[config_dictionary.rho_local_flux]
+        rho_flux_integral = self.constraint_dict[config_dictionary.rho_flux_integral]
+        rho_spillage = self.constraint_dict[config_dictionary.rho_spillage]
         max_flux_density = self.constraint_dict[config_dictionary.max_flux_density]
-        energy_integral_reference = 0.0
+        flux_integral_reference = 0.0
 
         # For the loss plot.
         total_loss_history = []
         flux_loss_history = []
         energy_gain = []
-        energy_reward_history = []
-        pixel_constraint_history = []
+        local_flux_constraint_history = []
+        spillage_constraint_history = []
+        flux_integral_constraint_history = []
 
         # Start the optimization.
         loss = torch.inf
@@ -315,6 +320,8 @@ class MotorPositionsOptimizer:
                 ),
                 device=device,
             )
+            intensities = 0
+            intensities_with_blocking = 0
 
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
@@ -379,7 +386,7 @@ class MotorPositionsOptimizer:
                 )
 
                 # Perform heliostat-based ray tracing.
-                flux_distributions = ray_tracer.trace_rays(
+                flux_distributions, intensity_all_rays, intensity_with_blocking = ray_tracer.trace_rays(
                     incident_ray_directions=incident_ray_directions_all_groups[
                         heliostat_group_index
                     ],
@@ -401,6 +408,8 @@ class MotorPositionsOptimizer:
                 )[self.target_area_index]
 
                 total_flux = total_flux + flux_distribution_on_target
+                intensities = intensities + intensity_all_rays
+                intensities_with_blocking = intensities_with_blocking + intensity_with_blocking
 
             if self.ddp_setup[config_dictionary.is_distributed]:
                 total_flux = torch.distributed.nn.functional.all_reduce(
@@ -426,31 +435,39 @@ class MotorPositionsOptimizer:
                 loss = flux_loss
 
             if isinstance(loss_definition, KLDivergenceLoss):
-                # Ensure that flux integral is maximized, i.e., intensity increases or stays the same.
+                # Augmented Lagrangian to ensure that flux integral is maximized, i.e., intensity increases or stays the same.
                 if epoch == 0:
-                    energy_integral_reference = total_flux.sum().detach()
-                    alpha = (flux_loss.item() / (energy_integral_reference + 1e-8)) * 5
-                energy_difference = torch.clamp(energy_integral_reference * 1.1 - total_flux.sum(), min=0.0)
-                energy_reward = alpha * energy_difference
-                
+                    flux_integral_reference = total_flux.sum().detach()
+                flux_integral_difference = flux_integral_reference - total_flux.sum()
+                flux_integral_difference_clamped = torch.clamp(flux_integral_difference, min=0.0)
+                flux_integral_constraint = (
+                    lambda_flux_integral * flux_integral_difference_clamped + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
+                )
+
+                # Augmented Lagrangian to ensure that spillage is eliminated.
+                spillage = intensities - total_flux.sum()
+                spillage_clamped = torch.clamp(spillage, min=0.0)
+                spillage_constraint = (
+                    lambda_spillage * spillage_clamped + 0.5 * rho_spillage * spillage_clamped**2
+                )
+
                 # Augmented Lagrangian to ensure that local heat spikes are avoided.
-                # Using 0.5 * rho * (g + lambda / rho)**2 - 0.5 * (lambda**2)/rho
-                # is mathematically equivalent to lambda * g + 0.5 * rho * g**2,
-                # but writing it as a completed square is more stable because its gradient ∂L/∂g = rho * (g + lambda/rho) 
-                # varies linearly and continuously with g, avoiding abrupt jumps from separately adding linear and quadratic terms.
-                g_pixel = total_flux - max_flux_density
-                g_pixel_positive = torch.clamp(g_pixel, min=0.0)
-                pixel_constraint = (
-                    0.5 * rho_pixel * (g_pixel_positive + lambda_pixel / rho_pixel)**2
-                    - 0.5 * (lambda_pixel**2) / rho_pixel
-                ).sum()
+                local_flux_violation = total_flux - max_flux_density
+                local_flux_violation_clamped = torch.clamp(local_flux_violation, min=0.0)
+                local_flux_constraint = (
+                    lambda_local_flux * local_flux_violation_clamped + 0.5 * rho_local_flux * local_flux_violation_clamped**2
+                ).max()
+                
                 loss = (
                     flux_loss
-                    + energy_reward
-                    + pixel_constraint
+                    + flux_integral_constraint
+                    + spillage_constraint
+                    + local_flux_constraint
                 )
                 with torch.no_grad():
-                    lambda_pixel = torch.clamp(lambda_pixel + rho_pixel * g_pixel, min=0.0)
+                    lambda_local_flux = torch.clamp(lambda_local_flux + rho_local_flux * local_flux_violation.max(), min=0.0)
+                    lambda_spillage = torch.clamp(lambda_spillage + rho_spillage * spillage, min=0.0)
+                    lambda_flux_integral = torch.clamp(lambda_flux_integral + rho_flux_integral * flux_integral_difference, min=0.0)
 
             loss.backward()
 
@@ -475,11 +492,13 @@ class MotorPositionsOptimizer:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
+            
             total_loss_history.append(loss.detach().cpu().item())
             flux_loss_history.append(flux_loss.detach().cpu().item())
-            energy_gain.append((100 / energy_integral_reference * (total_flux.sum()-energy_integral_reference)).detach().cpu().item())
-            energy_reward_history.append(energy_reward.detach().cpu().item())
-            pixel_constraint_history.append(pixel_constraint.detach().cpu().item())
+            energy_gain.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
+            local_flux_constraint_history.append(local_flux_constraint.detach().cpu().item())
+            spillage_constraint_history.append(spillage_constraint.detach().cpu().item())
+            flux_integral_constraint_history.append(flux_integral_constraint.detach().cpu().item())
 
             # Early stopping when loss did not improve since a predefined number of epochs.
             stop = early_stopper.step(loss)
@@ -491,10 +510,11 @@ class MotorPositionsOptimizer:
             epoch += 1
         
         loss_history = {
-            "total_loss_history": total_loss_history,
-            "flux_loss_history": flux_loss_history,
-            "energy_reward_history": energy_reward_history,
-            "pixel_constraint_history": pixel_constraint_history,
+            "total_loss": total_loss_history,
+            "flux_loss": flux_loss_history,
+            "local_flux_constraint": local_flux_constraint_history,
+            "spillage_constraint": spillage_constraint_history,
+            "flux_integral_constraint": flux_integral_constraint_history,
             "energy_gain": energy_gain
         }
         log.info(f"Rank: {rank}, motor positions optimized.")
@@ -513,4 +533,4 @@ class MotorPositionsOptimizer:
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
 
-        return loss.detach().cpu(), loss_history
+        return loss.detach().cpu(), loss_history, intensities, intensities_with_blocking

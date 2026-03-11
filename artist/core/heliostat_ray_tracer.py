@@ -523,7 +523,7 @@ class HeliostatRayTracer:
                             intersections[..., :3] - points_at_ray_origins, dim=-1
                         ),
                         epsilon=1e-12,
-                        softness=50.0,
+                        softness=5000.0,
                     )
 
             intensities = (
@@ -540,9 +540,9 @@ class HeliostatRayTracer:
 
             flux_distributions.append(batch_bitmaps)
 
-        combined = torch.cat(flux_distributions, dim=0)
+        combined_fluxes = torch.cat(flux_distributions, dim=0)
 
-        return combined
+        return combined_fluxes, absolute_intensities.sum(dim=(1,2)), intensities.sum(dim=(1,2))
 
     def scatter_rays(
         self,
