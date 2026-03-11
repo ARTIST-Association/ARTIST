@@ -405,7 +405,7 @@ def test_blocking_integration(device: torch.device) -> None:
         batch_size=10,
     )
 
-    bitmaps_per_heliostat = ray_tracer.trace_rays(
+    bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_mask=target_area_mask,

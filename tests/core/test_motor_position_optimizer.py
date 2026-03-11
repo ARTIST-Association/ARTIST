@@ -122,8 +122,9 @@ def test_motor_positions_optimizer(
         config_dictionary.early_stopping_window: early_stopping_window,
     }
     constraint_dict = {
-        config_dictionary.rho_energy: 1.0,
-        config_dictionary.rho_pixel: 1.0,
+        config_dictionary.rho_flux_integral: 1.0,
+        config_dictionary.rho_local_flux: 1.0,
+        config_dictionary.rho_spillage: 1.0,
         config_dictionary.max_flux_density: 3,
     }
     # Combine configurations.
