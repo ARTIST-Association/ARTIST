@@ -18,7 +18,7 @@ heliostats_for_plots:
 random_seed: 7
 device: "cuda"
 surface_reconstruction_optimization_configuration:
-  max_epoch: 3
+  max_epoch: 100
   batch_size: 48
   batch_size_outer: 48
   number_of_surface_points: 50
@@ -42,10 +42,13 @@ surface_reconstruction_optimization_configuration:
   weight_smoothness: 0.00
   weight_ideal_surface: 0.10
 kinematics_reconstruction_optimization_configuration:
-  max_epoch: 3
+  max_epoch: 500
   batch_size: 192
+  number_of_surface_points: 50
+  number_of_control_points: 6
+  nurbs_degree: 3
   sample_limit: 2
-  number_of_rays: 3
+  number_of_rays: 10
   initial_learning_rate: 1e-07
   scheduler: "cyclic"
   min_learning_rate: 1e-06
@@ -57,9 +60,12 @@ kinematics_reconstruction_optimization_configuration:
   cooldown: 5
   gamma: 0.92
 aim_point_optimization_configuration:
-  max_epoch: 3
+  max_epoch: 500
   batch_size: 96
-  number_of_rays: 3
+  number_of_surface_points: 50
+  number_of_control_points: 6
+  nurbs_degree: 3
+  number_of_rays: 4
   initial_learning_rate: 1e-03
   scheduler: "cyclic"
   min_learning_rate: 1e-06
@@ -73,12 +79,12 @@ aim_point_optimization_configuration:
   rho_energy: 1.0
   rho_max_flux_density: 1.0
   max_flux_density: 100000
-  dni: 500
 basic_config:
   batch_size: 96
   number_of_surface_points: 50
   number_of_control_points: 6
-  number_of_rays: 3
+  nurbs_degree: 3
+  number_of_rays: 4
   nurbs_degree: 3
   dni: 500
   baseline_incident_ray_direction: [0.411, 0.706, -0.576, 0.0]
