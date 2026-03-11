@@ -2,6 +2,7 @@ import logging
 import pathlib
 from typing import Any, cast
 
+from matplotlib import pyplot as plt
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -11,7 +12,7 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping
+from artist.util import config_dictionary, index_mapping, raytracing_utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ class KinematicsReconstructor:
             CalibrationDataParser
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
+        dni: float,
         optimization_configuration: dict[str, Any],
         reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
     ) -> None:
@@ -89,15 +91,16 @@ class KinematicsReconstructor:
         self.data = data
         self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
         self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
+        self.dni = dni
 
         if (
             reconstruction_method
-            == config_dictionary.kinematics_reconstruction_raytracing
+            in [config_dictionary.kinematics_reconstruction_raytracing, config_dictionary.kinematics_reconstruction_motor_positions]
         ):
             self.reconstruction_method = reconstruction_method
         else:
             raise ValueError(
-                f"ARTIST currently only supports the {config_dictionary.kinematics_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                f"The kinematics reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
             )
 
     def reconstruct_kinematics(
@@ -133,8 +136,264 @@ class KinematicsReconstructor:
                 loss_definition=loss_definition,
                 device=device,
             )
+        elif (
+            self.reconstruction_method
+            == config_dictionary.kinematics_reconstruction_motor_positions
+        ):
+            loss = self._reconstruct_kinematics_parameters_with_motor_positions(
+                loss_definition=loss_definition,
+                device=device
+            )
 
         return loss
+    
+
+    def _reconstruct_kinematics_parameters_with_motor_positions(
+        self,
+        loss_definition: Loss,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """
+        Calibrate the kinematic parameters using the motor positions.
+
+        This optimizer method calibrates the kinematic parameters by extracting the motor positions
+        and incident ray directions from calibration data and using the scene's geometry.
+
+        Parameters
+        ----------
+        loss_definition : Loss
+            The definition of the loss function and pre-processing of the prediction.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The final loss of the kinematic calibration for each heliostat in each group.
+            Tensor of shape [total_number_of_heliostats_in_scenario].
+        """
+        device = get_device(device=device)
+
+        rank = self.ddp_setup[config_dictionary.rank]
+
+        if rank == 0:
+            log.info("Beginning kinematic calibration with motor positions.")
+
+        final_loss_per_heliostat = torch.full(
+            (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
+            torch.inf,
+            device=device,
+        )
+        final_loss_start_indices = torch.cat(
+            [
+                torch.tensor([0], device=device),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(
+                    index_mapping.heliostat_dimension
+                ),
+            ]
+        )
+
+        for heliostat_group_index in self.ddp_setup[
+            config_dictionary.groups_to_ranks_mapping
+        ][rank]:
+            heliostat_group: HeliostatGroup = (
+                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+            )
+
+            parser = cast(
+                CalibrationDataParser, self.data[config_dictionary.data_parser]
+            )
+            heliostat_mapping = cast(
+                list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+                self.data[config_dictionary.heliostat_data_mapping],
+            )
+            (
+                _,
+                focal_spots_measured,
+                incident_ray_directions,
+                motor_positions,
+                active_heliostats_mask,
+                target_area_mask,
+            ) = parser.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_mapping,
+                heliostat_group=heliostat_group,
+                scenario=self.scenario,
+                device=device,
+            )
+
+            if active_heliostats_mask.sum() > 0:
+                # Calculate the reflection directions of the measured calibration data.
+                preferred_reflection_directions_measured = torch.zeros(active_heliostats_mask.sum(), 4, device=device)
+
+                # Create the optimizer.
+                optimizer = torch.optim.Adam(
+                    [
+                        heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+                        heliostat_group.kinematics.actuators.optimizable_parameters.requires_grad_(),
+                    ],
+                    lr=float(
+                        self.optimizer_dict[config_dictionary.initial_learning_rate]
+                    ),
+                )
+
+                # Create a learning rate scheduler.
+                scheduler_fn = getattr(
+                    learning_rate_schedulers,
+                    self.scheduler_dict[config_dictionary.scheduler_type],
+                )
+                scheduler: LRScheduler = scheduler_fn(
+                    optimizer=optimizer, parameters=self.scheduler_dict
+                )
+
+                # Set up early stopping.
+                early_stopper = learning_rate_schedulers.EarlyStopping(
+                    window_size=self.optimizer_dict[
+                        config_dictionary.early_stopping_window
+                    ],
+                    patience=self.optimizer_dict[
+                        config_dictionary.early_stopping_patience
+                    ],
+                    min_improvement=self.optimizer_dict[
+                        config_dictionary.early_stopping_delta
+                    ],
+                    relative=True,
+                )
+
+                loss_history = []
+
+                # Start the optimization.
+                loss = torch.inf
+                epoch = 0
+                log_step = (
+                    self.optimizer_dict[config_dictionary.max_epoch]
+                    if self.optimizer_dict[config_dictionary.log_step] == 0
+                    else self.optimizer_dict[config_dictionary.log_step]
+                )
+                while (
+                    loss > float(self.optimizer_dict[config_dictionary.tolerance])
+                    and epoch <= self.optimizer_dict[config_dictionary.max_epoch]
+                ):
+                    optimizer.zero_grad()
+
+                    # Activate heliostats.
+                    heliostat_group.activate_heliostats(
+                        active_heliostats_mask=active_heliostats_mask, device=device
+                    )
+
+                    # Retrieve the orientation of the heliostats for given motor positions.
+                    orientations = (
+                        heliostat_group.kinematics.motor_positions_to_orientations(
+                            motor_positions=motor_positions,
+                            device=device,
+                        )
+                    )
+
+                    if epoch==0:
+                        with torch.no_grad():
+                            preferred_reflection_directions_measured = torch.nn.functional.normalize(
+                                (
+                                    focal_spots_measured[:, :3]
+                                    - orientations[:, :3, 3]
+                                ),
+                                p=2,
+                                dim=1,
+                            )
+                            normal_measured = torch.nn.functional.normalize(preferred_reflection_directions_measured - incident_ray_directions[:, :3], dim=-1)
+
+
+                    # Determine the preferred reflection directions for each heliostat.
+                    preferred_reflection_directions = raytracing_utils.reflect(
+                        incident_ray_directions=incident_ray_directions[:, :3],
+                        reflection_surface_normals=orientations[:, :3, 2],
+                    )
+
+                    loss_per_sample = loss_definition(
+                        prediction=orientations[:, :3, 2],
+                        ground_truth=normal_measured,
+                        target_area_mask=target_area_mask,
+                        reduction_dimensions=(1,),
+                        device=device,
+                    )
+
+                    number_of_samples_per_heliostat = int(
+                        heliostat_group.active_heliostats_mask.sum()
+                        / (heliostat_group.active_heliostats_mask > 0).sum()
+                    )
+
+                    loss_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=loss_per_sample,
+                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                    )
+
+                    loss = loss_per_heliostat.mean()
+
+                    loss.backward()
+
+                    optimizer.step()
+                    if isinstance(
+                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                    ):
+                        scheduler.step(loss.detach())
+                    else:
+                        scheduler.step()
+
+                    if epoch % log_step == 0:
+                        log.info(
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
+                        )
+
+                    loss_history.append(loss.detach().cpu().item())
+
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    stop = early_stopper.step(loss)
+
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
+                        break
+
+                    epoch += 1
+                
+                loss_history = {
+                    "total_loss_history": loss_history,
+                }
+            
+                global_active_indices = torch.nonzero(
+                    active_heliostats_mask != 0, as_tuple=True
+                )[0]
+
+                final_indices = (
+                    global_active_indices
+                    + final_loss_start_indices[heliostat_group_index]
+                )
+
+                final_loss_per_heliostat[final_indices] = loss_per_heliostat
+                
+                log.info("Kinematics reconstructed.")
+        
+        if self.ddp_setup[config_dictionary.is_distributed]:
+            for index, heliostat_group in enumerate(
+                self.scenario.heliostat_field.heliostat_groups
+            ):
+                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
+                    index
+                ]
+                torch.distributed.broadcast(
+                    heliostat_group.kinematics.rotation_deviation_parameters,
+                    src=source[index_mapping.first_rank_from_group],
+                )
+                torch.distributed.broadcast(
+                    heliostat_group.kinematics.actuators.optimizable_parameters,
+                    src=source[index_mapping.first_rank_from_group],
+                )
+            torch.distributed.all_reduce(
+                final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
+            )
+
+            log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
+
+        return final_loss_per_heliostat.detach().cpu(), loss_history
 
     def _reconstruct_kinematics_parameters_with_raytracing(
         self,
@@ -197,7 +456,7 @@ class KinematicsReconstructor:
                 self.data[config_dictionary.heliostat_data_mapping],
             )
             (
-                _,
+                measured,
                 focal_spots_measured,
                 incident_ray_directions,
                 _,
@@ -287,6 +546,7 @@ class KinematicsReconstructor:
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
+                        dni=self.dni
                     )
 
                     # Perform heliostat-based ray tracing.
@@ -365,7 +625,7 @@ class KinematicsReconstructor:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                         )
-                    
+
                     loss_history.append(loss.detach().cpu().item())
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
@@ -376,6 +636,18 @@ class KinematicsReconstructor:
                         break
 
                     epoch += 1
+                for i in range(flux_distributions.shape[0]):
+                    _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+                    axes[0].imshow(flux_distributions[i].cpu().detach(), cmap="gray")
+                    axes[0].set_title("Reconstruction", fontsize=16)
+                    axes[0].axis("off")
+                    axes[1].imshow(measured[i].cpu().detach(), cmap="gray")
+                    axes[1].set_title("Measured", fontsize=16)
+                    axes[1].axis("off")
+                    plt.subplots_adjust(wspace=0.05)
+                    plt.show()
+                    plt.savefig(f"bitmaps/kinematics/sample_{i}.png")
+                    plt.close()
 
                 loss_history = {
                     "total_loss_history": loss_history,
