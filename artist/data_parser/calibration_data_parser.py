@@ -185,7 +185,7 @@ class CalibrationDataParser:
 
             for path in paths[:number_of_measurements]:
                 bitmap_tensor = (
-                    torchvision.io.read_image(
+                    torchvision.io.decode_image(
                         str(path), mode=torchvision.io.ImageReadMode.GRAY
                     )
                     .squeeze(0)
