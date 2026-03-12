@@ -1,3 +1,22 @@
+"""
+Generate plots based on ray tracing results.
+
+This script loads the results from the ``ARTIST`` raytracing and generates a plot comparing the extracted image, the
+image generated with an ideal surface, the image generated with a fitted surface based on deflectometry data, and
+the measured deformations in the surface.
+
+Command-Line Arguments
+----------------------
+config : str
+Path to the configuration file.
+device : str
+Device to use for the computation.
+results_dir : str
+Path to directory where the results are saved.
+plots_dir : str
+Path to the directory where the plots are saved.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -74,7 +93,7 @@ def plot_flux_prediction(
             gridspec_kw={"hspace": 0.1},
         )
 
-        # Extract ax if only one heliostat.
+        # Extract axis if only one heliostat.
         if number_of_heliostats == 1:
             ax = [ax]
 
@@ -120,24 +139,6 @@ def plot_flux_prediction(
 
 
 if __name__ == "__main__":
-    """
-    Generate plots based on ray tracing results.
-
-    This script loads the results from the ``ARTIST`` raytracing and generates a plot comparing the extracted image, the
-    image generated with an ideal surface, the image generated with a fitted surface based on deflectometry data, and
-    the measured deformations in the surface.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to directory where the results are saved.
-    plots_dir : str
-        Path to the directory where the plots are saved.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
