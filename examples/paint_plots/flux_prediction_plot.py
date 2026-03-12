@@ -1,3 +1,22 @@
+"""
+Generate plots based on ray tracing results.
+
+This script loads the results from the ``ARTIST`` raytracing and generates a plot comparing the extracted image, the
+image generated with an ideal surface, the image generated with a fitted surface based on deflectometry data, and
+the measured deformations in the surface.
+
+Command-Line Arguments
+----------------------
+config : str
+Path to the configuration file.
+device : str
+Device to use for the computation.
+results_dir : str
+Path to directory where the results are saved.
+plots_dir : str
+Path to the directory where the plots are saved.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -33,14 +52,14 @@ def plot_flux_prediction(
     results_file: pathlib.Path, plots_path: pathlib.Path, device: torch.device
 ) -> None:
     """
-    Plot the flux prediction results.
+    Plot the flux prediction results, saving each plot type as a separate column-plot.
 
     Parameters
     ----------
     results_file : pathlib.Path
         Path to the results file.
     plots_path : pathlib.Path
-        Path to save the plot to.
+        Base path to save the plots to. Suffixes depending on data column is appended.
     device : torch.device
         Device to use.
     """
@@ -58,40 +77,43 @@ def plot_flux_prediction(
     )
     number_of_heliostats = len(results_dict)
 
-    # Create figure.
-    fig, ax = plt.subplots(
-        number_of_heliostats,
-        4,
-        figsize=(12, 2.5 * number_of_heliostats),
-        gridspec_kw={
-            "width_ratios": [1, 1, 1, 1],
-            "wspace": 0.01,
-            "hspace": 0.1,
-        },
-    )
-
-    # Ensure 'ax' is always an array of arrays for consistency.
-    if number_of_heliostats == 1:
-        ax = [ax]
-
-    # Define colormaps.
+    # Define configurations for each column type.
     colormaps: list[str] = ["gray", "hot", "hot", "plasma"]
+    suffixes: list[str] = ["utis", "ideal", "deflectometry", "surface"]
 
-    for i, (heliostat_name, data) in enumerate(results_dict.items()):
-        # Extract images.
-        utis = normalize(data["utis"])
-        ideal = normalize(data["ideal"])
-        deflectometry = normalize(data["deflectometry"])
-        surface = data.get("surface", np.zeros_like(utis))
+    # Iterate over each column type to create separate figures.
+    for j in range(4):
+        fig, ax = plt.subplots(
+            number_of_heliostats,
+            1,
+            figsize=(
+                3,
+                2.5 * number_of_heliostats,
+            ),
+            gridspec_kw={"hspace": 0.1},
+        )
 
-        images = [utis, ideal, deflectometry, surface]
+        # Extract axis if only one heliostat.
+        if number_of_heliostats == 1:
+            ax = [ax]
 
-        for j, img in enumerate(images):
-            if j < 3:
-                ax[i][j].imshow(img, cmap=colormaps[j])
+        for i, (heliostat_name, data) in enumerate(results_dict.items()):
+            if j == 0:
+                img = normalize(data["utis"])
+            elif j == 1:
+                img = normalize(data["ideal"])
+            elif j == 2:
+                img = normalize(data["deflectometry"])
             else:
-                # Surface deviation map.
-                ax[i][j].scatter(
+                utis = normalize(data["utis"])
+                img = data.get("surface", np.zeros_like(utis))
+
+            # Generate plots.
+            if j < 3:
+                ax[i].imshow(img, cmap=colormaps[j])
+            else:
+                surface = img
+                ax[i].scatter(
                     surface[0].cpu().numpy(),
                     surface[1].cpu().numpy(),
                     c=surface[2].cpu().numpy(),
@@ -100,50 +122,23 @@ def plot_flux_prediction(
                     vmin=0.000,
                     vmax=0.007,
                 )
-                for spine in ax[i][j].spines.values():
-                    spine.set_visible(False)
-            # Turn off axis ticks and labels for all subplots.
-            ax[i][j].axis("off")
-            ax[i][j].set_xticks([])
-            ax[i][j].set_yticks([])
 
-        # Label rows.
-        ax[i][0].set_ylabel(
-            f"\\textbf{{{heliostat_name}}}", rotation=90, labelpad=10, va="center"
+            ax[i].set_xticks([])
+            ax[i].set_yticks([])
+            for spine in ax[i].spines.values():
+                spine.set_visible(False)
+
+        # Dynamically adjust the save path to include the suffix before the extension.
+        out_path = plots_path.with_name(
+            f"{plots_path.stem}_{suffixes[j]}{plots_path.suffix}"
         )
 
-    # Column titles with a smaller second line.
-    ax[0][0].set_title("\\textbf{Flux Image}\n{\\small (extracted with UTIS)}")
-    ax[0][1].set_title("\\textbf{Generated Flux}\n{\\small (using ideal surface)}")
-    ax[0][2].set_title("\\textbf{Generated Flux}\n{\\small (using deflectometry)}")
-    ax[0][3].set_title("\\textbf{Surface}\n{\\small (measured by deflectometry)}")
-
-    plt.savefig(plots_path, dpi=300, bbox_inches="tight")
-    plt.close(fig)
-    print(f"Saved overexposed flux comparison to {plots_path}.")
-
-    plt.close(fig)
+        plt.savefig(out_path, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Saved {suffixes[j]} comparison to {out_path}.")
 
 
 if __name__ == "__main__":
-    """
-    Generate plots based on ray tracing results.
-
-    This script loads the results from the ``ARTIST`` raytracing and generates a plot comparing the extracted image, the
-    image generated with an ideal surface, the image generated with a fitted surface based on deflectometry data, and
-    the measured deformations in the surface.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to directory where the results are saved.
-    plots_dir : str
-        Path to the directory where the plots are saved.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"

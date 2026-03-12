@@ -269,4 +269,4 @@ Internally, this computation proceeds in three main steps:
 3. Finally, the surface points and normals are calculated from the basis functions, their derivatives, and the control
    points.
 
-.. _Wolfram Demonstrations Project: demonstrations.wolfram.com/BSplineCurveWithKnots/
+.. _Wolfram Demonstrations Project: https://demonstrations.wolfram.com/BSplineCurveWithKnots/

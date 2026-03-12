@@ -143,6 +143,14 @@ field. Blocking occurs when a ray reflected from one heliostat toward the receiv
 reaching the target. Blocking is therefore a heliostat-field effect that depends on the relative positions and
 orientations of neighboring heliostats.
 
+.. figure:: ./images/blocking_juelich.jpeg
+   :width: 100 %
+   :align: center
+
+   Heliostat blocking in the Jülich heliostat field. Bright spots on the backs of several heliostats reveal where
+   reflected rays from neighboring heliostats are intercepted before reaching the receiver.
+   Credit: `DLR (CC BY-NC-ND 3.0) <https://www.dlr.de/de/service/impressum>`_
+
 Blocking is distinct from shading. By definition, shading occurs when incoming sunlight is obstructed before reaching a
 heliostat, i.e., between the light source and the reflecting surface. Blocking, in contrast, occurs after reflection,
 between the heliostat and the receiver. Currently, only blocking is implemented in ``ARTIST``.
