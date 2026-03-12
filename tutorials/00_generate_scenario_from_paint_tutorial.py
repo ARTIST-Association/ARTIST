@@ -1,3 +1,5 @@
+"""Generate a PAINT scenario."""
+
 import pathlib
 
 import torch
@@ -11,7 +13,7 @@ from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device
 
-# Set up logger
+# Set up logger.
 set_logger_config()
 
 torch.manual_seed(7)
@@ -48,14 +50,14 @@ heliostat_files_list = [
     # ... Include as many as you want, but at least one!
 ]
 
-# This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
+# Make sure the path you defined is valid and a scenario HDF5 can be saved there.
 if not pathlib.Path(scenario_path).parent.is_dir():
     raise FileNotFoundError(
         f"The folder ``{pathlib.Path(scenario_path).parent}`` selected to save the scenario does not exist. "
         "Please create the folder or adjust the file path before running again!"
     )
 
-# Include the power plant configuration.
+# Include the power plant and target area configuration.
 power_plant_config, target_area_list_config = (
     paint_scenario_parser.extract_paint_tower_measurements(
         tower_measurements_path=tower_file, device=device
@@ -90,7 +92,7 @@ nurbs_deflectometry_step_size = 100
 nurbs_fit_tolerance = 1e-10
 nurbs_fit_max_epoch = 400
 
-# Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+# Leave the optimizable parameters empty, they will automatically be added for the surface fit.
 nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
 nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     nurbs_fit_optimizer,
@@ -128,7 +130,7 @@ heliostat_list_config, prototype_config = (
 # )
 
 if __name__ == "__main__":
-    """Generate the scenario given the defined parameters."""
+    # Generate the scenario given the defined parameters.
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,

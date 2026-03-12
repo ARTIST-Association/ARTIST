@@ -1,3 +1,5 @@
+"""Generate a STRAL scenario."""
+
 import pathlib
 
 import torch
@@ -39,7 +41,7 @@ stral_file_path = pathlib.Path(
     "please/insert/the/path/to/the/stral/data/here/test_stral_data.binp"
 )
 
-# This checks to make sure the path you defined is valid and a scenario HDF5 can be saved there.
+# Make sure the path you defined is valid and a scenario HDF5 can be saved there.
 if not pathlib.Path(scenario_path).parent.is_dir():
     raise FileNotFoundError(
         f"The folder ``{pathlib.Path(scenario_path).parent}`` selected to save the scenario does not exist. "
@@ -95,7 +97,7 @@ light_source_list_config = LightSourceListConfig(light_source_list=light_source_
 # Generate surface configuration from STRAL data.
 surface_generator = SurfaceGenerator(device=device)
 
-# Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+# Leave the optimizable parameters empty, they will automatically be added for the surface fit.
 nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
 nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     nurbs_fit_optimizer,
@@ -133,19 +135,18 @@ kinematics_prototype_config = KinematicsPrototypeConfig(
     initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
-# The minimum and maximum motor positions provided here are approximations of the actuators in the heliostat field in Juelich.
+# The minimum and maximum motor positions provided here are approximations
+# of the actuators in the heliostat field in Juelich.
 min_max_motor_positions_actuator_1 = [0.0, 60000.0]
 min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 
-# Include an ideal actuator.
+# Include two ideal actuators.
 actuator1_prototype = ActuatorConfig(
     key="actuator_1",
     type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
     min_max_motor_positions=min_max_motor_positions_actuator_1,
 )
-
-# Include an ideal actuator.
 actuator2_prototype = ActuatorConfig(
     key="actuator_2",
     type=config_dictionary.ideal_actuator_key,
@@ -168,7 +169,6 @@ prototype_config = PrototypeConfig(
     actuators_prototype=actuator_prototype_config,
 )
 
-
 # Include the configuration for a heliostat.
 heliostat1 = HeliostatConfig(
     name="heliostat_1",
@@ -183,7 +183,7 @@ heliostat_list = [heliostat1]
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
 if __name__ == "__main__":
-    """Generate the scenario given the defined parameters."""
+    # Generate the scenario given the defined parameters.
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,

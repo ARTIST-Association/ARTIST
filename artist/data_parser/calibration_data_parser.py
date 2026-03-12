@@ -1,9 +1,9 @@
 import logging
 import pathlib
-from collections import defaultdict
-from typing import DefaultDict
 
+import numpy as np
 import torch
+import torchvision
 from PIL import Image
 
 import artist.util.index_mapping
@@ -157,55 +157,56 @@ class CalibrationDataParser:
             f"Rank {rank}: Beginning extraction of flux distributions from .png files."
         )
 
-        flux_data_per_heliostat: DefaultDict[str, torch.Tensor] = defaultdict(
-            torch.Tensor
+        width, height = resolution.to(device).tolist()
+        path_mapping_dict = dict(heliostat_flux_path_mapping)
+
+        total_number_of_measurements = sum(
+            min(
+                len(path_mapping_dict.get(name, [])),
+                self.sample_limit or len(path_mapping_dict.get(name, [])),
+            )
+            for name in heliostat_names
         )
 
-        width, height = resolution.to(device).tolist()
-
-        total_number_of_measurements = 0
-        for heliostat_name, paths in heliostat_flux_path_mapping:
-            number_of_measurements = min(len(paths), self.sample_limit or len(paths))
-            bitmaps = torch.empty(
-                (number_of_measurements, height, width), device=device
-            )
-            for bitmap_index, path in enumerate(paths[:number_of_measurements]):
-                bitmap_data = (
-                    Image.open(path)
-                    .convert("L")
-                    .resize((width, height), Image.BILINEAR)
-                )
-                # Normalize pixel values from [0, 255] to [0.0, 1.0] (grayscale pixel values are in the range [0, 255]).
-                bitmap_tensor = (
-                    torch.tensor(bitmap_data.getdata(), device=device).view(
-                        height, width
-                    )
-                    / artist.util.index_mapping.bitmap_normalizer
-                )
-                bitmaps[bitmap_index] = bitmap_tensor
-                total_number_of_measurements = total_number_of_measurements + 1
-            flux_data_per_heliostat[heliostat_name] = bitmaps
+        if total_number_of_measurements == 0:
+            f"Rank {rank}: No measured flux density distributions were provided for this group."
+            return torch.empty((0, height, width), device=device, dtype=torch.float32)
 
         measured_fluxes = torch.empty(
-            (total_number_of_measurements, height, width), device=device
+            (total_number_of_measurements, height, width),
+            device=device,
+            dtype=torch.float32,
         )
 
-        if total_number_of_measurements > 0:
-            index = 0
-            for name in heliostat_names:
-                flux_list = flux_data_per_heliostat.get(name, [])
-                for flux_data in flux_list:
-                    n = flux_data.shape[0] if flux_data.ndim == 3 else 1
-                    measured_fluxes[index : index + n] = flux_data
-                    index += n
+        index = 0
+        for heliostat_name in heliostat_names:
+            paths = path_mapping_dict.get(heliostat_name, [])
+            number_of_measurements = min(len(paths), self.sample_limit or len(paths))
 
-            log.info(
-                f"Rank {rank}: Loading measured flux density distributions complete."
-            )
+            for path in paths[:number_of_measurements]:
+                bitmap_tensor = (
+                    torchvision.io.decode_image(
+                        str(path), mode=torchvision.io.ImageReadMode.GRAY
+                    )
+                    .squeeze(0)
+                    .float()
+                    .to(device)
+                )
 
-        else:
-            log.info(
-                f"Rank {rank}: No measured flux density distributions were provided for this group."
-            )
+                if bitmap_tensor.shape != (height, width):
+                    bitmap_data = (
+                        Image.open(path)
+                        .convert("L")
+                        .resize((width, height), Image.Resampling.BILINEAR)
+                    )
+                    bitmap_tensor = torch.from_numpy(
+                        np.asarray(bitmap_data, dtype=np.float32)
+                    ).to(device)
 
+                bitmap_tensor /= artist.util.index_mapping.bitmap_normalizer
+
+                measured_fluxes[index] = bitmap_tensor
+                index += 1
+
+        log.info(f"Rank {rank}: Loading measured flux density distributions complete.")
         return measured_fluxes

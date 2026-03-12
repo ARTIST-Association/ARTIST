@@ -3,11 +3,11 @@
 How To Use ``ARTIST``
 =====================
 
-Here, you can find an overview of multiple examples and tutorials detailing how to use ``ARTIST``.
+Here, you can find an overview of examples and tutorials demonstrating how to use ``ARTIST``.
 
-More general information including can be found by reading up on what is happening in ``ARTIST``
-:ref:`under the hood <artist_under_hood>`, some important :ref:`heliostat information <heliostats>`, and an
-:ref:`overview of nurbs <nurbs>`.
+For more general background information, including details on the internal architecture and underlying concepts, check
+out what is happening in ``ARTIST`` :ref:`under the hood <artist_under_hood>`, our :ref:`heliostat explanations <heliostats>`,
+and the :ref:`overview of NURBS <nurbs>`.
 
 .. toctree::
    :maxdepth: 1

@@ -34,7 +34,7 @@ def create_flux_plot(id: str) -> None:
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
-        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+        (active_heliostats_mask, target_area_indices, incident_ray_directions) = (
             scenario.index_mapping(
                 heliostat_group=heliostat_group,
                 single_incident_ray_direction=incident_ray_direction,
@@ -52,7 +52,7 @@ def create_flux_plot(id: str) -> None:
         # Align heliostats.
         if id == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_mask],
+                aim_points=scenario.target_areas.centers[target_area_indices],
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
@@ -67,7 +67,7 @@ def create_flux_plot(id: str) -> None:
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
     ):
-        (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+        (active_heliostats_mask, target_area_indices, incident_ray_directions) = (
             scenario.index_mapping(
                 heliostat_group=heliostat_group,
                 single_incident_ray_direction=incident_ray_direction,
@@ -88,13 +88,13 @@ def create_flux_plot(id: str) -> None:
         bitmaps_per_heliostat = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
-            target_area_mask=target_area_mask,
+            target_area_indices=target_area_indices,
             device=device,
         )
 
         flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
             bitmaps_per_heliostat=bitmaps_per_heliostat,
-            target_area_mask=target_area_mask,
+            target_area_indices=target_area_indices,
             device=device,
         )[target_area_index]
 

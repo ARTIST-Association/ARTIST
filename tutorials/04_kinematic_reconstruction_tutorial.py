@@ -52,7 +52,7 @@ def create_fluxes(
             incident_ray_directions,
             _,
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
         ) = data_parser.parse_data_for_reconstruction(
             heliostat_data_mapping=heliostat_data_mapping,
             heliostat_group=heliostat_group,
@@ -72,7 +72,7 @@ def create_fluxes(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_mask],
+                aim_points=scenario.target_areas.centers[target_area_indices],
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
@@ -91,7 +91,7 @@ def create_fluxes(
             bitmaps_per_heliostat = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
-                target_area_mask=target_area_mask,
+                target_area_indices=target_area_indices,
                 device=device,
             )
             bitmaps.append(bitmaps_per_heliostat)

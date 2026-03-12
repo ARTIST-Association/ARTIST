@@ -149,7 +149,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             incident_ray_directions,
             motor_positions,
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
         ) = self._parse_calibration_data(
             heliostat_calibration_mapping=heliostat_calibration_mapping,
             heliostat_names=heliostat_group.names,
@@ -164,7 +164,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             incident_ray_directions,
             motor_positions,
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
         )
 
     def _parse_calibration_data(

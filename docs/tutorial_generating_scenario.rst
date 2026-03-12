@@ -6,58 +6,69 @@
 .. note::
 
     You can find the corresponding ``Python`` scripts for this tutorial here:
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_stral_tutorial.py
-    https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_paint_tutorial.py
 
-In this tutorial, we will guide you through the process of generating simple ``ARTIST`` scenario HDF5 files. Before
-starting the tutorial, make sure you have read the information regarding the structure of an ``ARTIST`` scenario file
-:ref:`that you can find here <scenario>`!
+    - https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_stral_tutorial.py
+    - https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/00_generate_scenario_from_paint_tutorial.py
 
-As mentioned in the :ref:`information on a scenario <scenario>`, an ``ARTIST`` scenario consists of five main elements:
+In this tutorial, we will walk through the process of generating simple ``ARTIST`` HDF5 scenario files. Before
+starting, please make sure you have read the :ref:`scenario documentation <scenario>` describing the structure of an
+``ARTIST`` scenario file.
 
-- One power plant location
-- At least one (but possibly more) target areas.
-- At least one (but possibly more) light sources.
-- At least one (but usually more) heliostats.
-- A prototype which is used if the individual heliostats do not have individual parameters.
+As outlined in the :ref:`scenario overview <scenario>`, an ``ARTIST`` scenario consists of five main elements:
 
-In this tutorial, we will develop simple ``ARTIST`` scenarios that contain:
+- One power plant location,
+- at least one (but possibly more) target areas,
+- at least one (but possibly more) light sources,
+- at least one (but usually more) heliostats, and
+- a prototype used whenever a heliostat does not define individual parameters.
 
-- A power plant location
-- One or more target areas.
-- One ``Sun`` as a light source.
-- One or more heliostats.
-- A corresponding prototype to define the properties of the heliostat.
+In this tutorial, we generate minimal example scenarios that include:
 
-Before we start defining the scenario, we need to determine where it will be saved. We define this by setting the
-``scenario_path`` variable. If this location does not exist, the scenario generation will automatically fail.
+- A power plant location,
+- one or more target areas,
+- a single ``Sun`` light source,
+- one or more heliostats, and
+- a corresponding prototype defining the heliostat properties.
 
-.. code-block::
+Defining the Scenario Path
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Before defining the scenario content, we must specify where the generated HDF5 file will be stored. This is done by
+setting the ``scenario_path`` variable. If the specified directory does not exist, the scenario generation will fail.
+
+.. code-block:: python
 
     # Specify the path to your scenario file.
     scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
-After this step, the process differs depending on which data source you are using. Data from different data sources
-may have to be handled differently to create scenarios in ``ARTIST``. Depending on the structure of the input data,
-different functions will need to be called. This tutorial shows how to convert ``STRAL`` and ``PAINT`` data to create
-usable scenarios for ``ARTIST``.
+Choosing A Data Source
+^^^^^^^^^^^^^^^^^^^^^^
 
-We will first look at using ``PAINT`` data to generate a scenario. If you are only interested in ``STRAL`` please
-jump to :ref:`stral`.
+The subsequent steps depend on the data source used to construct the scenario. Data with different input formats from
+different sources requires different preprocessing steps before it can be converted into an ``ARTIST`` scenario.
+This tutorial shows how to convert STRAL and PAINT data to create usable scenarios for ``ARTIST``. The solar tower ray
+tracing laboratory `STRAL <https://elib.dlr.de/78440/>`_ is a ray-tracing software, and
+`PAINT <https://paint-database.org/>`_ is the first FAIR database for operational data of concentrating solar power
+plants.
+
+We will first cover the workflow for PAINT data. If you are only interested in STRAL, you can jump directly to
+:ref:`stral`.
 
 .. _paint:
 
-Generating a Scenario With ``PAINT`` Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generating a Scenario With PAINT Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For generating a scenario from ``PAINT`` specify the following files (If you want to set up a scenario with multiple
-heliostats, simply add more files for each heliostat):
+To generate an ``ARTIST`` scenario from ``PAINT`` data, you must provide the following files:
 
 - One ``tower-measurement.json`` file
-- One or more ``heliostat-properties.json`` file
-- One or more ``deflectometry.h5`` file
+- One or more ``heliostat-properties.json`` files
+- One or more ``deflectometry.h5`` files
 
-.. code-block::
+If you want to include multiple heliostats in your scenario, simply add one set of heliostat-specific files, i.e.,
+properties and deflectometry, per heliostat.
+
+.. code-block:: python
 
     # Specify the path to your tower-measurements.json file.
     tower_file = pathlib.Path(
@@ -85,23 +96,23 @@ heliostats, simply add more files for each heliostat):
                 "please/insert/the/path/to/the/deflectometry/data/here/deflectometry.h5"
             ),
         ),
-        # ... Include as many as you want, but at least one!
+        # ... Include as many heliostats as you want, but at least one!
     ]
 
-Now we will get into building the scenario.
+With the required input files defined, we can now proceed to building the scenario.
 
 .. _plant_and_target:
 
 Power Plant and Target Areas
 ----------------------------
-The location of the power plant as well as information on the target areas (i.e., the receiver or calibration targets) is
-loaded simultaneously in paint form the ``tower-measurement.json`` file.
+The power plant location and the associated target areas (i.e., the receiver or calibration targets) are loaded
+simultaneously from the ``tower-measurement.json`` file. We can extract this information using functions from the
+``paint_scenario_parser`` module. The function shown below will return
 
-We can load this information using functions from the ``paint_scenario_parser``. In this case, the function below will return
-an instance of the the ``PowerPlantConfig`` class as well as an instance of the ``TowerAreaListConfig`` containing a
-list of viable target areas.
+- an instance of ``PowerPlantConfig`` and
+- an instance of ``TowerAreaListConfig``, containing a list of viable target areas.
 
-.. code-block::
+.. code-block:: python
 
     # Include the power plant and target area configuration.
     power_plant_config, target_area_list_config = (
@@ -110,35 +121,36 @@ list of viable target areas.
         )
     )
 
-The ``PowerPlantConfig`` contains the following attributes:
-
-- The ``power_plant_position`` indicating the power plants location.
-
-The ``TargetAreaListConfig`` contains a list of multiple ``TargetAreaConfig`` objects, which each define the
+The ``PowerPlantConfig`` object provides the power plant's geographic location via the ``power_plant_position``
+attribute. The ``TargetAreaListConfig`` contains a list of multiple ``TargetAreaConfig`` objects. Each defines the
 following attributes:
 
-- A ``target_area_key`` used to identify the target area when loading the ``ARTIST`` scenario.
-  This one is a receiver.
-- The ``geometry`` currently modelled – in this case a planar target area.
-- The ``center`` which defines the position of the target areas's middle. Note that because this is a position
-  tensor, the final element of the tensor in the 4D representation is a 1 – for more information see
-  :ref:`our note on coordinates <artist_under_hood>`.
-- A ``normal_vector`` defining the normal vector to the plane of the target area. Note that because this is a direction
-  tensor, the final element of the tensor in the 4D representation is a 0 – for more information see
-  :ref:`our note on coordinates <artist_under_hood>`.
-- The ``plane_e`` which defines the target area plane in the east direction.
-- The ``plane_u`` which defines the target area plane in the up direction.
+``target_area_key``
+  An identifier used to reference the target area when loading the ``ARTIST`` scenario – in this
+  case, a receiver.
+``geometry``
+  The currently modeled geometry – in this case, a planar target area.
+``center``
+  The target area's middle position. Since this is a position tensor, its final element in the 4D
+  representation is a 1 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
+``normal_vector``
+  The target area plane's normal vector. Since this is a direction tensor, its final element in the
+  4D representation is a 0 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
+``plane_e``
+  The direction vector defining the target area plane's east direction.
+``plane_u``
+  The direction vector defining the target area plane's up direction.
 
 .. _light_source:
 
 Light Source
 ------------
-The light source is the object responsible for providing light that is then reflected by the heliostats. Typically, this
-light source is a ``Sun``, however in certain situations it may be beneficial to model multiple artificial light
-sources. Light source information are not included in any files, you have to define them by yourself.
+The light source provides the radiation that is reflected by the heliostats. In most scenarios, this light source
+represents the sun. However, in certain applications, such as calibration setups, it may be useful to model multiple
+artificial light sources. Light source information is not read from external files and must be defined manually.
 We define the light source by creating a ``LightSourceConfig`` object as shown below:
 
-.. code-block::
+.. code-block:: python
 
     # Include the light source configuration.
     light_source1_config = LightSourceConfig(
@@ -150,20 +162,25 @@ We define the light source by creating a ``LightSourceConfig`` object as shown b
         covariance=4.3681e-06,
     )
 
-This configuration defines the following light source properties:
+This configuration specifies the following light source properties:
 
-- The ``light_source_key`` used to identify the light source when loading the ``ARTIST`` scenario.
-- The ``light_source_type`` which defines what type of light source is used. In this case, it is a ``Sun``.
-- The ``number_of_rays`` which defines how many rays are sampled from the light source for ray tracing.
-- The ``distribution_type`` which models what distribution is used to model the light source. In this case, we use a
-  normal distribution.
-- The ``mean`` and the ``covariance`` which are the parameters of the previously defined normal distribution used to
-  model the light source.
+``light_source_key``
+  Used to identify the light source when loading the ``ARTIST`` scenario.
+``light_source_type``
+  The type of light source used – in this case, a ``Sun``.
+``number_of_rays``
+  The number of rays to be sampled from the light source for ray tracing.
+``distribution_type``
+  The type of distribution used to model the light source – in this case, a normal distribution.
+``mean``
+  The mean parameter of the selected normal distribution.
+``covariance``
+  The covariance parameter of the selected normal distribution.
 
-Since our scenario only contains one light source but ``ARTIST`` scenarios are designed to load multiple light sources,
-we have to wrap our light source in a list and create a ``LightSourceListConfig`` object:
+Although this example uses only a single light source, ``ARTIST`` scenarios are designed to support multiple sources.
+Therefore, the light source configuration must be wrapped in a list and passed to a ``LightSourceListConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Create a list of light source configs - in this case only one.
     light_source_list = [light_source1_config]
@@ -174,13 +191,14 @@ we have to wrap our light source in a list and create a ``LightSourceListConfig`
 
 Prototypes and Heliostats
 -------------------------
-``ARTIST`` always requires prototypes and heliostats - see :ref:`our tutorial here <scenario>` for more information.
+Every ``ARTIST`` scenario requires both prototypes and heliostats (see :ref:`our tutorial here <scenario>` for more
+information).
 
-The prototypes and list of heliostats can be easily extracted using the ``paint_scenario_parser``. Here it important to define one
-target area from the list of possible target areas as the default aim point. In this case we use the receiver for this,
-as shown below:
+The prototypes and list of heliostats can be easily extracted using the ``paint_scenario_parser``. Before doing so, we
+must define a default aim point by selecting one target area from the previously loaded list – typically the
+receiver:
 
-.. code-block::
+.. code-block:: python
 
     target_area = [
         target_area
@@ -188,12 +206,18 @@ as shown below:
         if target_area.target_area_key == config_dictionary.target_area_receiver
     ]
 
-Now, before we load the heliostats we need to do some configuration. ``ARTIST`` internally models all surfaces with
-:ref:`NURBS <nurbs>`, which are learnt when loading the data. Therefore, we have to set certain parameters, such as the
-number of control points, the fit tolerance, the number of epochs to train for, etc. We also need to configure an optimizer
-for the training process and a learning rate scheduler. This is shown below:
+Before loading the heliostats, we need to do some configuration. ``ARTIST`` internally models all heliostat surfaces
+using :ref:`NURBS <nurbs>`, which are learned when loading the data. Therefore, we need to specify parameters
+controlling the fitting process, such as:
 
-.. code-block::
+- the number of NURBS control points,
+- the fitting method
+- the tolerance and number of epochs to train, and
+- an optimizer and learning rate scheduler for the training process.
+
+This is shown below:
+
+.. code-block:: python
 
     number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
     nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
@@ -201,7 +225,7 @@ for the training process and a learning rate scheduler. This is shown below:
     nurbs_fit_tolerance = 1e-10
     nurbs_fit_max_epoch = 400
 
-    # Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+    # Leave the optimizable parameters empty, they will automatically be added for the surface fit.
     nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
     nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         nurbs_fit_optimizer,
@@ -212,10 +236,13 @@ for the training process and a learning rate scheduler. This is shown below:
         threshold_mode="abs",
     )
 
-Then, with a single function we can load the heliostat list configuration, learn the surfaces, and generate the
-prototype configuration.
+With the configuration defined, a single function call :
 
-.. code-block::
+- loads the heliostat list configuration,
+- learn the NURBS surfaces, and
+- generates the prototype configuration.
+
+.. code-block:: python
 
     heliostat_list_config, prototype_config = (
         paint_scenario_parser.extract_paint_heliostats_fitted_surface(
@@ -232,30 +259,33 @@ prototype configuration.
         )
     )
 
-The ``heliostat_list_config`` is a list of ``HeliostatConfig`` objects which includes the following information:
+``heliostat_list_config``
+    A list of ``HeliostatConfig`` objects, where each object contains:
 
-- The ``name`` used to identify the heliostat.
-- The numerical ``id`` of the heliostat.
-- The ``position`` of the heliostat.
-- The configuration for the ``surface`` of the heliostat (see :py:class:`artist.scenario.configuration_classes.SurfaceConfig`).
-- The configuration for the ``kinematics`` of the heliostat (see :py:class:`artist.scenario.configuration_classes.KinematicsConfig`).
-- A list of configurations for the ``actuators`` required by the heliostat (see :py:class:`artist.scenario.configuration_classes.ActuatorConfig`).
+    - The ``name`` used to identify the heliostat
+    - The numerical ``id`` of the heliostat
+    - The heliostat ``position``
+    - The ``surface`` configuration of the heliostat (see :py:class:`artist.scenario.configuration_classes.SurfaceConfig`).
+    - The ``kinematics`` configuration of the heliostat (see :py:class:`artist.scenario.configuration_classes.KinematicsConfig`).
+    - A list of configurations for the ``actuators`` required by the heliostat (see :py:class:`artist.scenario.configuration_classes.ActuatorConfig`).
 
-The ``prototype_config`` is a ``PrototypeConfig`` object, containing information on:
+``prototype_config``
+    A ``PrototypeConfig`` object defines fallback configurations used when heliostats do not provide individual
+    parameters. It contains:
 
-- The ``surface_prototype`` used in the scenario, for heliostats without individual surface configurations (see :py:class:`artist.scenario.configuration_classes.SurfacePrototypeConfig`).
-- The ``kinematics_prototype`` used in the scenario, for heliostats without individual kinematics configurations (see :py:class:`artist.scenario.configuration_classes.KinematicsPrototypeConfig`).
-- A list of ``actuators_prototype`` used in the scenario, for heliostats without individual actuator configurations (see :py:class:`artist.scenario.configuration_classes.ActuatorPrototypeConfig`).
+    - The ``surface_prototype`` (see :py:class:`artist.scenario.configuration_classes.SurfacePrototypeConfig`)
+    - The ``kinematics_prototype`` (see :py:class:`artist.scenario.configuration_classes.KinematicsPrototypeConfig`)
+    - A list of ``actuators_prototype`` (see :py:class:`artist.scenario.configuration_classes.ActuatorPrototypeConfig`)
 
 Different Surface Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``ARTIST`` does not require deflectometry data to generate a scenario. It is also possible to generate a
-scenario with an *ideal* surface. The true surface can then either be learnt via raytracing
-(see :ref:`the NURBS surface reconstructor<tutorial_surface_reconstruction>`), or if not information on the true surface
-is available an ideal surface can also be applied. To generate heliostats with ideal surface you call the function:
+``ARTIST`` does not require deflectometry data to generate a scenario. Instead, scenarios can also be created with
+*ideal* heliostat surfaces. The true surface can later be learned via ray tracing (see
+:ref:`the NURBS surface reconstructor<tutorial_surface_reconstruction>`). If no information about the true surface
+is available, the ideal surface can simply be used as is. To generate heliostats with ideal surfaces, call:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list_config, prototype_config = (
             paint_scenario_parser.extract_paint_heliostats_ideal_surface(
@@ -265,14 +295,15 @@ is available an ideal surface can also be applied. To generate heliostats with i
             )
         )
 
-It is also not necessary to define an optimizer in this setting.
+In this case, no optimizer or NURBS fitting parameters need to be defined.
 
-It is also possible to generate scenarios containing both fitted and ideal surfaces with the function ``extract_paint_heliostats_mixed_surface()``.
-In this case, the type of surface created depends on the mapping derived above. More specifically, if you provide a path
-to a deflectometry file, then the surface will be fitted, if not, then an ideal surface will be generated.
+It is also possible to generate mixed-surface scenarios containing both fitted and ideal surfaces using the function
+``extract_paint_heliostats_mixed_surface()``. In this case, the surface type is determined automatically from the
+provided input mapping. If you provide a path to a deflectometry file, the surface will be fitted; if not, an ideal
+surface will be generated.
 For example, for the following mapping:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_files_list = [
         (
@@ -294,7 +325,7 @@ For example, for the following mapping:
 
 Calling the function:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list_config, prototype_config = (
         paint_scenario_parser.extract_paint_heliostats_mixed_surface(
@@ -311,9 +342,9 @@ Calling the function:
         )
     )
 
-will generate a scenario where "heliostat_1" has a fitted surface and "heliostat_2" has an ideal surface.
+will generate a scenario in which ``heliostat_1`` has a fitted surface and ``heliostat_2`` has an ideal surface.
 
-**NOTE:** In this situation, the prototype will always be an ideal surface.
+**NOTE:** In mixed-surface scenarios, the prototype surface will always be an ideal surface.
 
 
 .. _create_hdf5:
@@ -321,13 +352,13 @@ will generate a scenario where "heliostat_1" has a fitted surface and "heliostat
 Creating the HDF5 File
 ----------------------
 
-Now we have all the required information to generate the HDF5 and finish the scenario. We can generate this scenario by
-running the ``main`` function shown below:
+At this point, we have all the information needed to generate the HDF5 file and complete the scenario. We can create the
+scenario by running the ``main`` function shown below:
 
-.. code-block::
+.. code-block:: python
 
     if __name__ == "__main__":
-        """Generate the scenario given the defined parameters."""
+        # Generate the scenario given the defined parameters.
         scenario_generator = ScenarioGenerator(
             file_path=scenario_path,
             power_plant_config=power_plant_config,
@@ -338,50 +369,51 @@ running the ``main`` function shown below:
         )
         scenario_generator.generate_scenario()
 
-This ``main`` function initially defines the ``ScenarioGenerator`` object based on the previously defined ``scenario_path``
-and our configurations for the receiver(s), light source(s), prototype, and heliostat(s).
+Based on the previously defined ``scenario_path`` and our configurations for the receiver(s), light source(s),
+prototype, and heliostat(s), a ``ScenarioGenerator`` object is instantiated. This object is then used to generate the
+actual HDF5 file.
 
-If you go to the location you defined at the very start you should now see a HDF5 file there -- and that is all there is
-to generating a scenario in ``ARTIST``!
+After running this script, a new HDF5 file will appear at the location you specified at the very beginning – and that is
+all it takes to generate a scenario in ``ARTIST``!
 
 .. _stral:
 
-Generating a Scenario with ``STRAL`` Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generating a Scenario with STRAL Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To generate a scenario from ``STRAL``, you only need a single ``.binp`` file.
+To generate a scenario from STRAL, you only need a single ``.binp`` file.
 
-.. code-block::
+.. code-block:: python
 
     # Specify the path to your stral_data.binp file.
     stral_file_path = pathlib.Path(
         "please/insert/the/path/to/the/stral/data/here/stral_data.binp"
     )
 
-Many of the steps required to generate the scenario are very similar to before, but there are some changes.
+Many of the steps for generating a scenario are very similar to those for PAINT data, but a few differences specific to
+STRAL need to be taken into account.
 
 Power Plant
 -----------
-``STRAL`` data contains no information about the power plant position, so you have to enter the
-coordinates manually, as shown below:
+STRAL data does not include the power plant location, so you must enter the coordinates manually:
 
-.. code-block::
+.. code-block:: python
 
     # Include the power plant configuration.
     power_plant_config = PowerPlantConfig(
       power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
     )
 
-Information on the ``PowerPlantConfig`` class is provided above (see :ref:`plant_and_target`).
+More details on the ``PowerPlantConfig`` class are provided above (see :ref:`plant_and_target`).
 
 Target Areas
 ------------
-We also need to manually define the ``TargetAreaConfig`` when using ``STRAL``:
+When using STRAL data, we also need to manually define the ``TargetAreaConfig``:
 
-.. code-block::
+.. code-block:: python
 
     # STRAL
-    # Include a single tower area (receiver)
+    # Include a single tower area (receiver).
     receiver_config = TargetAreaConfig(
         target_area_key="receiver",
         geometry=config_dictionary.target_area_type_planar,
@@ -391,13 +423,12 @@ We also need to manually define the ``TargetAreaConfig`` when using ``STRAL``:
         plane_u=7.0,
     )
 
-Information on the ``TargetAreaConfig`` class is provided above (see :ref:`plant_and_target`).
+More details on the ``TargetAreaConfig`` class are provided above (see :ref:`plant_and_target`).
 
-Since our scenario only contains one target area (a receiver) but ``ARTIST`` scenarios are designed to load multiple
-target areas, when using ``STRAL`` we have to manually wrap our target area in a list and create a
-``TargetAreaListConfig`` object:
+Since our scenario contains only one target area (a receiver), but ``ARTIST`` scenarios are designed to support multiple
+target areas, we have to manually wrap our target area in a list and create a ``TargetAreaListConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Create list of target area configs - in this case only one.
     target_area_config_list = [receiver_config]
@@ -407,17 +438,17 @@ target areas, when using ``STRAL`` we have to manually wrap our target area in a
 
 Light Source
 ------------
-Generating a light source when using ``STRAL`` data is identical to ``PAINT`` data, please see: :ref:`light_source`.
+Generating a light source using STRAL data is identical to ``PAINT`` data, please see :ref:`light_source`.
 
 Prototypes
 ----------
-In ``STRAL`` prototypes need to be defined manually. A prototype always contains a surface prototype, a kinematics
+With STRAL data, prototypes must be defined manually. A prototype always consists of a surface prototype, a kinematics
 prototype, and an actuator prototype.
 
-We start with the surface prototype. We first need to extract information regarding the facet translation vectors, the
-canting, and the surface points and normals from ``STRAL`` with the following code:
+We start with the surface prototype. First, we need to extract information regarding the facet translation vectors, the
+canting, and the surface points and normals from STRAL:
 
-.. code-block::
+.. code-block:: python
 
     (
         facet_translation_vectors,
@@ -428,14 +459,14 @@ canting, and the surface points and normals from ``STRAL`` with the following co
         stral_file_path=stral_file_path, device=device
     )
 
-Before we can generate a NURBS surface based on the surface normals and points from ``STRAL`` we need to define the surface
+Before we can generate a NURBS surface based on the surface normals and points from STRAL, we need to define the surface
 generator and the optimizer and scheduler to fit the surface:
 
-.. code-block::
+.. code-block:: python
 
     surface_generator = SurfaceGenerator(device=device)
 
-    # Please leave the optimizable parameters empty, they will automatically be added for the surface fit.
+    # Leave the optimizable parameters empty, they will automatically be added for the surface fit.
     nurbs_fit_optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
     nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         nurbs_fit_optimizer,
@@ -448,7 +479,7 @@ generator and the optimizer and scheduler to fit the surface:
 
 Finally, we can use the configuration to generate a fitted surface:
 
-.. code-block::
+.. code-block:: python
 
     surface_config = surface_generator.generate_fitted_surface_config(
         heliostat_name="heliostat_1",
@@ -461,10 +492,10 @@ Finally, we can use the configuration to generate a fitted surface:
         device=device,
     )
 
-Alternatively, we can also generate an ideal surface that is not fitted based on deflectometry data. To generate this
-surface you don't need to define an optimizer or scheduler, but can simply call:
+Alternatively, we can generate an ideal surface that is not fitted based on deflectometry data. To generate such a
+surface, we do not need to define an optimizer or scheduler but can simply call:
 
-.. code-block::
+.. code-block:: python
 
      surface_config = surface_generator.generate_ideal_surface_config(
         facet_translation_vectors=facet_translation_vectors,
@@ -472,21 +503,21 @@ surface you don't need to define an optimizer or scheduler, but can simply call:
         device=device,
     )
 
-To generate the surface configuration, we simply define a surface configuration prototype based on the list of facets
-contained in the `SurfaceConfig` object created above:
+To create the surface configuration, we define a surface configuration prototype based on the list of facets
+contained in the `SurfaceConfig` from above:
 
-.. code-block::
+.. code-block:: python
 
     surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.facet_list)
 
-The next prototype object we consider is the kinematics prototype. The kinematics modeled in ``ARTIST`` assumes that
-all heliostats are initially pointing in the south direction; however, depending on the CSP considered, the heliostats may
-initially be orientated in a different direction. For our scenario, we want the heliostats to initially be orientated upwards,
-i.e., they point directly at the sky. A further element of a kinematics configuration is ``KinematicsDeviations`` which are small
-disturbance parameters to represent offsets caused by the two-joint kinematics modeled in ``ARTIST``. However, in this tutorial
-we ignore these deviations. Therefore, we can now create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` object:
+Next, we consider the kinematics prototype. The kinematics in ``ARTIST`` assume that all heliostats initially
+point in the south direction; however, depending on the CSP considered, the heliostats may be orientated differently. In
+our scenario, we orient the heliostats upwards, i.e., they point directly at the sky. A further element of a kinematics
+configuration is ``KinematicsDeviations`` which are small disturbance parameters representing offsets caused by the
+two-joint kinematics modeled in ``ARTIST``. In this tutorial, we ignore these deviations. Therefore, we can
+create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` object as:
 
-.. code-block::
+.. code-block:: python
 
     kinematics_prototype_config = KinematicsPrototypeConfig(
         type=config_dictionary.rigid_body_key,
@@ -495,34 +526,34 @@ we ignore these deviations. Therefore, we can now create the kinematics prototyp
 
 This object defines:
 
-- The ``type`` applied in the scenario; in this case, we are using a rigid body kinematics.
-- The ``initial_orientation`` which is the direction we defined above.
-- If we have ``KinematicsDeviations``, we would also include them in this definition.
+``type``
+  The type used in the scenario – in this case, rigid-body kinematics.
+``initial_orientation``
+  The initial heliostat orientation which is the direction we defined above.
+``KinematicsDeviations``
+  The offsets (ignored here).
 
-With the kinematics prototype defined, the final prototype we require is the actuator prototype. For the rigid body
-kinematics applied in this scenario, we require exactly two actuators. These actuators require min and max motor positions
-which are not included in the ``STRAL`` data, therefore we have to define them manually. Here we use the min amd max motor
-positions that are relevant for Jülich
+With the kinematics prototype defined, the final prototype required is the actuator prototype. For the rigid-body
+kinematics, we need exactly two actuators. Since STRAL data does not include motor position limits, we have to define
+them manually. Here, we use the minimum and maximum motor positions for the Jülich plant:
 
-.. code-block::
+.. code-block:: python
 
     min_max_motor_positions_actuator_1 = [0.0, 60000.0]
     min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 
-We can now define these actuators with ``ActuatorConfig`` objects as shown below:
+We can now define the actuators using ``ActuatorConfig`` objects as shown below:
 
-.. code-block::
+.. code-block:: python
 
-    # Include an ideal actuator.
+    # Include two ideal actuators.
     actuator1_prototype = ActuatorConfig(
         key="actuator_1",
         type=config_dictionary.ideal_actuator_key,
         clockwise_axis_movement=False,
         min_max_motor_positions=min_max_motor_positions_actuator_1,
     )
-
-    # Include an ideal actuator.
-    actuator2_prototype = ActuatorConfig(
+   actuator2_prototype = ActuatorConfig(
         key="actuator_2",
         type=config_dictionary.ideal_actuator_key,
         clockwise_axis_movement=True,
@@ -531,16 +562,18 @@ We can now define these actuators with ``ActuatorConfig`` objects as shown below
 
 These configurations define:
 
-- The ``key`` used when loading the actuator from an ``ARTIST`` scenario.
-- The ``type`` which in this case is an ideal actuator for both actuators.
-- The ``clockwise_axis_movement`` parameter which defines if the actuator operates per default in a clockwise or
-  counter-clockwise direction.
+``key``
+  The key used when loading the actuator from an ``ARTIST`` scenario.
+``type``
+  The actuator type – in this case, an ideal actuator for both actuators.
+``clockwise_axis_movement``
+  Defines whether the actuator operates in a clockwise or counter-clockwise direction.
 
-If we were considering different types of actuators, e.g., a linear actuator, we would also have to define specific
-actuator parameters – however we will stick to a simple configuration for this tutorial. To complete the actuator
-prototype, we need to wrap both actuators in a list and generate an ``ActuatorPrototypeConfig`` object:
+For different types of actuators, e.g., a linear actuator, we would also have to define specific actuator parameters.
+However, we will stick to a simple configuration for this tutorial. To complete the actuator prototype, we wrap both
+actuators in a list and generate an ``ActuatorPrototypeConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Create a list of actuators.
     actuator_prototype_list = [actuator1_prototype, actuator2_prototype]
@@ -550,10 +583,9 @@ prototype, we need to wrap both actuators in a list and generate an ``ActuatorPr
         actuator_list=actuator_prototype_list
     )
 
-Now that all the aspects of our prototype are defined, we can create the final ``PrototypeConfig`` object, which simply
-combines all the above configurations into one object, as shown below:
+With all prototypes defined, we can combine them into the final ``PrototypeConfig`` object as shown below:
 
-.. code-block::
+.. code-block:: python
 
     # Include the final prototype config.
     prototype_config = PrototypeConfig(
@@ -564,9 +596,9 @@ combines all the above configurations into one object, as shown below:
 
 Heliostat from ``STRAL``
 ------------------------
-Having defined the prototype we can now define our heliostat by creating a ``HeliostatConfig`` object as shown below:
+Having defined the prototype, we can now define our heliostat by creating a ``HeliostatConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     # Include the configuration for a heliostat.
     heliostat1 = HeliostatConfig(
@@ -575,32 +607,35 @@ Having defined the prototype we can now define our heliostat by creating a ``Hel
         position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
     )
 
-This heliostat configuration requires:
+This heliostat configuration specifies:
 
-- A ``name`` used to identify the heliostat when loading the ``ARTIST`` scenario.
-- The ``id``, a unique identifier that can be used to quickly identify the heliostat within the scenario.
-- The ``position`` which defines the position of the heliostat in the field. Note the one in the fourth
-  dimension according to the previously discussed :ref:'coordinate convention <coordinates>'.
+``name``
+  A name used to identify the heliostat when loading the ``ARTIST`` scenario.
+``id``
+  A unique identifier that can be used to quickly identify the heliostat within the scenario.
+``position``
+  The heliostat's position in the field. Note the one in the fourth dimension according to the previously discussed
+  :ref:`coordinate convention <coordinates>`.
 
-In this setting, the heliostat does not have any individual surface, kinematics, or actuator parameters, and will
-automatically use the parameters defined in the prototype. However, since ``ARTIST`` is designed to load multiple
-heliostats, we do need to wrap our heliostat configuration in a list and create a ``HeliostatListConfig`` object as shown below:
+Since no individual surface, kinematics, or actuator parameters are provided, this heliostat will automatically use the
+prototype configurations. Since ``ARTIST`` is designed to support multiple heliostats, we need to wrap our heliostat
+configuration in a list and create a ``HeliostatListConfig`` object:
 
-.. code-block::
+.. code-block:: python
 
     heliostat_list = [heliostat1]
 
     # Create the configuration for all heliostats.
     heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
 
-If we wanted heliostats with individual measurements, we would have to define the individual surface, kinematics, and
-actuator configurations for each heliostat.
+If individual measurements are available, it is also possible to define custom surface, kinematics, and actuator
+configurations for each heliostat.
 
 Creating the HDF5 File
 ----------------------
-Creating the HDF5 based on ``STRAL`` data is the same process as when using ``PAINT`` data (see :ref:`create_hdf5`).
+Creating the HDF5 based on STRAL data follows the same procedure as with PAINT data (see :ref:`create_hdf5`).
 
 .. warning::
 
-    When generating a scenario, the logger reports what version of the scenario generator is currently running. Changes
-    in versions may result in a scenario that is incompatible with the current ``ARTIST`` version.
+    When generating a scenario, the logger reports the version of the scenario generator being used. Scenario files
+    generated with a different version may be incompatible with the current ``ARTIST`` version.

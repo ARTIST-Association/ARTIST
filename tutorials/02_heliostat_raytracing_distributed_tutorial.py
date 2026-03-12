@@ -40,13 +40,16 @@ with setup_distributed_environment(
             device=device,
         )
 
-    # Set a ray extinction factor responsible for global shading of rays (0.0 -> no global shading, 1.0 -> full global shading).
+    # Set a ray extinction factor responsible for global shading of rays.
+    # 0.0 -> no global shading, 1.0 -> full global shading
     ray_extinction_factor = 0.0
 
-    # Use a heliostat target light source mapping to specify which heliostat in your scenario should be activated,
-    # which heliostat will receive which incident ray direction for alignment and on which target it will be raytraced.
-    # If no mapping is provided, all heliostats are selected, and they will all receive the default incident ray direction
-    # from a sun positioned directly in the south and they will all be raytraced on the first target found in your scenario.
+    # Use a heliostat/target/light-source mapping to specify
+    # - which heliostat in your scenario should be activated,
+    # - which incident ray direction each heliostat should receive for alignment, and
+    # - on which target each heliostat will be ray-traced.
+    # If no mapping is provided, all heliostats are selected. They will all receive the default incident ray direction
+    # from a sun located directly in the south and be ray-traced on the first target found in the scenario.
     heliostat_target_light_source_mapping = None
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
     # heliostat_target_light_source_mapping = [
@@ -66,18 +69,19 @@ with setup_distributed_environment(
         device=device,
     )
 
-    # Since each individual heliostat group has individual kinematics and actuator types, they must be
-    # processed separately. If a distributed environment exists, they can be processed in parallel,
-    # otherwise each heliostat group results will be computed sequentially.
-    # For blocking to work correctly, all heliostat groups have to be aligned before any group can be raytraced.
+    # Since each heliostat group has its own kinematics and actuator types, the groups must be processed separately.
+    # If a distributed environment exists, they can be processed in parallel; otherwise, the results for each heliostat
+    # group are computed sequentially.
+    # For blocking to work correctly, all heliostat groups have to be aligned before any group can be ray-traced.
     for heliostat_group_alignment in scenario.heliostat_field.heliostat_groups:
-        # If no mapping from heliostats to target areas to incident ray direction is provided, the scenario.index_mapping() method
-        # activates all heliostats. It is possible to then provide a default target area index and a default incident ray direction
-        # if those are not specified either all heliostats are assigned to the first target area found in the scenario with an
-        # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
+        # If no mapping from heliostats to target areas and incident ray direction is provided, the
+        # ``scenario.index_mapping()`` method activates all heliostats. A default target area index and a default
+        # incident ray direction can then be specified. If these are not provided either, all heliostats are assigned
+        # to the first target area found in the scenario and receive an incident ray direction "north" (meaning the
+        # light source position is directly in the south).
         (
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
             incident_ray_directions,
         ) = scenario.index_mapping(
             heliostat_group=heliostat_group_alignment,
@@ -85,23 +89,23 @@ with setup_distributed_environment(
             device=device,
         )
 
-        # The active_heliostats_mask is a tensor that shows the selection of active heliostats.
-        # For each index 0 indicates a deactivated heliostat and 1 an activated one.
-        # An integer greater than 1 indicates that the heliostat in this index is regarded multiple times.
-        # It is a tensor of shape [number_of_heliostats_in_group].
+        # The ``active_heliostats_mask`` is a tensor of shape [number_of_heliostats_in_group] that indicates which
+        # heliostats are active in a group.
+        # For each index, 0 indicates a deactivated heliostat and 1 an activated one.
+        # An integer greater than 1 indicates that the heliostat in this index is considered multiple times.
         heliostat_group_alignment.activate_heliostats(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
+            aim_points=scenario.target_areas.centers[target_area_indices],
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
         )
 
-    # Raytracing happens only on one device for each group.
+    # Ray tracing happens only on one device for each group.
     for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
         ddp_setup[config_dictionary.rank]
     ]:
@@ -111,7 +115,7 @@ with setup_distributed_environment(
         if heliostat_group.active_heliostats_mask.sum() > 0:
             (
                 active_heliostats_mask,
-                target_area_mask,
+                target_area_indices,
                 incident_ray_directions,
             ) = scenario.index_mapping(
                 heliostat_group=heliostat_group,
@@ -119,7 +123,7 @@ with setup_distributed_environment(
                 device=device,
             )
 
-            # Create a parallelized ray tracer.
+            # Create a distributed ray tracer.
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
@@ -135,7 +139,7 @@ with setup_distributed_environment(
             bitmaps_per_heliostat = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
-                target_area_mask=target_area_mask,
+                target_area_indices=target_area_indices,
                 device=device,
             )
 
@@ -150,7 +154,7 @@ with setup_distributed_environment(
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
-                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_mask[i]]}"
+                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_indices[i]]}"
                 )
                 plt.savefig(
                     f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
@@ -159,7 +163,7 @@ with setup_distributed_environment(
             # Get the flux distributions per target.
             bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
-                target_area_mask=target_area_mask[sample_indices_for_local_rank],
+                target_area_indices=target_area_indices[sample_indices_for_local_rank],
                 device=device,
             )
 
@@ -167,8 +171,8 @@ with setup_distributed_environment(
                 combined_bitmaps_per_target + bitmaps_per_target
             )
 
-    # It is possible to skip this nested reduction step. The reduction within the outer process group would take
-    # care of it but to see how the nested process group it is nice to look at the intermediate reduction results.
+    # This nested reduction step could be skipped, since the reduction within the outer process group would handle it.
+    # However, performing it here allows us to inspect the intermediate reduction results of the nested process group.
     if ddp_setup[config_dictionary.is_nested]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
