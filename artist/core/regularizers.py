@@ -98,7 +98,7 @@ class SmoothnessRegularizer(Regularizer):
         current_control_points : torch.Tensor
             The current control points.
             Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
-        original_control_points : torch.Tensƒor
+        original_control_points : torch.Tensor
             The original control points.
             Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         device : torch.device | None
