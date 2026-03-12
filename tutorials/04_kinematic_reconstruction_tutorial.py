@@ -64,94 +64,6 @@ def create_fluxes(
             measured_flux,
             _,
             incident_ray_directions,
-            motor_positions,
-            active_heliostats_mask,
-            target_area_mask,
-        ) = parser.parse_data_for_reconstruction(
-            heliostat_data_mapping=heliostat_mapping,
-            heliostat_group=heliostat_group,
-            scenario=scenario,
-            bitmap_resolution=torch.tensor([256, 256]),
-            device=device,
-        )
-
-        if active_heliostats_mask.sum() > 0:
-            measured_bitmaps.append(measured_flux)
-
-            # Activate heliostats.
-            heliostat_group.activate_heliostats(
-                active_heliostats_mask=active_heliostats_mask,
-                device=device,
-            )
-
-            # Align heliostats.
-            heliostat_group.align_surfaces_with_motor_positions(
-                motor_positions=motor_positions,
-                active_heliostats_mask=active_heliostats_mask,
-                device=device,
-            )
-
-            # Create a ray tracer.
-            ray_tracer = HeliostatRayTracer(
-                scenario=scenario,
-                heliostat_group=heliostat_group,
-                blocking_active=False,
-                batch_size=heliostat_group.number_of_active_heliostats,
-                bitmap_resolution=torch.tensor([256, 256], device=device),
-            )
-
-            # Perform heliostat-based ray tracing.
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
-                incident_ray_directions=incident_ray_directions,
-                active_heliostats_mask=active_heliostats_mask,
-                target_area_mask=target_area_mask,
-                device=device,
-            )
-            bitmaps.append(bitmaps_per_heliostat)
-
-    scenario.set_number_of_rays(number_of_rays=4)
-
-    return bitmaps, measured_bitmaps
-
-
-
-def create_fluxes_ray(
-    data,
-    scenario: Scenario,
-) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
-    """
-    Create data to plot the heliostat fluxes.
-
-    Parameters
-    ----------
-    data_parser : CalibrationDataParser
-        The data parser used to load calibration data from files.
-
-    Returns
-    -------
-    list[torch.Tensor]
-        Bitmaps per heliostat.
-    list[torch.Tensor]
-        Measured flux bitmap.
-    """
-    bitmaps = []
-    measured_bitmaps = []
-    scenario.set_number_of_rays(number_of_rays=500)
-    for heliostat_group_index in range(len(scenario.heliostat_field.heliostat_groups)):
-        heliostat_group: HeliostatGroup = (
-            scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-        )
-        parser = cast(
-            CalibrationDataParser, data[config_dictionary.data_parser]
-        )
-        heliostat_mapping = cast(
-            list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            data[config_dictionary.heliostat_data_mapping],
-        )
-        (
-            measured_flux,
-            focal_spots,
-            incident_ray_directions,
             _,
             active_heliostats_mask,
             target_area_mask,
@@ -202,8 +114,6 @@ def create_fluxes_ray(
 
     return bitmaps, measured_bitmaps
 
-
-
 def create_plots(
     fluxes_before: torch.Tensor,
     fluxes_after: torch.Tensor,
@@ -223,37 +133,27 @@ def create_plots(
     flux_measured : torch.Tensor
         Measured flux reference.
     """
-    for flux_before, flux_after, flux_before_ray, flux_after_ray, flux_measured in zip(fluxes_before, fluxes_after, fluxes_before_ray, fluxes_after_ray, fluxes_measured):
+    for group_index, (flux_before, flux_after, flux_measured) in enumerate(
+        zip(fluxes_before, fluxes_after, fluxes_measured)
+    ):
         for i in range(len(flux_before)):
-            _, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 5))
+            _, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
 
-            axes[0, 0].imshow(flux_before[i].cpu().detach(), cmap="gray")
-            axes[0, 0].set_title("Before (align with motor pos)", fontsize=16)
-            axes[0, 0].axis("off")
-            
-            axes[1, 0].imshow(flux_before_ray[i].cpu().detach(), cmap="gray")
-            axes[1, 0].set_title("Before (align with incident ray)", fontsize=16)
-            axes[1, 0].axis("off")
+            axes[0].imshow(flux_before[i].cpu().detach(), cmap="gray")
+            axes[0].set_title("Before reconstruction", fontsize=16)
+            axes[0].axis("off")
 
-            axes[0, 1].imshow(flux_after[i].cpu().detach(), cmap="gray")
-            axes[0, 1].set_title("After (align with motor pos)", fontsize=16)
-            axes[0, 1].axis("off")
-    
-            axes[1, 1].imshow(flux_after_ray[i].cpu().detach(), cmap="gray")
-            axes[1, 1].set_title("After (align with incident ray)", fontsize=16)
-            axes[1, 1].axis("off")
+            axes[1].imshow(flux_after[i].cpu().detach(), cmap="gray")
+            axes[1].set_title("After reconstruction", fontsize=16)
+            axes[1].axis("off")
 
-            axes[1, 2].imshow(flux_measured[i].cpu().detach(), cmap="gray")
-            axes[1, 2].set_title("Measured", fontsize=16)
-            axes[1, 2].axis("off")
-
-            axes[0, 2].imshow(flux_measured[i].cpu().detach(), cmap="gray")
-            axes[0, 2].set_title("Measured", fontsize=16)
-            axes[0, 2].axis("off")
+            axes[2].imshow(flux_measured[i].cpu().detach(), cmap="gray")
+            axes[2].set_title("Measured", fontsize=16)
+            axes[2].axis("off")
 
             plt.subplots_adjust(wspace=0.05)
             plt.show()
-            plt.savefig(f"heliostat_{i}_raytracing.png")
+            plt.savefig(f"heliostat_{i}_in_group_{group_index}_calibration.png")
 
 
 #############################################################################################################
@@ -268,72 +168,46 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "AA39",
+        "heliostat_name_1",
         [
-            # pathlib.Path(
-            #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-calibration-properties.json"
-            # ),
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/156812-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
             # ....
         ],
         [
-            #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/270398-flux.png"),
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/156812-flux.png"),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
-    # (
-    #     "AA31",
-    #     [
-    #         # pathlib.Path(
-    #         #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-calibration-properties.json"
-    #         # ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
-    #         ),
-    #         # ....
-    #     ],
-    #     [
-    #         #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/125284-flux.png"),
-    #         pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux.png"),
-    #         # ....
-    #     ],
-    # ),
-    # (
-    #     "AC43",
-    #     [
-    #         # pathlib.Path(
-    #         #     "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-calibration-properties.json"
-    #         # ),
-    #         pathlib.Path(
-    #             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-calibration-properties.json"
-    #         ),
-    #         # ....
-    #     ],
-    #     [
-    #         #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/62900-flux.png"),
-    #         pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/72752-flux.png"),
-    #         # ....
-    #     ],
-    # ),
+    (
+        "heliostat_name_2",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
 ]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
 # heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-#     base_path="/workVERLEIHNIX/share/PAINT",
-#     heliostat_names=["AK54", "AM55", "AM56"],
-#     number_of_measurements=3,
+#     base_path="base/path/data",
+#     heliostat_names=["heliostat_1", "..."],
+#     number_of_measurements=5,
 #     image_variant="flux",
-#     randomize=False,
-#     seed=1
+#     randomize=True,
 # )
 
 # Configure the optimization.
@@ -405,20 +279,12 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
-    # bitmaps_before, _ = create_fluxes(
-    #     data=data_plots,
-    #     scenario=scenario,
-    # )
-
-    bitmaps_before_ray, _ = create_fluxes_ray(
+    bitmaps_before, _ = create_fluxes(
         data=data_plots,
         scenario=scenario
     )
 
-    #loss_definition = FocalSpotLoss(scenario=scenario)
-    #reconstruction_method = config_dictionary.kinematics_reconstruction_raytracing
-    loss_definition = VectorLoss()
-    reconstruction_method = config_dictionary.kinematics_reconstruction_motor_positions
+    loss_definition = FocalSpotLoss(scenario=scenario)
 
     # Create the kinematics reconstructor.
     kinematics_reconstructor = KinematicsReconstructor(
@@ -427,7 +293,7 @@ with setup_distributed_environment(
         data=data,
         dni=500,
         optimization_configuration=optimization_configuration,
-        reconstruction_method=reconstruction_method
+        reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing
     )
 
     # Reconstruct the kinematics.
@@ -436,21 +302,13 @@ with setup_distributed_environment(
     )
 
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
-# print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
+print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
 
 bitmaps_after, bitmaps_measured = create_fluxes(
-    data=data_plots,
-    scenario=scenario
+    data_parser=data_parser_plots,
 )
-bitmaps_after_ray, bitmaps_measured = create_fluxes_ray(
-    data=data_plots,
-    scenario=scenario
-)
-
 create_plots(
     fluxes_before=bitmaps_before,
     fluxes_after=bitmaps_after,
-    fluxes_after_ray=bitmaps_after_ray,
-    fluxes_before_ray=bitmaps_before_ray,
     fluxes_measured=bitmaps_measured,
 )
