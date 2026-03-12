@@ -152,8 +152,15 @@ This acceleration structure follows the approach proposed by Karras_ and enables
 heliostat fields containing thousands of mirrors. The use of an LBVH allows blocking to be evaluated with good
 scalability while maintaining efficient GPU execution.
 
-Ray extinction due to blocking is handled globally. Rays that intersect blocking geometry are removed from the
-simulation and do not contribute to the predicted flux distribution on the receiver.
+If a reflected ray intersects another heliostat, the ray is terminated and does not contribute to the predicted
+flux distribution on the receiver. Since blocking depends on the relative position of heliostats in the field, it is
+evaluated individually for each heliostat during the ray-tracing process.
+
+This mechanism should not be confused with global ray extinction in the ray tracer. Global ray extinction models
+the loss of ray energy due to atmospheric effects such as dust, fog, or sandstorms. In ``ARTIST``, this is represented
+by a global ``ray_extinction_factor`` that reduces the energy of all rays uniformly along their path. Unlike blocking,
+which completely terminates rays due to geometric occlusion, atmospheric extinction only attenuates the ray energy and
+is assumed to be spatially uniform across the heliostat field.
 
 Blocking is enabled during motor position optimization, where accurate flux prediction is required. For surface and
 kinematics reconstruction tasks, blocking is automatically disabled to reduce computational cost and improve
