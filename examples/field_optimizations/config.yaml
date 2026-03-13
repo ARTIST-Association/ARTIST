@@ -37,12 +37,11 @@ surface_reconstruction_optimization_configuration:
   cooldown: 5
   gamma: 0.92
   energy_tolerance: 0.01
-  initial_lambda_energy: 0.1
-  rho_energy: 1.0
+  rho_flux_integral: 1.0
   weight_smoothness: 0.00
   weight_ideal_surface: 0.10
 kinematics_reconstruction_optimization_configuration:
-  max_epoch: 500
+  max_epoch: 1000
   batch_size: 192
   number_of_surface_points: 50
   number_of_control_points: 6
@@ -60,7 +59,7 @@ kinematics_reconstruction_optimization_configuration:
   cooldown: 5
   gamma: 0.92
 aim_point_optimization_configuration:
-  max_epoch: 500
+  max_epoch: 1000
   batch_size: 96
   number_of_surface_points: 50
   number_of_control_points: 6
@@ -76,9 +75,10 @@ aim_point_optimization_configuration:
   threshold: 0.001
   cooldown: 5
   gamma: 0.92
-  rho_energy: 1.0
-  rho_max_flux_density: 1.0
-  max_flux_density: 100000
+  rho_flux_integral: 1.0
+  rho_local_flux: 1.0
+  rho_spillage: 1.0
+  max_flux_density: 1000000 # W/m^2
 basic_config:
   batch_size: 96
   number_of_surface_points: 50
@@ -89,7 +89,7 @@ basic_config:
   dni: 500
   baseline_incident_ray_direction: [0.411, 0.706, -0.576, 0.0]
   baseline_target_area: "receiver"
-  baseline_aim_point: [-0.19720931, -0.03458419, 54.929, 1.0]
+  baseline_aim_point: [-0.3299, -0.5030, 55.4552,  1.0000] # baseline_aim_point: [-0.19720931, -0.03458419, 54.929, 1.0]s
 heliostat_list_baseline:
   - "AG48"
   - "AG49"

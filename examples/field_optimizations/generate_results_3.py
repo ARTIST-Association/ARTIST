@@ -436,7 +436,7 @@ def kinematics_plots(
                 batch_size=heliostat_group.number_of_active_heliostats,
                 random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
             )
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
                 target_area_mask=target_area_mask.detach(),
@@ -537,7 +537,7 @@ def surface_plots(
                 batch_size=heliostat_group.number_of_active_heliostats,
                 random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
             )
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
                 target_area_mask=target_area_mask.detach(),
@@ -671,7 +671,7 @@ def aim_point_plots(
                 bitmap_resolution=bitmap_resolution,
                 dni=dni,
             )
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 target_area_mask=target_area_mask,
@@ -936,9 +936,8 @@ def full_field_optimizations(
             config_dictionary.constraints:{
                 config_dictionary.weight_smoothness: surface_config["weight_smoothness"],
                 config_dictionary.weight_ideal_surface: surface_config["weight_ideal_surface"],
-                config_dictionary.rho_energy: surface_config["rho_energy"],
+                config_dictionary.rho_flux_integral: surface_config["rho_flux_integral"],
                 config_dictionary.energy_tolerance: surface_config["energy_tolerance"],
-                config_dictionary.initial_lambda_energy: surface_config["initial_lambda_energy"],
             }
         }
         for data in data_surfaces:
@@ -1106,18 +1105,18 @@ def full_field_optimizations(
         torch.cuda.empty_cache()
 
         # Aim point optimization.
-        # number_of_surface_points_per_facet = torch.tensor(
-        #     [basic_config["number_of_surface_points"], basic_config["number_of_surface_points"]], 
-        #     device=device
-        # )
-        # number_of_control_points_per_facet = torch.tensor(
-        #     [basic_config["number_of_control_points"], basic_config["number_of_control_points"]], 
-        #     device=device
-        # )
-        # nurbs_degree = torch.tensor(
-        #     [basic_config["nurbs_degree"], basic_config["nurbs_degree"]], 
-        #     device=device
-        # )
+        number_of_surface_points_per_facet = torch.tensor(
+            [basic_config["number_of_surface_points"], basic_config["number_of_surface_points"]], 
+            device=device
+        )
+        number_of_control_points_per_facet = torch.tensor(
+            [basic_config["number_of_control_points"], basic_config["number_of_control_points"]], 
+            device=device
+        )
+        nurbs_degree = torch.tensor(
+            [basic_config["nurbs_degree"], basic_config["nurbs_degree"]], 
+            device=device
+        )
         with h5py.File(scenario_path) as scenario_file:
             scenario_aim_points = Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
@@ -1175,7 +1174,9 @@ def full_field_optimizations(
                 config_dictionary.cooldown: aim_point_config["cooldown"],
             },
             config_dictionary.constraints:{
-                config_dictionary.rho_pixel: aim_point_config["rho_max_flux_density"],
+                config_dictionary.rho_flux_integral: aim_point_config["rho_flux_integral"],
+                config_dictionary.rho_local_flux: aim_point_config["rho_local_flux"],
+                config_dictionary.rho_spillage: aim_point_config["rho_spillage"],
                 config_dictionary.max_flux_density: aim_point_config["max_flux_density"],   
             }
         }
@@ -1190,7 +1191,7 @@ def full_field_optimizations(
             bitmap_resolution=bitmap_resolution,
             device=device,
         )
-        aimpoint_optimization_final_loss, loss_history_aim_points = motor_positions_optimizer.optimize(
+        aimpoint_optimization_final_loss, loss_history_aim_points, _, _ = motor_positions_optimizer.optimize(
             loss_definition=KLDivergenceLoss(), device=device
         )
         aim_point_data_after = aim_point_plots(
