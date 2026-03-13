@@ -259,12 +259,9 @@ class SurfaceReconstructor:
                 )
 
                 # Set up constraints.
-                energy_per_flux_reference = torch.zeros_like(active_heliostats_mask)
-                initial_lambda_energy = self.constraint_dict[
-                    config_dictionary.initial_lambda_energy
-                ]
-                lambda_energy = None
-                rho_energy = self.constraint_dict[config_dictionary.rho_energy]
+                flux_integrals_reference = torch.zeros_like(active_heliostats_mask)
+                lambda_flux_integral = 0.0
+                rho_flux_integral = self.constraint_dict[config_dictionary.rho_flux_integral]
                 energy_tolerance = self.constraint_dict[
                     config_dictionary.energy_tolerance
                 ]
@@ -285,7 +282,7 @@ class SurfaceReconstructor:
                 # Set up plot.
                 total_loss_history = []
                 flux_loss_history = []
-                energy_history = []
+                flux_integral_history = []
                 smoothness_history = []
                 ideal_history = []
                 energy_gain = []
@@ -375,7 +372,7 @@ class SurfaceReconstructor:
                     )
 
                     # Perform heliostat-based ray tracing.
-                    flux_distributions = ray_tracer.trace_rays(
+                    flux_distributions, _, _ = ray_tracer.trace_rays(
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         target_area_mask=target_area_mask,
@@ -429,36 +426,15 @@ class SurfaceReconstructor:
 
                     # Augmented Lagrangian to ensure that flux integral is conserved, i.e., intensity does not get lost.
                     if epoch == 0:
-                        energy_per_flux_reference = cropped_flux_distributions.sum(
-                            dim=(1, 2)
-                        ).detach()
-                    energy_difference = (
-                        cropped_flux_distributions.sum(dim=(1, 2))
-                        - energy_per_flux_reference
-                    ) / (energy_per_flux_reference + self.epsilon)
-
-                    energy_constraint = (
-                        torch.clamp(
-                            energy_difference,
-                            min=-energy_tolerance,
-                            max=energy_tolerance,
-                        )
-                        - energy_difference
-                    )
-                    energy_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
-                        loss_per_sample=energy_constraint,
+                        flux_integrals_reference = cropped_flux_distributions.sum(dim=(1, 2)).detach()
+                    flux_integrals_relative_differences = (cropped_flux_distributions.sum(dim=(1, 2)) - flux_integrals_reference) / (flux_integrals_reference + self.epsilon)
+                    flux_constraint_per_sample = torch.clamp(-energy_tolerance - flux_integrals_relative_differences,min=0.0)
+                    flux_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
+                        loss_per_sample=flux_constraint_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )
-                    if lambda_energy is None:
-                        lambda_energy = torch.full_like(
-                            energy_constraint_per_heliostat,
-                            initial_lambda_energy,
-                            dtype=torch.float32,
-                            device=device,
-                        )
-                    constraint = (
-                        lambda_energy.detach() * energy_constraint_per_heliostat
-                        + 0.5 * rho_energy * energy_constraint_per_heliostat**2
+                    flux_integrals_constraint = (
+                        lambda_flux_integral * flux_constraint_per_heliostat + 0.5 * rho_flux_integral * flux_constraint_per_heliostat**2
                     )
 
                     # Regularization terms.
@@ -501,13 +477,16 @@ class SurfaceReconstructor:
                     
                     total_loss_per_heliostat = (
                         flux_loss_per_heliostat
-                        + constraint
+                        + flux_integrals_constraint
                         + alpha * smoothness_loss_per_heliostat
                         + beta * ideal_surface_loss_per_heliostat
                     )
 
                     total_loss = total_loss_per_heliostat.mean()
                     total_loss.backward()
+
+                    with torch.no_grad():
+                        lambda_flux_integral = torch.clamp(lambda_flux_integral + rho_flux_integral * flux_constraint_per_heliostat, min=0.0)
 
                     if self.ddp_setup[config_dictionary.is_nested]:
                         # Reduce gradients within each heliostat group.
@@ -545,12 +524,6 @@ class SurfaceReconstructor:
                     else:
                         scheduler.step()
 
-                    with torch.no_grad():
-                        lambda_energy += (
-                            rho_energy * energy_constraint_per_heliostat.detach()
-                        )
-                        lambda_energy.clamp_(min=0.0)
-
                     if epoch % log_step == 0 and rank == 0:
                         log.info(
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}"
@@ -558,10 +531,10 @@ class SurfaceReconstructor:
 
                     total_loss_history.append(total_loss.detach().cpu().item())
                     flux_loss_history.append(flux_loss_per_heliostat.mean().detach().cpu().item())
-                    energy_gain.append(energy_difference.mean().detach().cpu().item())
+                    energy_gain.append(flux_integrals_relative_differences.mean().detach().cpu().item())
                     smoothness_history.append((alpha * smoothness_loss_per_heliostat).mean().detach().cpu().item())
                     ideal_history.append((beta * ideal_surface_loss_per_heliostat).mean().detach().cpu().item())
-                    energy_history.append(constraint.mean().detach().cpu().item())
+                    flux_integral_history.append(flux_integrals_constraint.mean().detach().cpu().item())
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
@@ -591,7 +564,7 @@ class SurfaceReconstructor:
                     "smoothness_history": smoothness_history,
                     "ideal_history": ideal_history,
                     "energy_gain": energy_gain,
-                    "energy_history": energy_history
+                    "flux_integral_history": flux_integral_history
                 }
 
                 global_active_indices = torch.nonzero(

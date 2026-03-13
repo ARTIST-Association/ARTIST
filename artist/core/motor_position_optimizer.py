@@ -282,14 +282,14 @@ class MotorPositionsOptimizer:
         )
 
         # Set up constraints.
+        flux_integral_reference = 0.0
         lambda_local_flux = 0.0
         lambda_flux_integral = 0.0
         lambda_spillage = 0.0
         rho_local_flux = self.constraint_dict[config_dictionary.rho_local_flux]
         rho_flux_integral = self.constraint_dict[config_dictionary.rho_flux_integral]
         rho_spillage = self.constraint_dict[config_dictionary.rho_spillage]
-        max_flux_density = self.constraint_dict[config_dictionary.max_flux_density]
-        flux_integral_reference = 0.0
+        max_flux_density_per_pixel = (torch.prod(self.scenario.target_areas.dimensions[self.target_area_index]) / torch.prod(self.bitmap_resolution)) * self.constraint_dict[config_dictionary.max_flux_density]
 
         # For the loss plot.
         total_loss_history = []
@@ -438,21 +438,21 @@ class MotorPositionsOptimizer:
                 # Augmented Lagrangian to ensure that flux integral is maximized, i.e., intensity increases or stays the same.
                 if epoch == 0:
                     flux_integral_reference = total_flux.sum().detach()
-                flux_integral_difference = flux_integral_reference - total_flux.sum()
+                flux_integral_difference = (flux_integral_reference - total_flux.sum()) / (flux_integral_reference + self.epsilon)
                 flux_integral_difference_clamped = torch.clamp(flux_integral_difference, min=0.0)
                 flux_integral_constraint = (
                     lambda_flux_integral * flux_integral_difference_clamped + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
                 )
 
                 # Augmented Lagrangian to ensure that spillage is eliminated.
-                spillage = intensities - total_flux.sum()
+                spillage = spillage = (intensities.sum() - total_flux.sum()) / (total_flux.sum().detach() + self.epsilon)
                 spillage_clamped = torch.clamp(spillage, min=0.0)
                 spillage_constraint = (
                     lambda_spillage * spillage_clamped + 0.5 * rho_spillage * spillage_clamped**2
                 )
 
                 # Augmented Lagrangian to ensure that local heat spikes are avoided.
-                local_flux_violation = total_flux - max_flux_density
+                local_flux_violation = (total_flux - max_flux_density_per_pixel.detach()) / (max_flux_density_per_pixel.detach() + self.epsilon)
                 local_flux_violation_clamped = torch.clamp(local_flux_violation, min=0.0)
                 local_flux_constraint = (
                     lambda_local_flux * local_flux_violation_clamped + 0.5 * rho_local_flux * local_flux_violation_clamped**2
