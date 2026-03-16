@@ -380,21 +380,23 @@ class KinematicsReconstructor:
                         break
 
                     epoch += 1
-                for i in range(flux_distributions.shape[0]):
-                    _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-                    axes[0].imshow(flux_distributions[i].cpu().detach(), cmap="gray")
-                    axes[0].set_title("Reconstruction", fontsize=16)
-                    axes[0].axis("off")
-                    axes[1].imshow(measured[i].cpu().detach(), cmap="gray")
-                    axes[1].set_title("Measured", fontsize=16)
-                    axes[1].axis("off")
-                    plt.subplots_adjust(wspace=0.05)
-                    plt.show()
-                    plt.savefig(f"bitmaps/kinematics/sample_{i}.png")
-                    plt.close()
+                
+                # Uncomment for analyses of single fluxes
+                # for i in range(flux_distributions.shape[0]):
+                #     _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+                #     axes[0].imshow(flux_distributions[i].cpu().detach(), cmap="gray")
+                #     axes[0].set_title("Reconstruction", fontsize=16)
+                #     axes[0].axis("off")
+                #     axes[1].imshow(measured[i].cpu().detach(), cmap="gray")
+                #     axes[1].set_title("Measured", fontsize=16)
+                #     axes[1].axis("off")
+                #     plt.subplots_adjust(wspace=0.05)
+                #     plt.show()
+                #     plt.savefig(f"bitmaps/kinematics/sample_{i}.png")
+                #     plt.close()
 
                 loss_history = {
-                    "total_loss_history": loss_history,
+                    "total_loss": loss_history,
                 }
 
                 local_indices = (

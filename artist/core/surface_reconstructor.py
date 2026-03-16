@@ -285,7 +285,7 @@ class SurfaceReconstructor:
                 flux_integral_history = []
                 smoothness_history = []
                 ideal_history = []
-                energy_gain = []
+                flux_integral = []
 
                 # Start the optimization.
                 loss = torch.inf
@@ -531,7 +531,7 @@ class SurfaceReconstructor:
 
                     total_loss_history.append(total_loss.detach().cpu().item())
                     flux_loss_history.append(flux_loss_per_heliostat.mean().detach().cpu().item())
-                    energy_gain.append(flux_integrals_relative_differences.mean().detach().cpu().item())
+                    flux_integral.append(flux_integrals_relative_differences.mean().detach().cpu().item())
                     smoothness_history.append((alpha * smoothness_loss_per_heliostat).mean().detach().cpu().item())
                     ideal_history.append((beta * ideal_surface_loss_per_heliostat).mean().detach().cpu().item())
                     flux_integral_history.append(flux_integrals_constraint.mean().detach().cpu().item())
@@ -545,26 +545,27 @@ class SurfaceReconstructor:
 
                     epoch += 1
                 
-                for i in range(cropped_flux_distributions.shape[0]):
-                    _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-                    axes[0].imshow(cropped_flux_distributions[i].cpu().detach(), cmap="gray")
-                    axes[0].set_title("Reconstruction", fontsize=16)
-                    axes[0].axis("off")
-                    axes[1].imshow(measured_flux_distributions[sample_indices_for_local_rank][i].cpu().detach(), cmap="gray")
-                    axes[1].set_title("Measured", fontsize=16)
-                    axes[1].axis("off")
-                    plt.subplots_adjust(wspace=0.05)
-                    plt.show()
-                    plt.savefig(f"bitmaps/surfaces/sample_{i}.png")
-                    plt.close()
+                # Uncomment for analyses of single fluxes
+                # for i in range(cropped_flux_distributions.shape[0]):
+                #     _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+                #     axes[0].imshow(cropped_flux_distributions[i].cpu().detach(), cmap="gray")
+                #     axes[0].set_title("Reconstruction", fontsize=16)
+                #     axes[0].axis("off")
+                #     axes[1].imshow(measured_flux_distributions[sample_indices_for_local_rank][i].cpu().detach(), cmap="gray")
+                #     axes[1].set_title("Measured", fontsize=16)
+                #     axes[1].axis("off")
+                #     plt.subplots_adjust(wspace=0.05)
+                #     plt.show()
+                #     plt.savefig(f"bitmaps/surfaces/sample_{i}.png")
+                #     plt.close()
 
                 loss_history = {
-                    "total_loss_history": total_loss_history,
-                    "flux_loss_history": flux_loss_history,
-                    "smoothness_history": smoothness_history,
-                    "ideal_history": ideal_history,
-                    "energy_gain": energy_gain,
-                    "flux_integral_history": flux_integral_history
+                    "total_loss": total_loss_history,
+                    "flux_loss": flux_loss_history,
+                    "smoothness_regularizer": smoothness_history,
+                    "ideal_regularizer": ideal_history,
+                    "flux_integral": flux_integral,
+                    "flux_integral_constraint": flux_integral_history
                 }
 
                 global_active_indices = torch.nonzero(

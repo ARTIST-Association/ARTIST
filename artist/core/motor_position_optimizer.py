@@ -294,7 +294,7 @@ class MotorPositionsOptimizer:
         # For the loss plot.
         total_loss_history = []
         flux_loss_history = []
-        energy_gain = []
+        flux_integral = []
         local_flux_constraint_history = []
         spillage_constraint_history = []
         flux_integral_constraint_history = []
@@ -495,7 +495,7 @@ class MotorPositionsOptimizer:
             
             total_loss_history.append(loss.detach().cpu().item())
             flux_loss_history.append(flux_loss.detach().cpu().item())
-            energy_gain.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
+            flux_integral.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
             local_flux_constraint_history.append(local_flux_constraint.detach().cpu().item())
             spillage_constraint_history.append(spillage_constraint.detach().cpu().item())
             flux_integral_constraint_history.append(flux_integral_constraint.detach().cpu().item())
@@ -515,7 +515,7 @@ class MotorPositionsOptimizer:
             "local_flux_constraint": local_flux_constraint_history,
             "spillage_constraint": spillage_constraint_history,
             "flux_integral_constraint": flux_integral_constraint_history,
-            "energy_gain": energy_gain
+            "flux_integral": flux_integral
         }
         log.info(f"Rank: {rank}, motor positions optimized.")
 
