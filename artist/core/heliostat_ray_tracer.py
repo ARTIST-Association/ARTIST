@@ -472,6 +472,17 @@ class HeliostatRayTracer:
                 )
             )
 
+            intersections, absolute_intensities = (
+                raytracing_utils.line_cylinder_intersections(
+                    rays=rays,
+                    points_at_ray_origins=self.heliostat_group.active_surface_points[
+                        active_heliostats_mask_batch
+                    ],
+                    device=device,
+                    scenario=self.scenario
+                )
+            )
+
             # The variable blocked is all zeros if there is no blocking at all in the scene.
             # If blocking was activated in the HeliostatRaytracer, blocking will be computed.
             number_of_heliostats, number_of_rays, number_of_points, _ = (

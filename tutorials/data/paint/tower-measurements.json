@@ -124,17 +124,10 @@
   },
   "receiver": {
       "type": "convex_cylinder",
-      "normal_vector": [
-          0.0,
-          0.90630779,
-          -0.42261826
-      ],
+      "radius": 4.14,
+      "normal_vector": [0, 0.90630779, -0.42261826],
+      "opening_angle": 60,
       "coordinates": {
-          "center": [
-              50.91341660151,
-              6.387825304776098,
-              142.22674999999998
-          ],
           "receiver_outer_upper_left": [
               50.91342727218299,
               6.387856856914401,

@@ -10,7 +10,7 @@ from artist.core.loss_functions import (
     PixelLoss,
     VectorLoss,
 )
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.tower_target_areas_planar import TowerTargetAreas
 from artist.scenario.scenario import Scenario
 from artist.scene.light_source import LightSource
 from artist.scene.light_source_array import LightSourceArray

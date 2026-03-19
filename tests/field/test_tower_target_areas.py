@@ -3,7 +3,7 @@ import pytest
 import torch
 from pytest_mock import MockerFixture
 
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.tower_target_areas_planar import TowerTargetAreas
 from artist.util import config_dictionary
 
 

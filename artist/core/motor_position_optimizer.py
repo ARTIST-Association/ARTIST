@@ -445,7 +445,7 @@ class MotorPositionsOptimizer:
                 )
 
                 # Augmented Lagrangian to ensure that spillage is eliminated.
-                spillage = spillage = (intensities.sum() - total_flux.sum()) / (total_flux.sum().detach() + self.epsilon)
+                spillage = (intensities.sum() - total_flux.sum()) / (total_flux.sum().detach() + self.epsilon)
                 spillage_clamped = torch.clamp(spillage, min=0.0)
                 spillage_constraint = (
                     lambda_spillage * spillage_clamped + 0.5 * rho_spillage * spillage_clamped**2
@@ -471,7 +471,7 @@ class MotorPositionsOptimizer:
 
             loss.backward()
 
-            # Reduce gradients across all ranks (global process group)
+            # Reduce gradients across all ranks (global process group).
             if self.ddp_setup[config_dictionary.is_distributed]:
                 for param_group in optimizer.param_groups:
                     for param in param_group["params"]:
@@ -479,7 +479,7 @@ class MotorPositionsOptimizer:
                             torch.distributed.all_reduce(
                                 param.grad, op=torch.distributed.ReduceOp.SUM
                             )
-                            # Average the gradients
+                            # Average the gradients.
                             param.grad /= self.ddp_setup[config_dictionary.world_size]
 
             optimizer.step()

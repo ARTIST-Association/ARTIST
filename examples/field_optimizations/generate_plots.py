@@ -1356,7 +1356,7 @@ if __name__ == "__main__":
 
     # for case in ["baseline", "full_field"]:
     for case in ["baseline"]:
-        results_number = 0
+        results_number = 1
         results_path = pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
 
         plots_path = pathlib.Path(args.plots_dir) / case

@@ -21,30 +21,30 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path("test")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
-    "please/insert/the/path/to/the/paint/data/here/tower-measurements.json"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/tower-measurements.json"
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
     (
-        "name",
+        "AA39",
         pathlib.Path(
-            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
-        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
+        #pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
     ),
-    (
-        "name2",
-        pathlib.Path(
-            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
-        ),
-        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
-    ),
+    # (
+    #     "name2",
+    #     pathlib.Path(
+    #         "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
+    #     ),
+    #     pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
+    # ),
     # ... Include as many as you want, but at least one!
 ]
 
@@ -56,7 +56,7 @@ if not pathlib.Path(scenario_path).parent.is_dir():
     )
 
 # Include the power plant configuration.
-power_plant_config, target_area_list_config = (
+power_plant_config, target_area_list_planar_config, target_area_list_cylindrical_config = (
     paint_scenario_parser.extract_paint_tower_measurements(
         tower_measurements_path=tower_file, device=device
     )
@@ -78,12 +78,6 @@ light_source_list = [light_source1_config]
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
-target_area = [
-    target_area
-    for target_area in target_area_list_config.target_area_list
-    if target_area.target_area_key == config_dictionary.target_area_receiver
-]
-
 number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
 nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
 nurbs_deflectometry_step_size = 100
@@ -102,37 +96,38 @@ nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 )
 
 # Use this configuration for deflectometry surfaces.
-heliostat_list_config, prototype_config = (
-    paint_scenario_parser.extract_paint_heliostats_fitted_surface(
-        paths=heliostat_files_list,
-        power_plant_position=power_plant_config.power_plant_position,
-        number_of_nurbs_control_points=number_of_nurbs_control_points,
-        deflectometry_step_size=nurbs_deflectometry_step_size,
-        nurbs_fit_method=nurbs_fit_method,
-        nurbs_fit_tolerance=nurbs_fit_tolerance,
-        nurbs_fit_max_epoch=nurbs_fit_max_epoch,
-        nurbs_fit_optimizer=nurbs_fit_optimizer,
-        nurbs_fit_scheduler=nurbs_fit_scheduler,
-        device=device,
-    )
-)
-
-# Use this configuration for ideal surfaces.
 # heliostat_list_config, prototype_config = (
-#     paint_scenario_parser.extract_paint_heliostats_ideal_surface(
+#     paint_scenario_parser.extract_paint_heliostats_fitted_surface(
 #         paths=heliostat_files_list,
 #         power_plant_position=power_plant_config.power_plant_position,
 #         number_of_nurbs_control_points=number_of_nurbs_control_points,
+#         deflectometry_step_size=nurbs_deflectometry_step_size,
+#         nurbs_fit_method=nurbs_fit_method,
+#         nurbs_fit_tolerance=nurbs_fit_tolerance,
+#         nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+#         nurbs_fit_optimizer=nurbs_fit_optimizer,
+#         nurbs_fit_scheduler=nurbs_fit_scheduler,
 #         device=device,
 #     )
 # )
+
+# Use this configuration for ideal surfaces.
+heliostat_list_config, prototype_config = (
+    paint_scenario_parser.extract_paint_heliostats_ideal_surface(
+        paths=heliostat_files_list,
+        power_plant_position=power_plant_config.power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        device=device,
+    )
+)
 
 if __name__ == "__main__":
     """Generate the scenario given the defined parameters."""
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,

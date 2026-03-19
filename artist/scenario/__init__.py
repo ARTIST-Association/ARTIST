@@ -18,8 +18,6 @@ from artist.scenario.configuration_classes import (
     PrototypeConfig,
     SurfaceConfig,
     SurfacePrototypeConfig,
-    TargetAreaConfig,
-    TargetAreaListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario

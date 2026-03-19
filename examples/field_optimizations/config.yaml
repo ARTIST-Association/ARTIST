@@ -16,7 +16,7 @@ heliostats_for_plots:
   - "AM55"
   - "AM56"
 random_seed: 7
-device: "cuda"
+device: "cuda:1"
 surface_reconstruction_optimization_configuration:
   max_epoch: 200
   batch_size: 48
@@ -79,8 +79,8 @@ basic_config:
   dni: 500
   baseline_incident_ray_direction: [0.411, 0.706, -0.576, 0.0]
   baseline_target_area: "receiver"
-  baseline_aim_point: [-0.3299, -0.5030, 55.4552,  1.0000]        # Focal spot extracted from measured flux
-  #baseline_aim_point: [-0.19720931, -0.03458419, 54.929, 1.0]    # Aim point from protocol 
+  #baseline_aim_point: [-0.3299, -0.5030, 55.4552,  1.0000]        # Focal spot extracted from measured flux
+  baseline_aim_point: [-0.19720931, -0.03458419, 54.929, 1.0]    # Aim point from protocol 
 heliostat_list_baseline:
   - "AG48"
   - "AG49"

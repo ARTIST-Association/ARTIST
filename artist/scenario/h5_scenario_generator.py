@@ -14,7 +14,8 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.util import config_dictionary
 
@@ -53,7 +54,8 @@ class H5ScenarioGenerator:
         self,
         file_path: pathlib.Path,
         power_plant_config: PowerPlantConfig,
-        target_area_list_config: TargetAreaListConfig,
+        target_area_list_planar_config: TargetAreaPlanarListConfig,
+        target_area_list_cylindrical_config: TargetAreaCylindricalListConfig,
         light_source_list_config: LightSourceListConfig,
         heliostat_list_config: HeliostatListConfig,
         prototype_config: PrototypeConfig,
@@ -91,7 +93,8 @@ class H5ScenarioGenerator:
                 "Please create the folder or adjust the file path before running again!"
             )
         self.power_plant_config = power_plant_config
-        self.target_area_list_config = target_area_list_config
+        self.target_area_list_planar_config = target_area_list_planar_config
+        self.target_area_list_cylindrical_config = target_area_list_cylindrical_config
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
@@ -240,13 +243,22 @@ class H5ScenarioGenerator:
                 ),
             )
 
-            # Include parameters for the tower target areas.
-            log.info("Including parameters for the target areas.")
+            # Include parameters for the planar tower target areas.
+            log.info("Including parameters for the planar target areas.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.target_area_key,
+                prefix=config_dictionary.target_area_planar_key,
                 parameters=self._flatten_dict(
-                    self.target_area_list_config.create_target_area_list_dict()
+                    self.target_area_list_planar_config.create_target_area_list_dict()
+                ),
+            )
+            # Include parameters for the tower cylindrical target areas.
+            log.info("Including parameters for the cylindrical target areas.")
+            self._include_parameters(
+                file=f,
+                prefix=config_dictionary.target_area_cylindrical_key,
+                parameters=self._flatten_dict(
+                    self.target_area_list_cylindrical_config.create_target_area_list_dict()
                 ),
             )
 

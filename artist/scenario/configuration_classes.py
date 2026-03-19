@@ -49,112 +49,85 @@ class PowerPlantConfig:
         return power_plant_dict
 
 
-class TargetAreaConfig:
+class TargetAreaPlanarConfig:
     """
-    Store the tower target area configuration parameters.
+    Store the tower target area configuration parameters for planar target areas.
 
     Attributes
     ----------
     target_area_key : str
-        The ID string used to identify the target area in the HDF5 file.
-    geometry : str
-        The type of target area, e.g., planar.
+        ID used to identify the target area in the HDF5 file.
     center : torch.Tensor
-        The position of the target area's center.
+        Position of the target area's center.
     normal_vector : torch.Tensor
-        The normal vector to the target plane.
+        Normal vector to the target plane.
     plane_e : float
-        The size of the target area in the east direction.
+        Size of the target area in the east direction.
     plane_u : float
-        The size of the target area in the up direction.
-    curvature_e : float | None
-        The curvature of the target area in the east direction.
-    curvature_u : float | None
-        The curvature of the target area in the up direction.
+        Size of the target area in the up direction.
 
     Methods
     -------
     create_receiver_dict()
-       Create a dictionary containing the configuration parameters for the target area.
+       Create a dictionary containing the configuration parameters for the planar target area.
     """
 
     def __init__(
         self,
         target_area_key: str,
-        geometry: str,
         center: torch.Tensor,
         normal_vector: torch.Tensor,
         plane_e: float,
         plane_u: float,
-        curvature_e: float | None = None,
-        curvature_u: float | None = None,
     ) -> None:
         """
-        Initialize the target area configuration.
+        Initialize the target area configuration for planar target areas.
 
         Parameters
         ----------
         target_area_key : str
-            The ID string used to identify the target area in the HDF5 file.
-        geometry : str
-            The type of target area, e.g., planar.
+            ID used to identify the target area in the HDF5 file.
         center : torch.Tensor
-            The position of the target area's center.
+            Position of the target area's center.
         normal_vector : torch.Tensor
-            The normal vector to the target plane.
+            Normal vector to the target plane.
         plane_e : float
-            The size of the target area in the east direction.
+            Size of the target area in the east direction.
         plane_u : float
-            The size of the target area in the up direction.
-        curvature_e: float | None
-            The curvature of the target area in the east direction.
-        curvature_u: float | None
-            The curvature of the target area in the up direction.
+            Size of the target area in the up direction.
         """
         self.target_area_key = target_area_key
-        self.geometry = geometry
         self.center = center
         self.normal_vector = normal_vector
         self.plane_e = plane_e
         self.plane_u = plane_u
-        self.curvature_e = curvature_e
-        self.curvature_u = curvature_u
 
     def create_target_area_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the target area.
+        Create a dictionary containing the configuration parameters for the planar target area.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the target area.
+            A dictionary containing the configuration parameters for the planar target area.
         """
         target_area_dict = {
-            config_dictionary.target_area_geometry: self.geometry,
             config_dictionary.target_area_position_center: self.center,
             config_dictionary.target_area_normal_vector: self.normal_vector,
             config_dictionary.target_area_plane_e: self.plane_e,
             config_dictionary.target_area_plane_u: self.plane_u,
         }
-        if self.curvature_e is not None:
-            target_area_dict.update(
-                {config_dictionary.target_area_curvature_e: self.curvature_e}
-            )
-        if self.curvature_u is not None:
-            target_area_dict.update(
-                {config_dictionary.target_area_curvature_u: self.curvature_u}
-            )
 
         return target_area_dict
 
 
-class TargetAreaListConfig:
+class TargetAreaPlanarListConfig:
     """
-    Store the target area list configuration parameters.
+    Store the target area list configuration parameters for planar target areas.
 
     Attributes
     ----------
-    target_area_list : list[TargetAreaConfig]
+    target_area_list : list[TargetAreaPlanarConfig]
         A list of target area configurations to be included in the scenario.
 
     Methods
@@ -163,7 +136,126 @@ class TargetAreaListConfig:
        Create a dictionary containing the configuration parameters for the list of target areas.
     """
 
-    def __init__(self, target_area_list: list[TargetAreaConfig]) -> None:
+    def __init__(self, target_area_list: list[TargetAreaPlanarConfig]) -> None:
+        """
+        Initialize the target area list configuration.
+
+        Parameters
+        ----------
+        target_area_list : list[TargetAreaConfig]
+            The list of target area configurations included in the scenario.
+        """
+        self.target_area_list = target_area_list
+
+    def create_target_area_list_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the list of target areas.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the list of target areas.
+        """
+        return {
+            target_area.target_area_key: target_area.create_target_area_dict()
+            for target_area in self.target_area_list
+        }
+    
+class TargetAreaCylindricalConfig:
+    """
+    Store the tower target area configuration parameters for cylindrical target areas.
+
+    Attributes
+    ----------
+    target_area_key : str
+        ID used to identify the target area in the HDF5 file.
+    radius : float
+        Radius of the cylindrical target area.
+    center : torch.Tensor
+        Position of the center of the cylindrical target area.
+    height : torch.Tensor
+        Height of the cylindrical target area.
+    normal_vector : torch.Tensor
+        Normal vector of the cylindrical target area.
+    opening_angle : torch.Tensor
+        Opening angle of the cylindrical target area.
+
+    Methods
+    -------
+    create_receiver_dict()
+       Create a dictionary containing the configuration parameters for the cylindrical target area.
+    """
+
+    def __init__(
+        self,
+        target_area_key: str,
+        radius: float,
+        center: torch.Tensor,
+        height: float,
+        normal_vector: torch.Tensor,
+        opening_angle: float
+    ) -> None:
+        """
+        Initialize the target area configuration for planar target areas.
+
+        Parameters
+        ----------
+        target_area_key : str
+            ID used to identify the target area in the HDF5 file.
+        radius : float
+            Radius of the cylindrical target area.
+        center : torch.Tensor
+            Position of the center of the cylindrical target area.
+        height : torch.Tensor
+            Height of the cylindrical target area.
+        normal_vector : torch.Tensor
+            Tilt angle of the cylindrical target area.
+        opening_angle : torch.Tensor
+            Opening angle of the cylindrical target area.
+        """
+        self.target_area_key = target_area_key
+        self.radius = radius
+        self.center = center
+        self.height = height
+        self.normal_vector = normal_vector
+        self.opening_angle = opening_angle
+
+    def create_target_area_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the planar target area.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the planar target area.
+        """
+        target_area_dict = {
+            config_dictionary.target_area_cylinder_radius: self.radius,
+            config_dictionary.target_area_cylinder_center: self.center,
+            config_dictionary.target_area_cylinder_height: self.height,
+            config_dictionary.target_area_cylinder_normal_vector: self.normal_vector,
+            config_dictionary.target_area_cylinder_opening_angle: self.opening_angle,
+        }
+
+        return target_area_dict
+
+
+class TargetAreaCylindricalListConfig:
+    """
+    Store the target area list configuration parameters for cylindrical target areas.
+
+    Attributes
+    ----------
+    target_area_list : list[TargetAreaPlanarConfig]
+        A list of target area configurations to be included in the scenario.
+
+    Methods
+    -------
+    create_target_area_list_dict()
+       Create a dictionary containing the configuration parameters for the list of target areas.
+    """
+
+    def __init__(self, target_area_list: list[TargetAreaCylindricalConfig]) -> None:
         """
         Initialize the target area list configuration.
 

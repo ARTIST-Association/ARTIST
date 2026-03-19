@@ -20,7 +20,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -59,7 +59,7 @@ with setup_distributed_environment(
 
     combined_bitmaps_per_target = torch.zeros(
         (
-            scenario.target_areas.number_of_target_areas,
+            scenario.target_areas_cylindrical.number_of_target_areas,
             bitmap_resolution[index_mapping.unbatched_bitmap_e],
             bitmap_resolution[index_mapping.unbatched_bitmap_u],
         ),
@@ -77,7 +77,7 @@ with setup_distributed_environment(
         # incident ray direction "north" (meaning the light source position is directly in the south) for all heliostats.
         (
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
             incident_ray_directions,
         ) = scenario.index_mapping(
             heliostat_group=heliostat_group_alignment,
@@ -95,7 +95,7 @@ with setup_distributed_environment(
 
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_mask],
+            aim_points=scenario.target_areas_cylindrical.centers[target_area_mask],
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,

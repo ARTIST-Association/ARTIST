@@ -9,7 +9,8 @@ from typing_extensions import Self
 from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -49,7 +50,8 @@ class Scenario:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        target_areas: TowerTargetAreas,
+        target_areas_planar: TowerTargetAreasPlanar,
+        target_areas_cylindrical: TowerTargetAreasCylindrical,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -75,9 +77,21 @@ class Scenario:
             A field of heliostats included in the scenario.
         """
         self.power_plant_position = power_plant_position
-        self.target_areas = target_areas
+        self.target_areas_planar = target_areas_planar
+        self.target_areas_cylindrical = target_areas_cylindrical
         self.light_sources = light_sources
         self.heliostat_field = heliostat_field
+
+        self._target_name_to_index = {}
+        idx = 0
+        for name in self.target_areas_cylindrical.names:
+            self._target_name_to_index[name] = idx
+            idx += 1
+
+        for name in self.target_areas_planar.names:
+            self._target_name_to_index[name] = idx
+            idx += 1
+
 
     @staticmethod
     def get_number_of_heliostat_groups_from_hdf5(scenario_path: pathlib.Path) -> int:
@@ -151,7 +165,10 @@ class Scenario:
                 config_dictionary.power_plant_position
             ][()]
         )
-        target_areas = TowerTargetAreas.from_hdf5(
+        target_areas_planar = TowerTargetAreasPlanar.from_hdf5(
+            config_file=scenario_file, device=device
+        )
+        target_areas_cylindrical = TowerTargetAreasCylindrical.from_hdf5(
             config_file=scenario_file, device=device
         )
         light_sources = LightSourceArray.from_hdf5(
@@ -249,7 +266,8 @@ class Scenario:
 
         return cls(
             power_plant_position=power_plant_position,
-            target_areas=target_areas,
+            target_areas_planar=target_areas_planar,
+            target_areas_cylindrical=target_areas_cylindrical,
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
@@ -304,6 +322,7 @@ class Scenario:
         device = get_device(device=device)
 
         data_per_heliostat = defaultdict(list)
+        total_number_of_target_areas = len(self._target_name_to_index)
 
         if string_mapping is None:
             if (
@@ -314,14 +333,14 @@ class Scenario:
                 raise ValueError(
                     "The specified single incident ray direction is invalid. Please provide a normalized 4D tensor with last element 0.0."
                 )
-            if single_target_area_index >= self.target_areas.number_of_target_areas:
+            if single_target_area_index >= total_number_of_target_areas:
                 raise ValueError(
-                    f"The specified single target area index is invalid. Only {self.target_areas.number_of_target_areas} target areas exist in this scenario."
+                    f"The specified single target area index is invalid. Only {total_number_of_target_areas} target areas exist in this scenario."
                 )
             active_heliostats_mask = torch.ones(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
-            target_area_mask = torch.tensor(
+            target_area_indices = torch.tensor(
                 single_target_area_index, dtype=torch.int32, device=device
             ).expand(heliostat_group.number_of_heliostats)
             incident_ray_directions = single_incident_ray_direction.expand(
@@ -337,9 +356,9 @@ class Scenario:
             for i, (heliostat_name, target_name, light_direction) in enumerate(
                 filtered_mapping
             ):
-                if target_name not in self.target_areas.names:
+                if target_name not in self._target_name_to_index:
                     errors.append(
-                        f"Invalid target '{target_name}' (Found at index {i} of provided mapping) not found in this scenario."
+                        f"Invalid target '{target_name}' at index {i} not found in target areas."
                     )
                 if (
                     light_direction.shape != torch.Size([4])
@@ -369,49 +388,26 @@ class Scenario:
             active_heliostats_mask = torch.zeros(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
-            target_area_mask = torch.empty(
-                len(filtered_mapping), dtype=torch.int32, device=device
-            )
+            target_area_indices = torch.empty(len(filtered_mapping), dtype=torch.int32, device=device)
             incident_ray_directions = torch.empty(
                 (len(filtered_mapping), 4), device=device
             )
-            heliostat_name_to_index = {
-                heliostat_name: index
-                for index, heliostat_name in enumerate(heliostat_group.names)
-            }
-            active_heliostats_mask = torch.zeros(
-                heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
-            )
-            target_area_mask = torch.empty(
-                len(filtered_mapping), dtype=torch.int32, device=device
-            )
-            incident_ray_directions = torch.empty(
-                (len(filtered_mapping), 4), device=device
-            )
-
-            for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(
-                filtered_mapping
-            ):
-                if heliostat_name in heliostat_group.names:
-                    active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1
-                    data_per_heliostat[heliostat_name].append(
-                        [
-                            self.target_areas.names.index(target_name),
-                            incident_ray_direction,
-                        ]
-                    )
+            for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(filtered_mapping):
+                active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1
+                data_per_heliostat[heliostat_name].append([
+                    self._target_name_to_index[target_name],
+                    incident_ray_direction
+                ])
             index = 0
             for name in heliostat_group.names:
-                for target_area_index, incident_ray_direction in data_per_heliostat.get(
-                    name, []
-                ):
-                    target_area_mask[index] = target_area_index
+                for target_area_index, incident_ray_direction in data_per_heliostat.get(name, []):
+                    target_area_indices[index] = target_area_index
                     incident_ray_directions[index] = incident_ray_direction
                     index += 1
 
         return (
             active_heliostats_mask,
-            target_area_mask,
+            target_area_indices,
             incident_ray_directions,
         )
 
@@ -430,7 +426,7 @@ class Scenario:
         """Return a string representation of the scenario."""
         return (
             f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
-            f" with {len(self.target_areas.names)} Target Area(s),"
+            f" with {len(self._target_name_to_index)} Target Area(s),"
             f" {len(self.light_sources.light_source_list)} Light Source(s),"
             f" and {sum(len(group.names) for group in self.heliostat_field.heliostat_groups)} Heliostat(s)."
         )

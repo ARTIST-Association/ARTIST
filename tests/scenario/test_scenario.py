@@ -8,7 +8,7 @@ import torch
 from artist import ARTIST_ROOT
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.tower_target_areas_planar import TowerTargetAreas
 from artist.scenario.scenario import Scenario
 
 
