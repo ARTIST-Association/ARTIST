@@ -370,7 +370,7 @@ class HeliostatRayTracer:
         self,
         incident_ray_directions: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
-        target_area_mask: torch.Tensor,
+        target_area_indices: torch.Tensor,
         ray_extinction_factor: float = 0.0,
         device: torch.device | None = None,
     ) -> torch.Tensor:
@@ -392,7 +392,7 @@ class HeliostatRayTracer:
             A mask where 0 indicates a deactivated heliostat and 1 an activated one.
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             Tensor of shape [number_of_heliostats].
-        target_area_mask : torch.Tensor
+        target_area_indices : torch.Tensor
             The indices of the target areas for each active heliostat.
             Tensor of shape [number_of_active_heliostats].
         ray_extinction_factor : float
@@ -467,7 +467,9 @@ class HeliostatRayTracer:
                         active_heliostats_mask_batch
                     ],
                     target_areas=self.scenario.target_areas,
-                    target_area_mask=target_area_mask[active_heliostats_mask_batch],
+                    target_area_indices=target_area_indices[
+                        active_heliostats_mask_batch
+                    ],
                     device=device,
                 )
             )
@@ -545,7 +547,7 @@ class HeliostatRayTracer:
                 intersections=intersections,
                 absolute_intensities=intensities,
                 active_heliostats_mask=active_heliostats_mask_batch,
-                target_area_mask=target_area_mask[active_heliostats_mask_batch],
+                target_area_indices=target_area_indices[active_heliostats_mask_batch],
                 device=device,
             )
 
@@ -613,7 +615,7 @@ class HeliostatRayTracer:
         intersections: torch.Tensor,
         absolute_intensities: torch.Tensor,
         active_heliostats_mask: torch.Tensor,
-        target_area_mask: torch.Tensor,
+        target_area_indices: torch.Tensor,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -632,8 +634,8 @@ class HeliostatRayTracer:
         active_heliostats_mask : torch.Tensor
             Used to map bitmaps per heliostat to correct index.
             Tensor of shape [number_of_heliostats].
-        target_area_mask : torch.Tensor
-            The indices of target areas on which each heliostat is raytraced.
+        target_area_indices : torch.Tensor
+            The indices of target areas on which each heliostat is ray-traced.
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
@@ -655,28 +657,28 @@ class HeliostatRayTracer:
 
         # Extract widths and heights of target planes, along with corresponding centers in E and U direction.
         plane_widths = (
-            self.scenario.target_areas.dimensions[target_area_mask][
+            self.scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_width
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
         plane_heights = (
-            self.scenario.target_areas.dimensions[target_area_mask][
+            self.scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_height
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
         plane_centers_e = (
-            self.scenario.target_areas.centers[target_area_mask][
+            self.scenario.target_areas.centers[target_area_indices][
                 :, index_mapping.target_area_center_e
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
         plane_centers_u = (
-            self.scenario.target_areas.centers[target_area_mask][
+            self.scenario.target_areas.centers[target_area_indices][
                 :, index_mapping.target_area_center_u
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
@@ -867,7 +869,7 @@ class HeliostatRayTracer:
     def get_bitmaps_per_target(
         self,
         bitmaps_per_heliostat: torch.Tensor,
-        target_area_mask: torch.Tensor,
+        target_area_indices: torch.Tensor,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -878,7 +880,7 @@ class HeliostatRayTracer:
         bitmaps_per_heliostat : torch.Tensor
             Bitmaps per heliostat.
             Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
-        target_area_mask : torch.Tensor
+        target_area_indices : torch.Tensor
             The mapping from heliostat to target area.
             Tensor of shape [number_of_active_heliostats].
         device : torch.device | None
@@ -903,7 +905,7 @@ class HeliostatRayTracer:
             device=device,
         )
         for index in range(self.scenario.target_areas.number_of_target_areas):
-            mask = target_area_mask == index
+            mask = target_area_indices == index
             if mask.any():
                 group_bitmaps_per_target[index] = bitmaps_per_heliostat[mask].sum(
                     dim=index_mapping.heliostat_dimension

@@ -205,7 +205,7 @@ class KinematicsReconstructor:
                 incident_ray_directions,
                 _,
                 active_heliostats_mask,
-                target_area_mask,
+                target_area_indices,
             ) = parser.parse_data_for_reconstruction(
                 heliostat_data_mapping=heliostat_mapping,
                 heliostat_group=heliostat_group,
@@ -271,7 +271,9 @@ class KinematicsReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[target_area_mask],
+                        aim_points=self.scenario.target_areas.centers[
+                            target_area_indices
+                        ],
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -297,7 +299,7 @@ class KinematicsReconstructor:
                     flux_distributions, _, _ = ray_tracer.trace_rays(
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
-                        target_area_mask=target_area_mask,
+                        target_area_indices=target_area_indices,
                         device=device,
                     )
 
@@ -308,7 +310,7 @@ class KinematicsReconstructor:
                         ground_truth=focal_spots_measured[
                             sample_indices_for_local_rank
                         ],
-                        target_area_mask=target_area_mask[
+                        target_area_indices=target_area_indices[
                             sample_indices_for_local_rank
                         ],
                         reduction_dimensions=(index_mapping.focal_spots,),

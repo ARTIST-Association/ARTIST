@@ -46,7 +46,7 @@ def line_plane_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
     target_areas: TowerTargetAreasPlanar,
-    target_area_mask: torch.Tensor | None = None,
+    target_area_indices: torch.Tensor | None = None,
     epsilon: float = 1e-6,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -62,7 +62,7 @@ def line_plane_intersections(
         Tensor of shape [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
     target_areas : TowerTargetAreas
         All possible tower target areas with their properties.
-    target_area_mask : torch.Tensor | None
+    target_area_indices : torch.Tensor | None
         The indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
         Tensor of shape [number_of_active_heliostats].
@@ -84,14 +84,14 @@ def line_plane_intersections(
     """
     device = get_device(device=device)
 
-    if target_area_mask is None:
-        target_area_mask = torch.zeros(
+    if target_area_indices is None:
+        target_area_indices = torch.zeros(
             points_at_ray_origins.shape[index_mapping.heliostat_dimension],
             dtype=torch.int32,
             device=device,
         )
-    plane_normals = target_areas.normal_vectors[target_area_mask]
-    plane_centers = target_areas.centers[target_area_mask]
+    plane_normals = target_areas.normal_vectors[target_area_indices]
+    plane_centers = target_areas.centers[target_area_indices]
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
     # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'

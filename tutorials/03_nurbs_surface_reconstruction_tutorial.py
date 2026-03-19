@@ -43,13 +43,13 @@ def plot_surface_points_and_angle_map(
     ----------
     surface_points : torch.Tensor
         The surface points for one heliostat.
-        Tensor of shape [1, number_of_combined_surface_points_all_facets, 4].
+        Shape is [1, number_of_combined_surface_points_all_facets, 4].
     surface_normals : torch.Tensor
         The surface normals for one heliostat.
-        Tensor of shape [1, number_of_combined_surface_points_all_facets, 4].
+        Shape is [1, number_of_combined_surface_points_all_facets, 4].
     reference_direction : torch.Tensor
         The reference direction.
-        Tensor of shape [4].
+        Shape is [4].
     name : str
         The name or index of the heliostat.
     """
@@ -121,11 +121,11 @@ def plot_multiple_fluxes(
     Parameters
     ----------
     reconstructed : torch.Tensor
-        The flux density distributions raytraced on the reconstructed surfaces.
-        Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+        The flux density distributions ray-traced on the reconstructed surfaces.
+        Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
     references : torch.Tensor
         The flux density distribution references.
-        Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+        Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
     name : str
         The name or index of the heliostat_group.
     """
@@ -247,7 +247,7 @@ def create_flux_plots(
             validation_incident_ray_directions,
             _,
             validation_active_heliostats_mask,
-            validation_target_area_mask,
+            validation_target_area_indices,
         ) = data_parser.parse_data_for_reconstruction(
             heliostat_data_mapping=validation_heliostat_data_mapping,
             heliostat_group=heliostat_group,
@@ -306,7 +306,9 @@ def create_flux_plots(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[validation_target_area_mask],
+                aim_points=scenario.target_areas.centers[
+                    validation_target_area_indices
+                ],
                 incident_ray_directions=validation_incident_ray_directions,
                 active_heliostats_mask=validation_active_heliostats_mask,
                 device=device,
@@ -326,7 +328,7 @@ def create_flux_plots(
             validation_bitmaps_per_heliostat = validation_ray_tracer.trace_rays(
                 incident_ray_directions=validation_incident_ray_directions,
                 active_heliostats_mask=validation_active_heliostats_mask,
-                target_area_mask=validation_target_area_mask,
+                target_area_indices=validation_target_area_indices,
                 device=device,
             )
 

@@ -188,7 +188,7 @@ class MotorPositionsOptimizer:
         initial_motor_positions_all_groups = []
 
         active_heliostats_masks_all_groups = []
-        target_area_masks_all_groups = []
+        target_area_indices_all_groups = []
         incident_ray_directions_all_groups = []
 
         for group_index, group in enumerate(
@@ -201,7 +201,7 @@ class MotorPositionsOptimizer:
                     device=device,
                 )
             )
-            target_area_masks_all_groups.append(
+            target_area_indices_all_groups.append(
                 torch.full(
                     (group.number_of_heliostats,),
                     self.target_area_index,
@@ -224,7 +224,7 @@ class MotorPositionsOptimizer:
             # Align heliostats.
             group.align_surfaces_with_incident_ray_directions(
                 aim_points=self.scenario.target_areas.centers[
-                    target_area_masks_all_groups[group_index]
+                    target_area_indices_all_groups[group_index]
                 ],
                 incident_ray_directions=incident_ray_directions_all_groups[group_index],
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
@@ -393,7 +393,7 @@ class MotorPositionsOptimizer:
                     active_heliostats_mask=active_heliostats_masks_all_groups[
                         heliostat_group_index
                     ],
-                    target_area_mask=target_area_masks_all_groups[
+                    target_area_indices=target_area_indices_all_groups[
                         heliostat_group_index
                     ],
                     device=device,
@@ -401,7 +401,7 @@ class MotorPositionsOptimizer:
                 sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                     bitmaps_per_heliostat=flux_distributions,
-                    target_area_mask=target_area_masks_all_groups[
+                    target_area_indices=target_area_indices_all_groups[
                         heliostat_group_index
                     ][sample_indices_for_local_rank],
                     device=device,
@@ -423,7 +423,9 @@ class MotorPositionsOptimizer:
                 ground_truth=self.ground_truth.unsqueeze(
                     index_mapping.heliostat_dimension
                 ),
-                target_area_mask=torch.tensor([self.target_area_index], device=device),
+                target_area_indices=torch.tensor(
+                    [self.target_area_index], device=device
+                ),
                 reduction_dimensions=(
                     index_mapping.batched_bitmap_e,
                     index_mapping.batched_bitmap_u,

@@ -8,28 +8,36 @@
     You can find the corresponding ``Python`` script for this tutorial here:
     https://github.com/ARTIST-Association/ARTIST/blob/main/tutorials/05_motor_positions_optimizer_tutorial.py
 
-This tutorial introduces the process of optimizing heliostat motor positions using the ``ARTIST`` software. This is crucial for precise alignment and maximizing the efficiency of the power plant.
+This tutorial demonstrates how to optimize heliostat motor positions in ``ARTIST``, which is a crucial step for precise
+heliostat alignment and maximizing power plant efficiency.
 
 The tutorial will walk you through the key concepts needed to perform this optimization, including:
 
-- How to define the ground truth and the loss function.
-- How to configure the optimization parameters.
-- How to perform the motor positions optimization.
+- Defining the ground truth and the loss function,
+- configuring the optimization parameters, and
+- performing the motor positions optimization.
 
-Before starting this scenario make sure you already know how to :ref:`load a scenario<tutorial_heliostat_raytracing>`,
+Before starting, make sure you know how to :ref:`load a scenario<tutorial_heliostat_raytracing>`,
 run ``ARTIST`` in a :ref:`distributed environment<tutorial_distributed_raytracing>`, and understand the structure of a
-:ref:`scenario<scenario>`. If you are not using your own scenario, we recommend using one of the
-``test_scenario_paint_multiple_heliostat_groups_deflectometry.h5`` or ``test_scenario_paint_multiple_heliostat_groups_ideal.h5``
-scenarios provided in the ``/scenarios`` folder.
+:ref:`scenario<scenario>`. If you are not using your own scenario, we recommend using either
 
-Before getting started, you need to load the scenario and set up the distributed environment, as in previous tutorials.
+- ``test_scenario_paint_multiple_heliostat_groups_deflectometry.h5`` or
+- ``test_scenario_paint_multiple_heliostat_groups_ideal.h5``
 
-Motor position optimization aims to optimize the motor positions of multiple heliostats to achieve a desired flux density
-on the solar tower. In this case, we focus on achieving a trapezoid distribution on the receiver, which is equivalent
-to all areas of the receiver receiving the same amount of sunlight. This would lead to and optimal flux distribution and
-improve operation of the power plant. Therefore, we have to define the ground truth with a trapezoid distribution.
+provided in the ``scenarios/`` folder.
 
-.. code-block::
+You should also have your scenario loaded and the distributed environment set up, as shown in previous tutorials.
+
+Motor Position Optimization
+---------------------------
+Motor position optimization adjusts the motor positions of all heliostats in the field to achieve a desired flux
+distribution on the solar tower. In this tutorial, we target a trapezoid distribution on the receiver, i.e., all regions should get
+approximately the same amount of sunlight. The resulting optimal flux density distribution maximizes the plant's energy
+yield and prevents local overheating.
+
+Below, we define the targeted trapezoid distribution as the ground truth:
+
+.. code-block:: python
 
     e_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=110, device=device
@@ -41,33 +49,45 @@ improve operation of the power plant. Therefore, we have to define the ground tr
         index_mapping.unbatched_bitmap_u
     ) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
 
-For the motor position optimization, the flux integral is essential as we usually want to maximize the energy on the receiver while optimally distributing the single heliostat fluxes.
-To simulate the energy on the receiver, we need to assign meaningful magnitudes to each single ray. This is done by providing the ``dni`` parameter.
-The DNI is the insolation measured at a given location on Earth with a surface element perpendicular to the sun's rays, excluding diffuse insolation.
-The DNI needs to be provided in W/m^2 and is then automatically converted to ray magnitudes.
-The DNI is a parameter in the ``MotorPositionsOptimizer``, as we will later see.
-You can pass a DNI directly into a ``HeliostatRayTracer`` anywhere else in ``ARTIST`` too, but in the previous two reconstructions it is not necessary.
-The ``ground_truth`` distribution we aim for now needs to be scaled with a ``target_flux_integral`` scalar value.
 
-.. code-block::
+Flux Scaling
+^^^^^^^^^^^^
+
+As we typically want to maximize the energy on the receiver while optimally distributing the single heliostat fluxes,
+the flux integral is an essential quantity in motor position optimization. To simulate the energy on the receiver, each
+ray needs to be assigned a meaningful magnitude. This is done by providing the ``dni`` parameter in the
+``MotorPositionsOptimizer``. The direct normal irradiance (DNI) is the insolation at a given location on Earth with a
+surface element perpendicular to the sun's rays, excluding diffuse insolation. It is provided in W/m^2 and automatically
+converted to ray magnitudes.
+
+For the optimization, the targeted ``ground_truth`` distribution is scaled with the scalar ``target_flux_integral``
+value:
+
+.. code-block:: python
+
     target_flux_integral = 10000
     ground_truth = (ground_truth / ground_truth.sum()) * target_flux_integral
 
-Next we set the loss function as the ``KLDivergenceLoss``:
+Loss Function
+^^^^^^^^^^^^^
 
-.. code-block::
+We again use the ``KLDivergenceLoss`` as the loss function:
+
+.. code-block:: python
 
     loss_definition = KLDivergenceLoss()
 
-The ``KLDivergenceLoss`` measures how one probability distribution is different from a second reference distribution. In
-this case the reference distribution is the trapezoid distribution, which we compare to the collective distribution
-generated by all heliostats in the scenario.
+The ``KLDivergenceLoss`` measures the difference between the predicted flux distribution generated by all heliostats in
+the scenario and the reference trapezoid distribution.
 
-Before we can perform the optimization, we also need to define the optimization configuration.
-Internally, the ``torch.optim.Adam`` optimizer is used, but the optimal parameters may differ depending on the data or
-specific use case. In this tutorial we define the following scheduler and optimization configuration:
+Optimization Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Before we can perform the optimization, we need to define the optimization configuration.
+Internally, ``ARTIST`` uses the ``torch.optim.Adam`` optimizer. We use the following scheduler and optimization
+settings:
 
-.. code-block::
+.. code-block:: python
+
     # Set optimizer parameters.
     optimizer_dict = {
         config_dictionary.initial_learning_rate: 3e-4,
@@ -105,18 +125,25 @@ specific use case. In this tutorial we define the following scheduler and optimi
         config_dictionary.constraints: constraint_dict,
     }
 
-The optimization configuration is a combination of optimizer parameters, scheduler parameters, and the learning constraints.
-For the motor position optimization, we have two constraints. With ``rho_energy`` and ``lambda_lr`` we define the parameters for Augmented Lagrangian coefficients.
-They enforce that the flux integral strives to maximize itself during the optimization.
-Furthermore, there are the ``max_flux_density`` and ``rho_pixel`` parameters.
-They constrain the flux at the pixel level. The parameter ``max_flux_density`` defines the maximum allowable flux density per pixel.
-The parameter ``rho_pixel`` controls the strength of the penalty applied when this limit is exceeded.
-This is particularly important because, in a real power plant, the receiver is subject to strict safety limits on the allowable flux density. Exceeding this limit could lead to material damage.
+The optimization configuration is a combination of optimizer parameters, scheduler parameters, and the learning
+constraints.
 
-Now we are finally done, the final step is to create a ``MotorPositionsOptimizer`` object and to run the ``optimize()``
-method to perform the actual optimization.
+Constraints
+^^^^^^^^^^^
+For the motor position optimization, we have two constraints:
 
-.. code-block::
+- **Flux integral constraints:** Controlled by ``rho_energy`` and ``lambda_lr`` to encourage maximizing the flux
+  integral and thus total energy using an Augmented Lagrangian.
+- **Pixel-level flux constraints:** Controlled by ``max_flux_density`` (maximum allowed flux density per pixel) and
+  ``rho_pixel`` (penalty strength for exceeding the limit) to constrain the flux at the pixel level. This is
+  particularly important because, in a real power plant, the receiver has strict safety limits on the flux density to
+  avoid material damage.
+
+Running the Optimizer
+^^^^^^^^^^^^^^^^^^^^^
+Finally, we create a ``MotorPositionsOptimizer`` object and run the optimization:
+
+.. code-block:: python
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
@@ -135,34 +162,34 @@ method to perform the actual optimization.
         loss_definition=loss_definition, device=device
     )
 
-The ``optimize()`` method returns the final loss of the optimization process, which can be useful for logging or
-analysis. That is all there is to motor position optimization in ``ARTIST``.
+The ``optimize()`` method returns the final loss of the optimization process, which can be useful for logging or further
+analysis.
 
 The Effect of Motor Position Optimization
 -----------------------------------------
 
-To better understand why motor position optimization is important lets consider a small example. Each receiver is is
-designed and constructed with a known optimal distribution in mind. This distribution might be a homogenous distribution
-or something similar. The aim is to realize this optimal distribution with all available heliostats. In the current
-tutorial, we aim to achieve a uniform distribution, but as we see in the following image, this is clearly
-not the case:
+To better understand why motor position optimization is important let's consider a small example. Receivers are designed
+and constructed with a known optimal distribution in mind. This distribution might be a homogenous distribution or
+something similar. The aim is to realize this optimal distribution with all heliostats in the field. Here, we aim to
+achieve a uniform distribution. However, the flux distribution before motor position optimization is clearly uneven:
 
 .. figure:: ./images/flux_before_aimpoint_optimization.png
    :width: 85%
    :alt: Flux before motor position optimization
    :align: center
 
-However, after performing the motor position optimization the various heliostats in the scenario can be pointed to slightly
-different targets to better approximate the desired distribution. We see this, in the image below:
+During motor position optimization, the heliostats are adjusted to aim at slightly different points on the receiver.
+This improves the uniformity of the flux distribution on the receiver:
 
 .. figure:: ./images/flux_after_aimpoint_optimization.png
    :width: 85%
    :alt: Flux after motor position optimization
    :align: center
 
-Since only a small number of heliostats are present in this scenario, it is impossible to actually achieve the desired
-uniform flux distribution - but we clearly see (despite only a few heliostats being present) that the flux is now more
-broadly distributed than before.
+Despite only a few heliostats being present in this scenario, the flux distribution is visibly more uniform after
+the optimization. Note that due to the small number of heliostats, it is impossible to actually achieve the desired
+uniform flux distribution – but we clearly see that the flux after the optimization is more broadly distributed than
+before.
 
 .. note::
 

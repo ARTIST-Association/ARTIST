@@ -168,7 +168,7 @@ class FocalSpotLoss(Loss):
             Tensor of shape [number_of_samples, 4].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_mask`` and ``device`` are expected keyword arguments for the focal spot loss.
+            The ``reduction_dimensions``, ``target_area_indices`` and ``device`` are expected keyword arguments for the focal spot loss.
 
         Raises
         ------
@@ -181,7 +181,7 @@ class FocalSpotLoss(Loss):
             The focal spot loss.
             Tensor of shape [number_of_samples].
         """
-        expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
+        expected_kwargs = ["reduction_dimensions", "device", "target_area_indices"]
         errors = []
         for key in expected_kwargs:
             if key not in kwargs:
@@ -194,15 +194,15 @@ class FocalSpotLoss(Loss):
 
         device = get_device(device=kwargs["device"])
 
-        target_area_mask = kwargs["target_area_mask"]
+        target_area_indices = kwargs["target_area_indices"]
 
         focal_spot = utils.get_center_of_mass(
             bitmaps=prediction,
-            target_centers=self.scenario.target_areas.centers[target_area_mask],
-            target_widths=self.scenario.target_areas.dimensions[target_area_mask][
+            target_centers=self.scenario.target_areas.centers[target_area_indices],
+            target_widths=self.scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_width
             ],
-            target_heights=self.scenario.target_areas.dimensions[target_area_mask][
+            target_heights=self.scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_height
             ],
             device=device,
@@ -263,7 +263,7 @@ class PixelLoss(Loss):
             Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_mask`` and optionally ``device`` are expected keyword arguments for the pixel loss.
+            The ``reduction_dimensions``, ``target_area_indices`` and optionally ``device`` are expected keyword arguments for the pixel loss.
 
         Raises
         ------
@@ -276,7 +276,7 @@ class PixelLoss(Loss):
             The summed MSE pixel loss reduced along the specified dimensions.
             Tensor of shape [number_of_samples].
         """
-        expected_kwargs = ["reduction_dimensions", "device", "target_area_mask"]
+        expected_kwargs = ["reduction_dimensions", "device", "target_area_indices"]
         errors = []
         for key in expected_kwargs:
             if key not in kwargs:
