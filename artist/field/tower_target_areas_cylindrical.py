@@ -4,6 +4,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
@@ -11,7 +12,7 @@ log = logging.getLogger(__name__)
 """A logger for the cylindrical tower target areas."""
 
 
-class TowerTargetAreasCylindrical:
+class TowerTargetAreasCylindrical(TowerTargetAreas):
     """
     The cylindrical tower target areas.
 

@@ -460,28 +460,38 @@ class HeliostatRayTracer:
                 device=device,
             )
 
+            number_of_target_areas_per_type = self.scenario.solar_tower.number_of_target_areas_per_type
+            planar_mask = target_area_indices < number_of_target_areas_per_type[0]
+            cylindrical_mask = ~planar_mask
+
+            rays_planar_targets = Rays(ray_directions=rays.ray_directions[planar_mask], ray_magnitudes=rays.ray_magnitudes[planar_mask])
+            rays_cylindrical_targets = Rays(ray_directions=rays.ray_directions[cylindrical_mask], ray_magnitudes=rays.ray_magnitudes[cylindrical_mask])
+
             intersections, absolute_intensities = (
                 raytracing_utils.line_plane_intersections(
-                    rays=rays,
+                    rays=rays_planar_targets,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
-                    ],
-                    target_areas=self.scenario.target_areas,
+                    ][planar_mask],
+                    target_areas=self.scenario.solar_tower.target_areas[0],
                     target_area_indices=target_area_indices[
                         active_heliostats_mask_batch
-                    ],
+                    ][planar_mask],
                     device=device,
                 )
             )
 
             intersections, absolute_intensities = (
                 raytracing_utils.line_cylinder_intersections(
-                    rays=rays,
+                    rays=rays_cylindrical_targets,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
-                    ],
+                    ][cylindrical_mask],
+                    target_areas=self.scenario.solar_tower.target_areas[1],
+                    target_area_indices=target_area_indices[
+                        active_heliostats_mask_batch
+                    ][cylindrical_mask],
                     device=device,
-                    scenario=self.scenario
                 )
             )
 

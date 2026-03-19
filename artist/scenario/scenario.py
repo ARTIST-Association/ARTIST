@@ -9,6 +9,7 @@ from typing_extensions import Self
 from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
+from artist.field.solar_tower import SolarTower
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.scene.light_source_array import LightSourceArray
@@ -50,8 +51,7 @@ class Scenario:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        target_areas_planar: TowerTargetAreasPlanar,
-        target_areas_cylindrical: TowerTargetAreasCylindrical,
+        solar_tower: SolarTower,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -77,20 +77,9 @@ class Scenario:
             A field of heliostats included in the scenario.
         """
         self.power_plant_position = power_plant_position
-        self.target_areas_planar = target_areas_planar
-        self.target_areas_cylindrical = target_areas_cylindrical
+        self.solar_tower = solar_tower
         self.light_sources = light_sources
         self.heliostat_field = heliostat_field
-
-        self._target_name_to_index = {}
-        idx = 0
-        for name in self.target_areas_cylindrical.names:
-            self._target_name_to_index[name] = idx
-            idx += 1
-
-        for name in self.target_areas_planar.names:
-            self._target_name_to_index[name] = idx
-            idx += 1
 
 
     @staticmethod
@@ -165,12 +154,11 @@ class Scenario:
                 config_dictionary.power_plant_position
             ][()]
         )
-        target_areas_planar = TowerTargetAreasPlanar.from_hdf5(
+
+        solar_tower = SolarTower.from_hdf5(
             config_file=scenario_file, device=device
         )
-        target_areas_cylindrical = TowerTargetAreasCylindrical.from_hdf5(
-            config_file=scenario_file, device=device
-        )
+
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
         )
@@ -266,8 +254,7 @@ class Scenario:
 
         return cls(
             power_plant_position=power_plant_position,
-            target_areas_planar=target_areas_planar,
-            target_areas_cylindrical=target_areas_cylindrical,
+            solar_tower=solar_tower,
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
@@ -322,7 +309,7 @@ class Scenario:
         device = get_device(device=device)
 
         data_per_heliostat = defaultdict(list)
-        total_number_of_target_areas = len(self._target_name_to_index)
+        total_number_of_target_areas = len(self.solar_tower.target_name_to_index)
 
         if string_mapping is None:
             if (
@@ -356,7 +343,7 @@ class Scenario:
             for i, (heliostat_name, target_name, light_direction) in enumerate(
                 filtered_mapping
             ):
-                if target_name not in self._target_name_to_index:
+                if target_name not in self.solar_tower.target_name_to_index:
                     errors.append(
                         f"Invalid target '{target_name}' at index {i} not found in target areas."
                     )
@@ -395,7 +382,7 @@ class Scenario:
             for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(filtered_mapping):
                 active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1
                 data_per_heliostat[heliostat_name].append([
-                    self._target_name_to_index[target_name],
+                    self.solar_tower.target_name_to_index[target_name],
                     incident_ray_direction
                 ])
             index = 0

@@ -90,7 +90,7 @@ def line_plane_intersections(
             dtype=torch.int32,
             device=device,
         )
-    plane_normals = target_areas.normal_vectors[target_area_indices]
+    plane_normals = target_areas.normals[target_area_indices]
     plane_centers = target_areas.centers[target_area_indices]
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
@@ -133,18 +133,12 @@ def line_plane_intersections(
 def line_cylinder_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
-    scenario: Scenario,
+    target_areas: TowerTargetAreasPlanar,
+    target_area_indices: torch.Tensor | None = None,
     epsilon: float = 1e-6,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Ray-tracing function:
-    1. Transform rays into cylinder frame (rotation optional)
-    2. Intersect cylinder
-    3. Clip theta/z to receiver bounds (skip clipping for full cylinder)
-    4. Map to module UV coordinates
-    5. Splat onto module grid
-
     world space
       ↓
     rotate rays into receiver frame
@@ -156,94 +150,23 @@ def line_cylinder_intersections(
     unwrap cylinder patch
         ↓
     2D receiver grid
-
-
-    Step 1 — transform ray into cylinder frame
-    Step 2 — ray-cylinder intersection
-    Step 3 — check receiver patch bounds
-    Step 4 — convert to receiver coordinates
-    Example if the receiver is tilted by angle α around x:
-    
-    The tilt only affects: R_cyl
-    Example if the receiver is tilted by angle α around x:
-    R_cyl =
-    [1      0        0]
-    [0   cosα   -sinα]
-    [0   sinα    cosα]
-    This rotation is applied to the rays.
-
-    transform rays → intersect canonical cylinder → unwrap
     """
-    plant_coordinates = [
-        50.913421122592574,
-        6.387824755874856,
-        87.0
-    ]
-    receiver_coordinates = {
-      "center": [50.91341660151, 6.3878253047761, 142.22675],
-      "receiver_outer_upper_left": [50.913427272183, 6.3878568569144, 144.805],
-      "receiver_outer_upper_right": [50.9134277392519, 6.38779212125015, 144.82],
-      "receiver_outer_lower_left": [50.9134054755624, 6.38785629153485, 139.596],
-      "receiver_outer_lower_right": [50.9134057066037, 6.38779225067161, 139.592],
-      "receiver_inner_lower_left": [50.9134065441443, 6.38785392584286, 139.86],
-      "receiver_inner_lower_right": [50.9134066492965, 6.38779530140411, 139.862],
-      "receiver_inner_upper_left": [50.9134264540107, 6.38785420535071, 144.592],
-      "receiver_inner_upper_right": [50.9134267664737, 6.38779541198343, 144.593]
-    }
+    device = get_device(device=device)
 
-    receiver_coordinates_enu = {}
-    for key, coord in receiver_coordinates.items():
-        wgs_tensor = torch.tensor([coord], dtype=torch.float64)
-        plant_tensor = torch.tensor(plant_coordinates, dtype=torch.float64)
-        enu_coord = utils.convert_3d_points_to_4d_format(utils.convert_wgs84_coordinates_to_local_enu(wgs_tensor, plant_tensor))
-        receiver_coordinates_enu[key] = enu_coord.squeeze(0)
-    
-    cylinder_radius = 4.14
-    tilt_angle = -25
-    tilt_angle_radians = torch.deg2rad(torch.tensor(tilt_angle, device=device)).unsqueeze(0)
-    opening_angle_cylinder_part = 60
-    opening_angle_cylinder_part_radians = torch.deg2rad(torch.tensor(opening_angle_cylinder_part, device=device)).unsqueeze(0)
-    arc_length_absorber = cylinder_radius * opening_angle_cylinder_part_radians
-    rotation_matrix = utils.rotate_e(e=tilt_angle_radians)
-
-    point_a = receiver_coordinates_enu["receiver_inner_lower_left"]
-    point_b = receiver_coordinates_enu["receiver_inner_lower_right"]
-    point_c = receiver_coordinates_enu["receiver_inner_upper_left"]
-    point_d = receiver_coordinates_enu["receiver_inner_upper_right"]
-
-    midpoint_lower = (point_a + point_b) / 2
-    midpoint_upper = (point_c + point_d) / 2
-    axis_cylinder = torch.nn.functional.normalize(torch.abs(midpoint_lower-midpoint_upper), dim=0)
-    normal_vector = rotation_matrix @ torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
-    
-    # Chord vector
-    chord_lower = point_b - point_a
-    chord_upper = point_d - point_c
-    # Distance from midpoint to center
-    distance_to_center_lower = torch.sqrt(cylinder_radius**2 - (torch.norm(chord_lower[:3])/2)**2)
-    distance_to_center_upper = torch.sqrt(cylinder_radius**2 - (torch.norm(chord_upper[:3])/2)**2)
-    center_lower = midpoint_lower + distance_to_center_lower * -normal_vector
-    center_upper = midpoint_upper + distance_to_center_upper * -normal_vector
-    
-    center_cylinder = (center_lower + center_upper) / 2
-    height_cylinder = torch.norm(center_lower-center_upper)
-    
-    theta_min = - opening_angle_cylinder_part_radians/2
-    theta_max = opening_angle_cylinder_part_radians/2
-    z_min = -height_cylinder/2
-    z_max = +height_cylinder/2
-
+    rotation_matrices = determine_rotation_matrices(
+        normals=target_areas.normals,
+        device=device
+    )
 
     # In reality in the cylinder is tilted and its center is on top of the solar tower.
     # For raytracing to be efficient, calculating intersections with an axis aligned cylinder with the z-axis and center at the origin is a lot easier.
     # Rotating the cylinder makes the ray intersection equation harder to solve and gradients would be more at risk to be instable.
     # That is why we rotate the world around it instead.
     # translate ray origins by center of cylinder, then rotate 
-    
     local_ray_origins = (
         points_at_ray_origins 
-        @ utils.translate_enu(e=-center_cylinder[:, 0], n=-center_cylinder[:, 1], u=-center_cylinder[:, 2]).transpose(1,2) 
-        @ rotation_matrix.transpose(1,2)
+        @ utils.translate_enu(e=-target_areas.centers[:, 0], n=-target_areas.centers[:, 1], u=-target_areas.centers[:, 2]).transpose(1,2) 
+        @ rotation_matrices.transpose(1,2)
     ) # transpose the matrix because we need the inverse directions.
     local_ray_directions = rays.ray_directions @ rotation_matrix.transpose(1,2)
 
@@ -287,6 +210,14 @@ def line_cylinder_intersections(
     z_hit = p_hit[..., 2]
     hit_mask = valid_mask & (t > 0)
 
+
+    theta_min = - opening_angle_cylinder_part_radians/2
+    theta_max = opening_angle_cylinder_part_radians/2
+    z_min = -height_cylinder/2
+    z_max = +height_cylinder/2
+
+
+
     hit_mask &= (theta_min <= theta_hit) & (theta_hit <= theta_max)
     hit_mask &= (z_min <= z_hit) & (z_hit <= z_max)
                 
@@ -296,3 +227,28 @@ def line_cylinder_intersections(
 
     u = (theta_hit - theta_min) / (theta_max - theta_min)
     v =  (z_hit - z_min) / (z_max - z_min)
+
+
+def determine_rotation_matrices(
+    normals: torch.Tensor,
+    epsilon: float = 1e-6,
+    device: torch.device | None = None,
+):
+    device = get_device(device=device)
+
+    up = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
+    cylinder_axes = torch.cross(up[:, :3], normals[:, :3], dim=-1)
+    cylinder_axes = cylinder_axes / (torch.norm(cylinder_axes) + epsilon)
+    theta = (up[:, :3] * normals[:, :3]).sum(dim=-1, keepdim=True).clamp(-1 + epsilon, 1 - epsilon)
+    
+    matrix = torch.zeros(normals.shape[0], 3, 3, device=device)
+    matrix[:, 0, 1] = cylinder_axes[:, 2]
+    matrix[:, 0, 2] = cylinder_axes[:, 1]
+    matrix[:, 1, 0] = cylinder_axes[:, 2]
+    matrix[:, 1, 2] = cylinder_axes[:, 0]
+    matrix[:, 2, 0] = cylinder_axes[:, 1]
+    matrix[:, 2, 1] = -cylinder_axes[:, 0]
+    
+    rotation_matrix_3d = torch.eye(3, device=device) + torch.sin(theta) * matrix + (1 - torch.cos(theta)) * (matrix @ matrix)
+    rotation_matrix = torch.eye(4, device=device)
+    rotation_matrix[:3, :3] = rotation_matrix_3d

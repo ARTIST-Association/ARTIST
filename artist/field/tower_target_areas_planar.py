@@ -4,6 +4,7 @@ import h5py
 import torch
 from typing_extensions import Self
 
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
@@ -11,7 +12,7 @@ log = logging.getLogger(__name__)
 """A logger for the planar tower target areas."""
 
 
-class TowerTargetAreasPlanar:
+class TowerTargetAreasPlanar(TowerTargetAreas):
     """
     The planar tower target areas.
 
@@ -26,7 +27,7 @@ class TowerTargetAreasPlanar:
     centers : torch.Tensor
         The center point coordinate of each planar target area.
         Tensor of shape [number_of_target_areas, 4].
-    normal_vectors : torch.Tensor
+    normals : torch.Tensor
         The normal vector of each planar target area.
         Tensor of shape [number_of_target_areas, 4].
     dimensions : torch.Tensor
@@ -45,7 +46,7 @@ class TowerTargetAreasPlanar:
         self,
         names: list[str],
         centers: torch.Tensor,
-        normal_vectors: torch.Tensor,
+        normals: torch.Tensor,
         dimensions: torch.Tensor,
     ) -> None:
         """
@@ -58,7 +59,7 @@ class TowerTargetAreasPlanar:
         centers : torch.Tensor
             The center point coordinate of each target area.
             Tensor of shape [number_of_target_areas, 4].
-        normal_vectors : torch.Tensor
+        normals : torch.Tensor
             The normal vector of each target area.
             Tensor of shape [number_of_target_areas, 4].
         dimensions : torch.Tensor
@@ -67,7 +68,7 @@ class TowerTargetAreasPlanar:
         """
         self.names = names
         self.centers = centers
-        self.normal_vectors = normal_vectors
+        self.normals = normals
         self.dimensions = dimensions
 
         self.number_of_target_areas = len(self.names)
@@ -107,7 +108,7 @@ class TowerTargetAreasPlanar:
 
         names = []
         centers = torch.zeros((number_of_target_areas, 4), device=device)
-        normal_vectors = torch.zeros((number_of_target_areas, 4), device=device)
+        normals = torch.zeros((number_of_target_areas, 4), device=device)
         dimensions = torch.zeros((number_of_target_areas, 2), device=device)
 
         for index, target_area_name in enumerate(
@@ -124,7 +125,7 @@ class TowerTargetAreasPlanar:
                 dtype=torch.float,
                 device=device,
             )
-            normal_vectors[index] = torch.tensor(
+            normals[index] = torch.tensor(
                 single_target_area_config[config_dictionary.target_area_normal_vector][
                     ()
                 ],
@@ -141,6 +142,6 @@ class TowerTargetAreasPlanar:
         return cls(
             names=names,
             centers=centers,
-            normal_vectors=normal_vectors,
+            normals=normals,
             dimensions=dimensions,
         )
