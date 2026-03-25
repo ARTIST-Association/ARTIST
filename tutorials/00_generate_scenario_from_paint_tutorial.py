@@ -38,15 +38,15 @@ heliostat_files_list = [
         pathlib.Path(
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
         ),
-        #pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
+        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
     ),
-    # (
-    #     "name2",
-    #     pathlib.Path(
-    #         "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
-    #     ),
-    #     pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
-    # ),
+    (
+        "AA31",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
+        ),
+        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"),
+    ),
     # ... Include as many as you want, but at least one!
 ]
 
@@ -98,20 +98,20 @@ nurbs_fit_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 )
 
 # Use this configuration for deflectometry surfaces.
-# heliostat_list_config, prototype_config = (
-#     paint_scenario_parser.extract_paint_heliostats_fitted_surface(
-#         paths=heliostat_files_list,
-#         power_plant_position=power_plant_config.power_plant_position,
-#         number_of_nurbs_control_points=number_of_nurbs_control_points,
-#         deflectometry_step_size=nurbs_deflectometry_step_size,
-#         nurbs_fit_method=nurbs_fit_method,
-#         nurbs_fit_tolerance=nurbs_fit_tolerance,
-#         nurbs_fit_max_epoch=nurbs_fit_max_epoch,
-#         nurbs_fit_optimizer=nurbs_fit_optimizer,
-#         nurbs_fit_scheduler=nurbs_fit_scheduler,
-#         device=device,
-#     )
-# )
+heliostat_list_config, prototype_config = (
+    paint_scenario_parser.extract_paint_heliostats_fitted_surface(
+        paths=heliostat_files_list,
+        power_plant_position=power_plant_config.power_plant_position,
+        number_of_nurbs_control_points=number_of_nurbs_control_points,
+        deflectometry_step_size=nurbs_deflectometry_step_size,
+        nurbs_fit_method=nurbs_fit_method,
+        nurbs_fit_tolerance=nurbs_fit_tolerance,
+        nurbs_fit_max_epoch=nurbs_fit_max_epoch,
+        nurbs_fit_optimizer=nurbs_fit_optimizer,
+        nurbs_fit_scheduler=nurbs_fit_scheduler,
+        device=device,
+    )
+)
 
 # Use this configuration for ideal surfaces.
 heliostat_list_config, prototype_config = (

@@ -470,19 +470,12 @@ class HeliostatRayTracer:
             rays_cylindrical_targets = Rays(ray_directions=rays.ray_directions[~planar_active_mask], ray_magnitudes=rays.ray_magnitudes[~planar_active_mask])
 
             intersection_distances = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
-            absolute_intensities = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
+            angle_reduced_intensities = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
             bitmap_intersections_e = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
             bitmap_intersections_u = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device) 
 
-            # Blocking needs intersection distances
-            # Splatting needs bitmap intersections and relative intensities (reduction based on angle)
-            # Intercept factor needs absolute intensities and ratio of hit and miss
-
-            # - bitmap intersections
-            # - angle based intensities
-
             if planar_active_mask.sum() > 0:
-                target_intersections_planar, absolute_intensities[planar_active_mask], intersection_distances[planar_active_mask] = (
+                bitmap_intersections_e[planar_active_mask], bitmap_intersections_u[planar_active_mask], intersection_distances[planar_active_mask], angle_reduced_intensities[planar_active_mask] = (
                     raytracing_utils.line_plane_intersections(
                         rays=rays_planar_targets,
                         points_at_ray_origins=self.heliostat_group.active_surface_points[
@@ -492,19 +485,13 @@ class HeliostatRayTracer:
                         target_area_indices=target_area_indices[
                             active_heliostats_mask_batch
                         ][planar_active_mask],
+                        bitmap_resolution=self.bitmap_resolution,
                         device=device,
                     )
                 )
-                bitmap_intersections_e[planar_active_mask], bitmap_intersections_u[planar_active_mask] = self.convert_to_bitmap_intersections(
-                    intersections=target_intersections_planar,
-                    target_area_indices = target_area_indices[
-                        active_heliostats_mask_batch
-                    ][planar_active_mask],
-                    device=device
-                )
 
             if (~planar_active_mask).sum() > 0:
-                bitmap_intersections_e[~planar_active_mask], bitmap_intersections_u[~planar_active_mask], absolute_intensities[~planar_active_mask], intersection_distances[~planar_active_mask] = (
+                bitmap_intersections_e[~planar_active_mask], bitmap_intersections_u[~planar_active_mask], intersection_distances[~planar_active_mask], angle_reduced_intensities[~planar_active_mask] = (
                     raytracing_utils.line_cylinder_intersections(
                         rays=rays_cylindrical_targets,
                         points_at_ray_origins=self.heliostat_group.active_surface_points[
@@ -514,6 +501,7 @@ class HeliostatRayTracer:
                         target_area_indices=target_area_indices[
                             active_heliostats_mask_batch
                         ][~planar_active_mask] - self.scenario.solar_tower.number_of_target_areas_per_type[0],
+                        bitmap_resolution=self.bitmap_resolution,
                         device=device,
                     )
                 )
@@ -571,7 +559,7 @@ class HeliostatRayTracer:
                     )
 
             intensities = (
-                absolute_intensities * (1 - blocked) * (1 - ray_extinction_factor)
+                angle_reduced_intensities * (1 - blocked) * (1 - ray_extinction_factor)
             )
 
             batch_bitmaps = self.bilinear_splatting(
@@ -585,7 +573,7 @@ class HeliostatRayTracer:
 
         combined_fluxes = torch.cat(flux_distributions, dim=0)
 
-        return combined_fluxes, absolute_intensities.sum(dim=(1,2)), intensities.sum(dim=(1,2))
+        return combined_fluxes, angle_reduced_intensities.sum(dim=(1,2)), intensities.sum(dim=(1,2))
 
     def scatter_rays(
         self,
@@ -639,68 +627,6 @@ class HeliostatRayTracer:
                 device=device,
             ),
         )
-
-    def convert_to_bitmap_intersections(
-        self,
-        intersections: torch.Tensor,
-        target_area_indices: torch.Tensor,
-        device: torch.device | None = None,
-    ):
-        device = device = get_device(device=device)
-        plane_widths = (
-            self.scenario.solar_tower.target_areas[0].dimensions[target_area_indices][
-                :, index_mapping.target_area_width
-            ]
-            .unsqueeze(index_mapping.number_rays_per_point)
-            .unsqueeze(index_mapping.points_dimension)
-        )
-        plane_heights = (
-            self.scenario.solar_tower.target_areas[0].dimensions[target_area_indices][
-                :, index_mapping.target_area_height
-            ]
-            .unsqueeze(index_mapping.number_rays_per_point)
-            .unsqueeze(index_mapping.points_dimension)
-        )
-        plane_centers_e = (
-            self.scenario.solar_tower.target_areas[0].centers[target_area_indices][
-                :, index_mapping.target_area_center_e
-            ]
-            .unsqueeze(index_mapping.number_rays_per_point)
-            .unsqueeze(index_mapping.points_dimension)
-        )
-        plane_centers_u = (
-            self.scenario.solar_tower.target_areas[0].centers[target_area_indices][
-                :, index_mapping.target_area_center_u
-            ]
-            .unsqueeze(index_mapping.number_rays_per_point)
-            .unsqueeze(index_mapping.points_dimension)
-        )
-
-        # Determine the E- and U-positions of the rays' intersections with the target areas' planes, scaled to the
-        # bitmap resolutions. Here, we decide that the bottom left corner of the 2D bitmap is the origin of the flux
-        # image that is computed. `target_intersections_e/u` contain the intersection coordinates in meters.
-        # Rays that hit the actual target have intersection coordinates ranging from 0 to `target_area.plane_e/_u`.
-        target_intersections_e = (
-            intersections[:, :, :, index_mapping.e] + plane_widths / 2 - plane_centers_e
-        )
-        target_intersections_u = (
-            intersections[:, :, :, index_mapping.u]
-            + plane_heights / 2
-            - plane_centers_u
-        )
-
-        # Scale target intersection coordinates into bitmap space.
-        # The resulting `bitmap_intersections_e/u` represent continuous coordinates
-        # in pixel units.
-        bitmap_intersections_e = (
-            (target_intersections_e / plane_widths * (self.bitmap_resolution[0] - 1))
-        )
-        bitmap_intersections_u = (
-            (target_intersections_u / plane_heights * (self.bitmap_resolution[1] - 1))
-        )
-
-        return bitmap_intersections_e, bitmap_intersections_u
-
 
     def get_bitmaps_per_target(
         self,

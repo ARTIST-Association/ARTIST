@@ -50,6 +50,7 @@ def line_plane_intersections(
     points_at_ray_origins: torch.Tensor,
     target_areas: TowerTargetAreasPlanar,
     target_area_indices: torch.Tensor | None = None,
+    bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     epsilon: float = 1e-6,
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -86,6 +87,7 @@ def line_plane_intersections(
         Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
     """
     device = get_device(device=device)
+    bitmap_resolution = bitmap_resolution.to(device)
 
     if target_area_indices is None:
         target_area_indices = torch.zeros(
@@ -117,24 +119,58 @@ def line_plane_intersections(
         (points_at_ray_origins - plane_centers[:, None, :]) * plane_normals[:, None, :]
     ).sum(dim=-1)[:, None, :]
 
-    intersection_distances = torch.where(
-        front_facing_mask,
-        numerator / torch.clamp(angle_based_intensities, min=epsilon),
-        torch.tensor(float('inf'), device=device),
-    )
-
+    intersection_distances = numerator / torch.clamp(angle_based_intensities, min=epsilon)
     intersections = (
         points_at_ray_origins[:, None, :, :]
         + rays.ray_directions * intersection_distances[:, :, :, None]
     )
 
-    intensities = torch.where(
-        front_facing_mask,
-        rays.ray_magnitudes * angle_based_intensities,
-        torch.tensor(float('inf'), device=device),
+    intensities = rays.ray_magnitudes * angle_based_intensities
+
+    # Determine the E- and U-positions of the rays' intersections with the target areas' planes, scaled to the
+    # bitmap resolutions. Here, we decide that the bottom left corner of the 2D bitmap is the origin of the flux
+    # image that is computed. `target_intersections_e/u` contain the intersection coordinates in meters.
+    # Rays that hit the actual target have intersection coordinates ranging from 0 to `target_area.plane_e/_u`.
+    plane_dimensions = target_areas.dimensions[target_area_indices]
+    plane_centers = target_areas.centers[target_area_indices]
+
+    target_intersections_e = (
+        intersections[..., index_mapping.e]
+        + (plane_dimensions[:, 0] / 2)[:, None, None]
+        - plane_centers[:, 0][:, None, None]
     )
-    
-    return intersections, intersection_distances, intensities 
+
+    target_intersections_u = (
+        intersections[..., index_mapping.u]
+        + (plane_dimensions[:, 1] / 2)[:, None, None]
+        - plane_centers[:, 2][:, None, None]
+    )
+
+    # Scale target intersection coordinates into bitmap space.
+    # The resulting `bitmap_intersections_e/u` represent continuous coordinates
+    # in pixel units.
+    bitmap_intersections_e = (
+        (target_intersections_e / plane_dimensions[:, 0] * (bitmap_resolution[0] - 1))
+    )
+    bitmap_intersections_u = (
+        (target_intersections_u / plane_dimensions[:, 1] * (bitmap_resolution[1] - 1))
+    )
+
+    # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.
+    # Also filter out rays that hit the backside of the target or rays that are parallel to the target.    
+    intersection_indices_on_target = (
+        (0 <= bitmap_intersections_e)
+        & (bitmap_intersections_e <= bitmap_resolution[0] - 1)
+        & (0 <= bitmap_intersections_u)
+        & (bitmap_intersections_u <= bitmap_resolution[1] - 1)
+    )
+
+    bitmap_intersections_e = bitmap_intersections_e * intersection_indices_on_target * front_facing_mask
+    bitmap_intersections_u = bitmap_intersections_u * intersection_indices_on_target * front_facing_mask
+    intersection_distances = intersection_distances * intersection_indices_on_target * front_facing_mask
+    intensities = intensities * intersection_indices_on_target * front_facing_mask
+
+    return bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities 
 
 def line_cylinder_intersections(
     rays: Rays,
@@ -189,34 +225,33 @@ def line_cylinder_intersections(
     c = (ox**2 + oy**2 - radii.view(-1,1,1)**2).repeat(1, dx.shape[1], 1)
 
     discriminant = b**2 - 4*a*c
-    valid = (discriminant >= 0) & (torch.abs(a) > 1e-8)
+    
+    # If a ray does not hit the infinite cylinder at all, the discriminant is negative and the square root cannot be computed,
+    # these rays are invalid.
+    mask_infinite_cylinder_hits = (discriminant >= 0) & (torch.abs(a) > 1e-8)
 
     # If there are no intersections, return empty coordinates, intensities and distances.
-    if not torch.any(valid):
+    if not torch.any(mask_infinite_cylinder_hits):
         empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device),
         return empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-    sqrt_discriminant = torch.sqrt(discriminant * valid)
+    sqrt_discriminant = torch.sqrt(discriminant * mask_infinite_cylinder_hits)
 
-    a_valid = a * valid
-    b_valid = b * valid
+    # The square root has two solutions, the minimum of the positive solutions per ray is the intersection we need.
+    distance_candidates = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2], 2), device=device)
+    distance_candidates[:, :, :, 0] = (-b - sqrt_discriminant) / (2 * a)
+    distance_candidates[:, :, :, 1] = (-b + sqrt_discriminant) / (2 * a)
 
-    t1 = (-b_valid - sqrt_discriminant) / (2 * a_valid)
-    t2 = (-b_valid + sqrt_discriminant) / (2 * a_valid)
-    t_candidates = torch.stack([t1,t2],dim=-1)
-    t_candidates = torch.where(t_candidates>0, t_candidates, torch.tensor(float('inf'),device=device))
-    t, _ = torch.min(t_candidates, dim=-1)     
-
-    # Only keep hits in front of ray origins.
-    valid = torch.isfinite(t)
-    intersection_distances = t * valid.float() 
-
-    if t.numel() == 0:
+    # All invalid intersection distances are set to inf.
+    intersection_distances, _ = torch.min(torch.clamp(distance_candidates, min=0.0), dim=-1)
+    valid_distances = intersection_distances > 0
+    
+    if (intersection_distances == 0.0).all():
         empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device),
         return empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
     # Intersection points (local cylinder frame).
-    intersections = origins_local + intersection_distances.unsqueeze(-1) * directions_local
+    intersections = origins_local + intersection_distances[:, :, :, None] * directions_local
     x, y, z = intersections[:, :, :, 0], intersections[:, :, :, 1], intersections[:, :, :, 2]
 
     # Cylinder normals (local frame).
@@ -224,8 +259,7 @@ def line_cylinder_intersections(
     normals_local = normals_local / torch.norm(normals_local, dim=-1, keepdim=True)
 
     # Lambert cosine law for ray magnitudes.
-    relative_intensities = (-directions_local * normals_local).sum(dim=-1).clamp(min=0.0)
-    intensities = relative_intensities * rays.ray_magnitudes
+    angle_based_intensities = (-directions_local * normals_local).sum(dim=-1).clamp(min=0.0)
 
     # Height and angle of intersections.
     # We want all coordinates of the cylinder intersections to be positive for the bitmap calculation.
@@ -233,17 +267,21 @@ def line_cylinder_intersections(
     # z-values range from negative half cylinder height to positive half the cylinder height, therefore we add half the cylinder height 
     # to all z-values.
     z = z + heights.view(-1, 1, 1) / 2
-    # within_height = (z >= 0) & (z <= heights.view(-1,1,1))
     # Initially angles are defined 0° towards positive east axis, we want to define 0° as positive north minus half of the opening angle. 
     angles = torch.atan2(y, x) - torch.pi/2 + opening_angles.view(-1,1,1)/2
-    # within_sector = (angles >= 0) & (angles <= opening_angles.view(-1,1,1))
 
-    # valid_hits = within_height & within_sector
-    # intersection_heights = z * valid_hits
-    # intersection_angles = angles * valid_hits
-    # intensities = intensities * valid_hits
+    intersections_on_target = (
+        (z >= 0) & (z <= heights.view(-1,1,1))
+        & (angles >= 0) & (angles <= opening_angles.view(-1,1,1))
+    )
 
-    bitmap_intersection_u = z / heights.view(-1,1,1) * (bitmap_resolution[1]-1)
-    bitmap_intersection_e = angles / opening_angles.view(-1,1,1) * (bitmap_resolution[0] - 1)
+    bitmap_intersections_u = z / heights.view(-1,1,1) * (bitmap_resolution[1]-1)
+    bitmap_intersections_e = angles / opening_angles.view(-1,1,1) * (bitmap_resolution[0] - 1)
 
-    return bitmap_intersection_e, bitmap_intersection_u, intensities, intersection_distances
+    # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.      
+    bitmap_intersections_e = bitmap_intersections_e * intersections_on_target * valid_distances
+    bitmap_intersections_u = bitmap_intersections_u * intersections_on_target * valid_distances
+    intersection_distances = intersection_distances * intersections_on_target * valid_distances
+    intensities = rays.ray_magnitudes * angle_based_intensities * intersections_on_target * valid_distances
+    
+    return bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities, 
