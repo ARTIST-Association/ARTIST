@@ -20,7 +20,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test_2.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -52,17 +52,21 @@ with setup_distributed_environment(
     # from a sun located directly in the south and be ray-traced on the first target found in the scenario.
     heliostat_target_light_source_mapping = None
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-    # heliostat_target_light_source_mapping = [
-    #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
-    #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
-    #     (...)
-    # ]
+    heliostat_target_light_source_mapping = [
+        #("AA00", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        #("AA00", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        #("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
+        # ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        # ("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
+    ]
 
     bitmap_resolution = torch.tensor([256, 256])
 
     combined_bitmaps_per_target = torch.zeros(
         (
-            scenario.target_areas_cylindrical.number_of_target_areas,
+            scenario.solar_tower.number_of_target_areas_per_type.sum(),
             bitmap_resolution[index_mapping.unbatched_bitmap_e],
             bitmap_resolution[index_mapping.unbatched_bitmap_u],
         ),
@@ -99,7 +103,7 @@ with setup_distributed_environment(
 
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas_cylindrical.centers[target_area_indices],
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices, device=device),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -136,7 +140,7 @@ with setup_distributed_environment(
             )
 
             # Perform heliostat-based ray tracing.
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 target_area_indices=target_area_indices,

@@ -159,35 +159,43 @@ def extract_paint_tower_measurements(
                 device=device,
             )
 
-            corner_points_enu = utils.convert_3d_points_to_4d_format(utils.convert_wgs84_coordinates_to_local_enu(
+            corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
                 target_area_corner_points_wgs84, power_plant_position, device=device
-            ), device=device)
+            )
 
             upper_left, lower_left, upper_right, lower_right = corner_points_enu
 
             radius = tower_dict[target_area]["radius"]
-            normal_vector = utils.convert_3d_directions_to_4d_format(torch.tensor(tower_dict[target_area]["normal_vector"], device=device))
+
             opening_angle = torch.deg2rad(torch.tensor(tower_dict[target_area]["opening_angle"], device=device))
+            normal = torch.tensor(tower_dict[target_area]["normal_vector"], device=device)
+            ortho_radius = torch.cross(normal, torch.tensor([0.0, 0.0, 1.0], device=device), dim=-1)
+            axis = torch.nn.functional.normalize(torch.cross(ortho_radius, normal, dim=-1), dim=-1)
 
             # Calculate center and height from points on cylinder arch.
             midpoint_lower = (lower_left + lower_right) / 2
             midpoint_upper = (upper_left + upper_right) / 2
+
             chord_lower = lower_right - lower_left
-            chord_upper = upper_right - lower_right
-            distance_to_center_lower = torch.sqrt(radius**2 - (torch.norm(chord_lower[:3])/2)**2)
-            distance_to_center_upper = torch.sqrt(radius**2 - (torch.norm(chord_upper[:3])/2)**2)
-            center_lower = midpoint_lower + distance_to_center_lower * -normal_vector
-            center_upper = midpoint_upper + distance_to_center_upper * -normal_vector
+            chord_upper = upper_right - upper_left
+            
+            distance_to_center_lower = torch.sqrt(radius**2 - (torch.norm(chord_lower)/2)**2)
+            distance_to_center_upper = torch.sqrt(radius**2 - (torch.norm(chord_upper)/2)**2)
+            
+            center_lower = midpoint_lower -normal * distance_to_center_lower
+            center_upper = midpoint_upper -normal * distance_to_center_upper
+
             center = (center_lower + center_upper) / 2
             height = torch.norm(center_lower-center_upper)
 
             tower_area_config = TargetAreaCylindricalConfig(
                 target_area_key=target_area,
                 radius=radius,
-                center=center,
+                center=utils.convert_3d_points_to_4d_format(center, device=device),
                 height=height,
-                normal_vector=normal_vector,
-                opening_angle=opening_angle
+                axis=utils.convert_3d_directions_to_4d_format(axis, device=device),
+                normal=utils.convert_3d_directions_to_4d_format(normal, device=device),
+                opening_angle=opening_angle,
             )
 
             target_area_cylindrical_configs.append(tower_area_config)

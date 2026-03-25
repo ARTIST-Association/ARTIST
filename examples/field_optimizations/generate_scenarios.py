@@ -75,7 +75,7 @@ def generate_ideal_scenario(
     device = get_device(device=device)
 
     # Generate power plant configuration and target area list.
-    power_plant_config, target_area_list_config = (
+    power_plant_config, target_area_list_planar_config, target_area_list_cylindrical_config = (
         paint_scenario_parser.extract_paint_tower_measurements(
             tower_measurements_path=tower_file, device=device
         )
@@ -83,7 +83,7 @@ def generate_ideal_scenario(
 
     # Set up light source configuration.
     light_source1_config = LightSourceConfig(
-        light_source_key="sun_1",
+        light_source_key="sun",
         light_source_type=config_dictionary.sun_key,
         number_of_rays=10,
         distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -108,7 +108,8 @@ def generate_ideal_scenario(
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,
@@ -337,7 +338,8 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
-    tower_file = data_dir / args.tower_file_name
+    #tower_file = data_dir / args.tower_file_name
+    tower_file = Path("tutorials/data/paint/tower-measurements.json")
 
     for case in ["baseline", "full_field"]:
         viable_heliostats_data = (

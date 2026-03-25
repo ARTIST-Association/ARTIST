@@ -118,7 +118,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test.h5")
 
 # Set optimizer parameters.
 optimizer_dict = {
@@ -145,9 +145,9 @@ scheduler_dict = {
 }
 # Configure the regularizers and constraints.
 constraint_dict = {
-    config_dictionary.rho_energy: 1.0,
-    config_dictionary.max_flux_density: 1e10,
-    config_dictionary.rho_pixel: 1.0,
+    config_dictionary.rho_flux_integral: 1.0,
+    config_dictionary.rho_local_flux: 1e10,
+    config_dictionary.rho_spillage: 1.0,
 }
 # Combine configurations.
 optimization_configuration = {

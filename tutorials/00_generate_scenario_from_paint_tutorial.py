@@ -23,7 +23,7 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test")
+scenario_path = pathlib.Path("test_2")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(

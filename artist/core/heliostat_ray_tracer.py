@@ -459,46 +459,69 @@ class HeliostatRayTracer:
                 ],
                 device=device,
             )
+            
+            # Choose the heliostat indices that are in the active batch and have a planar target area.
+            planar_active_mask = (
+                active_heliostats_mask_batch &
+                (target_area_indices < self.scenario.solar_tower.number_of_target_areas_per_type[0])
+            )[active_heliostats_mask_batch]
 
-            number_of_target_areas_per_type = self.scenario.solar_tower.number_of_target_areas_per_type
-            planar_mask = target_area_indices < number_of_target_areas_per_type[0]
-            cylindrical_mask = ~planar_mask
+            rays_planar_targets = Rays(ray_directions=rays.ray_directions[planar_active_mask], ray_magnitudes=rays.ray_magnitudes[planar_active_mask])
+            rays_cylindrical_targets = Rays(ray_directions=rays.ray_directions[~planar_active_mask], ray_magnitudes=rays.ray_magnitudes[~planar_active_mask])
 
-            rays_planar_targets = Rays(ray_directions=rays.ray_directions[planar_mask], ray_magnitudes=rays.ray_magnitudes[planar_mask])
-            rays_cylindrical_targets = Rays(ray_directions=rays.ray_directions[cylindrical_mask], ray_magnitudes=rays.ray_magnitudes[cylindrical_mask])
+            intersection_distances = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
+            absolute_intensities = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
+            bitmap_intersections_e = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device)
+            bitmap_intersections_u = torch.zeros((active_heliostats_mask_batch.sum(), self.light_source.number_of_rays, self.heliostat_group.surface_points.shape[1]), device=device) 
 
-            intersections, absolute_intensities = (
-                raytracing_utils.line_plane_intersections(
-                    rays=rays_planar_targets,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ][planar_mask],
-                    target_areas=self.scenario.solar_tower.target_areas[0],
-                    target_area_indices=target_area_indices[
-                        active_heliostats_mask_batch
-                    ][planar_mask],
-                    device=device,
+            # Blocking needs intersection distances
+            # Splatting needs bitmap intersections and relative intensities (reduction based on angle)
+            # Intercept factor needs absolute intensities and ratio of hit and miss
+
+            # - bitmap intersections
+            # - angle based intensities
+
+            if planar_active_mask.sum() > 0:
+                target_intersections_planar, absolute_intensities[planar_active_mask], intersection_distances[planar_active_mask] = (
+                    raytracing_utils.line_plane_intersections(
+                        rays=rays_planar_targets,
+                        points_at_ray_origins=self.heliostat_group.active_surface_points[
+                            active_heliostats_mask_batch
+                        ][planar_active_mask],
+                        target_areas=self.scenario.solar_tower.target_areas[0],
+                        target_area_indices=target_area_indices[
+                            active_heliostats_mask_batch
+                        ][planar_active_mask],
+                        device=device,
+                    )
                 )
-            )
-
-            intersections, absolute_intensities = (
-                raytracing_utils.line_cylinder_intersections(
-                    rays=rays_cylindrical_targets,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
+                bitmap_intersections_e[planar_active_mask], bitmap_intersections_u[planar_active_mask] = self.convert_to_bitmap_intersections(
+                    intersections=target_intersections_planar,
+                    target_area_indices = target_area_indices[
                         active_heliostats_mask_batch
-                    ][cylindrical_mask],
-                    target_areas=self.scenario.solar_tower.target_areas[1],
-                    target_area_indices=target_area_indices[
-                        active_heliostats_mask_batch
-                    ][cylindrical_mask],
-                    device=device,
+                    ][planar_active_mask],
+                    device=device
                 )
-            )
+
+            if (~planar_active_mask).sum() > 0:
+                bitmap_intersections_e[~planar_active_mask], bitmap_intersections_u[~planar_active_mask], absolute_intensities[~planar_active_mask], intersection_distances[~planar_active_mask] = (
+                    raytracing_utils.line_cylinder_intersections(
+                        rays=rays_cylindrical_targets,
+                        points_at_ray_origins=self.heliostat_group.active_surface_points[
+                            active_heliostats_mask_batch
+                        ][~planar_active_mask],
+                        target_areas=self.scenario.solar_tower.target_areas[1],
+                        target_area_indices=target_area_indices[
+                            active_heliostats_mask_batch
+                        ][~planar_active_mask] - self.scenario.solar_tower.number_of_target_areas_per_type[0],
+                        device=device,
+                    )
+                )
 
             # The variable blocked is all zeros if there is no blocking at all in the scene.
             # If blocking was activated in the HeliostatRaytracer, blocking will be computed.
-            number_of_heliostats, number_of_rays, number_of_points, _ = (
-                intersections.shape
+            number_of_heliostats, number_of_rays, number_of_points = (
+                intersection_distances.shape
             )
             blocked = torch.zeros(
                 (number_of_heliostats, number_of_rays, number_of_points),
@@ -542,9 +565,7 @@ class HeliostatRayTracer:
                         blocking_primitives_normals=blocking_primitives_normals[
                             filtered_blocking_primitive_indices
                         ],
-                        distances_to_target=torch.norm(
-                            intersections[..., :3] - points_at_ray_origins, dim=-1
-                        ),
+                        distances_to_target=intersection_distances,
                         epsilon=1e-12,
                         softness=5000.0,
                     )
@@ -553,11 +574,10 @@ class HeliostatRayTracer:
                 absolute_intensities * (1 - blocked) * (1 - ray_extinction_factor)
             )
 
-            batch_bitmaps = self.sample_bitmaps(
-                intersections=intersections,
+            batch_bitmaps = self.bilinear_splatting(
+                bitmap_intersections_e=bitmap_intersections_e,
+                bitmap_intersections_u=bitmap_intersections_u,
                 absolute_intensities=intensities,
-                active_heliostats_mask=active_heliostats_mask_batch,
-                target_area_indices=target_area_indices[active_heliostats_mask_batch],
                 device=device,
             )
 
@@ -620,75 +640,36 @@ class HeliostatRayTracer:
             ),
         )
 
-    def sample_bitmaps(
+    def convert_to_bitmap_intersections(
         self,
         intersections: torch.Tensor,
-        absolute_intensities: torch.Tensor,
-        active_heliostats_mask: torch.Tensor,
         target_area_indices: torch.Tensor,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
-        """
-        Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
-
-        The bitmaps are saved for each active heliostat separately.
-
-        Parameters
-        ----------
-        intersections : torch.Tensor
-            The intersections of rays on the target area planes for each heliostat.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets, 4].
-        absolute_intensities : torch.Tensor
-            The absolute intensities of the rays hitting the target planes for each heliostat.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
-        active_heliostats_mask : torch.Tensor
-            Used to map bitmaps per heliostat to correct index.
-            Tensor of shape [number_of_heliostats].
-        target_area_indices : torch.Tensor
-            The indices of target areas on which each heliostat is ray-traced.
-            Tensor of shape [number_of_active_heliostats].
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The flux density distributions of the reflected rays on the target areas for each active heliostat.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
-        """
-        device = get_device(device=device)
-
-        # Extract number of active heliostats and bitmap height and width, i.e., its resolution in pixels.
-        num_heliostats = active_heliostats_mask.sum()
-        bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
-        bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
-
-        # Extract widths and heights of target planes, along with corresponding centers in E and U direction.
+    ):
+        device = device = get_device(device=device)
         plane_widths = (
-            self.scenario.target_areas.dimensions[target_area_indices][
+            self.scenario.solar_tower.target_areas[0].dimensions[target_area_indices][
                 :, index_mapping.target_area_width
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
         plane_heights = (
-            self.scenario.target_areas.dimensions[target_area_indices][
+            self.scenario.solar_tower.target_areas[0].dimensions[target_area_indices][
                 :, index_mapping.target_area_height
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
         plane_centers_e = (
-            self.scenario.target_areas.centers[target_area_indices][
+            self.scenario.solar_tower.target_areas[0].centers[target_area_indices][
                 :, index_mapping.target_area_center_e
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
             .unsqueeze(index_mapping.points_dimension)
         )
         plane_centers_u = (
-            self.scenario.target_areas.centers[target_area_indices][
+            self.scenario.solar_tower.target_areas[0].centers[target_area_indices][
                 :, index_mapping.target_area_center_u
             ]
             .unsqueeze(index_mapping.number_rays_per_point)
@@ -709,10 +690,77 @@ class HeliostatRayTracer:
         )
 
         # Scale target intersection coordinates into bitmap space.
-        #
         # The resulting `bitmap_intersections_e/u` represent continuous coordinates
         # in pixel units.
+        bitmap_intersections_e = (
+            (target_intersections_e / plane_widths * (self.bitmap_resolution[0] - 1))
+        )
+        bitmap_intersections_u = (
+            (target_intersections_u / plane_heights * (self.bitmap_resolution[1] - 1))
+        )
 
+        return bitmap_intersections_e, bitmap_intersections_u
+
+
+    def get_bitmaps_per_target(
+        self,
+        bitmaps_per_heliostat: torch.Tensor,
+        target_area_indices: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """
+        Transform bitmaps per heliostat to bitmaps per target area.
+
+        Parameters
+        ----------
+        bitmaps_per_heliostat : torch.Tensor
+            Bitmaps per heliostat.
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+        target_area_indices : torch.Tensor
+            The mapping from heliostat to target area.
+            Tensor of shape [number_of_active_heliostats].
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            Bitmaps per target area.
+            Tensor of shape [number_of_target_areas, bitmap_resolution_e, bitmap_resolution_u].
+        """
+        device = get_device(device=device)
+
+        group_bitmaps_per_target = torch.zeros(
+            (
+                self.scenario.target_areas.number_of_target_areas,
+                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
+                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            ),
+            device=device,
+        )
+        for index in range(self.scenario.target_areas.number_of_target_areas):
+            mask = target_area_indices == index
+            if mask.any():
+                group_bitmaps_per_target[index] = bitmaps_per_heliostat[mask].sum(
+                    dim=index_mapping.heliostat_dimension
+                )
+
+        return group_bitmaps_per_target
+
+
+    def bilinear_splatting(
+        self,
+        bitmap_intersections_e,
+        bitmap_intersections_u,
+        absolute_intensities,
+        device,
+    ):  
+        bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
+        bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
+        num_heliostats = absolute_intensities.shape[0]
+        
         # A one-pixel margin is implicitly added around the actual target area.
         # This is required for bilinear splatting: rays that intersect close to
         # the target boundary must still contribute partially to pixels inside
@@ -734,12 +782,11 @@ class HeliostatRayTracer:
         # As bilinear weights assume integer indices are at pixel centers, the
         # scaling uses `(bitmap_width - 1)` and `(bitmap_height - 1)` so that
         # continuous coordinates map correctly to pixel centers when discretized
-        # into `bitmap_resolution` bins.
         bitmap_intersections_e = (
-            1.0 + (target_intersections_e / plane_widths * (bitmap_width - 1))
+            1.0 + bitmap_intersections_e
         ).reshape(num_heliostats, -1)
         bitmap_intersections_u = (
-            1.0 + (target_intersections_u / plane_heights * (bitmap_height - 1))
+            1.0 + bitmap_intersections_u
         ).reshape(num_heliostats, -1)
 
         absolute_intensities = absolute_intensities.reshape(num_heliostats, -1)
@@ -875,50 +922,3 @@ class HeliostatRayTracer:
         # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
         # (flip along axis 2).
         return torch.flip(bitmaps_per_heliostat, [1, 2])
-
-    def get_bitmaps_per_target(
-        self,
-        bitmaps_per_heliostat: torch.Tensor,
-        target_area_indices: torch.Tensor,
-        device: torch.device | None = None,
-    ) -> torch.Tensor:
-        """
-        Transform bitmaps per heliostat to bitmaps per target area.
-
-        Parameters
-        ----------
-        bitmaps_per_heliostat : torch.Tensor
-            Bitmaps per heliostat.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
-        target_area_indices : torch.Tensor
-            The mapping from heliostat to target area.
-            Tensor of shape [number_of_active_heliostats].
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            Bitmaps per target area.
-            Tensor of shape [number_of_target_areas, bitmap_resolution_e, bitmap_resolution_u].
-        """
-        device = get_device(device=device)
-
-        group_bitmaps_per_target = torch.zeros(
-            (
-                self.scenario.target_areas.number_of_target_areas,
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
-            ),
-            device=device,
-        )
-        for index in range(self.scenario.target_areas.number_of_target_areas):
-            mask = target_area_indices == index
-            if mask.any():
-                group_bitmaps_per_target[index] = bitmaps_per_heliostat[mask].sum(
-                    dim=index_mapping.heliostat_dimension
-                )
-
-        return group_bitmaps_per_target

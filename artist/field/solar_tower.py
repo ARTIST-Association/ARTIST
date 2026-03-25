@@ -8,6 +8,7 @@ from typing_extensions import Self
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+from artist.util import utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -103,9 +104,15 @@ class SolarTower:
         return cls(target_areas=[target_areas_planar, target_areas_cylindrical], device=device)
     
 
-    def get_centers_of_target_areas(self, target_area_indices: torch.Tensor) -> torch.Tensor:
-        aim_points = torch.stack([
-            target_area.centers[local_idx]
-            for target_area, local_idx in (self.index_to_target_area[i] for i in target_area_indices)
-        ], dim=0)
+    def get_centers_of_target_areas(self, target_area_indices: torch.Tensor, device) -> torch.Tensor:
+        device = get_device(device=device)
+        
+        aim_points = torch.zeros((target_area_indices.shape[0], 4), device=device)
+
+        planar_mask = target_area_indices < self.number_of_target_areas_per_type[0]
+
+        aim_points[planar_mask] = self.target_areas[0].centers[target_area_indices[planar_mask]]
+        cylinder_indices = target_area_indices[~planar_mask] - self.number_of_target_areas_per_type[0]
+        aim_points[~planar_mask] = self.target_areas[1].centers[cylinder_indices] + self.target_areas[1].radii[cylinder_indices] * self.target_areas[1].normals[cylinder_indices]
+
         return aim_points

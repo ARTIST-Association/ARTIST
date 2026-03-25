@@ -106,7 +106,7 @@ def rotate_e(
     device = get_device(device=device)
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention.
+    sin_e = torch.sin(e)
     ones = torch.ones(e.shape, device=device)
 
     matrix = torch.zeros(
@@ -115,8 +115,8 @@ def rotate_e(
 
     matrix[:, index_mapping.e, index_mapping.e] = ones
     matrix[:, index_mapping.n, index_mapping.n] = cos_e
-    matrix[:, index_mapping.n, index_mapping.u] = sin_e
-    matrix[:, index_mapping.u, index_mapping.n] = -sin_e
+    matrix[:, index_mapping.n, index_mapping.u] = -sin_e
+    matrix[:, index_mapping.u, index_mapping.n] = sin_e
     matrix[:, index_mapping.u, index_mapping.u] = cos_e
     matrix[
         :, index_mapping.transform_homogenous, index_mapping.transform_homogenous

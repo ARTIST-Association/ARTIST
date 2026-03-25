@@ -192,8 +192,9 @@ class TargetAreaCylindricalConfig:
         radius: float,
         center: torch.Tensor,
         height: float,
-        normal_vector: torch.Tensor,
-        opening_angle: float
+        axis: torch.Tensor,
+        normal: torch.Tensor,
+        opening_angle: float,
     ) -> None:
         """
         Initialize the target area configuration for planar target areas.
@@ -217,7 +218,8 @@ class TargetAreaCylindricalConfig:
         self.radius = radius
         self.center = center
         self.height = height
-        self.normal_vector = normal_vector
+        self.axis = axis
+        self.normal = normal
         self.opening_angle = opening_angle
 
     def create_target_area_dict(self) -> dict[str, Any]:
@@ -233,7 +235,8 @@ class TargetAreaCylindricalConfig:
             config_dictionary.target_area_cylinder_radius: self.radius,
             config_dictionary.target_area_cylinder_center: self.center,
             config_dictionary.target_area_cylinder_height: self.height,
-            config_dictionary.target_area_cylinder_normal_vector: self.normal_vector,
+            config_dictionary.target_area_cylinder_axis: self.axis,
+            config_dictionary.target_area_cylinder_normal: self.normal,
             config_dictionary.target_area_cylinder_opening_angle: self.opening_angle,
         }
 

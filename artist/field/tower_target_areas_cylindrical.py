@@ -55,8 +55,9 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         radii: torch.Tensor,
         centers: torch.Tensor,
         heights: torch.Tensor,
+        axes: torch.Tensor,
         normals: torch.Tensor,
-        opening_angles: torch.Tensor,
+        opening_angles: torch.Tensor
     ) -> None:
         """
         Initialize the cylindrical target areas.
@@ -87,6 +88,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         self.radii = radii
         self.centers = centers
         self.heights = heights
+        self.axes = axes
         self.normals = normals
         self.opening_angles = opening_angles
 
@@ -130,6 +132,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         radii = torch.zeros((number_of_target_areas), device=device)
         centers = torch.zeros((number_of_target_areas, 4), device=device)
         heights = torch.zeros((number_of_target_areas), device=device)
+        axes = torch.zeros((number_of_target_areas, 4), device=device)
         normals = torch.zeros((number_of_target_areas, 4), device=device)
         opening_angles = torch.zeros((number_of_target_areas), device=device)
 
@@ -161,9 +164,16 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
                 dtype=torch.float,
                 device=device,
             )
+            axes[index] = torch.tensor(
+                single_target_area_config[
+                    config_dictionary.target_area_cylinder_axis
+                ][()],
+                dtype=torch.float,
+                device=device,
+            )
             normals[index] = torch.tensor(
                 single_target_area_config[
-                    config_dictionary.target_area_cylinder_normal_vector
+                    config_dictionary.target_area_cylinder_normal
                 ][()],
                 dtype=torch.float,
                 device=device,
@@ -176,11 +186,13 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
                 device=device,
             )
 
+
         return cls(
             names=names,
             radii=radii,
             centers=centers,
             heights=heights,
+            axes=axes,
             normals=normals,
-            opening_angles=opening_angles
+            opening_angles=opening_angles,
         )
