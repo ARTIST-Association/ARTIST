@@ -1,0 +1,139 @@
+{
+  "name": "ARTIST",
+  "@context": "https://w3id.org/codemeta/3.0",
+  "author": [
+    {
+      "affiliation": {
+        "name": "German Aerospace Center (DLR)",
+        "type": "Organization"
+      },
+      "email": "max.pargmann@dlr.de",
+      "familyName": "Pargmann",
+      "id": "_:author_1",
+      "givenName": "Max",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "German Aerospace Center (DLR)",
+        "type": "Organization"
+      },
+      "email": "marlene.busch@dlr.de",
+      "familyName": "Busch",
+      "id": "_:author_2",
+      "givenName": "Marlene",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "Karlsruhe Institute of Technology (KIT)",
+        "type": "Organization"
+      },
+      "email": "kaleb.phipps@kit.edu",
+      "familyName": "Phipps",
+      "id": "_:author_3",
+      "givenName": "Kaleb",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "German Aerospace Center (DLR)",
+        "type": "Organization"
+      },
+      "email": "mathias.kuhl@dlr.de",
+      "familyName": "Kuhl",
+      "id": "_:author_4",
+      "givenName": "Mathias",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "Karlsruhe Institute of Technology (KIT)",
+        "type": "Organization"
+      },
+      "email": "marie.weiel@kit.edu",
+      "familyName": "Weiel",
+      "id": "_:author_5",
+      "givenName": "Marie",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "German Aerospace Center (DLR)",
+        "type": "Organization"
+      },
+      "email": "felix.goehring@dlr.de",
+      "familyName": "Göhring",
+      "id": "_:author_6",
+      "givenName": "Felix",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "German Aerospace Center (DLR)",
+        "type": "Organization"
+      },
+      "email": "daniel.maldonadoquinto@dlr.de",
+      "familyName": "Maldonado Quinto",
+      "id": "_:author_7",
+      "givenName": "Daniel",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "German Aerospace Center (DLR)",
+        "type": "Organization"
+      },
+      "email": "robert.pitz-paal@dlr.de",
+      "familyName": "Pitz-Paal",
+      "id": "_:author_8",
+      "givenName": "Robert",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "Synhelion Germany",
+        "type": "Organization"
+      },
+      "email": "moritz.leibauer@synhelion.com",
+      "familyName": "Leibauer",
+      "id": "_:author_9",
+      "givenName": "Moritz",
+      "type": "Person"
+    },
+    {
+      "affiliation": {
+        "name": "Karlsruhe Institute of Technology (KIT)",
+        "type": "Organization"
+      },
+      "email": "markus.goetz@kit.edu",
+      "familyName": "Götz",
+      "id": "_:author_10",
+      "givenName": "Markus",
+      "type": "Person"
+    }
+  ],
+  "codeRepository": "https://github.com/ARTIST-Association/ARTIST",
+  "dateCreated": "2023-09-26",
+  "dateModified": "2025-10-17",
+  "datePublished": "2025-10-17",
+  "description": "The ARTIST package provides an implementation of a differentiable ray tracer using the PyTorch machine-learning framework in Python. Leveraging automatic differentiation and GPU computation, it facilitates the optimization of solar tower power plants by combining gradient-based optimization methods with smooth parametric descriptions of heliostats.",
+  "downloadUrl": "https://github.com/ARTIST-Association/ARTIST/releases/tag/v1.0.0",
+  "issueTracker": "https://github.com/ARTIST-Association/ARTIST/issues",
+  "keywords": [
+    "Solar Tower Power Plant",
+    "Concentrated Solar Energy",
+    "Differentiable Ray Tracing",
+    "Digital Twin",
+    "Heliostat Calibration",
+    "Surface Reconstruction",
+    "Python"
+  ],
+  "license": "https://spdx.org/licenses/MIT",
+  "programmingLanguage": [
+    "Python"
+  ],
+  "schema:releaseNotes": "## :rocket: **First release** :fire:\r\n\r\nThis is the initial release of ``ARTIST`` providing:\r\n- A fully differentiable digital twin for solar tower power plants.\r\n- Support for surface reconstruction, kinematic reconstruction, differentiable ray tracing, aim point optimization, and more.\r\n- Fully GPU-Optimized.\r\n- Designed for parallel compute.\r\n- Examples and tutorials to help you get started.\r\n\r\nBelow are some of the major changes!\r\n\r\n## What's Changed\r\n* Features/concentrator by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/14\r\n* Features/sun rotation by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/35\r\n* Linear Actuator by @kalebphipps in https://github.com/ARTIST-Association/ARTIST/pull/52\r\n* Heliostat Raytracing with MPI  by @kalebphipps in https://github.com/ARTIST-Association/ARTIST/pull/57\r\n* Features/differentiable nurbs by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/62\r\n* Create NOTICE by @Markus-Goetz in https://github.com/ARTIST-Association/ARTIST/pull/75\r\n* Maintenance/fair software by @mcw92 in https://github.com/ARTIST-Association/ARTIST/pull/83\r\n* Features/gpu support by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/94\r\n* Features/alignment optimization by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/96\r\n* Features/multi heliostats by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/113\r\n* Features/multiple parallel heliostats by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/124\r\n* Features/flexible heliostat activation by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/131\r\n* Features/parallelized heliostat groups by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/139\r\n* Features/hyperparameter search including motor position optimization by @MarleneBusch in https://github.com/ARTIST-Association/ARTIST/pull/154\r\n\r\n## New Contributors\r\n* @MarleneBusch made their first contribution in https://github.com/ARTIST-Association/ARTIST/pull/14\r\n* @kalebphipps made their first contribution in https://github.com/ARTIST-Association/ARTIST/pull/18\r\n* @mcw92 made their first contribution in https://github.com/ARTIST-Association/ARTIST/pull/18\r\n* @Markus-Goetz made their first contribution in https://github.com/ARTIST-Association/ARTIST/pull/75\r\n* @pre-commit-ci[bot] made their first contribution in https://github.com/ARTIST-Association/ARTIST/pull/86\r\n* @Filos1992 made their first contribution in https://github.com/ARTIST-Association/ARTIST/pull/150\r\n\r\n**Full Changelog**: https://github.com/ARTIST-Association/ARTIST/commits/v1.0.0",
+  "version": "1.0.0",
+  "type": "SoftwareSourceCode"
+}
