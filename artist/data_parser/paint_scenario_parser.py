@@ -250,19 +250,19 @@ def extract_paint_heliostat_properties(
 
     kinematics_deviations = KinematicsDeviations(
         first_joint_translation_e=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.FIRST_JOINT_TRANSLATION_E_KEY
             ],
             device=device,
         ),
         first_joint_translation_n=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.FIRST_JOINT_TRANSLATION_N_KEY
             ],
             device=device,
         ),
         first_joint_translation_u=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.FIRST_JOINT_TRANSLATION_U_KEY
             ],
             device=device,
@@ -270,19 +270,19 @@ def extract_paint_heliostat_properties(
         first_joint_tilt_n=torch.tensor(0.0, device=device),
         first_joint_tilt_u=torch.tensor(0.0, device=device),
         second_joint_translation_e=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.SECOND_JOINT_TRANSLATION_E_KEY
             ],
             device=device,
         ),
         second_joint_translation_n=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.SECOND_JOINT_TRANSLATION_N_KEY
             ],
             device=device,
         ),
         second_joint_translation_u=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.SECOND_JOINT_TRANSLATION_U_KEY
             ],
             device=device,
@@ -290,19 +290,19 @@ def extract_paint_heliostat_properties(
         second_joint_tilt_e=torch.tensor(0.0, device=device),
         second_joint_tilt_n=torch.tensor(0.0, device=device),
         concentrator_translation_e=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.CONCENTRATOR_TRANSLATION_E_KEY
             ],
             device=device,
         ),
         concentrator_translation_n=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.CONCENTRATOR_TRANSLATION_N_KEY
             ],
             device=device,
         ),
         concentrator_translation_u=torch.tensor(
-            heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+            heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
                 paint_mappings.CONCENTRATOR_TRANSLATION_U_KEY
             ],
             device=device,
@@ -319,7 +319,7 @@ def extract_paint_heliostat_properties(
     )
 
     paint_actuators = list(
-        heliostat_dict[paint_mappings.KINEMATIC_PROPERTIES_KEY][
+        heliostat_dict[paint_mappings.KINEMATICS_PROPERTIES_KEY][
             paint_mappings.ACTUATOR_KEY
         ]
     )
