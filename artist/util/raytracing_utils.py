@@ -150,10 +150,10 @@ def line_plane_intersections(
     # The resulting `bitmap_intersections_e/u` represent continuous coordinates
     # in pixel units.
     bitmap_intersections_e = (
-        (target_intersections_e / plane_dimensions[:, 0] * (bitmap_resolution[0] - 1))
+        (target_intersections_e / plane_dimensions[:, 0, None, None] * (bitmap_resolution[0] - 1))
     )
     bitmap_intersections_u = (
-        (target_intersections_u / plane_dimensions[:, 1] * (bitmap_resolution[1] - 1))
+        (target_intersections_u / plane_dimensions[:, 1, None, None] * (bitmap_resolution[1] - 1))
     )
 
     # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.
@@ -169,6 +169,12 @@ def line_plane_intersections(
     bitmap_intersections_u = bitmap_intersections_u * intersection_indices_on_target * front_facing_mask
     intersection_distances = intersection_distances * intersection_indices_on_target * front_facing_mask
     intensities = intensities * intersection_indices_on_target * front_facing_mask
+
+    # The column indices need to be flipped because the more intuitive way to look at flux prediction
+    # bitmaps, is to imagine oneself to stand in the heliostat field looking at the receiver.
+    # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
+    # i.e., subtracting the intersections from the total E-resolution to flip left and right.
+    bitmap_intersections_e = (bitmap_resolution[0] - 1) - bitmap_intersections_e
 
     return bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities 
 
@@ -198,27 +204,26 @@ def line_cylinder_intersections(
 
     origins = points_at_ray_origins[:, :, :3]
     directions = rays.ray_directions[:, :, :, :3]
-    number_of_heliostats = origins.shape[0]
 
     # Receiver definition.
     cylinder_axes = target_areas.axes[target_area_indices][:, :3]
+    cylinder_normals = target_areas.normals[target_area_indices][:, :3]
     cylinder_centers = target_areas.centers[target_area_indices][:, :3]
     radii = target_areas.radii[target_area_indices]
     heights = target_areas.heights[target_area_indices]
     opening_angles = target_areas.opening_angles[target_area_indices]
 
     # Build local cylinder frame.
-    u = torch.tensor([1.0, 0.0, 0.0], device=device)[None, :].expand(number_of_heliostats, 3)
-    v = torch.cross(cylinder_axes, u, dim=-1)
-    rotations = torch.stack([ u, v, cylinder_axes], dim=1)
+    u = torch.cross(cylinder_normals, cylinder_axes, dim=-1)
+    rotations = torch.stack([ u, cylinder_normals, cylinder_axes], dim=1)
 
     # Transform rays into local cylinder frame.
     origins_local = ((origins - cylinder_centers[:, None, :]) @ rotations.transpose(1, 2))[:, None, :, :]
     directions_local = directions @ rotations.transpose(1, 2)[:, None, :, :]
 
     # Cylinder intersection (aligned with z-axis).
-    ox, oy, _ = origins_local[:, :, :, 0], origins_local[:, :, :, 1], origins_local[:, :, :, 2]
-    dx, dy, _ = directions_local[:, :, :, 0], directions_local[:, :, :, 1], directions_local[:, :, :, 2]
+    ox, oy = origins_local[:, :, :, 0], origins_local[:, :, :, 1]
+    dx, dy = directions_local[:, :, :, 0], directions_local[:, :, :, 1]
 
     a = dx**2 + dy**2
     b = 2 * (ox*dx + oy*dy)
@@ -242,7 +247,7 @@ def line_cylinder_intersections(
     distance_candidates[:, :, :, 0] = (-b - sqrt_discriminant) / (2 * a)
     distance_candidates[:, :, :, 1] = (-b + sqrt_discriminant) / (2 * a)
 
-    # All invalid intersection distances are set to inf.
+    # All invalid intersection distances are set to zero.
     intersection_distances, _ = torch.min(torch.clamp(distance_candidates, min=0.0), dim=-1)
     valid_distances = intersection_distances > 0
     
@@ -267,9 +272,9 @@ def line_cylinder_intersections(
     # z-values range from negative half cylinder height to positive half the cylinder height, therefore we add half the cylinder height 
     # to all z-values.
     z = z + heights.view(-1, 1, 1) / 2
-    # Initially angles are defined 0° towards positive east axis, we want to define 0° as positive north minus half of the opening angle. 
-    angles = torch.atan2(y, x) - torch.pi/2 + opening_angles.view(-1,1,1)/2
-
+    # Initially angles are defined 0° towards positive east axis, we want to define 0° as where the normal vector points towards. 
+    angles = torch.atan2(y, x) - (torch.atan2(cylinder_normals[:, 1].view(-1,1,1), cylinder_normals[:, 0].view(-1,1,1)) - (opening_angles.view(-1,1,1) / 2)) 
+    
     intersections_on_target = (
         (z >= 0) & (z <= heights.view(-1,1,1))
         & (angles >= 0) & (angles <= opening_angles.view(-1,1,1))

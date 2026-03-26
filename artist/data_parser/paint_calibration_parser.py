@@ -153,7 +153,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         ) = self._parse_calibration_data(
             heliostat_calibration_mapping=heliostat_calibration_mapping,
             heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
+            target_name_to_index=scenario.solar_tower.target_name_to_index,
             power_plant_position=scenario.power_plant_position,
             device=device,
         )
@@ -171,7 +171,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         self,
         heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
         heliostat_names: list[str],
-        target_area_names: list[str],
+        target_name_to_index: list[str],
         power_plant_position: torch.Tensor,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -216,8 +216,6 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
         log.info("Beginning extraction of calibration properties data from PAINT file.")
 
-        target_indices = {name: index for index, name in enumerate(target_area_names)}
-
         # Gather calibration data.
         replication_counter: Counter[str] = Counter()
         calibration_data_per_heliostat = defaultdict(list)
@@ -231,7 +229,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
                 calibration_data_per_heliostat[heliostat_name].append(
                     [
-                        target_indices[
+                        target_name_to_index[
                             calibration_data_dict[paint_mappings.TARGET_NAME_KEY]
                         ],
                         calibration_data_dict[paint_mappings.FOCAL_SPOT_KEY][

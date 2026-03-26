@@ -1062,7 +1062,7 @@ def lbvh_filter_blocking_planes(
     # Remove self-hits (ray hits its the blocking primitive from which it originates).
     primitive_owner = torch.arange(number_of_primitives, device=device).view(1, -1)
     ray_owner = ray_to_heliostat_mapping.view(-1, 1)
-    non_self = mask_hits_per_ray & (ray_owner != primitive_owner)
+    non_self = mask_hits_per_ray# & (ray_owner != primitive_owner)
     filtered_blocking_primitive_indices = torch.nonzero(
         non_self.any(dim=0), as_tuple=True
     )[0]

@@ -23,7 +23,7 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test_2")
+scenario_path = pathlib.Path("test_3")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
@@ -114,14 +114,14 @@ heliostat_list_config, prototype_config = (
 )
 
 # Use this configuration for ideal surfaces.
-heliostat_list_config, prototype_config = (
-    paint_scenario_parser.extract_paint_heliostats_ideal_surface(
-        paths=heliostat_files_list,
-        power_plant_position=power_plant_config.power_plant_position,
-        number_of_nurbs_control_points=number_of_nurbs_control_points,
-        device=device,
-    )
-)
+# heliostat_list_config, prototype_config = (
+#     paint_scenario_parser.extract_paint_heliostats_ideal_surface(
+#         paths=heliostat_files_list,
+#         power_plant_position=power_plant_config.power_plant_position,
+#         number_of_nurbs_control_points=number_of_nurbs_control_points,
+#         device=device,
+#     )
+# )
 
 if __name__ == "__main__":
     # Generate the scenario given the defined parameters.

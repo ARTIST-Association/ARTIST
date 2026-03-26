@@ -110,9 +110,10 @@ class SolarTower:
         aim_points = torch.zeros((target_area_indices.shape[0], 4), device=device)
 
         planar_mask = target_area_indices < self.number_of_target_areas_per_type[0]
-
-        aim_points[planar_mask] = self.target_areas[0].centers[target_area_indices[planar_mask]]
+        if target_area_indices[planar_mask].numel() > 0:
+            aim_points[planar_mask] = self.target_areas[0].centers[target_area_indices[planar_mask]]
         cylinder_indices = target_area_indices[~planar_mask] - self.number_of_target_areas_per_type[0]
-        aim_points[~planar_mask] = self.target_areas[1].centers[cylinder_indices] + self.target_areas[1].radii[cylinder_indices] * self.target_areas[1].normals[cylinder_indices]
+        if target_area_indices[~planar_mask].numel() > 0:
+            aim_points[~planar_mask] = self.target_areas[1].centers[cylinder_indices] + self.target_areas[1].radii[cylinder_indices][:, None] * self.target_areas[1].normals[cylinder_indices]
 
         return aim_points

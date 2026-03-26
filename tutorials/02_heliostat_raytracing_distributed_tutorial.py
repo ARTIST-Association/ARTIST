@@ -5,10 +5,14 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.data_parser import paint_scenario_parser
+from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
+import paint.util.paint_mappings as paint_mappings
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -20,7 +24,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test_2.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test_3.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -52,17 +56,39 @@ with setup_distributed_environment(
     # from a sun located directly in the south and be ray-traced on the first target found in the scenario.
     heliostat_target_light_source_mapping = None
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-    heliostat_target_light_source_mapping = [
-        #("AA00", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        #("AA00", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        #("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
-        # ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        # ("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
-    ]
+    # heliostat_target_light_source_mapping = [
+    #     #("AA00", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    #     ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    #     ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    #     ("AA39", "solar_tower_juelich_lower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device))
+    #     #("AA00", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    #     #("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
+    #     # ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    #     # ("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
+    # ]
 
-    bitmap_resolution = torch.tensor([256, 256])
+    heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
+        base_path="/workVERLEIHNIX/share/paint_data",
+        heliostat_names=["AA39"],
+        number_of_measurements=2,
+        image_variant="flux-centered",
+        randomize=True,
+    )
+
+    data_parser_plots = PaintCalibrationDataParser(
+        sample_limit=2, centroid_extraction_method=paint_mappings.UTIS_KEY
+    )
+
+    # Create dict for the data parser and the heliostat_data_mapping.
+    # data: dict[
+    #     str,
+    #     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    # ] = {
+    #     config_dictionary.data_parser: data_parser_plots,
+    #     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+    # }
+
+    bitmap_resolution = torch.tensor([431, 360])
 
     combined_bitmaps_per_target = torch.zeros(
         (
@@ -84,12 +110,16 @@ with setup_distributed_environment(
         # to the first target area found in the scenario and receive an incident ray direction "north" (meaning the
         # light source position is directly in the south).
         (
+            measured,
+            focal_spots_measured,
+            incident_ray_directions,
+            _,
             active_heliostats_mask,
             target_area_indices,
-            incident_ray_directions,
-        ) = scenario.index_mapping(
+        ) = data_parser_plots.parse_data_for_reconstruction(
+            heliostat_data_mapping=heliostat_data_mapping,
             heliostat_group=heliostat_group_alignment,
-            string_mapping=heliostat_target_light_source_mapping,
+            scenario=scenario,
             device=device,
         )
 
@@ -101,6 +131,7 @@ with setup_distributed_environment(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
+        target_area_indices[0] = 3
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices, device=device),
@@ -118,14 +149,20 @@ with setup_distributed_environment(
         ]
         if heliostat_group.active_heliostats_mask.sum() > 0:
             (
+                measured,
+                focal_spots_measured,
+                incident_ray_directions,
+                _,
                 active_heliostats_mask,
                 target_area_indices,
-                incident_ray_directions,
-            ) = scenario.index_mapping(
-                heliostat_group=heliostat_group,
-                string_mapping=heliostat_target_light_source_mapping,
+            ) = data_parser_plots.parse_data_for_reconstruction(
+                heliostat_data_mapping=heliostat_data_mapping,
+                heliostat_group=heliostat_group_alignment,
+                scenario=scenario,
                 device=device,
             )
+            target_area_indices[0] = 3
+            scenario.set_number_of_rays(number_of_rays=300)
 
             # Create a distributed ray tracer.
             ray_tracer = HeliostatRayTracer(

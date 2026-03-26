@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get(
-        "data_dir", "./examples/field_optimizations/field_data"
+        "data_dir", "/workVERLEIHNIX/share/PAINT_DATA/"
     )
     metadata_root_default = config.get(
         "metadata_root", "./examples/field_optimizations/"

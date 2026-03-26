@@ -438,6 +438,9 @@ class HeliostatRayTracer:
             )
 
         flux_distributions = []
+        all_angle_reduced_intensities = []
+        all_intensities = []
+        all_blocked = []
         global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
             sampler_indices = list(self.distortions_sampler)
@@ -539,6 +542,7 @@ class HeliostatRayTracer:
                 )
                 # Create the blocked ray mask based on the relevant blocking primitive indices.
                 if filtered_blocking_primitive_indices.numel() > 0:
+                    print("blocked")
                     blocked = blocking.soft_ray_blocking_mask(
                         ray_origins=self.heliostat_group.active_surface_points[
                             active_heliostats_mask_batch
@@ -557,6 +561,7 @@ class HeliostatRayTracer:
                         epsilon=1e-12,
                         softness=5000.0,
                     )
+                    print(blocked.max())
 
             intensities = (
                 angle_reduced_intensities * (1 - blocked) * (1 - ray_extinction_factor)
@@ -570,10 +575,16 @@ class HeliostatRayTracer:
             )
 
             flux_distributions.append(batch_bitmaps)
+            all_angle_reduced_intensities.append(angle_reduced_intensities)
+            all_intensities.append(intensities)
+            all_blocked.append(blocked)
 
         combined_fluxes = torch.cat(flux_distributions, dim=0)
+        combined_angle_reduced_intensities = torch.cat(all_angle_reduced_intensities, dim=0) 
+        combined_intensities = torch.cat(all_intensities, dim=0)
+        combined_blocked = torch.cat(all_blocked, dim=0)
 
-        return combined_fluxes, angle_reduced_intensities.sum(dim=(1,2)), intensities.sum(dim=(1,2))
+        return combined_fluxes, intercept_factor, angle_reduced_intensities.sum(dim=(1,2)), intensities.sum(dim=(1,2))
 
     def scatter_rays(
         self,
@@ -843,8 +854,4 @@ class HeliostatRayTracer:
 
         # Since tensor indices have their origin of (0,0) in the top left, but our image indices have their
         # origin in the bottom left, we need to flip the row (u) indices, i.e., up-down flip (flip along axis 1).
-        # The column indices also need to be flipped because the more intuitive way to look at flux prediction
-        # bitmaps, is to imagine oneself to stand in the heliostat field looking at the receiver.
-        # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
-        # (flip along axis 2).
-        return torch.flip(bitmaps_per_heliostat, [1, 2])
+        return torch.flip(bitmaps_per_heliostat, [1])
