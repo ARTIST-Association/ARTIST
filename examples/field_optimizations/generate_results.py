@@ -410,7 +410,7 @@ def kinematics_plots(
                 incident_ray_directions,
                 _,
                 active_heliostats_mask,
-                target_area_mask,
+                target_area_indices,
             ) = parser.parse_data_for_reconstruction(
                 heliostat_data_mapping=heliostat_mapping,
                 heliostat_group=heliostat_group,
@@ -421,7 +421,7 @@ def kinematics_plots(
                 active_heliostats_mask=active_heliostats_mask.detach(), device=device
             )
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_mask].detach(),
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device).detach(),
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
                 device=device,
@@ -439,7 +439,7 @@ def kinematics_plots(
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
-                target_area_mask=target_area_mask.detach(),
+                target_area_indices=target_area_indices.detach(),
                 device=device,
             )
             names = [
@@ -511,7 +511,7 @@ def surface_plots(
                 incident_ray_directions,
                 _,
                 active_heliostats_mask,
-                target_area_mask,
+                target_area_indices,
             ) = parser.parse_data_for_reconstruction(
                 heliostat_data_mapping=heliostat_mapping,
                 heliostat_group=heliostat_group,
@@ -522,7 +522,7 @@ def surface_plots(
                 active_heliostats_mask=active_heliostats_mask.detach(), device=device
             )
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_mask].detach(),
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device).detach(),
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
                 device=device,
@@ -540,17 +540,17 @@ def surface_plots(
             bitmaps_per_heliostat, _, _, _= ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
-                target_area_mask=target_area_mask.detach(),
+                target_area_indices=target_area_indices.detach(),
                 device=device,
             )
             cropped_flux_distributions = utils.crop_flux_distributions_around_center(
                 flux_distributions=bitmaps_per_heliostat.detach(),
                 crop_width=config_dictionary.utis_crop_width,
                 crop_height=config_dictionary.utis_crop_height,
-                target_plane_widths=scenario.target_areas.dimensions[target_area_mask][
+                target_plane_widths=scenario.target_areas.dimensions[target_area_indices][
                     :, index_mapping.target_area_width
                 ].detach(),
-                target_plane_heights=scenario.target_areas.dimensions[target_area_mask][
+                target_plane_heights=scenario.target_areas.dimensions[target_area_indices][
                     :, index_mapping.target_area_height
                 ].detach(),
                 device=device,
@@ -625,7 +625,7 @@ def aim_point_plots(
         for heliostat_group_index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups
         ):
-            (active_heliostats_mask, target_area_mask, incident_ray_directions) = (
+            (active_heliostats_mask, target_area_indices, incident_ray_directions) = (
                 scenario.index_mapping(
                     heliostat_group=heliostat_group,
                     single_incident_ray_direction=incident_ray_direction,
@@ -684,7 +684,7 @@ def aim_point_plots(
             #     plt.close()
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
-                target_area_mask=target_area_mask,
+                target_area_indices=target_area_indices,
                 device=device,
             )[target_area_index]
             total_flux += flux_distribution_on_target

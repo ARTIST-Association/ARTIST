@@ -855,7 +855,7 @@ def lbvh_filter_blocking_planes(
     total_number_of_rays = ray_origins.shape[0]
     number_of_primitives = blocking_primitives_corners.shape[0]
 
-    max_tree_depth = compute_lbvh_max_depth(left=left, right=right)
+    max_tree_depth = compute_lbvh_max_depth(left=left, right=right, device=device)
 
     node_traversal_stack = torch.full(
         (total_number_of_rays, max_tree_depth),

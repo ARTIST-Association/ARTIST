@@ -367,12 +367,12 @@ def test_blocking_integration(device: torch.device) -> None:
 
     heliostat_group = scenario.heliostat_field.heliostat_groups[0]
     heliostat_target_light_source_mapping = [
-        ("heliostat_0", "target_3", incident_ray_direction),
-        ("heliostat_1", "target_3", incident_ray_direction),
-        ("heliostat_2", "target_3", incident_ray_direction),
-        ("heliostat_3", "target_3", incident_ray_direction),
-        ("heliostat_4", "target_3", incident_ray_direction),
-        ("heliostat_5", "target_3", incident_ray_direction),
+        ("heliostat_0", "target_0", incident_ray_direction),
+        ("heliostat_1", "target_0", incident_ray_direction),
+        ("heliostat_2", "target_0", incident_ray_direction),
+        ("heliostat_3", "target_0", incident_ray_direction),
+        ("heliostat_4", "target_0", incident_ray_direction),
+        ("heliostat_5", "target_0", incident_ray_direction),
     ]
 
     (
@@ -471,7 +471,7 @@ def test_ray_extinction(device: torch.device) -> None:
     )
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_indices],
+        aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,

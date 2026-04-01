@@ -667,13 +667,13 @@ class HeliostatRayTracer:
 
         group_bitmaps_per_target = torch.zeros(
             (
-                self.scenario.target_areas.number_of_target_areas,
+                self.scenario.solar_tower.number_of_target_areas_per_type.sum(),
                 self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
                 self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
             ),
             device=device,
         )
-        for index in range(self.scenario.target_areas.number_of_target_areas):
+        for index in range(group_bitmaps_per_target.shape[0]):
             mask = target_area_indices == index
             if mask.any():
                 group_bitmaps_per_target[index] = bitmaps_per_heliostat[mask].sum(

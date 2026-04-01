@@ -198,7 +198,7 @@ class FocalSpotLoss(Loss):
 
         focal_spot = utils.get_center_of_mass(
             bitmaps=prediction,
-            target_centers=self.scenario.target_areas.centers[target_area_indices],
+            target_centers=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device)[target_area_indices],
             target_widths=self.scenario.target_areas.dimensions[target_area_indices][
                 :, index_mapping.target_area_width
             ],

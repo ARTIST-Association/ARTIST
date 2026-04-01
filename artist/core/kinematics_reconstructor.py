@@ -271,7 +271,7 @@ class KinematicsReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[
+                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device)[
                             target_area_indices
                         ],
                         incident_ray_directions=incident_ray_directions,
