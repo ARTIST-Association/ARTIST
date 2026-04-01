@@ -115,15 +115,15 @@ if __name__ == "__main__":
     )
     # Download heliostat data.
     client.get_heliostat_data(
-        heliostats=viable_heliostats,
+        #heliostats=viable_heliostats,
         collections=[
             paint_mappings.SAVE_CALIBRATION.lower(),
             paint_mappings.SAVE_DEFLECTOMETRY.lower(),
             paint_mappings.SAVE_PROPERTIES.lower(),
         ],
-        filtered_calibration_keys=[
-            paint_mappings.CALIBRATION_FLUX_IMAGE_KEY,
-            paint_mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
-            paint_mappings.CALIBRATION_PROPERTIES_KEY,
-        ],
+        # filtered_calibration_keys=[
+        #     paint_mappings.CALIBRATION_FLUX_IMAGE_KEY,
+        #     paint_mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
+        #     paint_mappings.CALIBRATION_PROPERTIES_KEY,
+        # ],
     )

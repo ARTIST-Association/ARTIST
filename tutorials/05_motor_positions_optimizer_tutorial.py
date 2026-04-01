@@ -85,7 +85,7 @@ def create_flux_plot(id: str) -> None:
         )
 
         # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
+        bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,

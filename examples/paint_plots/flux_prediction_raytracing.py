@@ -262,12 +262,13 @@ def align_and_trace_rays(
     )
 
     # Perform heliostat-based ray tracing.
-    return ray_tracer.trace_rays(
+    bitmaps, _, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
         device=device,
     )
+    return bitmaps
 
 
 def generate_flux_images(

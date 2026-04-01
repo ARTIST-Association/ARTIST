@@ -325,7 +325,7 @@ def create_flux_plots(
             )
 
             # Perform heliostat-based ray tracing.
-            validation_bitmaps_per_heliostat = validation_ray_tracer.trace_rays(
+            validation_bitmaps_per_heliostat, _, _, _ = validation_ray_tracer.trace_rays(
                 incident_ray_directions=validation_incident_ray_directions,
                 active_heliostats_mask=validation_active_heliostats_mask,
                 target_area_indices=validation_target_area_indices,

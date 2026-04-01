@@ -436,7 +436,7 @@ def kinematics_plots(
                 batch_size=heliostat_group.number_of_active_heliostats,
                 random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
             )
-            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
                 target_area_mask=target_area_mask.detach(),
@@ -537,7 +537,7 @@ def surface_plots(
                 batch_size=heliostat_group.number_of_active_heliostats,
                 random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
             )
-            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _, _= ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
                 active_heliostats_mask=active_heliostats_mask.detach(),
                 target_area_mask=target_area_mask.detach(),
@@ -671,7 +671,7 @@ def aim_point_plots(
                 bitmap_resolution=bitmap_resolution,
                 dni=dni,
             )
-            bitmaps_per_heliostat, _, _ = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 target_area_indices=target_area_indices,

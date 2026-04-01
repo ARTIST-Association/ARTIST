@@ -16,7 +16,7 @@ heliostats_for_plots:
   - "AM55"
   - "AM56"
 random_seed: 7
-device: "cuda:1"
+device: "cuda"
 surface_reconstruction_optimization_configuration:
   max_epoch: 2
   batch_size: 48
