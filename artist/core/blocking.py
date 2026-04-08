@@ -137,7 +137,8 @@ def create_blocking_primitives_rectangles_by_index(
     - There are four facets ordered in two columns and two rows.
     - Each facet has an equal amount of surface points -> number_of_surface_points / 4
     - Each facet has an equal amount of points along its width and its height -> math.sqrt(number_of_surface_points / 4)
-
+    - Surface points are arranged in a structured, grid-like order and indexed in row-major fashion, analogous to a 2D tensor, ensuring consistent traversal.
+    
     Parameters
     ----------
     blocking_heliostats_active_surface_points : torch.Tensor
@@ -258,14 +259,14 @@ def soft_ray_blocking_mask(
         Shape is [number_of_blocking_primitives, 2, 4].
     blocking_primitives_normals : torch.Tensor
         The blocking primitives normals.
-        Shape is [number_of_blocking_primitives, 3]
+        Shape is [number_of_blocking_primitives, 4]
     epsilon : float
         A small value (default is 1e-12).
     softness : float
         Controls how soft the sigmoid approximates the blocking (default is 5000.0).
     ray_origin_offset
         Shift the ray origins a slight distance away from the heliostat planes to avoid self intersections (default is 0.05).
-        The distance is measured in cm, meaning the default offset pushes the ray origins 5cm along the ray direction.
+        The distance is measured in m, meaning the default offset pushes the ray origins 5cm along the ray direction.
 
     Returns
     -------
