@@ -1,3 +1,4 @@
+import logging
 import math
 import warnings
 
@@ -7,6 +8,8 @@ import torch.nn.functional as F
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
 
+log = logging.getLogger(__name__)
+"""A logger for blocking."""
 
 def create_blocking_primitives_rectangle(
     blocking_heliostats_surface_points: torch.Tensor,
@@ -528,6 +531,9 @@ def build_linear_bounding_volume_hierarchies(
     blocker_ids = torch.arange(number_of_blocking_primitives, dtype=torch.int32, device=device)
 
     if number_of_blocking_primitives == 0:
+        log.warning(
+            "No blocking primitives provided, returning empty tensors for the linear bounding volume hierarchies."
+        )
         return {
             config_dictionary.left_node: torch.empty(
                 (0,), dtype=torch.int32, device=device
@@ -710,23 +716,13 @@ def build_linear_bounding_volume_hierarchies(
         nodes_with_complete_aabb[index] = True
         rounds += 1
 
-    # Slow fallback logic if some axis aligned bounding boxes have not been computed.
+    # Warning, if some axis aligned bounding boxes have not been computed.
     if not nodes_with_complete_aabb.all():
-        incomplete = torch.nonzero(~nodes_with_complete_aabb, as_tuple=True)[0]
-        warnings.warn(
-            f"LBVH AABB fallback computation (very slow): {incomplete.numel()} internal nodes did not receive AABBs via DAG propagation.",
+        log.warning(
+            f"Some internal nodes did not receive AABBs via DAG propagation. This means the tree was built incorrectly.",
             RuntimeWarning,
         )
-        for node in incomplete.tolist():
-            min = int(min_index[node].item())
-            max = int(max_index[node].item())
-            leaf_nodes_slice = (
-                torch.arange(min, max + 1, device=device, dtype=torch.int64)
-                + leaf_offset
-            )
-            aabb_min[node] = torch.min(aabb_min[leaf_nodes_slice], dim=0).values
-            aabb_max[node] = torch.max(aabb_max[leaf_nodes_slice], dim=0).values
-
+ 
     return {
         config_dictionary.left_node: left,
         config_dictionary.right_node: right,
