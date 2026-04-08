@@ -9,6 +9,8 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary
@@ -30,21 +32,25 @@ def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
         The h5 scenario generator.
     """
     mock_power_plant_config = mocker.MagicMock(spec=PowerPlantConfig)
-    mock_target_area_list_config = mocker.MagicMock(spec=TargetAreaListConfig)
+    mock_target_area_list_planar_config = mocker.MagicMock(spec=TargetAreaPlanarListConfig)
+    mock_target_area_list_cylindrical_config = mocker.MagicMock(spec=TargetAreaCylindricalListConfig)
     mock_light_source_list_config = mocker.MagicMock(spec=LightSourceListConfig)
     mock_prototype_config = mocker.MagicMock(spec=PrototypeConfig)
     mock_heliostat_list_config = mocker.MagicMock(spec=HeliostatListConfig)
 
     mock_power_plant_config.create_power_plant_dict.return_value = {"param1": 123}
-    mock_target_area_list_config.create_target_area_list_dict.return_value = {
+    mock_target_area_list_planar_config.create_target_area_list_dict.return_value = {
         "param2": 456
     }
-    mock_light_source_list_config.create_light_source_list_dict.return_value = {
-        "param3": 789
+    mock_target_area_list_cylindrical_config.create_target_area_list_dict.return_value = {
+        "param3": 4567
     }
-    mock_prototype_config.create_prototype_dict.return_value = {"param4": "abc"}
+    mock_light_source_list_config.create_light_source_list_dict.return_value = {
+        "param4": 789
+    }
+    mock_prototype_config.create_prototype_dict.return_value = {"param5": "abc"}
     mock_heliostat_list_config.create_heliostat_list_dict.return_value = {
-        "param5": "xyz"
+        "param6": "xyz"
     }
 
     mocker.patch.object(
@@ -55,7 +61,8 @@ def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
         file_path=pathlib.Path("scenario"),
         version=1.0,
         power_plant_config=mock_power_plant_config,
-        target_area_list_config=mock_target_area_list_config,
+        target_area_list_planar_config=mock_target_area_list_planar_config,
+        target_area_list_cylindrical_config=mock_target_area_list_cylindrical_config,
         light_source_list_config=mock_light_source_list_config,
         prototype_config=mock_prototype_config,
         heliostat_list_config=mock_heliostat_list_config,
@@ -134,10 +141,11 @@ def test_generate_scenario(
 
             expected_datasets = {
                 config_dictionary.power_plant_key: ["param1"],
-                config_dictionary.target_area_key: ["param2"],
-                config_dictionary.light_source_key: ["param3"],
-                config_dictionary.prototype_key: ["param4"],
-                config_dictionary.heliostat_key: ["param5"],
+                config_dictionary.target_area_planar_key: ["param2"],
+                config_dictionary.target_area_cylindrical_key: ["param3"],
+                config_dictionary.light_source_key: ["param4"],
+                config_dictionary.prototype_key: ["param5"],
+                config_dictionary.heliostat_key: ["param6"],
             }
 
             for prefix, keys in expected_datasets.items():
