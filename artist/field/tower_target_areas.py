@@ -5,7 +5,7 @@ import torch
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
-"""A logger for the planar tower target areas."""
+"""A logger for the tower target areas."""
 
 
 class TowerTargetAreas:

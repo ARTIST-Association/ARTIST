@@ -185,7 +185,6 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
                 device=device,
             )
 
-
         return cls(
             names=names,
             radii=radii,
