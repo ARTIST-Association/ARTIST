@@ -284,10 +284,10 @@ def soft_ray_blocking_mask(
     blocking_primitives_normals = blocking_primitives_normals[None, None, None, :, :3]
 
     # Solve the plane equation.
-    denominator = torch.sum(ray_directions * blocking_primitives_normals, dim=-1)
+    denominator = torch.clamp(torch.sum(ray_directions * blocking_primitives_normals, dim=-1), min=epsilon)
     distances_to_blocking_planes = torch.sum(
         (corner_0 - ray_origins) * blocking_primitives_normals, dim=-1
-    ) / (denominator + epsilon)
+    ) / denominator
     blocking_planes_in_front_of_heliostats = torch.sigmoid(
         softness * (distances_to_blocking_planes - ray_origin_offset)
     )
