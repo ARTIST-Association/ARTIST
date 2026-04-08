@@ -84,16 +84,15 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
             For full cylinders this is two pi or 360°.
             Tensor of shape [number_of_target_areas].
         """
-        self.names = names
+        super().__init__(
+            names=names,
+            centers=centers,
+            normals=normals,
+        )
         self.radii = radii
-        self.centers = centers
         self.heights = heights
         self.axes = axes
-        self.normals = normals
         self.opening_angles = opening_angles
-
-        self.number_of_target_areas = len(self.names)
-
         
     @classmethod
     def from_hdf5(

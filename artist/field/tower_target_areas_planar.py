@@ -66,12 +66,12 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
             The dimensions of each target area (width, then height).
             Tensor of shape [number_of_target_areas, 2].
         """
-        self.names = names
-        self.centers = centers
-        self.normals = normals
+        super().__init__(
+            names=names,
+            centers=centers,
+            normals=normals,
+        )
         self.dimensions = dimensions
-
-        self.number_of_target_areas = len(self.names)
 
     @classmethod
     def from_hdf5(
