@@ -54,7 +54,7 @@ def create_blocking_primitives_rectangle(
         Tensor of shape [number_of_heliostats, 2, 4].
     torch.Tensor
         The blocking plane normals.
-        Tensor of shape [number_of_heliostats, 3].
+        Tensor of shape [number_of_heliostats, 4].
     """
     device = get_device(device=device)
 
@@ -103,8 +103,14 @@ def create_blocking_primitives_rectangle(
     spans[:, 0] = corners[:, 1] - corners[:, 0]
     spans[:, 1] = corners[:, 3] - corners[:, 0]
 
-    plane_normals = torch.nn.functional.normalize(
-        torch.cross(spans[:, 0, :3], spans[:, 1, :3], dim=-1), dim=-1
+    plane_normals = torch.cat(
+        [
+            torch.nn.functional.normalize(
+                torch.cross(spans[:, 0, :3], spans[:, 1, :3], dim=-1), dim=-1
+                ),
+            torch.zeros((number_of_surfaces, 1), device=device)
+        ],
+        dim=-1
     )
 
     return corners, spans, plane_normals
@@ -152,7 +158,7 @@ def create_blocking_primitives_rectangles_by_index(
         Tensor of shape [number_of_heliostats, 2, 4].
     torch.Tensor
         The blocking plane normals.
-        Tensor of shape [number_of_heliostats, 3].
+        Tensor of shape [number_of_heliostats, 4].
     """
     device = get_device(device=device)
 
@@ -183,8 +189,14 @@ def create_blocking_primitives_rectangles_by_index(
     spans[:, 0] = corners[:, 1] - corners[:, 0]
     spans[:, 1] = corners[:, 3] - corners[:, 0]
 
-    plane_normals = torch.nn.functional.normalize(
-        torch.cross(spans[:, 0, :3], spans[:, 1, :3], dim=-1), dim=-1
+    plane_normals = torch.cat(
+        [
+            torch.nn.functional.normalize(
+                torch.cross(spans[:, 0, :3], spans[:, 1, :3], dim=-1), dim=-1
+                ),
+            torch.zeros((number_of_surfaces, 1), device=device)
+        ],
+        dim=-1
     )
 
     return corners, spans, plane_normals
