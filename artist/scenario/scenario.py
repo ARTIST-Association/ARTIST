@@ -345,7 +345,7 @@ class Scenario:
             ):
                 if target_name not in self.solar_tower.target_name_to_index:
                     errors.append(
-                        f"Invalid target '{target_name}' at index {i} not found in target areas."
+                        f"Invalid target '{target_name}' (Found at index {i} of provided mapping) not found in this scenario."
                     )
                 if (
                     light_direction.shape != torch.Size([4])
