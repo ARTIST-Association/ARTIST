@@ -375,7 +375,7 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
 
 
 def morton_codes(
-    coordinates: torch.Tensor, epsilon: float = 1e-6, device: torch.device | None = None
+    coordinates: torch.Tensor, epsilon: float = 1e-6
 ) -> torch.Tensor:
     """
     Map 3D points to a single integer value corresponding to its Morton Code.
@@ -399,10 +399,6 @@ def morton_codes(
         Tensor of shape [number_of_blocking_planes, 3].
     epsilon : float
         A small epsilon value (default is 1e-6).
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -410,8 +406,6 @@ def morton_codes(
         The converted integers in Morton code.
         Tensor of shape [number_of_blocking_planes].
     """
-    device = get_device(device=device)
-
     # The 10 bits per axis should not be changed. 10 bits per axis means 1024 discrete positions along
     # each dimension and 30 bits in total. This is the maximum amount of bits per axis fitting into a
     # single 32-bit integer and is enough even for scenes with more than hundred thousand blocking planes.
@@ -426,12 +420,12 @@ def morton_codes(
     # Prepare the interleaving.
     # Spread 10 bits into 30 bits with 2 zero bits between each bit.
     u = expand_bits(scaled_coordinates[:, 2])
-    # Spread with additional shift to the left for x.
+    # Spread with additional shift to the left for e.
     e = expand_bits(scaled_coordinates[:, 0]) << 1
-    # Spread with 2 additional shifts to the left for y.
+    # Spread with 2 additional shifts to the left for n.
     n = expand_bits(scaled_coordinates[:, 1]) << 2
 
-    return (n | e | u)
+    return n | e | u
 
 
 def longest_common_prefix(
