@@ -2,6 +2,7 @@ import math
 import warnings
 
 import torch
+import torch.nn.functional as F
 
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -284,10 +285,11 @@ def soft_ray_blocking_mask(
     blocking_primitives_normals = blocking_primitives_normals[None, None, None, :, :3]
 
     # Solve the plane equation.
-    denominator = torch.clamp(torch.sum(ray_directions * blocking_primitives_normals, dim=-1), min=epsilon)
+    denominator = torch.sum(ray_directions * blocking_primitives_normals, dim=-1)
+    denominator_safe = torch.where(denominator.abs() < epsilon, torch.sign(denominator)*epsilon, denominator)
     distances_to_blocking_planes = torch.sum(
         (corner_0 - ray_origins) * blocking_primitives_normals, dim=-1
-    ) / denominator
+    ) / denominator_safe
     blocking_planes_in_front_of_heliostats = torch.sigmoid(
         softness * (distances_to_blocking_planes - ray_origin_offset)
     )
@@ -304,28 +306,35 @@ def soft_ray_blocking_mask(
     offset_projection_u = torch.sum(intersection_offset_from_corner * span_u, dim=-1)
     offset_projection_v = torch.sum(intersection_offset_from_corner * span_v, dim=-1)
     det = (
-        span_u_squared_norm * span_v_squared_norm - span_uv_dot * span_uv_dot + epsilon
+        span_u_squared_norm * span_v_squared_norm - span_uv_dot * span_uv_dot
     )
+    det_safe = torch.where(det.abs() < epsilon, torch.sign(det) * epsilon, det)
     u_coordinate_on_plane = (
         offset_projection_u * span_v_squared_norm - offset_projection_v * span_uv_dot
-    ) / det
+    ) / det_safe
     v_coordinate_on_plane = (
         offset_projection_v * span_u_squared_norm - offset_projection_u * span_uv_dot
-    ) / det
+    ) / det_safe
 
-    # Mask values near 1 if intersection within parallelogram (plane), mask values near 0, if intersection outside plane boundaries.
-    blocking_within_plane = (
-        torch.sigmoid(softness * u_coordinate_on_plane)
-        * torch.sigmoid(softness * (1 - u_coordinate_on_plane))
-        * torch.sigmoid(softness * v_coordinate_on_plane)
-        * torch.sigmoid(softness * (1 - v_coordinate_on_plane))
+    # Mask values are near 1 if intersection within parallelogram (plane),
+    # mask values are near 0, if intersection outside plane boundaries.
+    # We intermediately transition to log space to avoid underflow and keep gradients alive.
+
+    log_blocking_within_plane = (
+        F.logsigmoid(softness * u_coordinate_on_plane)
+        + F.logsigmoid(softness * (1 - u_coordinate_on_plane))
+        + F.logsigmoid(softness * v_coordinate_on_plane)
+        + F.logsigmoid(softness * (1 - v_coordinate_on_plane))
     )
+    blocking_within_plane = torch.exp(log_blocking_within_plane)
 
     blocking_mask_per_plane = (
         blocking_within_plane
         * blocking_planes_in_front_of_heliostats
     )
-    blocked = 1 - torch.prod(1 - blocking_mask_per_plane, dim=-1)
+
+    log_not_blocked = torch.sum(torch.log1p(-blocking_mask_per_plane+epsilon), dim=-1)
+    blocked = 1 - torch.exp(log_not_blocked)
 
     return blocked
 
