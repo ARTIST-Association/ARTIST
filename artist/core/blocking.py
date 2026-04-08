@@ -341,9 +341,10 @@ def soft_ray_blocking_mask(
 
 def expand_bits(integers: torch.Tensor) -> torch.Tensor:
     """
-    Expand the lower 10 bits of an integer into 30 bits by inserting 2 zero bits between each original bit.
+    Expand the lower ten bits of an integer into 30 bits by inserting two zero bits between each original bit.
     
-    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30 bit Morton codes using torch.int32.
+    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton
+    codes using torch.int32.
 
     Parameters
     ----------
@@ -357,6 +358,11 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
         Integer coordinates expanded from 10 bits to 30 bits.
         Tensor of shape [number_of_blocking_planes].
     """
+    # Validate inputs.
+    if (integers < 0).any() or (integers > 1023).any():
+        raise ValueError("Input integers must be in [0, 1023].")
+    if integers.dtype is not torch.int32:
+        raise TypeError("Input integers must have dtype torch.int32.")
     # Keep only the lower 10 bits.
     expanded_integers = integers & 0x000003ff
     # Spread and mask bits to achieve pattern with two 0 bits in between.
@@ -366,6 +372,7 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
         expanded_integers = (expanded_integers | (expanded_integers << shift)) & mask
 
     return expanded_integers
+
 
 def morton_codes(
     coordinates: torch.Tensor, epsilon: float = 1e-6, device: torch.device | None = None
