@@ -1,8 +1,12 @@
 import math
+from unittest.mock import MagicMock
 
 import pytest
 import torch
 
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.util import utils
 
 
@@ -578,34 +582,80 @@ def test_trapezoid_distribution(
 
 
 @pytest.mark.parametrize(
-    "image, crop_width, crop_height, target_width, target_height, expected_cropped",
+    "image, crop_width, crop_height, target_area_indices, expected_cropped",
     [
-        # Center of mass exactly at the geometric center -> cropping full plane should be identity.
+        # Symmetric bitmaps and no change in dimensions.
         (
-            torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
+            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]], [[0.5, 0.0, 0.5], [0.5, 1.0, 0.5], [0.5, 0.0, 0.5]]]),
             3.0,
             3.0,
-            torch.tensor([3.0]),
-            torch.tensor([3.0]),
-            torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
+            torch.tensor([0, 1]),
+            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]],[[0.5, 0.0, 0.5], [0.5, 1.0, 0.5], [0.5, 0.0, 0.5]]]),
         ),
-        # Symmetric intensities -> Center of mass at center -> identity expected.
+        # Symmetric bitmaps and change in dimensions.
         (
-            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]]]),
-            3.0,
-            3.0,
-            torch.tensor([3.0]),
-            torch.tensor([3.0]),
-            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]]]),
+            torch.tensor([
+                [
+                    [1.0, 2.0, 2.0, 1.0],
+                    [2.0, 3.0, 3.0, 2.0],
+                    [2.0, 3.0, 3.0, 2.0],
+                    [1.0, 2.0, 2.0, 1.0],
+                ],
+                [
+                    [1.0, 2.0, 2.0, 1.0],
+                    [2.0, 3.0, 3.0, 2.0],
+                    [2.0, 3.0, 3.0, 2.0],
+                    [1.0, 2.0, 2.0, 1.0],
+                ]
+            ]),
+            5.0,
+            5.0,
+            torch.tensor([0, 1]),
+            torch.tensor([[[0.0000, 0.0000, 0.0000, 0.0000],
+                [0.0000, 2.3333, 2.3333, 0.0000],
+                [0.0000, 2.3333, 2.3333, 0.0000],
+                [0.0000, 0.0000, 0.0000, 0.0000]],
+
+                [[0.0000, 0.0000, 0.0000, 0.0000],
+                [0.0000, 2.3333, 2.3333, 0.0000],
+                [0.0000, 2.3333, 2.3333, 0.0000],
+                [0.0000, 0.0000, 0.0000, 0.0000]]])
         ),
+        # Asymmetric bitmaps and no change in dimensions.
+        (
+            torch.tensor([[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]]),
+            3.0,
+            3.0,
+            torch.tensor([0, 1]),
+            torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]], [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
+        ),
+        # Asymmetric bitmaps and change in dimensions.
+        (
+            torch.tensor([[
+                [1., 1., 1., 0., 0., 0.],
+                [1., 2., 1., 0., 0., 0.],
+                [1., 1., 1., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0., 0.]]]),
+            2.0,
+            2.0,
+            torch.tensor([0]),
+            torch.tensor([[[0.1111, 0.3333, 0.3333, 0.3333, 0.3333, 0.1111],
+                [0.3333, 1.0000, 1.0000, 1.0000, 1.0000, 0.3333],
+                [0.3333, 1.0000, 1.4444, 1.4444, 1.0000, 0.3333],
+                [0.3333, 1.0000, 1.4444, 1.4444, 1.0000, 0.3333],
+                [0.3333, 1.0000, 1.0000, 1.0000, 1.0000, 0.3333],
+                [0.1111, 0.3333, 0.3333, 0.3333, 0.3333, 0.1111]]])
+
+        )
     ],
 )
 def test_crop_flux_distributions_around_center_centering(
     image: torch.Tensor,
     crop_width: float,
     crop_height: float,
-    target_width: torch.Tensor,
-    target_height: torch.Tensor,
+    target_area_indices: torch.Tensor,
     expected_cropped: torch.Tensor,
     device: torch.device,
 ) -> None:
@@ -625,12 +675,6 @@ def test_crop_flux_distributions_around_center_centering(
         Desired crop width in meters.
     crop_height : float
         Desired crop height in meters.
-    target_width : torch.Tensor
-        Target plane widths in meters.
-        Tensor of shape [number_of_bitmaps].
-    target_height : torch.Tensor
-        Target plane heights in meters.
-        Tensor of shape [number_of_bitmaps].
     expected_cropped : torch.Tensor
         The expected output image tensor after cropping.
         Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
@@ -642,129 +686,34 @@ def test_crop_flux_distributions_around_center_centering(
     AssertionError
         If test does not complete as expected.
     """
+    mock_solar_tower = MagicMock(spec=SolarTower)
+    mock_target_areas_planar = MagicMock(spec=TowerTargetAreasPlanar)
+    mock_target_areas_planar.names = ["multi_focus_tower"]
+    mock_target_areas_planar.dimensions = torch.tensor([[3.0, 3.0]], device=device)
+    mock_target_areas_cylindrical = MagicMock(spec=TowerTargetAreasCylindrical)
+    mock_target_areas_cylindrical.names = ["receiver"]
+    mock_target_areas_cylindrical.radii = torch.tensor(([[1.0]]), device=device)
+    mock_target_areas_cylindrical.heights = torch.tensor(([[3.0]]), device=device)
+    mock_target_areas_cylindrical.opening_angles = torch.tensor(([[3.0]]), device=device)
+
+    mock_solar_tower.target_areas =  [mock_target_areas_planar, mock_target_areas_cylindrical]
+    mock_solar_tower.number_of_target_area_types = 2
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor([1, 1], device=device)
+    mock_solar_tower.target_name_to_index = {'multi_focus_tower': 0, 'receiver': 1}
+    mock_solar_tower.index_to_target_area = {0: 'multi_focus_tower', 1: 'receiver'}
+
     cropped = utils.crop_flux_distributions_around_center(
         flux_distributions=image.to(device),
+        solar_tower=mock_solar_tower,
+        target_area_indices=target_area_indices.to(device),
         crop_width=crop_width,
         crop_height=crop_height,
-        target_plane_widths=target_width.to(device),
-        target_plane_heights=target_height.to(device),
         device=device,
     )
     torch.testing.assert_close(
         cropped, expected_cropped.to(device), rtol=1e-4, atol=1e-4
     )
     assert not torch.isnan(cropped).any()
-
-
-@pytest.mark.parametrize(
-    "height, width, brightest_pixel_row, brightest_pixel_column, crop_width, crop_height, target_width, target_height, tolerance_pixel, min_peak",
-    [
-        # Small offset near top-right.
-        (33, 33, 3, 29, 1.0, 1.0, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
-        # Closer to center.
-        (65, 65, 30, 34, 1.2, 1.2, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
-        # Far corner to stress interpolation and centering.
-        (64, 64, 1, 62, 0.8, 0.8, torch.tensor([3.0]), torch.tensor([3.0]), 1.0, 0.5),
-        # Rectangular image.
-        (48, 96, 5, 90, 1.0, 1.5, torch.tensor([4.0]), torch.tensor([2.0]), 1.0, 0.5),
-    ],
-    ids=[
-        "33x33_top-right",
-        "65x65_near-center",
-        "64x64_far-corner",
-        "48x96_rectangular",
-    ],
-)
-def test_crop_flux_distributions_around_center_offcenter(
-    height: int,
-    width: int,
-    brightest_pixel_row: int,
-    brightest_pixel_column: int,
-    crop_width: float,
-    crop_height: float,
-    target_width: torch.Tensor,
-    target_height: torch.Tensor,
-    tolerance_pixel: float,
-    min_peak: float,
-    device: torch.device,
-) -> None:
-    """
-    Test cropping behavior when the center of mass is off-center.
-
-    Parameters
-    ----------
-    height : int
-        The height of the input image in pixels.
-    width : int
-        The width of the input image in pixels.
-    brightest_pixel_row : int
-        The row index of the brightest pixel before cropping.
-    brightest_pixel_column : int
-        The column index of the brightest pixel before cropping.
-    crop_width : float
-        The desired crop width in meters.
-    crop_height : float
-        The desired crop height in meters.
-    target_width : torch.Tensor
-        Target plane widths in meters.
-        Tensor of shape [number_of_bitmaps].
-    target_height : torch.Tensor
-        Target plane heights in meters.
-        Tensor of shape [number_of_bitmaps].
-    tolerance_pixel : float
-        The pixel tolerance allowed between the peak pixel position and the geometric center.
-    min_peak : float
-        The minimum acceptable peak intensity after cropping and interpolation.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Raises
-    ------
-    AssertionError
-        If the test does not complete as expected.
-    """
-    # Build image with a single bright pixel.
-    image = torch.zeros((1, height, width), dtype=torch.float32)
-    # Clamp to valid range just in case parameters push to boundary.
-    brightest_pixel_row_index = int(max(0, min(height - 1, brightest_pixel_row)))
-    brightest_pixel_column_index = int(max(0, min(width - 1, brightest_pixel_column)))
-    image[0, brightest_pixel_row_index, brightest_pixel_column_index] = 1.0
-
-    cropped = utils.crop_flux_distributions_around_center(
-        flux_distributions=image.to(device),
-        crop_width=crop_width,
-        crop_height=crop_height,
-        target_plane_widths=target_width.to(device),
-        target_plane_heights=target_height.to(device),
-        device=device,
-    )
-
-    assert cropped.shape == image.shape[-3:]
-    assert not torch.isnan(cropped).any()
-
-    maximum_value = torch.amax(cropped)
-    positions_of_maximum_values = torch.nonzero(
-        cropped == maximum_value, as_tuple=False
-    )[0]
-    _, row_index_of_maximum, column_index_of_maximum = (
-        positions_of_maximum_values.tolist()
-    )
-    height_cropped, width_cropped = cropped.shape[-2], cropped.shape[-1]
-    center_row = (height_cropped - 1) / 2.0
-    center_column = (width_cropped - 1) / 2.0
-
-    # Allow a little extra slack on even dimensions due to half-pixel center with align_corners=False.
-    tolerance_row = tolerance_pixel + (0.5 if (height_cropped % 2 == 0) else 0.0)
-    tolerance_column = tolerance_pixel + (0.5 if (width_cropped % 2 == 0) else 0.0)
-
-    assert abs(row_index_of_maximum - center_row) <= tolerance_row, (
-        f"max row {row_index_of_maximum} not centered (H={height_cropped})"
-    )
-    assert abs(column_index_of_maximum - center_column) <= tolerance_column, (
-        f"max col {column_index_of_maximum} not centered (W={width_cropped})"
-    )
-
-    assert maximum_value >= min_peak
 
 
 @pytest.mark.parametrize(
