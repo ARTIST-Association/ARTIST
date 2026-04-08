@@ -1,8 +1,6 @@
 import torch
-import torch.nn.functional as functional
 
 from artist.field.solar_tower import SolarTower
-from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
@@ -533,19 +531,19 @@ def get_center_of_mass(
         + 1e-8
     )
 
-    y_coordinates = torch.linspace(0, 255, image_height, device=device)
-    x_coordinates = torch.linspace(0, 255, image_width, device=device)
+    y_coordinates = torch.linspace(0, image_height-1, image_height, device=device)
+    x_coordinates = torch.linspace(0, image_width-1, image_width, device=device)
     y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
     x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
     y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
 
     x_center_of_mass = (x_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
-    )
+    ) * image_width
     y_center_of_mass = (y_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
-    )
-    return torch.stack([x_center_of_mass, y_center_of_mass], dim=1)
+    ) * image_height
+    return torch.stack([x_center_of_mass, y_center_of_mass], dim=1) 
 
 def bitmap_coordinates_to_target_coordinates(
     bitmap_coordinates: torch.Tensor,
@@ -556,7 +554,8 @@ def bitmap_coordinates_to_target_coordinates(
 ) -> torch.Tensor:
     device = get_device(device=device)
 
-    center_coordinates = torch.ones((target_area_indices.numel(), 4), device=device)
+    center_coordinates = torch.zeros((target_area_indices.numel(), 4), device=device)
+    center_coordinates[:, -1] = 1.0
 
     planar_mask = target_area_indices < solar_tower.number_of_target_areas_per_type[0]
     if target_area_indices[planar_mask].numel() > 0:
@@ -572,7 +571,8 @@ def bitmap_coordinates_to_target_coordinates(
         target_dimensions[:, index_mapping.u] = -solar_tower.target_areas[0].dimensions[planar_indices, 1]
 
         center_coordinates[planar_mask] = (
-            solar_tower.target_areas[0].centers[planar_indices] - 0.5 * target_dimensions
+            solar_tower.target_areas[0].centers[planar_indices] 
+            - 0.5 * target_dimensions
             + coordinates / resolution * target_dimensions
         )
 
