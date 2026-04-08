@@ -344,9 +344,10 @@ def soft_ray_blocking_mask(
 
 def expand_bits(integers: torch.Tensor) -> torch.Tensor:
     """
-    Expand the lower 10 bits of an integer into 30 bits by inserting 2 zero bits between each original bit.
+    Expand the lower ten bits of an integer into 30 bits by inserting two zero bits between each original bit.
     
-    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30 bit Morton codes using torch.int32.
+    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton
+    codes using torch.int32.
 
     Parameters
     ----------
@@ -360,6 +361,11 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
         Integer coordinates expanded from 10 bits to 30 bits.
         Tensor of shape [number_of_blocking_planes].
     """
+    # Validate inputs.
+    if (integers < 0).any() or (integers > 1023).any():
+        raise ValueError("Input integers must be in [0, 1023].")
+    if integers.dtype is not torch.int32:
+        raise TypeError("Input integers must have dtype torch.int32.")
     # Keep only the lower 10 bits.
     expanded_integers = integers & 0x000003ff
     # Spread and mask bits to achieve pattern with two 0 bits in between.
@@ -370,8 +376,9 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
 
     return expanded_integers
 
+
 def morton_codes(
-    coordinates: torch.Tensor, epsilon: float = 1e-6, device: torch.device | None = None
+    coordinates: torch.Tensor, epsilon: float = 1e-6
 ) -> torch.Tensor:
     """
     Map 3D points to a single integer value corresponding to its Morton Code.
@@ -395,10 +402,6 @@ def morton_codes(
         Tensor of shape [number_of_blocking_planes, 3].
     epsilon : float
         A small epsilon value (default is 1e-6).
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
@@ -406,8 +409,6 @@ def morton_codes(
         The converted integers in Morton code.
         Tensor of shape [number_of_blocking_planes].
     """
-    device = get_device(device=device)
-
     # The 10 bits per axis should not be changed. 10 bits per axis means 1024 discrete positions along
     # each dimension and 30 bits in total. This is the maximum amount of bits per axis fitting into a
     # single 32-bit integer and is enough even for scenes with more than hundred thousand blocking planes.
@@ -422,12 +423,12 @@ def morton_codes(
     # Prepare the interleaving.
     # Spread 10 bits into 30 bits with 2 zero bits between each bit.
     u = expand_bits(scaled_coordinates[:, 2])
-    # Spread with additional shift to the left for x.
+    # Spread with additional shift to the left for e.
     e = expand_bits(scaled_coordinates[:, 0]) << 1
-    # Spread with 2 additional shifts to the left for y.
+    # Spread with 2 additional shifts to the left for n.
     n = expand_bits(scaled_coordinates[:, 1]) << 2
 
-    return (n | e | u)
+    return n | e | u
 
 
 def longest_common_prefix(
