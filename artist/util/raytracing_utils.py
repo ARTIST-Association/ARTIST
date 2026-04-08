@@ -240,7 +240,7 @@ def line_cylinder_intersections(
         empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device),
         return empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
-    sqrt_discriminant = torch.sqrt(discriminant * mask_infinite_cylinder_hits)
+    sqrt_discriminant = torch.sqrt(discriminant * mask_infinite_cylinder_hits + 1e-12)
 
     # The square root has two solutions, the minimum of the positive solutions per ray is the intersection we need.
     distance_candidates = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2], 2), device=device)

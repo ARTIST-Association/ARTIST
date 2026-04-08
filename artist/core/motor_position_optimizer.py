@@ -223,9 +223,10 @@ class MotorPositionsOptimizer:
 
             # Align heliostats.
             group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.target_areas.centers[
-                    target_area_indices_all_groups[group_index]
-                ],
+                aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices_all_groups[group_index],
+                    device=device
+                ),
                 incident_ray_directions=incident_ray_directions_all_groups[group_index],
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
                 device=device,
@@ -280,23 +281,33 @@ class MotorPositionsOptimizer:
             min_improvement=self.optimizer_dict[config_dictionary.early_stopping_delta],
             relative=True,
         )
+        
+        target_plane_dimensions = torch.empty(2, device=device)
+        target_areas, index = self.scenario.solar_tower.index_to_target_area[self.target_area_index]
+        if self.target_area_index < self.scenario.solar_tower.number_of_target_areas_per_type[0]:
+            target_plane_dimensions = target_areas.dimensions[self.target_area_index]
+        else:
+            cylinder_indices = self.target_area_index - self.scenario.solar_tower.number_of_target_areas_per_type[0]
+            target_plane_dimensions[0] = target_areas.radii[cylinder_indices] * target_areas.opening_angles[cylinder_indices]
+            target_plane_dimensions[1] = target_areas.heights[cylinder_indices]
+
 
         # Set up constraints.
         flux_integral_reference = 0.0
         lambda_local_flux = 0.0
         lambda_flux_integral = 0.0
-        lambda_spillage = 0.0
+        lambda_intercept = 0.0
         rho_local_flux = self.constraint_dict[config_dictionary.rho_local_flux]
         rho_flux_integral = self.constraint_dict[config_dictionary.rho_flux_integral]
-        rho_spillage = self.constraint_dict[config_dictionary.rho_spillage]
-        max_flux_density_per_pixel = (torch.prod(self.scenario.target_areas.dimensions[self.target_area_index]) / torch.prod(self.bitmap_resolution)) * self.constraint_dict[config_dictionary.max_flux_density]
+        rho_intercept = self.constraint_dict[config_dictionary.rho_intercept]
+        max_flux_density_per_pixel = (torch.prod(target_plane_dimensions) / torch.prod(self.bitmap_resolution)) * self.constraint_dict[config_dictionary.max_flux_density]
 
         # For the loss plot.
         total_loss_history = []
         flux_loss_history = []
         flux_integral = []
         local_flux_constraint_history = []
-        spillage_constraint_history = []
+        intercept_constraint_history = []
         flux_integral_constraint_history = []
 
         # Start the optimization.
@@ -320,8 +331,9 @@ class MotorPositionsOptimizer:
                 ),
                 device=device,
             )
-            intensities = 0
-            intensities_with_blocking = 0
+            intercept_factors = 0
+            on_target_factors = 0
+            blocking_factors = 0
 
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
@@ -386,7 +398,7 @@ class MotorPositionsOptimizer:
                 )
 
                 # Perform heliostat-based ray tracing.
-                flux_distributions, intensity_all_rays, intensity_with_blocking = ray_tracer.trace_rays(
+                flux_distributions, intercept_factor, on_target_factor, blocking_factor = ray_tracer.trace_rays(
                     incident_ray_directions=incident_ray_directions_all_groups[
                         heliostat_group_index
                     ],
@@ -408,9 +420,10 @@ class MotorPositionsOptimizer:
                 )[self.target_area_index]
 
                 total_flux = total_flux + flux_distribution_on_target
-                intensities = intensities + intensity_all_rays
-                intensities_with_blocking = intensities_with_blocking + intensity_with_blocking
-
+                intercept_factors = intercept_factors + intercept_factor
+                on_target_factors = on_target_factors + on_target_factor
+                blocking_factors = blocking_factors + blocking_factor
+            
             if self.ddp_setup[config_dictionary.is_distributed]:
                 total_flux = torch.distributed.nn.functional.all_reduce(
                     total_flux,
@@ -447,10 +460,9 @@ class MotorPositionsOptimizer:
                 )
 
                 # Augmented Lagrangian to ensure that spillage is eliminated.
-                spillage = (intensities.sum() - total_flux.sum()) / (total_flux.sum().detach() + self.epsilon)
-                spillage_clamped = torch.clamp(spillage, min=0.0)
-                spillage_constraint = (
-                    lambda_spillage * spillage_clamped + 0.5 * rho_spillage * spillage_clamped**2
+                intercept_factor_loss = 1.0 - intercept_factors.mean()
+                intercept_factor_constraint = (
+                    lambda_intercept * intercept_factor_loss + 0.5 * rho_intercept * intercept_factor_loss**2
                 )
 
                 # Augmented Lagrangian to ensure that local heat spikes are avoided.
@@ -463,12 +475,12 @@ class MotorPositionsOptimizer:
                 loss = (
                     flux_loss
                     + flux_integral_constraint
-                    + spillage_constraint
+                    + intercept_factor_constraint
                     + local_flux_constraint
                 )
                 with torch.no_grad():
                     lambda_local_flux = torch.clamp(lambda_local_flux + rho_local_flux * local_flux_violation.max(), min=0.0)
-                    lambda_spillage = torch.clamp(lambda_spillage + rho_spillage * spillage, min=0.0)
+                    lambda_intercept = torch.clamp(lambda_intercept + rho_intercept * intercept_factor_constraint, min=0.0)
                     lambda_flux_integral = torch.clamp(lambda_flux_integral + rho_flux_integral * flux_integral_difference, min=0.0)
 
             loss.backward()
@@ -499,7 +511,7 @@ class MotorPositionsOptimizer:
             flux_loss_history.append(flux_loss.detach().cpu().item())
             flux_integral.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
             local_flux_constraint_history.append(local_flux_constraint.detach().cpu().item())
-            spillage_constraint_history.append(spillage_constraint.detach().cpu().item())
+            intercept_constraint_history.append(intercept_factor_constraint.detach().cpu().item())
             flux_integral_constraint_history.append(flux_integral_constraint.detach().cpu().item())
 
             # Early stopping when loss did not improve since a predefined number of epochs.
@@ -515,7 +527,7 @@ class MotorPositionsOptimizer:
             "total_loss": total_loss_history,
             "flux_loss": flux_loss_history,
             "local_flux_constraint": local_flux_constraint_history,
-            "spillage_constraint": spillage_constraint_history,
+            "intercept_constraint": intercept_constraint_history,
             "flux_integral_constraint": flux_integral_constraint_history,
             "flux_integral": flux_integral
         }
@@ -535,4 +547,4 @@ class MotorPositionsOptimizer:
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
 
-        return loss.detach().cpu(), loss_history, intensities, intensities_with_blocking
+        return loss.detach().cpu(), loss_history, intercept_factors, on_target_factors, blocking_factors

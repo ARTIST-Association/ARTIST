@@ -317,21 +317,18 @@ class HeliostatRayTracer:
                 ]
             )
             blocking_heliostat_surfaces_active_list = []
+            self.blocking_heliostat_surfaces_active = torch.zeros_like(self.blocking_heliostat_surfaces)
             for group in self.scenario.heliostat_field.heliostat_groups:
-                if group.active_heliostats_mask.sum() == 0:
-                    blocking_heliostat_surfaces_active_list.append(
-                        group.surface_points + group.positions.unsqueeze(1)
-                    )
+                surfaces = group.surface_points + group.positions.unsqueeze(1)
+                mask = group.active_heliostats_mask.bool()
+                if mask.any():
+                    surfaces[mask] = group.active_surface_points
+                else:
                     log.warning(
-                        "Not all heliostat groups have been aligned yet."
-                        "Use unaligned, i.e., horizontal heliostats as approximated blocking planes in raytracing."
+                        "Not all heliostat groups have been aligned yet. "
+                        "Using horizontal heliostats as blocking planes."
                     )
-                if group.active_heliostats_mask.sum() > 0:
-                    heliostat_mask = torch.cumsum(group.active_heliostats_mask, dim=0)
-                    start_indices = heliostat_mask - group.active_heliostats_mask
-                    blocking_heliostat_surfaces_active_list.append(
-                        group.active_surface_points[start_indices]
-                    )
+                blocking_heliostat_surfaces_active_list.append(surfaces)
             self.blocking_heliostat_surfaces_active = torch.cat(
                 blocking_heliostat_surfaces_active_list
             )

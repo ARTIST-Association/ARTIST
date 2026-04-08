@@ -82,8 +82,6 @@ class SolarTower:
             for local_idx, name in enumerate(target_areas.names):
                 self.index_to_target_area.append((target_areas, local_idx))
 
-        
-
 
     @classmethod
     def from_hdf5(

@@ -196,19 +196,20 @@ class FocalSpotLoss(Loss):
 
         target_area_indices = kwargs["target_area_indices"]
 
-        focal_spot = utils.get_center_of_mass(
+        focal_spots_bitmap = utils.get_center_of_mass(
             bitmaps=prediction,
-            target_centers=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device)[target_area_indices],
-            target_widths=self.scenario.target_areas.dimensions[target_area_indices][
-                :, index_mapping.target_area_width
-            ],
-            target_heights=self.scenario.target_areas.dimensions[target_area_indices][
-                :, index_mapping.target_area_height
-            ],
             device=device,
         )
 
-        loss = torch.norm(focal_spot[:, :3] - ground_truth[:, :3], dim=1)
+        focal_spot_coordinates = utils.bitmap_coordinates_to_target_coordinates(
+            bitmap_coordinates=focal_spots_bitmap,
+            bitmap_resolution=prediction.shape[1:],
+            solar_tower=self.scenario.solar_tower,
+            target_area_indices=target_area_indices,
+            device=device
+        )
+
+        loss = torch.norm(focal_spot_coordinates[:, :3] - ground_truth[:, :3], dim=1)
 
         return loss
 

@@ -348,9 +348,7 @@ class SurfaceReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[
-                            target_area_indices
-                        ],
+                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -372,6 +370,10 @@ class SurfaceReconstructor:
                         bitmap_resolution=self.bitmap_resolution,
                         dni=self.dni
                     )
+                    def print_grad(name):
+                        def hook(grad):
+                            print(f"Gradient reached {name}: {grad}")
+                        return hook
 
                     # Perform heliostat-based ray tracing.
                     flux_distributions, _, _, _ = ray_tracer.trace_rays(
@@ -380,6 +382,7 @@ class SurfaceReconstructor:
                         target_area_indices=target_area_indices,
                         device=device,
                     )
+                    #flux_distributions.register_hook(print_grad("flux_distributions"))
 
                     sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
                     number_of_samples_per_heliostat = int(
@@ -394,17 +397,12 @@ class SurfaceReconstructor:
                     cropped_flux_distributions = (
                         utils.crop_flux_distributions_around_center(
                             flux_distributions=flux_distributions,
-                            crop_width=config_dictionary.utis_crop_width,
-                            crop_height=config_dictionary.utis_crop_height,
-                            target_plane_widths=self.scenario.target_areas.dimensions[
-                                target_area_indices[sample_indices_for_local_rank]
-                            ][:, index_mapping.target_area_width],
-                            target_plane_heights=self.scenario.target_areas.dimensions[
-                                target_area_indices[sample_indices_for_local_rank]
-                            ][:, index_mapping.target_area_height],
+                            solar_tower=self.scenario.solar_tower,
+                            target_area_indices=target_area_indices,
                             device=device,
                         )
                     )
+                    #cropped_flux_distributions.register_hook(print_grad("cropped_flux_distributions"))
 
                     # Flux loss.
                     flux_loss_per_sample = loss_definition(

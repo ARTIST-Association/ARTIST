@@ -1,7 +1,9 @@
 import torch
 import torch.nn.functional as functional
 
-from artist.util import index_mapping
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas import TowerTargetAreas
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -492,10 +494,6 @@ def rotation_angle_and_axis(
 
 def get_center_of_mass(
     bitmaps: torch.Tensor,
-    target_centers: torch.Tensor,
-    target_widths: float,
-    target_heights: float,
-    threshold: float = 0.0,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -504,22 +502,13 @@ def get_center_of_mass(
     First determine the indices of the bitmap center of mass.
     Next determine the position (coordinates) of the center of mass on the target.
 
+    Returns (0.0, 0.0) for empty fluxes.
+
     Parameters
     ----------
     bitmaps : torch.Tensor
         The flux densities in form of bitmaps.
         Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
-    target_centers : torch.Tensor
-        The positions of the centers of the targets.
-        Tensor of shape [number_of_active_heliostats, 4].
-    target_widths : float
-        The widths of the target surfaces.
-        Tensor of shape [number_of_active_heliostats].
-    target_heights : float
-        The heights of the target surfaces.
-        Tensor of shape [number_of_active_heliostats].
-    threshold : float
-        Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -528,59 +517,84 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        The coordinates of the flux density centers of mass.
+        Bitmap coordinates of the flux density centers of mass.
         Tensor of shape [number_of_active_heliostats, 4].
     """
     device = get_device(device=device)
 
-    _, heights, widths = bitmaps.shape
+    number_of_flux_distributions, image_height, image_width = bitmaps.shape
 
-    # Threshold the bitmap values. Any values below the threshold are set to zero.
-    flux_thresholds = torch.where(
-        bitmaps >= threshold, bitmaps, torch.zeros_like(bitmaps, device=device)
+    # Compute center of mass.
+    normalized_bitmaps = bitmaps / (
+        bitmaps.sum(
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            keepdim=True,
+        )
+        + 1e-8
     )
-    total_intensities = flux_thresholds.sum(
+
+    y_coordinates = torch.linspace(0, 255, image_height, device=device)
+    x_coordinates = torch.linspace(0, 255, image_width, device=device)
+    y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
+    x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
+    y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
+
+    x_center_of_mass = (x_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
     )
+    y_center_of_mass = (y_grid * normalized_bitmaps).sum(
+        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    )
+    return torch.stack([x_center_of_mass, y_center_of_mass], dim=1)
 
-    # Generate normalized east and up coordinates adjusted for pixel centers.
-    # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
-    e_indices = (
-        torch.arange(widths, dtype=torch.float32, device=device) + 0.5
-    ) / widths
-    u_indices = (
-        torch.arange(heights, dtype=torch.float32, device=device) + 0.5
-    ) / heights
+def bitmap_coordinates_to_target_coordinates(
+    bitmap_coordinates: torch.Tensor,
+    bitmap_resolution: torch.Tensor,
+    solar_tower: SolarTower,
+    target_area_indices: torch.Tensor,
+    device: torch.device | None = None, 
+) -> torch.Tensor:
+    device = get_device(device=device)
 
-    # Compute the centers of intensity using weighted sums of the coordinates.
-    center_of_masses_e = (
-        flux_thresholds.sum(dim=index_mapping.batched_bitmap_e) * e_indices
-    ).sum(dim=index_mapping.bitmap_intensities) / total_intensities
-    center_of_masses_u = (
-        1
-        - (flux_thresholds.sum(dim=index_mapping.batched_bitmap_u) * u_indices).sum(
-            dim=index_mapping.bitmap_intensities
+    center_coordinates = torch.ones((target_area_indices.numel(), 4), device=device)
+
+    planar_mask = target_area_indices < solar_tower.number_of_target_areas_per_type[0]
+    if target_area_indices[planar_mask].numel() > 0:
+        planar_indices = target_area_indices[planar_mask]
+        
+        resolution = torch.tensor([bitmap_resolution[0], 1e-8, bitmap_resolution[1], 1e-8], device=device)
+        coordinates = torch.zeros((planar_indices.numel(), 4), device=device)
+        coordinates[:, 0] = bitmap_coordinates[planar_mask, 0]
+        coordinates[:, 2] = bitmap_coordinates[planar_mask, 1]
+
+        target_dimensions = torch.zeros((planar_mask.sum(), 4), device=device)
+        target_dimensions[:, index_mapping.e] = -solar_tower.target_areas[0].dimensions[planar_indices, 0]
+        target_dimensions[:, index_mapping.u] = -solar_tower.target_areas[0].dimensions[planar_indices, 1]
+
+        center_coordinates[planar_mask] = (
+            solar_tower.target_areas[0].centers[planar_indices] - 0.5 * target_dimensions
+            + coordinates / resolution * target_dimensions
         )
-        / total_intensities
-    )
 
-    # Construct the coordinates relative to target centers.
-    de = torch.zeros(
-        (bitmaps.shape[index_mapping.heliostat_dimension], 4), device=device
-    )
-    de[:, index_mapping.e] = -target_widths
-    du = torch.zeros(
-        (bitmaps.shape[index_mapping.heliostat_dimension], 4), device=device
-    )
-    du[:, index_mapping.u] = target_heights
+    if target_area_indices[~planar_mask].numel() > 0:
+        cylinder_indices = target_area_indices[~planar_mask] - solar_tower.number_of_target_areas_per_type[0]
 
-    center_coordinates = (
-        target_centers
-        - 0.5 * (de + du)
-        + center_of_masses_e.unsqueeze(index_mapping.bitmap_intensities) * de
-        + center_of_masses_u.unsqueeze(index_mapping.bitmap_intensities) * du
-    )
+        cylinder_normals = solar_tower.target_areas[1].normals[cylinder_indices][:, :3]
+        cylinder_axis = solar_tower.target_areas[1].axes[cylinder_indices][:, :3]
+        cylinder_center = solar_tower.target_areas[1].centers[cylinder_indices]
+        radii = solar_tower.target_areas[1].radii[cylinder_indices]
+        
+        theta = (bitmap_coordinates[~planar_mask,0] / bitmap_resolution[0] - 0.5) * solar_tower.target_areas[1].opening_angles[cylinder_indices]
+        z = (bitmap_coordinates[~planar_mask,1] / bitmap_resolution[1] - 0.5) * solar_tower.target_areas[1].heights[cylinder_indices]
 
+        v = torch.cross(cylinder_axis, cylinder_normals, dim=-1)
+
+        center_coordinates[~planar_mask, :3] = cylinder_center[:, :3] + (
+            radii[:,None] * torch.cos(theta)[:,None] * cylinder_normals +
+            radii[:,None] * torch.sin(theta)[:,None] * v +
+            z[:,None] * cylinder_axis
+        )
+    
     return center_coordinates
 
 
@@ -823,10 +837,10 @@ def trapezoid_distribution(
 
 def crop_flux_distributions_around_center(
     flux_distributions: torch.Tensor,
-    crop_width: float,
-    crop_height: float,
-    target_plane_widths: torch.Tensor,
-    target_plane_heights: torch.Tensor,
+    solar_tower: SolarTower,
+    target_area_indices: torch.Tensor,
+    crop_width: float = config_dictionary.utis_crop_width,
+    crop_height: float = config_dictionary.utis_crop_height,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -888,9 +902,19 @@ def crop_flux_distributions_around_center(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
     )
 
+    target_dimensions = torch.empty((number_of_flux_distributions, 2), device=device)
+    planar_mask = target_area_indices < solar_tower.number_of_target_areas_per_type[0]
+    if target_area_indices[planar_mask].numel() > 0:
+        target_dimensions[planar_mask] = solar_tower.target_areas[0].dimensions[target_area_indices[planar_mask]]
+    if target_area_indices[~planar_mask].numel() > 0:
+        cylinder_indices = target_area_indices[~planar_mask] - solar_tower.number_of_target_areas_per_type[0]
+        target_dimensions[~planar_mask, 0] = solar_tower.target_areas[1].radii[cylinder_indices] * solar_tower.target_areas[1].opening_angles[cylinder_indices]
+        target_dimensions[~planar_mask, 1] = solar_tower.target_areas[1].heights[cylinder_indices]
+
+
     # Compute scale to match desired crop size in meters.
-    scale_x = crop_width / target_plane_widths
-    scale_y = crop_height / target_plane_heights
+    scale_x = crop_width / target_dimensions[:, 0]
+    scale_y = crop_height / target_dimensions[:, 1]
 
     # Build affine transform matrices (scale and center).
     affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)
@@ -901,10 +925,10 @@ def crop_flux_distributions_around_center(
 
     # Apply affine transform.
     images_expanded = flux_distributions[:, None, :, :]
-    sampling_grid = functional.affine_grid(
+    sampling_grid = torch.nn.functional.affine_grid(
         affine_matrices, size=images_expanded.shape, align_corners=True
     )
-    cropped_images = functional.grid_sample(
+    cropped_images = torch.nn.functional.grid_sample(
         images_expanded, sampling_grid, align_corners=True, padding_mode="zeros"
     )
 

@@ -200,7 +200,7 @@ class KinematicsReconstructor:
                 self.data[config_dictionary.heliostat_data_mapping],
             )
             (
-                measured,
+                _,
                 focal_spots_measured,
                 incident_ray_directions,
                 _,
