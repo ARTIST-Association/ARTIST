@@ -218,7 +218,7 @@ with setup_distributed_environment(
     )
 
     # Optimize the motor positions.
-    final_loss_per_heliostat = motor_positions_optimizer.optimize(
+    final_loss_per_heliostat, _, _, _, _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 

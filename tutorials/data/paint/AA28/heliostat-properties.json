@@ -11,7 +11,7 @@
       -1.0,
       0.0
   ],
-  "kinematic_properties": {
+  "kinematics_properties": {
       "actuators": [
           {
               "type_axis": "ideal",

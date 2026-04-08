@@ -23,7 +23,7 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test_3")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_paint_mix_ideal_prototype_deflectometry.h5")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
@@ -46,6 +46,20 @@ heliostat_files_list = [
             "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
         ),
         pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"),
+    ),
+    (
+        "AA28",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/heliostat-properties.json"
+        ),
+        #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"),
+    ),
+    (
+        "AC43",
+        pathlib.Path(
+            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
+        ),
+        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"),
     ),
     # ... Include as many as you want, but at least one!
 ]

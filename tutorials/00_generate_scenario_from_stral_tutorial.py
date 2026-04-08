@@ -16,8 +16,10 @@ from artist.scenario.configuration_classes import (
     PowerPlantConfig,
     PrototypeConfig,
     SurfacePrototypeConfig,
-    TargetAreaConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.surface_generator import SurfaceGenerator
@@ -34,11 +36,11 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_stral_single_heliostat.h5")
 
 # Specify the path to your stral_data.binp file.
 stral_file_path = pathlib.Path(
-    "please/insert/the/path/to/the/stral/data/here/test_stral_data.binp"
+    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/stral/stral_data.binp"
 )
 
 # Make sure the path you defined is valid and a scenario HDF5 can be saved there.
@@ -53,21 +55,28 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
-# Include a single tower area (receiver).
-receiver_config = TargetAreaConfig(
+# Include a single planar tower area (receiver).
+target_area_list_planar_config = TargetAreaPlanarConfig(
     target_area_key="receiver",
-    geometry=config_dictionary.target_area_type_planar,
     center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
     normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     plane_e=8.629666667,
     plane_u=7.0,
 )
 
-# Create list of target area configs - in this case only one.
-target_area_config_list = [receiver_config]
+# Include the planar tower area configurations.
+target_area_planar_list_config = TargetAreaPlanarListConfig([target_area_list_planar_config])
 
-# Include the tower area configurations.
-target_area_list_config = TargetAreaListConfig(target_area_config_list)
+target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
+    target_area_key="cylinder",
+    radius=4.14,
+    center=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+    height=6.0,
+    axis=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+    normal=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
+    opening_angle=60,
+)
+target_area_cylindrical_list_config = TargetAreaCylindricalListConfig([target_area_list_cylindrical_config])
 
 # Include the light source configuration.
 light_source1_config = LightSourceConfig(
@@ -187,7 +196,8 @@ if __name__ == "__main__":
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_planar_list_config,
+        target_area_list_cylindrical_config=target_area_cylindrical_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostats_list_config,

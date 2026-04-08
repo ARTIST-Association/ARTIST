@@ -24,7 +24,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/test_3.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_paint_four_heliostats.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -56,19 +56,15 @@ with setup_distributed_environment(
     # from a sun located directly in the south and be ray-traced on the first target found in the scenario.
     heliostat_target_light_source_mapping = None
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-    # heliostat_target_light_source_mapping = [
-    #     #("AA00", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    #     ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    #     ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    #     ("AA39", "solar_tower_juelich_lower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device))
-    #     #("AA00", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    #     #("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
-    #     # ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    #     # ("AA39", "multi_focus_tower", torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)),
-    # ]
+    heliostat_target_light_source_mapping = [
+        ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ("AA39", "solar_tower_juelich_lower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ("AA39", "solar_tower_juelich_upper", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    ]
 
     heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-        base_path="/workVERLEIHNIX/share/paint_data",
+        base_path="/workVERLEIHNIX/share/PAINT_data",
         heliostat_names=["AA39"],
         number_of_measurements=2,
         image_variant="flux-centered",

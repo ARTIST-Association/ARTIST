@@ -28,8 +28,7 @@ torch.cuda.manual_seed(9)
 
 
 def create_fluxes(
-    data,
-    scenario: Scenario,
+    data_parser: CalibrationDataParser,
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -52,13 +51,6 @@ def create_fluxes(
     for heliostat_group_index in range(len(scenario.heliostat_field.heliostat_groups)):
         heliostat_group: HeliostatGroup = (
             scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-        )
-        parser = cast(
-            CalibrationDataParser, data[config_dictionary.data_parser]
-        )
-        heliostat_mapping = cast(
-            list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            data[config_dictionary.heliostat_data_mapping],
         )
         (
             measured_flux,
@@ -86,7 +78,7 @@ def create_fluxes(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_indices],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
@@ -117,8 +109,6 @@ def create_fluxes(
 def create_plots(
     fluxes_before: torch.Tensor,
     fluxes_after: torch.Tensor,
-    fluxes_after_ray: torch.Tensor,
-    fluxes_before_ray: torch.Tensor,
     fluxes_measured: torch.Tensor,
 ) -> None:
     """
@@ -168,34 +158,34 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_paint_four_heliostats.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "heliostat_name_1",
+        "AA39",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux.png"),
             # ....
         ],
     ),
     (
-        "heliostat_name_2",
+        "AA31",
         [
             pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux.png"),
             # ....
         ],
     ),
@@ -214,7 +204,7 @@ heliostat_data_mapping = [
 optimizer_dict = {
     config_dictionary.initial_learning_rate: 0.00005,
     config_dictionary.tolerance: 0.0000,
-    config_dictionary.max_epoch: 500,
+    config_dictionary.max_epoch: 2,
     config_dictionary.batch_size: 50,
     config_dictionary.log_step: 1,
     config_dictionary.early_stopping_delta: 1e-8,
@@ -280,8 +270,7 @@ with setup_distributed_environment(
         )
 
     bitmaps_before, _ = create_fluxes(
-        data=data_plots,
-        scenario=scenario
+        data_parser=data_parser_plots,
     )
 
     loss_definition = FocalSpotLoss(scenario=scenario)
