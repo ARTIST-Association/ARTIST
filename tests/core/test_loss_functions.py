@@ -10,7 +10,9 @@ from artist.core.loss_functions import (
     PixelLoss,
     VectorLoss,
 )
-from artist.field.tower_target_areas_planar import TowerTargetAreas
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreas, TowerTargetAreasPlanar
 from artist.scenario.scenario import Scenario
 from artist.scene.light_source import LightSource
 from artist.scene.light_source_array import LightSourceArray
@@ -187,10 +189,23 @@ def test_focal_spot_loss(
         If test does not complete as expected.
     """
     mock_scenario = mocker.MagicMock(spec=Scenario)
-    target_areas = mocker.MagicMock(spec=TowerTargetAreas)
-    target_areas.centers = (torch.tensor([[1.0, 1.0, 1.0, 0.0]], device=device),)
-    target_areas.dimensions = (torch.tensor([[2, 2]], device=device),)
-    mock_scenario.target_areas = target_areas
+    mock_solar_tower = mocker.MagicMock(spec=SolarTower)
+    mock_target_areas_planar = mocker.MagicMock(spec=TowerTargetAreasPlanar)
+    mock_target_areas_planar.names = ["multi_focus_tower"]
+
+    mock_target_areas_planar.centers = torch.tensor([[1.0, 1.0, 1.0, 0.0]], device=device)
+    mock_target_areas_planar.dimensions = torch.tensor([[2, 2]], device=device)
+    
+    mock_target_areas_cylindrical = mocker.MagicMock(spec=TowerTargetAreasCylindrical)
+    mock_target_areas_cylindrical.names = ["receiver"]
+
+    mock_solar_tower.target_areas =  [mock_target_areas_planar, mock_target_areas_cylindrical]
+    mock_solar_tower.number_of_target_area_types = 2
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor([3, 1], device=device)
+    mock_solar_tower.target_name_to_index = {'multi_focus_tower': 0, 'solar_tower_juelich_lower': 1, 'solar_tower_juelich_upper': 2, 'receiver': 3}
+    mock_solar_tower.index_to_target_area = {0: 'multi_focus_tower', 1: 'solar_tower_juelich_lower', 2: 'solar_tower_juelich_upper', 3: 'receiver'}
+
+    mock_scenario.solar_tower = mock_solar_tower
 
     target_area_indices = torch.tensor([0], device=device)
 
