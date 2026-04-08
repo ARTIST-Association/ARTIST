@@ -180,14 +180,9 @@ def test_extract_paint_calibration_data(
         extracted_list = list(
             calibration_data_parser._parse_calibration_data(
                 heliostat_calibration_mapping=heliostat_calibration_mapping,
-                power_plant_position=power_plant_position.to(device),
                 heliostat_names=["AA31", "AA39"],
-                target_area_names=[
-                    "multi_focus_tower",
-                    "receiver",
-                    "solar_tower_juelich_upper",
-                    "solar_tower_juelich_lower",
-                ],
+                target_name_to_index={'multi_focus_tower': 0, 'solar_tower_juelich_lower': 1, 'solar_tower_juelich_upper': 2, 'receiver': 3},
+                power_plant_position=power_plant_position.to(device),
                 device=device,
             )
         )

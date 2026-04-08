@@ -11,7 +11,8 @@ from artist.scenario.configuration_classes import (
     HeliostatListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarListConfig,
 )
 
 torch.manual_seed(7)
@@ -19,30 +20,31 @@ torch.cuda.manual_seed(7)
 
 
 @pytest.mark.parametrize(
-    "file_path, expected_types, expected_power_plant_position, expected_receiver_properties",
+    "file_path, expected_types, expected_power_plant_position, expected_multi_focus_properties, expected_receiver_properties",
     [
         (
             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/tower-measurements.json",
-            [PowerPlantConfig, TargetAreaListConfig],
+            [PowerPlantConfig, TargetAreaPlanarListConfig, TargetAreaCylindricalListConfig],
             torch.tensor(
                 [50.913421122593, 6.387824755875, 87.000000000000], dtype=torch.float64
             ),
             [
+                "multi_focus_tower",
+                torch.tensor([-17.604515075684,  -2.744643926620,  51.979751586914,   1.000000000000]),
+                torch.tensor(
+                    [[0, 1, 0, 0]]
+                ),
+                torch.tensor(5.411863327026),
+                torch.tensor(6.387498855591),
+            ],
+            [
                 "receiver",
-                "convex_cylinder",
-                torch.tensor(
-                    [
-                        3.860326111317e-02,
-                        -5.029551386833e-01,
-                        5.522674942017e01,
-                        1.000000000000e00,
-                    ]
-                ),
-                torch.tensor(
-                    [[0.000000000000, 0.906307816505, -0.422618269920, 0.000000000000]]
-                ),
-                torch.tensor(4.528313636780),
-                torch.tensor(5.218500137329),
+                4.14,
+                torch.tensor([-3.145754337311e-03, -3.755039930344e+00,  5.674332427979e+01, 1.000000000000e+00]),
+                torch.tensor(5.229192256927),
+                torch.tensor([0.000000000000, 0.422618269920, 0.906307816505, 0.000000000000]),
+                torch.tensor([ 0.000000000000,  0.906307816505, -0.422618269920,  0.000000000000]),
+                torch.tensor(1.047197580338),
             ],
         )
     ],
@@ -51,7 +53,8 @@ def test_extract_paint_tower_measurements(
     file_path: pathlib.Path,
     expected_types: list[Any],
     expected_power_plant_position: torch.Tensor,
-    expected_receiver_properties: torch.Tensor,
+    expected_multi_focus_properties : list[Any],
+    expected_receiver_properties: list[Any],
     device: torch.device,
 ) -> None:
     """
@@ -83,33 +86,60 @@ def test_extract_paint_tower_measurements(
 
     assert isinstance(extracted_list[0], expected_types[0])
     assert isinstance(extracted_list[1], expected_types[1])
+    assert isinstance(extracted_list[2], expected_types[2])
 
     torch.testing.assert_close(
         extracted_list[0].power_plant_position, expected_power_plant_position.to(device)
     )
     assert (
-        extracted_list[1].target_area_list[3].target_area_key
-        == expected_receiver_properties[0]
-    )
-    assert (
-        extracted_list[1].target_area_list[3].geometry
-        == expected_receiver_properties[1]
+        extracted_list[1].target_area_list[2].target_area_key
+        == expected_multi_focus_properties[0]
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].center,
+        extracted_list[1].target_area_list[2].center,
+        expected_multi_focus_properties[1].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[1].target_area_list[2].normal_vector,
+        expected_multi_focus_properties[2].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[1].target_area_list[2].plane_e,
+        expected_multi_focus_properties[3].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[1].target_area_list[2].plane_u,
+        expected_multi_focus_properties[4].to(device),
+    )
+    
+    # Receiver
+    assert (
+        extracted_list[2].target_area_list[0].target_area_key
+        == expected_receiver_properties[0]
+    )
+    torch.testing.assert_close(
+        extracted_list[2].target_area_list[0].radius,
+        expected_receiver_properties[1],
+    )
+    torch.testing.assert_close(
+        extracted_list[2].target_area_list[0].center,
         expected_receiver_properties[2].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].normal_vector,
+        extracted_list[2].target_area_list[0].height,
         expected_receiver_properties[3].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].plane_e,
+        extracted_list[2].target_area_list[0].axis,
         expected_receiver_properties[4].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].plane_u,
+        extracted_list[2].target_area_list[0].normal,
         expected_receiver_properties[5].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[2].target_area_list[0].opening_angle,
+        expected_receiver_properties[6].to(device),
     )
 
 

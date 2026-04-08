@@ -166,7 +166,7 @@ def test_motor_positions_optimizer(
     )
 
     # Optimize the motor positions.
-    _ = motor_positions_optimizer.optimize(
+    _, _, _, _, _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 

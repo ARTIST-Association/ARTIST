@@ -9,7 +9,6 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary

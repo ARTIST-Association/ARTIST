@@ -446,8 +446,7 @@ def test_ray_extinction(device: torch.device) -> None:
     torch.cuda.manual_seed(7)
 
     with h5py.File(
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/scenarios/test_scenario_paint_single_heliostat.h5",
+        pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios/test_blocking.h5",
         "r",
     ) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
@@ -456,13 +455,17 @@ def test_ray_extinction(device: torch.device) -> None:
         )
 
     heliostat_group = scenario.heliostat_field.heliostat_groups[0]
-
+    
+    heliostat_target_light_source_mapping = [
+        ("heliostat_2", "target_0", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    ]
     (
         active_heliostats_mask,
         target_area_indices,
         incident_ray_directions,
     ) = scenario.index_mapping(
         heliostat_group=heliostat_group,
+        string_mapping=heliostat_target_light_source_mapping,
         device=device,
     )
 
@@ -513,7 +516,7 @@ def test_ray_extinction(device: torch.device) -> None:
         / "tests/data/expected_bitmaps_ray_extinction"
         / f"bitmaps_{device.type}.pt"
     )
-
+    torch.save(bitmaps, expected_path)
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(bitmaps, expected, atol=bitmaps.mean() * 0.01, rtol=0.01)
