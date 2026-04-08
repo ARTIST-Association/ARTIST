@@ -96,7 +96,7 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
                     ]
                 ),
                 torch.tensor([[[0.0, 1.0, 0.0, 0.0], [2.0, 0.0, 0.0, 0.0]]]),
-                torch.tensor([[0.0, 0.0, -1.0]]),
+                torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             ],
         ),
         (
@@ -121,7 +121,7 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
                         ]
                     ]
                 ),
-                torch.tensor([[-0.1987, -0.4699, -0.8601]]),
+                torch.tensor([[-0.1987, -0.4699, -0.8601, 0.0]]),
             ],
         ),
     ],
@@ -268,7 +268,7 @@ def surface_for_index_test_rotated_and_translated(
                     ]
                 ),
                 torch.tensor([[[-2.0, 1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]]]),
-                torch.tensor([[0.0, 0.0, -1.0]]),
+                torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             ],
         ),
         (
@@ -292,7 +292,7 @@ def surface_for_index_test_rotated_and_translated(
                         ]
                     ]
                 ),
-                torch.tensor([[-0.1987, -0.4699, -0.8601]]),
+                torch.tensor([[-0.1987, -0.4699, -0.8601, 0.0]]),
             ],
         ),
     ],
