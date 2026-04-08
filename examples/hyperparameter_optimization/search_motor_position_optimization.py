@@ -168,7 +168,7 @@ def motor_position_optimizer_for_hpo(
         dni=500,
         device=device,
     )
-    loss = motor_positions_optimizer.optimize(
+    loss, _, _, _, _, = motor_positions_optimizer.optimize(
         loss_definition=loss_functions.KLDivergenceLoss(), device=device
     )
 
@@ -208,7 +208,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = config.get("data_dir", "./PAINT_data")
     device_default = config.get("device", "cuda")
     scenarios_dir_default = config.get(
         "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"

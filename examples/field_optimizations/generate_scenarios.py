@@ -338,8 +338,7 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
     data_dir = pathlib.Path(args.data_dir)
-    #tower_file = data_dir / args.tower_file_name
-    tower_file = Path("tutorials/data/paint/tower-measurements.json")
+    tower_file = data_dir / args.tower_file_name
 
     for case in ["baseline", "full_field"]:
         viable_heliostats_data = (

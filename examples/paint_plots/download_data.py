@@ -55,7 +55,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = config.get("data_dir", "./PAINT_data")
     metadata_root_default = config.get("metadata_root", "./")
     metadata_file_name_default = config.get(
         "metadata_file_name", "calibration_metadata_all_heliostats.csv"

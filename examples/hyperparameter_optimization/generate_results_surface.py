@@ -180,14 +180,8 @@ def data_for_flux_plots(
 
         cropped_flux_distributions = utils.crop_flux_distributions_around_center(
             flux_distributions=bitmaps_per_heliostat,
-            crop_width=config_dictionary.utis_crop_width,
-            crop_height=config_dictionary.utis_crop_height,
-            target_plane_widths=scenario.target_areas.dimensions[target_area_indices][
-                :, index_mapping.target_area_width
-            ],
-            target_plane_heights=scenario.target_areas.dimensions[target_area_indices][
-                :, index_mapping.target_area_height
-            ],
+            solar_tower=scenario.solar_tower,
+            target_area_indices=target_area_indices,
             device=device,
         )
 
@@ -455,7 +449,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = config.get("data_dir", "./PAINT_data")
     device_default = config.get("device", "cuda")
     scenarios_dir_default = config.get(
         "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"

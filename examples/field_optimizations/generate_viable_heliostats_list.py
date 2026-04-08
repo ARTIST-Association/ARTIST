@@ -67,6 +67,7 @@ def find_viable_heliostats(
         heliostat_name = heliostat_directory.name
 
         if heliostat_name in excluded_heliostats:
+            print(f"Skipping {heliostat_name}, part of the excluded heliostats list")
             continue
 
         properties_path = (
@@ -77,6 +78,7 @@ def find_viable_heliostats(
         calibration_dir = heliostat_directory / paint_mappings.SAVE_CALIBRATION
 
         if not calibration_dir.exists():
+            print(f"Skipping {heliostat_name}, no calibration directory found for this heliostat.")
             continue
 
         valid_calibration_files = []
@@ -197,7 +199,7 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = config.get("data_dir", "./PAINT_data")
     results_dir_default = config.get(
         "results_dir", "./examples/field_optimizations/results"
     )
@@ -272,7 +274,7 @@ if __name__ == "__main__":
     data_dir = pathlib.Path(args.data_dir)
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
-    for case in ["baseline", "full_field"]:
+    for case in ["baseline"]:#, "full_field"]:
         if case == "baseline":
             heliostat_list = args.heliostat_list_baseline
         else:

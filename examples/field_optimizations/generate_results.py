@@ -545,14 +545,8 @@ def surface_plots(
             )
             cropped_flux_distributions = utils.crop_flux_distributions_around_center(
                 flux_distributions=bitmaps_per_heliostat.detach(),
-                crop_width=config_dictionary.utis_crop_width,
-                crop_height=config_dictionary.utis_crop_height,
-                target_plane_widths=scenario.target_areas.dimensions[target_area_indices][
-                    :, index_mapping.target_area_width
-                ].detach(),
-                target_plane_heights=scenario.target_areas.dimensions[target_area_indices][
-                    :, index_mapping.target_area_height
-                ].detach(),
+                solar_tower=scenario.solar_tower,
+                target_area_indices=target_area_indices.detach(),
                 device=device,
             )
             names = [
@@ -814,7 +808,7 @@ def full_field_optimizations(
                 config_dictionary.tolerance: 1e-5,
                 config_dictionary.max_epoch: kinematics_config["max_epoch"],
                 config_dictionary.batch_size: kinematics_config["batch_size"],
-                config_dictionary.log_step: 10,
+                config_dictionary.log_step: basic_config[config_dictionary.log_step],
                 config_dictionary.early_stopping_delta: 1e-12,
                 config_dictionary.early_stopping_patience: 10000,
                 config_dictionary.early_stopping_window: 10000,
@@ -860,7 +854,7 @@ def full_field_optimizations(
         aim_point_data_kinematic_reconstruction = aim_point_plots(
             scenario=scenario_kinematics_ideal_surfaces,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_kinematics_ideal_surfaces.target_areas.names.index(baseline_target_area),
+            target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[baseline_target_area],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
             id="before",
@@ -918,7 +912,7 @@ def full_field_optimizations(
                 config_dictionary.tolerance: 1e-5,
                 config_dictionary.max_epoch: surface_config["max_epoch"],
                 config_dictionary.batch_size: surface_config["batch_size"],
-                config_dictionary.log_step: 10,
+                config_dictionary.log_step: basic_config[config_dictionary.log_step],
                 config_dictionary.early_stopping_delta: 1e-12,
                 config_dictionary.early_stopping_patience: 10000,
                 config_dictionary.early_stopping_window: 10000,
@@ -967,10 +961,10 @@ def full_field_optimizations(
             heliostat_data=data_mappings["surface_plot"],
             device=device,
         )
-        merged_data_surface = merge_data(
-            unoptimized_data=surface_data_before,
-            optimized_data=surface_data_after,
-        )
+        # merged_data_surface = merge_data(
+        #     unoptimized_data=surface_data_before,
+        #     optimized_data=surface_data_after,
+        # )
         reconstructed_nurbs_control_points = [
             heliostat_group.nurbs_control_points.detach()
             for heliostat_group in scenario_surface.heliostat_field.heliostat_groups
@@ -978,7 +972,7 @@ def full_field_optimizations(
         aim_point_data_surface_reconstruction = aim_point_plots(
             scenario=scenario_surface,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_surface.target_areas.names.index(baseline_target_area),
+            target_area_index=scenario_surface.solar_tower.target_name_to_index[baseline_target_area],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
             id="before",
@@ -987,7 +981,7 @@ def full_field_optimizations(
             device=device
         )
         results_dict["surface_reconstruction"] = {
-            "flux_plot_data": merged_data_surface,
+            #"flux_plot_data": merged_data_surface,
             "loss_history": loss_history_surface,
             "loss": surface_reconstruction_final_loss_per_heliostat,
             "aim_point_plot": aim_point_data_surface_reconstruction
@@ -1022,7 +1016,7 @@ def full_field_optimizations(
                 config_dictionary.tolerance: 1e-5,
                 config_dictionary.max_epoch: kinematics_config["max_epoch"],
                 config_dictionary.batch_size: kinematics_config["batch_size"],
-                config_dictionary.log_step: 10,
+                config_dictionary.log_step: basic_config[config_dictionary.log_step],
                 config_dictionary.early_stopping_delta: 1e-12,
                 config_dictionary.early_stopping_patience: 10000,
                 config_dictionary.early_stopping_window: 10000,
@@ -1075,7 +1069,7 @@ def full_field_optimizations(
         aim_point_data_combined_reconstruction = aim_point_plots(
             scenario=scenario_kinematics,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_kinematics.target_areas.names.index(baseline_target_area),
+            target_area_index=scenario_kinematics.solar_tower.target_name_to_index[baseline_target_area],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
             id="before",
@@ -1117,7 +1111,7 @@ def full_field_optimizations(
         aim_points_data_before = aim_point_plots(
             scenario=scenario_aim_points,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_aim_points.target_areas.names.index(baseline_target_area),
+            target_area_index=scenario_aim_points.solar_tower.target_name_to_index[baseline_target_area],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
             id="before",
@@ -1132,7 +1126,7 @@ def full_field_optimizations(
                 config_dictionary.tolerance: 1e-5,
                 config_dictionary.max_epoch: aim_point_config["max_epoch"],
                 config_dictionary.batch_size: aim_point_config["batch_size"],
-                config_dictionary.log_step: 10,
+                config_dictionary.log_step: basic_config[config_dictionary.log_step],
                 config_dictionary.early_stopping_delta: 1e-12,
                 config_dictionary.early_stopping_patience: 10000,
                 config_dictionary.early_stopping_window: 10000,
@@ -1151,8 +1145,8 @@ def full_field_optimizations(
             config_dictionary.constraints:{
                 config_dictionary.rho_flux_integral: aim_point_config["rho_flux_integral"],
                 config_dictionary.rho_local_flux: aim_point_config["rho_local_flux"],
-                config_dictionary.rho_spillage: aim_point_config["rho_spillage"],
-                config_dictionary.max_flux_density: aim_point_config["max_flux_density"],   
+                config_dictionary.rho_intercept: aim_point_config["rho_intercept"],
+                config_dictionary.max_flux_density: aim_point_config["max_flux_density"],
             }
         }
         motor_positions_optimizer = MotorPositionsOptimizer(
@@ -1160,19 +1154,19 @@ def full_field_optimizations(
             scenario=scenario_aim_points,
             optimization_configuration=optimization_configuration_aim_points,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_aim_points.target_areas.names.index(baseline_target_area),
+            target_area_index=scenario_aim_points.solar_tower.target_name_to_index[baseline_target_area],
             ground_truth=target_distribution,
             dni=baseline_dni,
             bitmap_resolution=bitmap_resolution,
             device=device,
         )
-        aimpoint_optimization_final_loss, loss_history_aim_points, _, _ = motor_positions_optimizer.optimize(
+        aimpoint_optimization_final_loss, loss_history_aim_points, _, _, _ = motor_positions_optimizer.optimize(
             loss_definition=KLDivergenceLoss(), device=device
         )
         aim_point_data_after = aim_point_plots(
             scenario=scenario_aim_points,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_aim_points.target_areas.names.index(baseline_target_area),
+            target_area_index=scenario_aim_points.solar_tower.target_name_to_index[baseline_target_area],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
             id="after",
@@ -1495,7 +1489,7 @@ def main() -> None:
         results_number = get_incremented_path_number(
             base_path=results_dir / "results.pt"
         )
-        results_path = results_dir / f"results_{results_number}.pt"
+        results_path = results_dir / f"results_{0}.pt"
 
         measured_data_dir = pathlib.Path(args.measured_data_dir)
         measured_data_dir.mkdir(parents=True, exist_ok=True)
@@ -1614,5 +1608,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     runtime_log.info("-----------------")
+    torch.autograd.set_detect_anomaly(True)
     main()
     runtime_log.info("\n\n")
