@@ -113,5 +113,5 @@ class SolarTower:
         cylinder_indices = target_area_indices[~planar_mask] - self.number_of_target_areas_per_type[0]
         if target_area_indices[~planar_mask].numel() > 0:
             aim_points[~planar_mask] = self.target_areas[1].centers[cylinder_indices] + self.target_areas[1].radii[cylinder_indices][:, None] * self.target_areas[1].normals[cylinder_indices]
-
+            aim_points[:, 3] = 1.0
         return aim_points
