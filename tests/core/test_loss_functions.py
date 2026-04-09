@@ -1,6 +1,6 @@
 import pytest
 import torch
-from pytest_mock import MockerFixture
+from unittest import mock 
 
 from artist.core.loss_functions import (
     AngleLoss,
@@ -159,7 +159,6 @@ def test_focal_spot_loss(
     ground_truth: torch.Tensor,
     expected: torch.Tensor,
     kwargs: bool,
-    mocker: MockerFixture,
     device: torch.device,
 ) -> None:
     """
@@ -178,8 +177,6 @@ def test_focal_spot_loss(
         Tensor of shape [number_of_flux_distributions].
     kwargs : bool
         Specifies if keyword arguments are passed.
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -188,15 +185,15 @@ def test_focal_spot_loss(
     AssertionError
         If test does not complete as expected.
     """
-    mock_scenario = mocker.MagicMock(spec=Scenario)
-    mock_solar_tower = mocker.MagicMock(spec=SolarTower)
-    mock_target_areas_planar = mocker.MagicMock(spec=TowerTargetAreasPlanar)
+    mock_scenario = mock.MagicMock(spec=Scenario)
+    mock_solar_tower = mock.MagicMock(spec=SolarTower)
+    mock_target_areas_planar = mock.MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["multi_focus_tower"]
 
     mock_target_areas_planar.centers = torch.tensor([[1.0, 1.0, 1.0, 0.0]], device=device)
     mock_target_areas_planar.dimensions = torch.tensor([[2, 2]], device=device)
     
-    mock_target_areas_cylindrical = mocker.MagicMock(spec=TowerTargetAreasCylindrical)
+    mock_target_areas_cylindrical = mock.MagicMock(spec=TowerTargetAreasCylindrical)
     mock_target_areas_cylindrical.names = ["receiver"]
 
     mock_solar_tower.target_areas =  [mock_target_areas_planar, mock_target_areas_cylindrical]
@@ -269,7 +266,6 @@ def test_pixel_loss(
     number_of_rays: int,
     expected: torch.Tensor,
     kwargs: bool,
-    mocker: MockerFixture,
     device: torch.device,
 ) -> None:
     """
@@ -293,8 +289,6 @@ def test_pixel_loss(
         Tensor of shape [number_of_samples].
     kwargs : bool
         Specifies if keyword arguments are passed.
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -303,14 +297,14 @@ def test_pixel_loss(
     AssertionError
         If test does not complete as expected.
     """
-    mock_scenario = mocker.MagicMock(spec=Scenario)
+    mock_scenario = mock.MagicMock(spec=Scenario)
 
-    target_areas = mocker.MagicMock(spec=TowerTargetAreas)
+    target_areas = mock.MagicMock(spec=TowerTargetAreas)
     target_areas.dimensions = target_area_dimensions.to(device)
     mock_scenario.target_areas = target_areas
 
-    light_sources = mocker.MagicMock(spec=LightSourceArray)
-    light_source = mocker.MagicMock(spec=LightSource)
+    light_sources = mock.MagicMock(spec=LightSourceArray)
+    light_source = mock.MagicMock(spec=LightSource)
     light_source.number_of_rays = number_of_rays
     light_sources.light_source_list = [light_source]
     mock_scenario.light_sources = light_sources
