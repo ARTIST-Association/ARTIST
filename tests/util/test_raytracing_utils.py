@@ -1,7 +1,8 @@
 import pytest
 import torch
 
-from artist.field.tower_target_areas_planar import TowerTargetAreas
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreas, TowerTargetAreasPlanar
 from artist.scene.rays import Rays
 from artist.util import raytracing_utils
 
@@ -105,7 +106,7 @@ def rays(request: pytest.FixtureRequest, device: torch.device) -> Rays:
 
 
 @pytest.fixture
-def target_area_1(
+def target_area_1_planar(
     device: torch.device,
 ) -> TowerTargetAreas:
     """
@@ -118,28 +119,25 @@ def target_area_1(
 
     Returns
     -------
-    TowerTargetAreas
+    TowerTargetAreasPlanar
         The target areas.
     """
-    normal_vectors = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
+    normals = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
     centers = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
-    dimensions = torch.tensor([[1, 1]], device=device)
-    curvatures = torch.tensor([[0, 0]], device=device)
+    dimensions = torch.tensor([[2, 2]], device=device)
 
-    return TowerTargetAreas(
-        names=["first"],
-        geometries=["planar"],
+    return TowerTargetAreasPlanar(
+        names=["planar1"],
         centers=centers,
-        normal_vectors=normal_vectors,
+        normals=normals,
         dimensions=dimensions,
-        curvatures=curvatures,
     )
 
 
 @pytest.fixture
-def target_area_2(
+def target_area_2_planar(
     device: torch.device,
-) -> TowerTargetAreas:
+) -> TowerTargetAreasPlanar:
     """
     Create target areas to use in the test.
 
@@ -150,21 +148,18 @@ def target_area_2(
 
     Returns
     -------
-    TowerTargetAreas
+    TowerTargetAreasPlanar
         The target areas.
     """
-    normal_vectors = torch.tensor([[0.5, 2.0, 1.0, 0.0]], device=device)
+    normals = torch.tensor([[0.2182, 0.7071, 0.7071, 0.0]], device=device)
     centers = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
-    dimensions = torch.tensor([[1, 1]], device=device)
-    curvatures = torch.tensor([[0, 0]], device=device)
+    dimensions = torch.tensor([[3, 3]], device=device)
 
-    return TowerTargetAreas(
-        names=["first"],
-        geometries=["planar_tilted"],
+    return TowerTargetAreasPlanar(
+        names=["planar2"],
         centers=centers,
-        normal_vectors=normal_vectors,
+        normals=normals,
         dimensions=dimensions,
-        curvatures=curvatures,
     )
 
 
@@ -199,54 +194,62 @@ def target_area_indices(
         "rays",
         "target_areas_fixture",
         "points_at_ray_origins",
-        "expected_intersections",
+        "expected_intersections_e",
+        "expected_intersections_u",
+        "expected_intersection_distances",
         "expected_absolute_intensities",
     ),
     [
         (  # Single intersection with ray perpendicular to plane.
-            (torch.tensor([[[[0.0, 0.0, -1.0, 0.0]]]]), torch.tensor([[[1.0]]])),
-            "target_area_1",
-            torch.tensor([[[0.0, 0.0, 1.0, 1.0]]]),
-            torch.tensor([[[[0.0, 0.0, 0.0, 1.0]]]]),
+            (torch.tensor([[[[0.0, -1.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_1_planar",
+            torch.tensor([[[0.0, -1.0, 0.0, 1.0]]]),
+            torch.tensor([[[127.5000]]]),
+            torch.tensor([[[127.5000]]]),
+            torch.tensor([[[1.0]]]),
             torch.tensor([[[1.0]]]),
         ),
         (  # Single intersection not perpendicular to plane.
-            (torch.tensor([[[[1.0, 1.0, -1.0, 0.0]]]]), torch.tensor([[[1.0]]])),
-            "target_area_1",
-            torch.tensor([[[0.0, 0.0, 1.0, 1.0]]]),
-            torch.tensor([[[[1.0, 1.0, 0.0, 1.0]]]]),
+            (torch.tensor([[[[ 0.5774,  -0.5774, 0.5774, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_1_planar",
+            torch.tensor([[[0.0, -1.0, 0.0, 1.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[255.0]]]),
+            torch.tensor([[[1.7319]]]),
+            torch.tensor([[[0.5774]]]),
+        ),
+        (  # Single intersection with tilted plane and reduced magnitude.
+            (torch.tensor([[[[0.0, -1.0, 0.0, 0.0]]]]), torch.tensor([[[0.5]]])),
+            "target_area_2_planar",
+            torch.tensor([[[0.0, -1.0, 0.0, 1.0]]]),
+            torch.tensor([[[127.5000]]]),
+            torch.tensor([[[127.5000]]]),
             torch.tensor([[[1.0]]]),
+            torch.tensor([[[0.3535]]]),
         ),
-        (  # Single intersection with tilted plane.
-            (torch.tensor([[[[-1.0, -2.0, -1.0, 0.0]]]]), torch.tensor([[[1.0]]])),
-            "target_area_2",
-            torch.tensor([[[2.0, 2.0, 2.0, 1.0]]]),
-            torch.tensor([[[[0.7273, -0.5455, 0.7273, 1.0]]]]),
-            torch.tensor([[[5.500000000000]]]),
-        ),
-        (  # Multiple intersections with multiple rays.
+        (  # Multiple intersections with multiple rays and some rays do not hit the plane.
             (
                 torch.tensor(
                     [
                         [
                             [
                                 [0.0, 0.0, -1.0, 0.0],
-                                [1.0, 1.0, -1.0, 0.0],
-                                [-1.0, -2.0, -1.0, 0.0],
+                                [0.4472, -0.8944, 0.0, 0.0],
+                                [0.7071, -0.7071, 0.0, 0.0],
                             ]
                         ]
                     ]
                 ),
-                torch.tensor([[[1.0, 1.0, 1.0]]]),
+                torch.tensor([[[1.0, 2.0, 1.0]]]),
             ),
-            "target_area_1",
+            "target_area_1_planar",
             torch.tensor(
-                [[[0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0], [2.0, 2.0, 2.0, 1.0]]]
+                [[[1.0, -1.0, 0.0, 1.0], [0.0, -1.0, 0.0, 1.0], [0.0, -1.0, 0.0, 1.0]]]
             ),
-            torch.tensor(
-                [[[[0.0, 0.0, 0.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, -2.0, 0.0, 1.0]]]]
-            ),
-            torch.tensor([[[1.0000, 1.0000, 1.0000]]]),
+            torch.tensor([[[255.0000, 63.7500, 0.0000]]]),
+            torch.tensor([[[0.0000, 127.5000, 127.5000]]]),
+            torch.tensor([[[0.0000, 1.1181, 1.4142]]]),
+            torch.tensor([[[-0.0000, 1.7888, 0.7071]]]),
         ),
     ],
     indirect=["rays"],
@@ -257,7 +260,9 @@ def test_line_plane_intersection(
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
-    expected_intersections: torch.Tensor,
+    expected_intersections_e: torch.Tensor,
+    expected_intersections_u: torch.Tensor,
+    expected_intersection_distances: torch.Tensor,
     expected_absolute_intensities: torch.Tensor,
     device: torch.device,
 ) -> None:
@@ -288,19 +293,135 @@ def test_line_plane_intersection(
     AssertionError
         If test does not complete as expected.
     """
-    intersections, absolute_intensities = raytracing_utils.line_plane_intersections(
+    bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities = raytracing_utils.line_plane_intersections(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
         target_area_indices=target_area_indices,
         device=device,
     )
+
     torch.testing.assert_close(
-        intersections, expected_intersections.to(device), rtol=1e-4, atol=1e-4
+        bitmap_intersections_e, expected_intersections_e.to(device), rtol=1e-4, atol=1e-4
     )
     torch.testing.assert_close(
-        absolute_intensities,
+        bitmap_intersections_u, expected_intersections_u.to(device), rtol=1e-4, atol=1e-4
+    )
+    torch.testing.assert_close(
+        intersection_distances, expected_intersection_distances.to(device), rtol=1e-4, atol=1e-4
+    )
+    torch.testing.assert_close(
+        intensities,
         expected_absolute_intensities.to(device),
         rtol=1e-4,
         atol=1e-4,
     )
+
+
+@pytest.fixture
+def target_area_1_cylindrical(device: torch.device) -> TowerTargetAreasCylindrical:
+    centers = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
+    normals = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
+    axes = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
+    radii = torch.tensor([1.0], device=device)
+    heights = torch.tensor([2.0], device=device)
+    opening_angles = torch.tensor([2*torch.pi], device=device)
+
+    return TowerTargetAreasCylindrical(
+        names=["cylinder1"],
+        centers=centers,
+        normals=normals,
+        axes=axes,
+        radii=radii,
+        heights=heights,
+        opening_angles=opening_angles
+    )
+
+@pytest.fixture
+def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindrical:
+    centers = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
+    normals = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
+    axes = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
+    radii = torch.tensor([1.0], device=device)
+    heights = torch.tensor([2.0], device=device)
+    opening_angles = torch.tensor([torch.pi / 2], device=device)
+
+    return TowerTargetAreasCylindrical(
+        names=["cylinder2"],
+        centers=centers,
+        normals=normals,
+        axes=axes,
+        radii=radii,
+        heights=heights,
+        opening_angles=opening_angles
+    )
+
+
+@pytest.mark.parametrize(
+    (
+        "rays",
+        "target_areas_fixture",
+        "points_at_ray_origins",
+        "expected_intersections_e",
+        "expected_intersections_u",
+        "expected_intersection_distances",
+        "expected_absolute_intensities",
+    ),
+    [
+        # Single intersection with ray perpendicular to plane.
+        (
+            (torch.tensor([[[[0.0, -1.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_1_cylindrical",
+            torch.tensor([[[0.0, 5.0, 0.0, 1.0]]]),
+            torch.tensor([[[127.5]]]),
+            torch.tensor([[[127.5]]]),
+            torch.tensor([[[4.0]]]),
+            torch.tensor([[[1.0]]]),
+        ),
+        # Single ray, hits outside valid height.
+        (
+            (torch.tensor([[[[0.0, -0.2425, 0.9701, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_1_cylindrical",
+            torch.tensor([[[0.0, 2.0, 0.0, 1.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+        ),
+        # Single ray outside of opening angle.
+        (
+            (torch.tensor([[[[-1.0, 0.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_2_cylindrical",
+            torch.tensor([[[3.0, 0.0, 0.0, 1.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+        ),
+    ],
+    indirect=["rays"]
+)
+def test_line_cylinder_intersection(
+    request: pytest.FixtureRequest,
+    target_area_indices: torch.Tensor | None,
+    rays: Rays,
+    target_areas_fixture: str,
+    points_at_ray_origins: torch.Tensor,
+    expected_intersections_e: torch.Tensor,
+    expected_intersections_u: torch.Tensor,
+    expected_intersection_distances: torch.Tensor,
+    expected_absolute_intensities: torch.Tensor,
+    device: torch.device,
+):
+    bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities = raytracing_utils.line_cylinder_intersections(
+        rays=rays,
+        points_at_ray_origins=points_at_ray_origins.to(device),
+        target_areas=request.getfixturevalue(target_areas_fixture),
+        target_area_indices=target_area_indices,
+        device=device,
+    )
+
+    torch.testing.assert_close(bitmap_intersections_e, expected_intersections_e.to(device), rtol=1e-4, atol=1e-4)
+    torch.testing.assert_close(bitmap_intersections_u, expected_intersections_u.to(device), rtol=1e-4, atol=1e-4)
+    torch.testing.assert_close(intersection_distances, expected_intersection_distances.to(device), rtol=1e-4, atol=1e-4)
+    torch.testing.assert_close(intensities, expected_absolute_intensities.to(device), rtol=1e-4, atol=1e-4)
