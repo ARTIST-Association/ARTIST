@@ -60,14 +60,14 @@ def line_plane_intersections(
     Parameters
     ----------
     rays : Rays
-        The rays.
+        Rays with directions and magnitudes, the directions must be normalized.
     points_at_ray_origins : torch.Tensor
-        The surface points of the ray origins.
+        Origins of the rays, which coincide with the surface points of the heliostats.
         Tensor of shape [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
     target_areas : TowerTargetAreas
-        All possible tower target areas with their properties.
+        All planar tower target areas.
     target_area_indices : torch.Tensor | None
-        The indices of target areas corresponding to each heliostat (default is None).
+        Indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
         Tensor of shape [number_of_active_heliostats].
     epsilon : float
@@ -95,19 +95,25 @@ def line_plane_intersections(
             dtype=torch.int32,
             device=device,
         )
-    plane_normals = target_areas.normals[target_area_indices]
-    plane_centers = target_areas.centers[target_area_indices]
+    
+    # Extract 3D data.
+    ray_directions = rays.ray_directions[..., :3]
+    ray_origins = points_at_ray_origins[..., :3]
+    plane_normals = target_areas.normals[target_area_indices][..., :3]
+    plane_centers = target_areas.centers[target_area_indices][..., :3]
 
     # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
-    # The relative intensities are calculated by taking the dot product (matrix multiplication) of the planes'
-    # unit normal vectors and the normalized ray-direction vectors, pointing from the planes to the sources.
-    # This determines how much the rays align with the plane normals.
-    # A positive dot product means the rays hit the front the plane, a zero dot product means a perpendicular ray
-    # to the normal, which is a parallel ray to the surface, which is invalid and a negative dot product means
-    # the ray hits the backside of the target plane, this is used to define a front facing mask for the rays. 
-    angle_based_intensities = (-rays.ray_directions * plane_normals[:, None, None, :]).sum(
-        dim=-1
-    )
+    # Compute the alignment of the rays with the plane normals using the dot product.
+    # In our raytracing process, the plane normals point away from the planes, which is usually the opposite
+    # direction of the rays. 
+    # Therefore, a ray hitting the front side of the plane forms an angle > 90° with the normal,
+    # making the dot product negative. By flipping the sign of the dot product, the front facing rays
+    # are assigned positive intensities. 
+    # - A negative dot product indicates the ray hits the front face of the plane (valid).
+    # - A zero dot product indicates the ray is parallel to the plane (invalid).
+    # - A positive dot product indicates the ray hits the back face of the plane (invalid). 
+    # The front-facing mask selects only rays hitting the front of the plane.
+    angle_based_intensities = -(ray_directions * plane_normals[:, None, None, :]).sum(-1)
     front_facing_mask = angle_based_intensities > epsilon
 
     # Calculate the intersections on the plane of each ray.
@@ -116,13 +122,16 @@ def line_plane_intersections(
     # Next, calculate the scalar distances along the ray directions from the ray origins to the intersection points on the planes.
     # This indicates how far the intersection points are along the rays' directions.
     numerator = (
-        (points_at_ray_origins - plane_centers[:, None, :]) * plane_normals[:, None, :]
-    ).sum(dim=-1)[:, None, :]
+        (plane_centers[:,None,:] - ray_origins)
+        * plane_normals[:,None,:]
+    ).sum(-1)[:,None,:]
 
-    intersection_distances = numerator / torch.clamp(angle_based_intensities, min=epsilon)
+    intersection_distances = torch.zeros_like(angle_based_intensities)
+    intersection_distances[front_facing_mask] = numerator[front_facing_mask] / angle_based_intensities[front_facing_mask]
+    
     intersections = (
-        points_at_ray_origins[:, None, :, :]
-        + rays.ray_directions * intersection_distances[:, :, :, None]
+        ray_origins[:, None, :, :]
+        + ray_directions * intersection_distances[:, :, :, None]
     )
 
     intensities = rays.ray_magnitudes * angle_based_intensities
@@ -158,17 +167,18 @@ def line_plane_intersections(
 
     # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.
     # Also filter out rays that hit the backside of the target or rays that are parallel to the target.    
-    intersection_indices_on_target = (
+    valid_mask = (
         (0 <= bitmap_intersections_e)
         & (bitmap_intersections_e <= bitmap_resolution[0] - 1)
         & (0 <= bitmap_intersections_u)
         & (bitmap_intersections_u <= bitmap_resolution[1] - 1)
+        & front_facing_mask
     )
 
-    bitmap_intersections_e = bitmap_intersections_e * intersection_indices_on_target * front_facing_mask
-    bitmap_intersections_u = bitmap_intersections_u * intersection_indices_on_target * front_facing_mask
-    intersection_distances = intersection_distances * intersection_indices_on_target * front_facing_mask
-    intensities = intensities * intersection_indices_on_target * front_facing_mask
+    bitmap_intersections_e = bitmap_intersections_e * valid_mask
+    bitmap_intersections_u = bitmap_intersections_u * valid_mask
+    intersection_distances = intersection_distances * valid_mask
+    intensities = intensities * valid_mask
 
     # The column indices need to be flipped because the more intuitive way to look at flux prediction
     # bitmaps, is to imagine oneself to stand in the heliostat field looking at the receiver.
@@ -201,6 +211,13 @@ def line_cylinder_intersections(
     """
     device = get_device(device=device)
     bitmap_resolution = bitmap_resolution.to(device)
+
+    if target_area_indices is None:
+        target_area_indices = torch.zeros(
+            points_at_ray_origins.shape[index_mapping.heliostat_dimension],
+            dtype=torch.int32,
+            device=device,
+        )
 
     origins = points_at_ray_origins[:, :, :3]
     directions = rays.ray_directions[:, :, :, :3]
