@@ -557,7 +557,7 @@ def build_linear_bounding_volume_hierarchies(
     primitive_maxs = blocking_primitives_corners.max(dim=1).values
     centroids = blocking_primitives_corners.mean(dim=1)
 
-    codes = morton_codes(coordinates=centroids, epsilon=1e-6, device=device)
+    codes = morton_codes(coordinates=centroids, epsilon=1e-6)
     sorted_codes, sorted_primitive_indices = torch.sort(codes)
 
     # Analyze similarities between Morton codes and determine the direction to the more similar Morton codes,
