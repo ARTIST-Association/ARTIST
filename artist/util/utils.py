@@ -539,10 +539,10 @@ def get_center_of_mass(
 
     x_center_of_mass = (x_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
-    ) * image_width
+    )
     y_center_of_mass = (y_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
-    ) * image_height
+    )
     return torch.stack([x_center_of_mass, y_center_of_mass], dim=1) 
 
 def bitmap_coordinates_to_target_coordinates(
@@ -566,6 +566,7 @@ def bitmap_coordinates_to_target_coordinates(
         coordinates[:, 0] = bitmap_coordinates[planar_mask, 0]
         coordinates[:, 2] = bitmap_coordinates[planar_mask, 1]
 
+        # Account for flips from bitmap to target coordinates.
         target_dimensions = torch.zeros((planar_mask.sum(), 4), device=device)
         target_dimensions[:, index_mapping.e] = -solar_tower.target_areas[0].dimensions[planar_indices, 0]
         target_dimensions[:, index_mapping.u] = -solar_tower.target_areas[0].dimensions[planar_indices, 1]

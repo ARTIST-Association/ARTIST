@@ -107,34 +107,33 @@ def line_plane_intersections(
     # In our raytracing process, the plane normals point away from the planes, which is usually the opposite
     # direction of the rays. 
     # Therefore, a ray hitting the front side of the plane forms an angle > 90° with the normal,
-    # making the dot product negative. By flipping the sign of the dot product, the front facing rays
-    # are assigned positive intensities. 
+    # making the dot product negative.
     # - A negative dot product indicates the ray hits the front face of the plane (valid).
     # - A zero dot product indicates the ray is parallel to the plane (invalid).
     # - A positive dot product indicates the ray hits the back face of the plane (invalid). 
     # The front-facing mask selects only rays hitting the front of the plane.
-    angle_based_intensities = -(ray_directions * plane_normals[:, None, None, :]).sum(-1)
-    front_facing_mask = angle_based_intensities > epsilon
+    angle_based_intensities = (ray_directions * plane_normals[:, None, None, :]).sum(dim=-1)
+    front_facing_mask = angle_based_intensities < 0.0
 
     # Calculate the intersections on the plane of each ray.
     # First, calculate the projections of the ray origins onto the planes' normals.
     # This indicates how far the ray origins are from the planes (along the normal directions of the planes).
-    # Next, calculate the scalar distances along the ray directions from the ray origins to the intersection points on the planes.
-    # This indicates how far the intersection points are along the rays' directions.
+    # Next, calculate the scalar distances along the ray directions from the ray origins to the intersection
+    # points on the planes. This indicates how far the intersection points are along the rays' directions.
     numerator = (
-        (plane_centers[:,None,:] - ray_origins)
-        * plane_normals[:,None,:]
-    ).sum(-1)[:,None,:]
+        (plane_centers[:, None, :] - ray_origins) * plane_normals[:, None, :]
+    ).sum(dim=-1)[:, None, :]
 
-    intersection_distances = torch.zeros_like(angle_based_intensities)
-    intersection_distances[front_facing_mask] = numerator[front_facing_mask] / angle_based_intensities[front_facing_mask]
-    
+    safe_denominator = torch.where(front_facing_mask, angle_based_intensities, 1.0)
+    intersection_distances = (numerator / safe_denominator) * front_facing_mask
+
     intersections = (
         ray_origins[:, None, :, :]
         + ray_directions * intersection_distances[:, :, :, None]
     )
 
-    intensities = rays.ray_magnitudes * angle_based_intensities
+    # Flip the sign of the intensities, so that valid rays have a positive intensity.
+    intensities = rays.ray_magnitudes * -angle_based_intensities
 
     # Determine the E- and U-positions of the rays' intersections with the target areas' planes, scaled to the
     # bitmap resolutions. Here, we decide that the bottom left corner of the 2D bitmap is the origin of the flux
