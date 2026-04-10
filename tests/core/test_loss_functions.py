@@ -132,23 +132,33 @@ def test_vector_loss(
 
 
 @pytest.mark.parametrize(
-    "prediction, ground_truth, expected, kwargs",
+    "prediction, target_area_center, ground_truth, expected, kwargs",
     [
         (
             torch.ones((1, 2, 2)),
-            torch.tensor([[1.0, 1.0, 1.0, 0.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
             torch.tensor([0.0]),
             True,
         ),
         (
             torch.ones((1, 2, 2)),
-            torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
+            torch.tensor([[1.5, 0.0, 0.0, 1.0]]),
+            torch.tensor([[1.5, 0.0, 0.0, 1.0]]),
+            torch.tensor([0.0]),
+            True,
+        ),
+        (
+            torch.ones((1, 2, 2)),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.tensor([[1.0, 1.0, 1.0, 0.0]]),
             torch.tensor([1.732050776482]),
             True,
         ),
         (
             torch.ones((1, 2, 2)),
-            torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
             torch.tensor([3.0]),
             False,
         ),
@@ -156,6 +166,7 @@ def test_vector_loss(
 )
 def test_focal_spot_loss(
     prediction: torch.Tensor,
+    target_area_center: torch.Tensor,
     ground_truth: torch.Tensor,
     expected: torch.Tensor,
     kwargs: bool,
@@ -190,7 +201,7 @@ def test_focal_spot_loss(
     mock_target_areas_planar = mock.MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["multi_focus_tower"]
 
-    mock_target_areas_planar.centers = torch.tensor([[1.0, 1.0, 1.0, 0.0]], device=device)
+    mock_target_areas_planar.centers = target_area_center.to(device)
     mock_target_areas_planar.dimensions = torch.tensor([[2, 2]], device=device)
     
     mock_target_areas_cylindrical = mock.MagicMock(spec=TowerTargetAreasCylindrical)
