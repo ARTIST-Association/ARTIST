@@ -23,7 +23,7 @@ def focal_spot() -> torch.Tensor:
         The desired focal spot.
         Tensor of shape [4].
     """
-    ground_truth = torch.tensor([1.0, -0.5030, 56.0, 1.0000])
+    ground_truth = torch.tensor([1.5, -3.2357, 37.0, 1.0])
 
     return ground_truth
 
@@ -124,8 +124,8 @@ def test_motor_positions_optimizer(
     constraint_dict = {
         config_dictionary.rho_flux_integral: 1.0,
         config_dictionary.rho_local_flux: 1.0,
-        config_dictionary.rho_spillage: 1.0,
-        config_dictionary.max_flux_density: 3,
+        config_dictionary.rho_intercept: 1.0,
+        config_dictionary.max_flux_density: 1000000,
     }
     # Combine configurations.
     optimization_configuration = {

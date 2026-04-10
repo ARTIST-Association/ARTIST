@@ -516,7 +516,7 @@ def test_ray_extinction(device: torch.device) -> None:
         / "tests/data/expected_bitmaps_ray_extinction"
         / f"bitmaps_{device.type}.pt"
     )
-    torch.save(bitmaps, expected_path)
+
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(bitmaps, expected, atol=bitmaps.mean() * 0.01, rtol=0.01)

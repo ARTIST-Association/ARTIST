@@ -82,7 +82,7 @@ def test_surface_reconstructor(
         config_dictionary.cooldown: 5,
     }
     constraint_dict = {
-        config_dictionary.rho_energy: 1.0,
+        config_dictionary.rho_flux_integral: 1.0,
         config_dictionary.energy_tolerance: 0.01,
         config_dictionary.weight_smoothness: 0.005,
         config_dictionary.weight_ideal_surface: 0.005,
