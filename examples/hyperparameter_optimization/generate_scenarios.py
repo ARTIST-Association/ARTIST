@@ -202,11 +202,7 @@ def generate_fitted_scenario(
             deflectometry_file,
         )
         for name in selected_heliostats_list
-        if (
-            deflectometry_file := find_latest_deflectometry_file(
-                name, data_directory
-            )
-        )
+        if (deflectometry_file := find_latest_deflectometry_file(name, data_directory))
         is not None
     ]
 
@@ -370,7 +366,7 @@ if __name__ == "__main__":
 
         if case == "surface":
             scenario_path = (
-                pathlib.Path(args.scenarios_dir) / f"deflectometry_scenario.h5"
+                pathlib.Path(args.scenarios_dir) / "deflectometry_scenario.h5"
             )
             if not scenario_path.parent.exists():
                 scenario_path.parent.mkdir(parents=True, exist_ok=True)
@@ -385,6 +381,8 @@ if __name__ == "__main__":
                     data_directory=data_dir,
                     scenario_path=scenario_path,
                     tower_file_path=tower_file,
-                    selected_heliostats_list=[heliostat["name"] for heliostat in viable_heliostats],
+                    selected_heliostats_list=[
+                        heliostat["name"] for heliostat in viable_heliostats
+                    ],
                     device=device,
                 )

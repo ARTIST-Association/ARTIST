@@ -3,13 +3,13 @@ import pathlib
 import warnings
 from typing import Any
 
-from matplotlib.gridspec import GridSpec
-import seaborn as sns
-import pandas as pd
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import torch
 import yaml
 from matplotlib import pyplot as plt
+from matplotlib.gridspec import GridSpec
 from scipy.stats import gaussian_kde
 
 from artist.core.loss_functions import KLDivergenceLoss
@@ -32,6 +32,7 @@ plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
 cmap = "inferno"
 
+
 def plot_heliostat_positions(
     results: list[dict[str, Any]], results_ftp, save_dir: pathlib.Path
 ) -> None:
@@ -47,7 +48,6 @@ def plot_heliostat_positions(
     save_dir : pathlib.Path
         Directory to save the plots.
     """
-
     positions = list(results["heliostat_positions"].values())
 
     x = [pos[0] for pos in positions]
@@ -58,12 +58,7 @@ def plot_heliostat_positions(
     y_all = [pos[1] for pos in positions_all_heliostats]
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(
-        x=x_all,
-        y=y_all,
-        c=plot_colors["lightblue"],
-        s=10 
-    )
+    ax.scatter(x=x_all, y=y_all, c=plot_colors["lightblue"], s=10)
 
     ax.scatter(
         x,
@@ -82,12 +77,13 @@ def plot_heliostat_positions(
     ax.grid(True)
 
     save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / f"heliostat_positions.pdf"
+    filename = save_dir / "heliostat_positions.pdf"
     fig.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
     print(f"Saved heliostat position plot at: {filename}.")
+
 
 def plot_surface_reconstruction_flux(
     results: dict[str, Any],
@@ -242,14 +238,15 @@ def plot_surface_reconstruction_flux(
         )
         cbar6.set_label("Angle (rad)")
 
-    save_dir = (save_dir / f"run_{results_number}")
+    save_dir = save_dir / f"run_{results_number}"
     save_dir.mkdir(parents=True, exist_ok=True)
     filename = save_dir / "surface_reconstruction_flux.png"
     fig.tight_layout()
-    fig.savefig(filename)#, dpi=300, bbox_inches="tight")
+    fig.savefig(filename)  # , dpi=300, bbox_inches="tight")
     plt.close(fig)
 
     print(f"Saved surface reconstruction error distribution plot at: {filename}.")
+
 
 def plot_surface_error_analysis(
     results: dict[str, Any],
@@ -336,12 +333,15 @@ def plot_surface_error_analysis(
     ax2.legend(loc="upper right")
 
     save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / f"run_{results_number}/surface_reconstruction_error_analysis.pdf"
+    filename = (
+        save_dir / f"run_{results_number}/surface_reconstruction_error_analysis.pdf"
+    )
     fig.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
     print(f"Saved surface reconstruction error analysis plot at: {filename}.")
+
 
 def plot_surface_loss_history(
     results: dict[str, Any],
@@ -359,39 +359,39 @@ def plot_surface_loss_history(
     """
     loss_history = results["surface_reconstruction"]["loss_history"]
     epochs = np.arange(0, len(loss_history[0]["total_loss"]))
-    
+
     for batch_index, batch in enumerate(loss_history):
         fig, ax1 = plt.subplots(figsize=(8, 5))
 
-        l1, = ax1.plot(
+        (l1,) = ax1.plot(
             epochs,
             batch["total_loss"],
             label=r"Total Loss",
             color=plot_colors["darkblue"],
         )
 
-        l2, = ax1.plot(
+        (l2,) = ax1.plot(
             epochs,
             batch["flux_loss"],
             label=r"KL-Divergence",
             color=plot_colors["blue_1"],
         )
 
-        l3, = ax1.plot(
+        (l3,) = ax1.plot(
             epochs,
             batch["ideal_regularizer"],
             label=r"Ideal Surface Regularization",
             color=plot_colors["blue_2"],
         )
 
-        l4, = ax1.plot(
+        (l4,) = ax1.plot(
             epochs,
             batch["smoothness_regularizer"],
             label=r"Smooth Surface Regularization",
             color=plot_colors["blue_3"],
         )
 
-        l5, = ax1.plot(
+        (l5,) = ax1.plot(
             epochs,
             batch["flux_integral_constraint"],
             label=r"Flux integral Constraint",
@@ -401,9 +401,9 @@ def plot_surface_loss_history(
         ax1.set_xlabel(r"Epoch")
         ax1.set_ylabel(r"Loss Terms")
         ax1.grid(True)
-        
+
         ax2 = ax1.twinx()
-        l6, = ax2.plot(
+        (l6,) = ax2.plot(
             epochs,
             batch["flux_integral"],
             label=r"Flux integral difference %",
@@ -418,12 +418,16 @@ def plot_surface_loss_history(
         ax1.set_title(r"\textbf{Loss History}", fontsize=13, ha="center")
 
         save_dir.mkdir(parents=True, exist_ok=True)
-        filename = save_dir / f"run_{results_number}/surface_reconstruction_loss_history_{batch_index}.pdf"
+        filename = (
+            save_dir
+            / f"run_{results_number}/surface_reconstruction_loss_history_{batch_index}.pdf"
+        )
         fig.tight_layout()
         fig.savefig(filename, dpi=300, bbox_inches="tight")
         plt.close(fig)
-        
+
         print(f"Saved surface reconstruction loss history plot at: {filename}.")
+
 
 def plot_kinematics_reconstruction_flux(
     results: dict[str, Any],
@@ -538,6 +542,7 @@ def plot_kinematics_reconstruction_flux(
 
         print(f"Saved kinematics reconstruction flux plot at: {filename}.")
 
+
 def plot_kinematics_error_analysis(
     results: dict[str, Any],
     save_dir: pathlib.Path,
@@ -596,7 +601,9 @@ def plot_kinematics_error_analysis(
             ax_kde_m = fig.add_subplot(gs[0, 0])
             ax_kde_mrad = None
 
-        ax_dist_m = fig.add_subplot(gs[:, 1]) if split_left else fig.add_subplot(gs[0, 1])
+        ax_dist_m = (
+            fig.add_subplot(gs[:, 1]) if split_left else fig.add_subplot(gs[0, 1])
+        )
         ax_dist_mrad = ax_dist_m.twinx()
 
         x_max = max(errors_m)
@@ -683,8 +690,12 @@ def plot_kinematics_error_analysis(
         fit_m = np.poly1d(np.polyfit(distances, errors_m, 1))
         fit_mrad = np.poly1d(np.polyfit(distances, errors_mrad, 1))
 
-        ax_dist_m.plot(x_fit, fit_m(x_fit), linestyle="--", color=plot_colors["lightblue"])
-        ax_dist_mrad.plot(x_fit, fit_mrad(x_fit), linestyle="--", color=plot_colors["darkblue"])
+        ax_dist_m.plot(
+            x_fit, fit_m(x_fit), linestyle="--", color=plot_colors["lightblue"]
+        )
+        ax_dist_mrad.plot(
+            x_fit, fit_mrad(x_fit), linestyle="--", color=plot_colors["darkblue"]
+        )
 
         ax_dist_m.set_xlabel(r"\textbf{Heliostat Distance from Tower [m]}")
         ax_dist_m.set_ylabel(r"\textbf{Pointing Error [m]}")
@@ -693,7 +704,9 @@ def plot_kinematics_error_analysis(
 
         handles_m, labels_m = ax_dist_m.get_legend_handles_labels()
         handles_a, labels_a = ax_dist_mrad.get_legend_handles_labels()
-        ax_dist_m.legend(handles_m + handles_a, labels_m + labels_a, fontsize=8, loc="upper right")
+        ax_dist_m.legend(
+            handles_m + handles_a, labels_m + labels_a, fontsize=8, loc="upper right"
+        )
 
         fig.suptitle(rf"\textbf{{Kinematics Reconstruction with {label}}}", fontsize=14)
 
@@ -702,6 +715,7 @@ def plot_kinematics_error_analysis(
         plt.close(fig)
 
         print(f"Saved kinematics reconstruction error analysis plot at: {filename}.")
+
 
 def plot_kinematics_loss_history(
     results: dict[str, Any],
@@ -725,7 +739,7 @@ def plot_kinematics_loss_history(
     for reconstruction in reconstructions:
         loss_history = results[reconstruction]["loss_history"]
         epochs = np.arange(0, len(loss_history["total_loss"]))
-        
+
         fig, ax1 = plt.subplots(figsize=(6, 5))
 
         ax1.plot(
@@ -741,14 +755,18 @@ def plot_kinematics_loss_history(
         ax1.legend(loc="upper right")
 
         ax1.set_title(r"\textbf{Loss History}", fontsize=13, ha="center")
-        
+
         save_dir.mkdir(parents=True, exist_ok=True)
-        filename = save_dir / f"run_{results_number}/kinematics_reconstruction_loss_history_{reconstruction}.pdf"
+        filename = (
+            save_dir
+            / f"run_{results_number}/kinematics_reconstruction_loss_history_{reconstruction}.pdf"
+        )
         plt.tight_layout()
         fig.savefig(filename, dpi=300, bbox_inches="tight")
         plt.close(fig)
 
         print(f"Saved kinematics reconstructions loss history plot at: {filename}.")
+
 
 def plot_model_reconstruction(
     results: dict[str, Any],
@@ -767,42 +785,98 @@ def plot_model_reconstruction(
     measured_flux = results["measured_flux"]
     ideal_model_flux = results["ideal_model"]["aim_point_plot"]
     reconstructed_surfaces_flux = results["surface_reconstruction"]["aim_point_plot"]
-    reconstructed_kinematics_flux = results["kinematics_reconstruction_with_ideal_surfaces"]["aim_point_plot"]
-    combined_reconstruction_flux = results["kinematics_reconstruction_with_reconstructed_surfaces"]["aim_point_plot"]
+    reconstructed_kinematics_flux = results[
+        "kinematics_reconstruction_with_ideal_surfaces"
+    ]["aim_point_plot"]
+    combined_reconstruction_flux = results[
+        "kinematics_reconstruction_with_reconstructed_surfaces"
+    ]["aim_point_plot"]
 
-    measured_flux_normed = measured_flux * (combined_reconstruction_flux.sum() / measured_flux.sum())
+    measured_flux_normed = measured_flux * (
+        combined_reconstruction_flux.sum() / measured_flux.sum()
+    )
 
     kl_divergence = KLDivergenceLoss()
     kl_divs_1 = [
         "",
-        kl_divergence(measured_flux_normed.unsqueeze(0), ideal_model_flux.unsqueeze(0), reduction_dimensions=(1,2)).item(),
-        kl_divergence(measured_flux_normed.unsqueeze(0), reconstructed_surfaces_flux.unsqueeze(0), reduction_dimensions=(1,2)).item(),
-        kl_divergence(measured_flux_normed.unsqueeze(0), reconstructed_kinematics_flux.unsqueeze(0), reduction_dimensions=(1,2)).item(),
-        kl_divergence(measured_flux_normed.unsqueeze(0), combined_reconstruction_flux.unsqueeze(0), reduction_dimensions=(1,2)).item(),
+        kl_divergence(
+            measured_flux_normed.unsqueeze(0),
+            ideal_model_flux.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
+        kl_divergence(
+            measured_flux_normed.unsqueeze(0),
+            reconstructed_surfaces_flux.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
+        kl_divergence(
+            measured_flux_normed.unsqueeze(0),
+            reconstructed_kinematics_flux.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
+        kl_divergence(
+            measured_flux_normed.unsqueeze(0),
+            combined_reconstruction_flux.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
     ]
 
     kl_divs_2 = [
         "",
-        kl_divergence(ideal_model_flux.unsqueeze(0), measured_flux_normed.unsqueeze(0), reduction_dimensions=(1,2)).item(),
-        kl_divergence(reconstructed_surfaces_flux.unsqueeze(0), measured_flux_normed.unsqueeze(0), reduction_dimensions=(1,2)).item(),
-        kl_divergence(reconstructed_kinematics_flux.unsqueeze(0), measured_flux_normed.unsqueeze(0), reduction_dimensions=(1,2)).item(),
-        kl_divergence(combined_reconstruction_flux.unsqueeze(0), measured_flux_normed.unsqueeze(0), reduction_dimensions=(1,2)).item(),
+        kl_divergence(
+            ideal_model_flux.unsqueeze(0),
+            measured_flux_normed.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
+        kl_divergence(
+            reconstructed_surfaces_flux.unsqueeze(0),
+            measured_flux_normed.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
+        kl_divergence(
+            reconstructed_kinematics_flux.unsqueeze(0),
+            measured_flux_normed.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
+        kl_divergence(
+            combined_reconstruction_flux.unsqueeze(0),
+            measured_flux_normed.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        ).item(),
     ]
 
     mse_losses = [
         torch.nan,
         torch.nn.functional.mse_loss(ideal_model_flux, measured_flux_normed).item(),
-        torch.nn.functional.mse_loss(reconstructed_surfaces_flux, measured_flux_normed).item(),
-        torch.nn.functional.mse_loss(reconstructed_kinematics_flux, measured_flux_normed).item(),
-        torch.nn.functional.mse_loss(combined_reconstruction_flux, measured_flux_normed).item(),
+        torch.nn.functional.mse_loss(
+            reconstructed_surfaces_flux, measured_flux_normed
+        ).item(),
+        torch.nn.functional.mse_loss(
+            reconstructed_kinematics_flux, measured_flux_normed
+        ).item(),
+        torch.nn.functional.mse_loss(
+            combined_reconstruction_flux, measured_flux_normed
+        ).item(),
     ]
 
     l_one_modified = [
         torch.nan,
-        (torch.abs((ideal_model_flux - measured_flux_normed)).sum() / measured_flux_normed.sum()).item(),
-        (torch.abs((reconstructed_surfaces_flux - measured_flux_normed)).sum() / measured_flux_normed.sum()).item(),
-        (torch.abs((reconstructed_kinematics_flux - measured_flux_normed)).sum() / measured_flux_normed.sum()).item(),
-        (torch.abs((combined_reconstruction_flux - measured_flux_normed)).sum() / measured_flux_normed.sum()).item(),
+        (
+            torch.abs((ideal_model_flux - measured_flux_normed)).sum()
+            / measured_flux_normed.sum()
+        ).item(),
+        (
+            torch.abs((reconstructed_surfaces_flux - measured_flux_normed)).sum()
+            / measured_flux_normed.sum()
+        ).item(),
+        (
+            torch.abs((reconstructed_kinematics_flux - measured_flux_normed)).sum()
+            / measured_flux_normed.sum()
+        ).item(),
+        (
+            torch.abs((combined_reconstruction_flux - measured_flux_normed)).sum()
+            / measured_flux_normed.sum()
+        ).item(),
     ]
 
     images = [
@@ -830,15 +904,17 @@ def plot_model_reconstruction(
         r"\textbf{Ideal Model Flux}",
         r"\textbf{Reconstructed Surfaces}",
         r"\textbf{Reconstructed Kinematics}",
-        r"\textbf{Combined Reconstructions}"
+        r"\textbf{Combined Reconstructions}",
     ]
 
     points = {
-        "focal spot aim point": 256 - torch.tensor([104.7413, 139.8122], device='cuda:0'),
-        "aim point 'measured'": 256 - torch.tensor([112.9362, 111.4531], device='cuda:0')
+        "focal spot aim point": 256
+        - torch.tensor([104.7413, 139.8122], device="cuda:0"),
+        "aim point 'measured'": 256
+        - torch.tensor([112.9362, 111.4531], device="cuda:0"),
     }
 
-    measured=images[0]
+    measured = images[0]
     Y, X = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
     x_com_measured = (X * measured).sum() / measured.sum()
     y_com_measured = (Y * measured).sum() / measured.sum()
@@ -847,15 +923,38 @@ def plot_model_reconstruction(
         im = ax.imshow(flux, cmap=cmap, vmin=vmin, vmax=vmax)
         ax.axis("off")
         ax.set_title(titles[idx], fontsize=13)
-        ax.scatter(x_com_measured, y_com_measured, s=80, marker='x', color='blue', label="center of mass reference")
+        ax.scatter(
+            x_com_measured,
+            y_com_measured,
+            s=80,
+            marker="x",
+            color="blue",
+            label="center of mass reference",
+        )
 
         Y, X = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
         x_com = (X * flux).sum() / flux.sum()
         y_com = (Y * flux).sum() / flux.sum()
-        ax.scatter(x_com, y_com, s=80, marker='o', color='green', label="center of mass")
-            
-        ax.scatter(256/2, 256/2, s=40, marker='x', color='white', label="geometric center of bitmap")
-        ax.scatter(points["aim point 'measured'"][0].cpu(), points["aim point 'measured'"][1].cpu(), s=80, marker='x', color='white', label="aim point from protocol")
+        ax.scatter(
+            x_com, y_com, s=80, marker="o", color="green", label="center of mass"
+        )
+
+        ax.scatter(
+            256 / 2,
+            256 / 2,
+            s=40,
+            marker="x",
+            color="white",
+            label="geometric center of bitmap",
+        )
+        ax.scatter(
+            points["aim point 'measured'"][0].cpu(),
+            points["aim point 'measured'"][1].cpu(),
+            s=80,
+            marker="x",
+            color="white",
+            label="aim point from protocol",
+        )
 
         ax.legend(fontsize=9, loc="upper right")
 
@@ -868,7 +967,7 @@ def plot_model_reconstruction(
             annotation += f"\nMSE: {mse_losses[idx]:.4f}"
         if not torch.isnan(torch.tensor(l_one_modified[idx])):
             annotation += f"\nL1-mod: {l_one_modified[idx]:.4f}"
-        
+
         ax.annotate(
             annotation,
             xy=(0.5, -0.05),
@@ -899,6 +998,7 @@ def plot_model_reconstruction(
 
     print(f"Saved model reconstruction flux plot at: {filename}.")
 
+
 def plot_aim_point_flux(
     results: dict[str, Any],
     save_dir: pathlib.Path,
@@ -915,12 +1015,20 @@ def plot_aim_point_flux(
     """
     measured_flux = results["measured_flux"]
     homogeneous_distribution = results["homogeneous_distribution"]
-    unoptimized_flux = results["aim_point_optimization_reconstructed_model"]["aim_point_plot"][0]
-    optimized_flux = results["aim_point_optimization_reconstructed_model"]["aim_point_plot"][1]
+    unoptimized_flux = results["aim_point_optimization_reconstructed_model"][
+        "aim_point_plot"
+    ][0]
+    optimized_flux = results["aim_point_optimization_reconstructed_model"][
+        "aim_point_plot"
+    ][1]
 
     # Normalize measured and homogeneous fluxes
-    measured_flux_normed = measured_flux * (unoptimized_flux.sum() / measured_flux.sum())
-    homogeneous_distribution_normed = homogeneous_distribution * (optimized_flux.sum() / homogeneous_distribution.sum())
+    measured_flux_normed = measured_flux * (
+        unoptimized_flux.sum() / measured_flux.sum()
+    )
+    homogeneous_distribution_normed = homogeneous_distribution * (
+        optimized_flux.sum() / homogeneous_distribution.sum()
+    )
 
     # Compute KL divergences
     kl_divergence = KLDivergenceLoss()
@@ -964,14 +1072,9 @@ def plot_aim_point_flux(
         rf"$\mathrm{{KL}}(\mathrm{{H}} \,\|\, \mathrm{{M}}) = {kl_div_measured_homogeneous.item():.4f}$",
         rf"$\mathrm{{KL}}(\mathrm{{H}} \,\|\, \mathrm{{U}}) = {kl_div_unoptimized_homogeneous.item():.4f}$",
         rf"$\mathrm{{KL}}(\mathrm{{H}} \,\|\, \mathrm{{O}}) = {kl_div_optimized_homogeneous.item():.4f}$",
-        ""
-    ]
-    improvement_labels = [
         "",
-        rf"$\mathrm{{100\%}}$",
-        rf"$\mathrm{improvement:.2f}\%$",
-        ""
     ]
+    improvement_labels = ["", r"$\mathrm{100\%}$", rf"$\mathrm{improvement:.2f}\%$", ""]
     titles = [
         r"\textbf{Baseline Aim Point}",
         r"\textbf{Reconstructed Model}",
@@ -1013,6 +1116,7 @@ def plot_aim_point_flux(
 
     print(f"Saved aim point optimization flux plot at: {filename}.")
 
+
 def plot_aim_point_loss_history(
     results: dict[str, Any],
     save_dir: pathlib.Path,
@@ -1029,37 +1133,37 @@ def plot_aim_point_loss_history(
     """
     loss_history = results["aim_point_optimization_reconstructed_model"]["loss_history"]
     epochs = np.arange(0, len(loss_history["total_loss"]))
-    
+
     fig, ax1 = plt.subplots(figsize=(8, 5))
 
-    l1, = ax1.plot(
+    (l1,) = ax1.plot(
         epochs,
         loss_history["total_loss"],
         label=r"Total Loss",
         color=plot_colors["darkblue"],
     )
 
-    l2, = ax1.plot(
+    (l2,) = ax1.plot(
         epochs,
         loss_history["flux_loss"],
         label=r"KL-Divergence",
         color=plot_colors["blue_1"],
     )
 
-    l3, = ax1.plot(
+    (l3,) = ax1.plot(
         epochs,
         loss_history["local_flux_constraint"],
         label=r"Local Flux Constraint",
         color=plot_colors["blue_2"],
     )
 
-    l4, = ax1.plot(
+    (l4,) = ax1.plot(
         epochs,
         loss_history["spillage_constraint"],
         label=r"Spillage Constraint",
         color=plot_colors["blue_3"],
     )
-    l5, = ax1.plot(
+    (l5,) = ax1.plot(
         epochs,
         loss_history["flux_integral_constraint"],
         label=r"Flux Integral Constraint",
@@ -1069,9 +1173,9 @@ def plot_aim_point_loss_history(
     ax1.set_xlabel(r"Epoch")
     ax1.set_ylabel(r"Loss Terms")
     ax1.grid(True)
-    
+
     ax2 = ax1.twinx()
-    l6, = ax2.plot(
+    (l6,) = ax2.plot(
         epochs,
         loss_history["flux_integral"],
         label=r"Flux integral %",
@@ -1086,10 +1190,13 @@ def plot_aim_point_loss_history(
     ax1.set_title(r"\textbf{Loss History}", fontsize=13, ha="center")
 
     save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / f"run_{results_number}/aim_point_optimization_loss_history.pdf"
+    filename = (
+        save_dir / f"run_{results_number}/aim_point_optimization_loss_history.pdf"
+    )
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved aim point optimization loss history plot at: {filename}.")
+
 
 def plot_tradeoffs(df, save_path):
 
@@ -1112,9 +1219,10 @@ def plot_tradeoffs(df, save_path):
 
     bottom = np.zeros(len(run_ids))
 
-    for task, color in zip(task_order,
-                        [plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]]):
-
+    for task, color in zip(
+        task_order,
+        [plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]],
+    ):
         heights = stacked_data[task].values
 
         axes[0].bar(
@@ -1123,7 +1231,7 @@ def plot_tradeoffs(df, save_path):
             bottom=bottom,
             color=color,
             alpha=alpha,
-            label=task.capitalize()
+            label=task.capitalize(),
         )
 
         for i, run_id in enumerate(run_ids):
@@ -1132,9 +1240,9 @@ def plot_tradeoffs(df, save_path):
                 param_col = f"parameters_{task}"
                 if param_col in df.columns:
                     param_dict = df[
-                        (df["run_id"] == run_id) &
-                        (df["task"] == task) &
-                        (df["ablation_case"] == ablation_case_map[task])
+                        (df["run_id"] == run_id)
+                        & (df["task"] == task)
+                        & (df["ablation_case"] == ablation_case_map[task])
                     ][param_col].iloc[0]
 
                     max_epoch = param_dict.get("max_epoch", "")
@@ -1165,7 +1273,7 @@ def plot_tradeoffs(df, save_path):
                         ha="center",
                         va="bottom",
                         fontsize=8,
-                        color="black"
+                        color="black",
                     )
                 else:
                     axes[0].text(
@@ -1175,7 +1283,7 @@ def plot_tradeoffs(df, save_path):
                         ha="center",
                         va="center",
                         fontsize=8,
-                        color="black"
+                        color="black",
                     )
 
         bottom += heights
@@ -1190,7 +1298,7 @@ def plot_tradeoffs(df, save_path):
             va="top",
             fontsize=10,
             rotation=45,
-            color="black"
+            color="black",
         )
 
     axes[0].set_xticks(x_pos)
@@ -1205,7 +1313,7 @@ def plot_tradeoffs(df, save_path):
         ax=axes[1],
         palette=[plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]],
         alpha=alpha,
-        order=run_ids
+        order=run_ids,
     )
     axes[1].set_title("Task-wise Loss per Run")
     axes[1].set_xlabel("Run ID")
@@ -1217,11 +1325,14 @@ def plot_tradeoffs(df, save_path):
     plt.savefig(save_path, dpi=300)
     plt.close(fig)
 
+
 def plot_run_analysis(save_dir: pathlib.Path, results_paths):
-    "CURRENTLY NOT WORKING"
+    """CURRENTLY NOT WORKING"""
     counter = 1
     results_list = []
-    for results_path, hardware in zip(results_paths, ["NVIDIA RTX A6000", "NVIDIA Grace-Hopper"]):
+    for results_path, hardware in zip(
+        results_paths, ["NVIDIA RTX A6000", "NVIDIA Grace-Hopper"]
+    ):
         if not results_path.exists():
             raise FileNotFoundError(
                 f"Results directory not found: {results_path}. Please run ``reconstruction_generate_results.py``"
@@ -1237,13 +1348,21 @@ def plot_run_analysis(save_dir: pathlib.Path, results_paths):
                 )
                 data["run_info"]["hardware"] = hardware
                 data["run_info"]["run_id"] = counter
-                counter += 1 
+                counter += 1
                 results_list.append(data)
 
     rows = []
-    tasks = {"surface": "surface_reconstruction_loss_per_heliostat", "kinematics": "kinematics_reconstruction_loss_per_heliostat", "aim_points": "aimpoint_optimization_loss_per_heliostat"}
-    parameters = {"surface": ["max_epoch", "batch_size", "batch_size_outer", "number_of_rays"], "kinematics": ["max_epoch", "batch_size", "number_of_rays"], "aim_points": ["max_epoch", "batch_size", "number_of_rays"]}
-    
+    tasks = {
+        "surface": "surface_reconstruction_loss_per_heliostat",
+        "kinematics": "kinematics_reconstruction_loss_per_heliostat",
+        "aim_points": "aimpoint_optimization_loss_per_heliostat",
+    }
+    parameters = {
+        "surface": ["max_epoch", "batch_size", "batch_size_outer", "number_of_rays"],
+        "kinematics": ["max_epoch", "batch_size", "number_of_rays"],
+        "aim_points": ["max_epoch", "batch_size", "number_of_rays"],
+    }
+
     for run in results:
         hw = run["run_info"]["hardware"]
         run_id = run["run_info"]["run_id"]
@@ -1251,7 +1370,12 @@ def plot_run_analysis(save_dir: pathlib.Path, results_paths):
         for i in range(1, 9):
             study_case = run[f"losses{i}"]
             if i == 5:
-                study_case["surface_reconstruction_loss_per_heliostat"] = torch.min(torch.stack(study_case["surface_reconstruction_loss_per_heliostat"], dim=0), dim=0).values
+                study_case["surface_reconstruction_loss_per_heliostat"] = torch.min(
+                    torch.stack(
+                        study_case["surface_reconstruction_loss_per_heliostat"], dim=0
+                    ),
+                    dim=0,
+                ).values
             for key, value in zip(tasks.keys(), tasks.values()):
                 row = {
                     "hardware": hw,
@@ -1259,16 +1383,22 @@ def plot_run_analysis(save_dir: pathlib.Path, results_paths):
                     "ablation_case": i,
                     "task": key,
                     "optimized": True if study_case[value] is not None else False,
-                    "runtime": run["run_info"]["runtimes"][i-1],
-                    "loss": np.mean(list(study_case[value].cpu().detach())) if study_case[value] is not None else np.nan,
-                    "total_runtime": total_runtime
+                    "runtime": run["run_info"]["runtimes"][i - 1],
+                    "loss": np.mean(list(study_case[value].cpu().detach()))
+                    if study_case[value] is not None
+                    else np.nan,
+                    "total_runtime": total_runtime,
                 }
                 for parameter in parameters:
-                    row[f"parameters_{parameter}"] = run["run_info"]["parameters"][parameter]
+                    row[f"parameters_{parameter}"] = run["run_info"]["parameters"][
+                        parameter
+                    ]
                 rows.append(row)
     df = pd.DataFrame(rows)
     hardware_order = ["NVIDIA RTX A6000", "NVIDIA Grace-Hopper"]
-    df["hardware"] = pd.Categorical(df["hardware"], categories=hardware_order, ordered=True)
+    df["hardware"] = pd.Categorical(
+        df["hardware"], categories=hardware_order, ordered=True
+    )
     df.sort_values(by=["hardware", "total_runtime"], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
@@ -1357,11 +1487,13 @@ if __name__ == "__main__":
     # for case in ["baseline", "full_field"]:
     for case in ["baseline"]:
         results_number = 1
-        results_path = pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
+        results_path = (
+            pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
+        )
 
         plots_path = pathlib.Path(args.plots_dir) / case
         (plots_path / f"run_{results_number}").mkdir(parents=True, exist_ok=True)
-    
+
         if not results_path.exists():
             raise FileNotFoundError(
                 f"Results file not found: {results_path}. Please run ``reconstruction_generate_results.py``"
@@ -1380,19 +1512,21 @@ if __name__ == "__main__":
             map_location=device,
         )
 
-        #plot_heliostat_positions(results=results, results_ftp=results_ftp, save_dir=plots_path)
+        # plot_heliostat_positions(results=results, results_ftp=results_ftp, save_dir=plots_path)
 
-        #plot_surface_reconstruction_flux(results=results, save_dir=plots_path)        
+        # plot_surface_reconstruction_flux(results=results, save_dir=plots_path)
         plot_surface_error_analysis(results=results, save_dir=plots_path)
         plot_surface_loss_history(results=results, save_dir=plots_path)
 
         plot_kinematics_reconstruction_flux(results=results, save_dir=plots_path)
-        plot_kinematics_error_analysis(results=results, save_dir=plots_path, split_left=False) 
+        plot_kinematics_error_analysis(
+            results=results, save_dir=plots_path, split_left=False
+        )
         plot_kinematics_loss_history(results=results, save_dir=plots_path)
 
         plot_model_reconstruction(results=results, save_dir=plots_path)
 
-        plot_aim_point_flux(results=results, save_dir=plots_path)    
+        plot_aim_point_flux(results=results, save_dir=plots_path)
         plot_aim_point_loss_history(results=results, save_dir=plots_path)
-        
+
         # plot_run_analysis(save_dir=pathlib.Path(args.plots_dir) / "runtimes.pdf", results_paths=[pathlib.Path(args.results_dir) / case, pathlib.Path(args.results_dir) / "ftp" / case])

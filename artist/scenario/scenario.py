@@ -10,8 +10,6 @@ from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.solar_tower import SolarTower
-from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -80,7 +78,6 @@ class Scenario:
         self.solar_tower = solar_tower
         self.light_sources = light_sources
         self.heliostat_field = heliostat_field
-
 
     @staticmethod
     def get_number_of_heliostat_groups_from_hdf5(scenario_path: pathlib.Path) -> int:
@@ -155,9 +152,7 @@ class Scenario:
             ][()]
         )
 
-        solar_tower = SolarTower.from_hdf5(
-            config_file=scenario_file, device=device
-        )
+        solar_tower = SolarTower.from_hdf5(config_file=scenario_file, device=device)
 
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
@@ -375,19 +370,27 @@ class Scenario:
             active_heliostats_mask = torch.zeros(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
             )
-            target_area_indices = torch.empty(len(filtered_mapping), dtype=torch.int32, device=device)
+            target_area_indices = torch.empty(
+                len(filtered_mapping), dtype=torch.int32, device=device
+            )
             incident_ray_directions = torch.empty(
                 (len(filtered_mapping), 4), device=device
             )
-            for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(filtered_mapping):
+            for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(
+                filtered_mapping
+            ):
                 active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1
-                data_per_heliostat[heliostat_name].append([
-                    self.solar_tower.target_name_to_index[target_name],
-                    incident_ray_direction
-                ])
+                data_per_heliostat[heliostat_name].append(
+                    [
+                        self.solar_tower.target_name_to_index[target_name],
+                        incident_ray_direction,
+                    ]
+                )
             index = 0
             for name in heliostat_group.names:
-                for target_area_index, incident_ray_direction in data_per_heliostat.get(name, []):
+                for target_area_index, incident_ray_direction in data_per_heliostat.get(
+                    name, []
+                ):
                     target_area_indices[index] = target_area_index
                     incident_ray_directions[index] = incident_ray_direction
                     index += 1

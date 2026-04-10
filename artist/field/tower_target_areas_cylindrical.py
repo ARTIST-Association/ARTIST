@@ -28,7 +28,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         The radius of each cylindrical target area.
         Tensor of shape [number_of_target_areas].
     centers : torch.Tensor
-        The center coordinate of each cylindrical target area. 
+        The center coordinate of each cylindrical target area.
         The center is defined at the halfway between top and bottom of the cylinder on the cylinder axis.
         Tensor of shape [number_of_target_areas, 4].
     heights : torch.Tensor
@@ -49,6 +49,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
     from_hdf5()
         Load all target areas from an HDF5 file.
     """
+
     def __init__(
         self,
         names: list[str],
@@ -57,7 +58,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         heights: torch.Tensor,
         axes: torch.Tensor,
         normals: torch.Tensor,
-        opening_angles: torch.Tensor
+        opening_angles: torch.Tensor,
     ) -> None:
         """
         Initialize the cylindrical target areas.
@@ -70,7 +71,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
             The radius of each cylindrical target area.
             Tensor of shape [number_of_target_areas].
         centers : torch.Tensor
-            The center coordinate of each cylindrical target area. 
+            The center coordinate of each cylindrical target area.
             The center is defined at the halfway between top and bottom of the cylinder on the cylinder axis.
             Tensor of shape [number_of_target_areas, 4].
         heights : torch.Tensor
@@ -93,7 +94,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         self.heights = heights
         self.axes = axes
         self.opening_angles = opening_angles
-        
+
     @classmethod
     def from_hdf5(
         cls, config_file: h5py.File, device: torch.device | None = None
@@ -125,7 +126,9 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         if rank == 0:
             log.info("Loading the cylindrical tower target areas from an HDF5 file.")
 
-        number_of_target_areas = len(config_file[config_dictionary.target_area_cylindrical_key])
+        number_of_target_areas = len(
+            config_file[config_dictionary.target_area_cylindrical_key]
+        )
 
         names = []
         radii = torch.zeros((number_of_target_areas), device=device)
@@ -138,9 +141,9 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         for index, target_area_name in enumerate(
             config_file[config_dictionary.target_area_cylindrical_key].keys()
         ):
-            single_target_area_config = config_file[config_dictionary.target_area_cylindrical_key][
-                target_area_name
-            ]
+            single_target_area_config = config_file[
+                config_dictionary.target_area_cylindrical_key
+            ][target_area_name]
             names.append(target_area_name)
             radii[index] = torch.tensor(
                 single_target_area_config[
@@ -164,9 +167,9 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
                 device=device,
             )
             axes[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_cylinder_axis
-                ][()],
+                single_target_area_config[config_dictionary.target_area_cylinder_axis][
+                    ()
+                ],
                 dtype=torch.float,
                 device=device,
             )

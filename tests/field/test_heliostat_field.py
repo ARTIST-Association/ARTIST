@@ -3,7 +3,6 @@ from unittest import mock
 import h5py
 import pytest
 import torch
-from pytest_mock import MockerFixture
 
 from artist.field.heliostat_field import HeliostatField
 from artist.scenario.configuration_classes import SurfaceConfig

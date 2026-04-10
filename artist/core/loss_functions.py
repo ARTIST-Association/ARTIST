@@ -206,7 +206,7 @@ class FocalSpotLoss(Loss):
             bitmap_resolution=prediction.shape[1:],
             solar_tower=self.scenario.solar_tower,
             target_area_indices=target_area_indices,
-            device=device
+            device=device,
         )
 
         loss = torch.norm(focal_spot_coordinates[:, :3] - ground_truth[:, :3], dim=1)

@@ -160,7 +160,8 @@ class TargetAreaPlanarListConfig:
             target_area.target_area_key: target_area.create_target_area_dict()
             for target_area in self.target_area_list
         }
-    
+
+
 class TargetAreaCylindricalConfig:
     """
     Store the tower target area configuration parameters for cylindrical target areas.

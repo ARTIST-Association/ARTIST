@@ -65,7 +65,9 @@ target_area_list_planar_config = TargetAreaPlanarConfig(
 )
 
 # Include the planar tower area configurations.
-target_area_planar_list_config = TargetAreaPlanarListConfig([target_area_list_planar_config])
+target_area_planar_list_config = TargetAreaPlanarListConfig(
+    [target_area_list_planar_config]
+)
 
 target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
     target_area_key="cylinder",
@@ -76,7 +78,9 @@ target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
     normal=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     opening_angle=60,
 )
-target_area_cylindrical_list_config = TargetAreaCylindricalListConfig([target_area_list_cylindrical_config])
+target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
+    [target_area_list_cylindrical_config]
+)
 
 # Include the light source configuration.
 light_source1_config = LightSourceConfig(

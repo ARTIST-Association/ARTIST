@@ -32,8 +32,12 @@ def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
         The h5 scenario generator.
     """
     mock_power_plant_config = mocker.MagicMock(spec=PowerPlantConfig)
-    mock_target_area_list_planar_config = mocker.MagicMock(spec=TargetAreaPlanarListConfig)
-    mock_target_area_list_cylindrical_config = mocker.MagicMock(spec=TargetAreaCylindricalListConfig)
+    mock_target_area_list_planar_config = mocker.MagicMock(
+        spec=TargetAreaPlanarListConfig
+    )
+    mock_target_area_list_cylindrical_config = mocker.MagicMock(
+        spec=TargetAreaCylindricalListConfig
+    )
     mock_light_source_list_config = mocker.MagicMock(spec=LightSourceListConfig)
     mock_prototype_config = mocker.MagicMock(spec=PrototypeConfig)
     mock_heliostat_list_config = mocker.MagicMock(spec=HeliostatListConfig)

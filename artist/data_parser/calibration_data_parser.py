@@ -5,9 +5,7 @@ import numpy as np
 import torch
 import torchvision
 from PIL import Image
-import torchvision
 
-from artist.util import track_runtime, runtime_log
 import artist.util.index_mapping
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario

@@ -1,8 +1,6 @@
 import logging
 from typing import Any
 
-from matplotlib import pyplot as plt
-import numpy as np
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -191,10 +189,14 @@ class MotorPositionsOptimizer:
         target_area_indices_all_groups = []
         incident_ray_directions_all_groups = []
 
-        group_offsets = torch.cat([
-            torch.tensor([0], device=device),
-            self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0)[:-1]
-        ])
+        group_offsets = torch.cat(
+            [
+                torch.tensor([0], device=device),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0)[
+                    :-1
+                ],
+            ]
+        )
 
         for group_index, group in enumerate(
             self.scenario.heliostat_field.heliostat_groups
@@ -230,7 +232,7 @@ class MotorPositionsOptimizer:
             group.align_surfaces_with_incident_ray_directions(
                 aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
                     target_area_indices=target_area_indices_all_groups[group_index],
-                    device=device
+                    device=device,
                 ),
                 incident_ray_directions=incident_ray_directions_all_groups[group_index],
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
@@ -286,14 +288,25 @@ class MotorPositionsOptimizer:
             min_improvement=self.optimizer_dict[config_dictionary.early_stopping_delta],
             relative=True,
         )
-        
+
         target_plane_dimensions = torch.empty(2, device=device)
-        target_areas, index = self.scenario.solar_tower.index_to_target_area[self.target_area_index]
-        if self.target_area_index < self.scenario.solar_tower.number_of_target_areas_per_type[0]:
+        target_areas, index = self.scenario.solar_tower.index_to_target_area[
+            self.target_area_index
+        ]
+        if (
+            self.target_area_index
+            < self.scenario.solar_tower.number_of_target_areas_per_type[0]
+        ):
             target_plane_dimensions = target_areas.dimensions[self.target_area_index]
         else:
-            cylinder_indices = self.target_area_index - self.scenario.solar_tower.number_of_target_areas_per_type[0]
-            target_plane_dimensions[0] = target_areas.radii[cylinder_indices] * target_areas.opening_angles[cylinder_indices]
+            cylinder_indices = (
+                self.target_area_index
+                - self.scenario.solar_tower.number_of_target_areas_per_type[0]
+            )
+            target_plane_dimensions[0] = (
+                target_areas.radii[cylinder_indices]
+                * target_areas.opening_angles[cylinder_indices]
+            )
             target_plane_dimensions[1] = target_areas.heights[cylinder_indices]
 
         # Set up constraints.
@@ -304,7 +317,9 @@ class MotorPositionsOptimizer:
         rho_local_flux = self.constraint_dict[config_dictionary.rho_local_flux]
         rho_flux_integral = self.constraint_dict[config_dictionary.rho_flux_integral]
         rho_intercept = self.constraint_dict[config_dictionary.rho_intercept]
-        max_flux_density_per_pixel = (torch.prod(target_plane_dimensions) / torch.prod(self.bitmap_resolution)) * self.constraint_dict[config_dictionary.max_flux_density]
+        max_flux_density_per_pixel = (
+            torch.prod(target_plane_dimensions) / torch.prod(self.bitmap_resolution)
+        ) * self.constraint_dict[config_dictionary.max_flux_density]
 
         # For the loss plot.
         total_loss_history = []
@@ -335,7 +350,10 @@ class MotorPositionsOptimizer:
                 ),
                 device=device,
             )
-            intercept_factors = torch.zeros((sum(actives.sum() for actives in active_heliostats_masks_all_groups)), device=device)
+            intercept_factors = torch.zeros(
+                (sum(actives.sum() for actives in active_heliostats_masks_all_groups)),
+                device=device,
+            )
             on_target_factors = torch.zeros_like(intercept_factors, device=device)
             blocking_factors = torch.zeros_like(intercept_factors, device=device)
 
@@ -402,7 +420,12 @@ class MotorPositionsOptimizer:
                 )
 
                 # Perform heliostat-based ray tracing.
-                flux_distributions, intercept_factor, on_target_factor, blocking_factor = ray_tracer.trace_rays(
+                (
+                    flux_distributions,
+                    intercept_factor,
+                    on_target_factor,
+                    blocking_factor,
+                ) = ray_tracer.trace_rays(
                     incident_ray_directions=incident_ray_directions_all_groups[
                         heliostat_group_index
                     ],
@@ -425,11 +448,13 @@ class MotorPositionsOptimizer:
 
                 total_flux = total_flux + flux_distribution_on_target
 
-                global_indices = group_offsets[heliostat_group_index] + sample_indices_for_local_rank
+                global_indices = (
+                    group_offsets[heliostat_group_index] + sample_indices_for_local_rank
+                )
                 intercept_factors[global_indices] = intercept_factor
                 on_target_factors[global_indices] = on_target_factor
                 blocking_factors[global_indices] = blocking_factor
-            
+
             if self.ddp_setup[config_dictionary.is_distributed]:
                 total_flux = torch.distributed.nn.functional.all_reduce(
                     total_flux,
@@ -459,25 +484,36 @@ class MotorPositionsOptimizer:
                 # Augmented Lagrangian to ensure that flux integral is maximized, i.e., intensity increases or stays the same.
                 if epoch == 0:
                     flux_integral_reference = total_flux.sum().detach()
-                flux_integral_difference = (flux_integral_reference - total_flux.sum()) / (flux_integral_reference + self.epsilon)
-                flux_integral_difference_clamped = torch.clamp(flux_integral_difference, min=0.0)
+                flux_integral_difference = (
+                    flux_integral_reference - total_flux.sum()
+                ) / (flux_integral_reference + self.epsilon)
+                flux_integral_difference_clamped = torch.clamp(
+                    flux_integral_difference, min=0.0
+                )
                 flux_integral_constraint = (
-                    lambda_flux_integral * flux_integral_difference_clamped + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
+                    lambda_flux_integral * flux_integral_difference_clamped
+                    + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
                 )
 
                 # Augmented Lagrangian to ensure that spillage is eliminated.
                 intercept_factor_loss = 1.0 - intercept_factors.mean()
                 intercept_factor_constraint = (
-                    lambda_intercept * intercept_factor_loss + 0.5 * rho_intercept * intercept_factor_loss**2
+                    lambda_intercept * intercept_factor_loss
+                    + 0.5 * rho_intercept * intercept_factor_loss**2
                 )
 
                 # Augmented Lagrangian to ensure that local heat spikes are avoided.
-                local_flux_violation = (total_flux - max_flux_density_per_pixel.detach()) / (max_flux_density_per_pixel.detach() + self.epsilon)
-                local_flux_violation_clamped = torch.clamp(local_flux_violation, min=0.0)
+                local_flux_violation = (
+                    total_flux - max_flux_density_per_pixel.detach()
+                ) / (max_flux_density_per_pixel.detach() + self.epsilon)
+                local_flux_violation_clamped = torch.clamp(
+                    local_flux_violation, min=0.0
+                )
                 local_flux_constraint = (
-                    lambda_local_flux * local_flux_violation_clamped + 0.5 * rho_local_flux * local_flux_violation_clamped**2
+                    lambda_local_flux * local_flux_violation_clamped
+                    + 0.5 * rho_local_flux * local_flux_violation_clamped**2
                 ).max()
-                
+
                 loss = (
                     flux_loss
                     + flux_integral_constraint
@@ -485,9 +521,19 @@ class MotorPositionsOptimizer:
                     + local_flux_constraint
                 )
                 with torch.no_grad():
-                    lambda_local_flux = torch.clamp(lambda_local_flux + rho_local_flux * local_flux_violation.max(), min=0.0)
-                    lambda_intercept = torch.clamp(lambda_intercept + rho_intercept * intercept_factor_constraint, min=0.0)
-                    lambda_flux_integral = torch.clamp(lambda_flux_integral + rho_flux_integral * flux_integral_difference, min=0.0)
+                    lambda_local_flux = torch.clamp(
+                        lambda_local_flux + rho_local_flux * local_flux_violation.max(),
+                        min=0.0,
+                    )
+                    lambda_intercept = torch.clamp(
+                        lambda_intercept + rho_intercept * intercept_factor_constraint,
+                        min=0.0,
+                    )
+                    lambda_flux_integral = torch.clamp(
+                        lambda_flux_integral
+                        + rho_flux_integral * flux_integral_difference,
+                        min=0.0,
+                    )
 
             loss.backward()
 
@@ -512,14 +558,29 @@ class MotorPositionsOptimizer:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
                 )
-            
+
             total_loss_history.append(loss.detach().cpu().item())
             flux_loss_history.append(flux_loss.detach().cpu().item())
             if isinstance(loss_definition, KLDivergenceLoss):
-                flux_integral.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
-                local_flux_constraint_history.append(local_flux_constraint.detach().cpu().item())
-                intercept_constraint_history.append(intercept_factor_constraint.detach().cpu().item())
-                flux_integral_constraint_history.append(flux_integral_constraint.detach().cpu().item())
+                flux_integral.append(
+                    (
+                        100
+                        / flux_integral_reference
+                        * (total_flux.sum() - flux_integral_reference + 1e-8)
+                    )
+                    .detach()
+                    .cpu()
+                    .item()
+                )
+                local_flux_constraint_history.append(
+                    local_flux_constraint.detach().cpu().item()
+                )
+                intercept_constraint_history.append(
+                    intercept_factor_constraint.detach().cpu().item()
+                )
+                flux_integral_constraint_history.append(
+                    flux_integral_constraint.detach().cpu().item()
+                )
 
             # Early stopping when loss did not improve since a predefined number of epochs.
             stop = early_stopper.step(loss)
@@ -529,14 +590,14 @@ class MotorPositionsOptimizer:
                 break
 
             epoch += 1
-        
+
         loss_history = {
             "total_loss": total_loss_history,
             "flux_loss": flux_loss_history,
             "local_flux_constraint": local_flux_constraint_history,
             "intercept_constraint": intercept_constraint_history,
             "flux_integral_constraint": flux_integral_constraint_history,
-            "flux_integral": flux_integral
+            "flux_integral": flux_integral,
         }
         log.info(f"Rank: {rank}, motor positions optimized.")
 
@@ -554,4 +615,10 @@ class MotorPositionsOptimizer:
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
 
-        return loss.detach().cpu(), loss_history, intercept_factors, on_target_factors, blocking_factors
+        return (
+            loss.detach().cpu(),
+            loss_history,
+            intercept_factors,
+            on_target_factors,
+            blocking_factors,
+        )

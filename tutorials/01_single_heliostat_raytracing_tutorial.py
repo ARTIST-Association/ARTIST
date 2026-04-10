@@ -65,7 +65,9 @@ scenario.heliostat_field.heliostat_groups[
 target_area_indices = torch.tensor([0], device=device)
 
 # Use the center of the selected target area as the aim point.
-aim_point = scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device)
+aim_point = scenario.solar_tower.get_centers_of_target_areas(
+    target_area_indices=target_area_indices, device=device
+)
 print(f"The initial aim point used for this raytracing is {aim_point.tolist()}.")
 
 # Since we only have one heliostat we need to define a single incident ray direction.
@@ -202,7 +204,12 @@ ray_tracer = HeliostatRayTracer(
 )
 
 # Perform heliostat-based ray tracing.
-image_south, _, _, _,= ray_tracer.trace_rays(
+(
+    image_south,
+    _,
+    _,
+    _,
+) = ray_tracer.trace_rays(
     incident_ray_directions=incident_ray_directions,
     active_heliostats_mask=active_heliostats_mask,
     target_area_indices=target_area_indices,
@@ -254,14 +261,21 @@ def align_and_trace_rays(
     scenario.heliostat_field.heliostat_groups[
         index_mapping.first_heliostat_group
     ].align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
+        aim_points=scenario.solar_tower.get_centers_of_target_areas(
+            target_area_indices=target_area_indices, device=device
+        ),
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
     )
 
     # Perform heliostat-based ray tracing.
-    bitmaps, _, _, _, = ray_tracer.trace_rays(
+    (
+        bitmaps,
+        _,
+        _,
+        _,
+    ) = ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,

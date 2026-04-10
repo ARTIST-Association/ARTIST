@@ -10,13 +10,12 @@ import yaml
 
 from artist.core import loss_functions
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, set_logger_config, utils
+from artist.util import config_dictionary, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 set_logger_config()
@@ -313,7 +312,9 @@ def generate_reconstruction_results(
             config_dictionary.energy_tolerance: 0.001,
             config_dictionary.initial_lambda_energy: 0.1,
             config_dictionary.weight_smoothness: hyperparameters["weight_smoothness"],
-            config_dictionary.weight_ideal_surface: hyperparameters["weight_ideal_surface"],
+            config_dictionary.weight_ideal_surface: hyperparameters[
+                "weight_ideal_surface"
+            ],
         }
         optimization_configuration = {
             config_dictionary.optimization: optimizer_dict,
@@ -328,7 +329,7 @@ def generate_reconstruction_results(
             config_dictionary.data_parser: PaintCalibrationDataParser(
                 sample_limit=hyperparameters["sample_limit"],
             ),
-            config_dictionary.heliostat_data_mapping: heliostat_data_mapping
+            config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
         }
 
         data_plot: dict[

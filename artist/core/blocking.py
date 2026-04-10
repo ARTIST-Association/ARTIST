@@ -1,6 +1,5 @@
 import logging
 import math
-import warnings
 
 import torch
 import torch.nn.functional as F
@@ -10,6 +9,7 @@ from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for blocking."""
+
 
 def create_blocking_primitives_rectangle(
     blocking_heliostats_surface_points: torch.Tensor,
@@ -111,10 +111,10 @@ def create_blocking_primitives_rectangle(
         [
             torch.nn.functional.normalize(
                 torch.cross(spans[:, 0, :3], spans[:, 1, :3], dim=-1), dim=-1
-                ),
-            torch.zeros((number_of_surfaces, 1), device=device)
+            ),
+            torch.zeros((number_of_surfaces, 1), device=device),
         ],
-        dim=-1
+        dim=-1,
     )
 
     return corners, spans, plane_normals
@@ -142,7 +142,7 @@ def create_blocking_primitives_rectangles_by_index(
     - Each facet has an equal amount of surface points -> number_of_surface_points / 4
     - Each facet has an equal amount of points along its width and its height -> math.sqrt(number_of_surface_points / 4)
     - Surface points are arranged in a structured, grid-like order and indexed in row-major fashion, analogous to a 2D tensor, ensuring consistent traversal.
-    
+
     Parameters
     ----------
     blocking_heliostats_active_surface_points : torch.Tensor
@@ -198,10 +198,10 @@ def create_blocking_primitives_rectangles_by_index(
         [
             torch.nn.functional.normalize(
                 torch.cross(spans[:, 0, :3], spans[:, 1, :3], dim=-1), dim=-1
-                ),
-            torch.zeros((number_of_surfaces, 1), device=device)
+            ),
+            torch.zeros((number_of_surfaces, 1), device=device),
         ],
-        dim=-1
+        dim=-1,
     )
 
     return corners, spans, plane_normals
@@ -215,7 +215,7 @@ def soft_ray_blocking_mask(
     blocking_primitives_normals: torch.Tensor,
     epsilon: float = 1e-12,
     softness: float = 5000.0,
-    ray_origin_offset = 0.05
+    ray_origin_offset=0.05,
 ) -> torch.Tensor:
     r"""
     Compute a mask indicating which rays are blocked, using a soft differentiable approach.
@@ -289,10 +289,13 @@ def soft_ray_blocking_mask(
 
     # Solve the plane equation.
     denominator = torch.sum(ray_directions * blocking_primitives_normals, dim=-1)
-    denominator_safe = torch.where(denominator.abs() < epsilon, torch.sign(denominator)*epsilon, denominator)
-    distances_to_blocking_planes = torch.sum(
-        (corner_0 - ray_origins) * blocking_primitives_normals, dim=-1
-    ) / denominator_safe
+    denominator_safe = torch.where(
+        denominator.abs() < epsilon, torch.sign(denominator) * epsilon, denominator
+    )
+    distances_to_blocking_planes = (
+        torch.sum((corner_0 - ray_origins) * blocking_primitives_normals, dim=-1)
+        / denominator_safe
+    )
     blocking_planes_in_front_of_heliostats = torch.sigmoid(
         softness * (distances_to_blocking_planes - ray_origin_offset)
     )
@@ -308,9 +311,7 @@ def soft_ray_blocking_mask(
     span_uv_dot = torch.sum(span_u * span_v, dim=-1)
     offset_projection_u = torch.sum(intersection_offset_from_corner * span_u, dim=-1)
     offset_projection_v = torch.sum(intersection_offset_from_corner * span_v, dim=-1)
-    det = (
-        span_u_squared_norm * span_v_squared_norm - span_uv_dot * span_uv_dot
-    )
+    det = span_u_squared_norm * span_v_squared_norm - span_uv_dot * span_uv_dot
     det_safe = torch.where(det.abs() < epsilon, torch.sign(det) * epsilon, det)
     u_coordinate_on_plane = (
         offset_projection_u * span_v_squared_norm - offset_projection_v * span_uv_dot
@@ -332,11 +333,10 @@ def soft_ray_blocking_mask(
     blocking_within_plane = torch.exp(log_blocking_within_plane)
 
     blocking_mask_per_plane = (
-        blocking_within_plane
-        * blocking_planes_in_front_of_heliostats
+        blocking_within_plane * blocking_planes_in_front_of_heliostats
     )
 
-    log_not_blocked = torch.sum(torch.log1p(-blocking_mask_per_plane+epsilon), dim=-1)
+    log_not_blocked = torch.sum(torch.log1p(-blocking_mask_per_plane + epsilon), dim=-1)
     blocked = 1 - torch.exp(log_not_blocked)
 
     return blocked
@@ -345,7 +345,7 @@ def soft_ray_blocking_mask(
 def expand_bits(integers: torch.Tensor) -> torch.Tensor:
     """
     Expand the lower ten bits of an integer into 30 bits by inserting two zero bits between each original bit.
-    
+
     This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton
     codes using torch.int32.
 
@@ -367,7 +367,7 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
     if integers.dtype is not torch.int32:
         raise TypeError("Input integers must have dtype torch.int32.")
     # Keep only the lower 10 bits.
-    expanded_integers = integers & 0x000003ff
+    expanded_integers = integers & 0x000003FF
     # Spread and mask bits to achieve pattern with two 0 bits in between.
     masks = [0x030000FF, 0x0300F00F, 0x030C30C3, 0x09249249]
     shifts = [16, 8, 4, 2]
@@ -377,17 +377,15 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
     return expanded_integers
 
 
-def morton_codes(
-    coordinates: torch.Tensor, epsilon: float = 1e-6
-) -> torch.Tensor:
+def morton_codes(coordinates: torch.Tensor, epsilon: float = 1e-6) -> torch.Tensor:
     """
     Map 3D points to a single integer value corresponding to its Morton Code.
 
     Spatially nearby points have similar Morton codes. Morton codes are also sometimes referred to as
     Z-order curve codes. They are computed by bit-interleaving the binary representations of the 3D
     x, y, z coordinates.
-    The bits are interleaved such that y bits are given the highest priority, then x, then z. This is 
-    derived from heliostat field layouts, where heliostats commonly share a similar up component and 
+    The bits are interleaved such that y bits are given the highest priority, then x, then z. This is
+    derived from heliostat field layouts, where heliostats commonly share a similar up component and
     blocking is determined by the east and north component.
 
     This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30 bit Morton codes using torch.int32.
@@ -413,12 +411,14 @@ def morton_codes(
     # each dimension and 30 bits in total. This is the maximum amount of bits per axis fitting into a
     # single 32-bit integer and is enough even for scenes with more than hundred thousand blocking planes.
     bits = 10
-    
+
     mins = coordinates.min(dim=0).values
     maxs = coordinates.max(dim=0).values
     shifted = coordinates - mins
     scale = (1 << bits) - 1
-    scaled_coordinates = (shifted * (scale / ((maxs - mins).max() + epsilon))).to(torch.int32)
+    scaled_coordinates = (shifted * (scale / ((maxs - mins).max() + epsilon))).to(
+        torch.int32
+    )
 
     # Prepare the interleaving.
     # Spread 10 bits into 30 bits with 2 zero bits between each bit.
@@ -468,7 +468,7 @@ def longest_common_prefix(
         The longest common prefixes in the range from 0 to total_bits.
         Tensor of shape [number_of_blocking_planes].
     """
-    device = get_device(device=device) 
+    device = get_device(device=device)
     valid = (j >= 0) & (j < codes.shape[0])
 
     lcp = torch.full_like(i, -1, device=device)
@@ -479,19 +479,21 @@ def longest_common_prefix(
         nonzero_mask = differing_bits != 0
         msb = torch.full_like(i, -1, device=device)
         if nonzero_mask.any():
-            leading_zeros = torch.zeros_like(differing_bits[nonzero_mask], dtype=torch.int32, device=device)
+            leading_zeros = torch.zeros_like(
+                differing_bits[nonzero_mask], dtype=torch.int32, device=device
+            )
             for shift in [16, 8, 4, 2, 1]:
                 mask = differing_bits[nonzero_mask] >> (32 - shift) == 0
                 leading_zeros = leading_zeros + shift * mask.to(torch.int32)
-                differing_bits[nonzero_mask] = torch.where(mask, differing_bits[nonzero_mask] << shift, differing_bits[nonzero_mask])
+                differing_bits[nonzero_mask] = torch.where(
+                    mask,
+                    differing_bits[nonzero_mask] << shift,
+                    differing_bits[nonzero_mask],
+                )
 
             msb[nonzero_mask] = 31 - leading_zeros
 
-        lcp[valid] = torch.where(
-            differing_bits[valid] == 0,
-            30,
-            (30 - 1) - msb[valid]
-        )
+        lcp[valid] = torch.where(differing_bits[valid] == 0, 30, (30 - 1) - msb[valid])
 
     return lcp
 
@@ -529,7 +531,9 @@ def build_linear_bounding_volume_hierarchies(
     device = get_device(device=device)
 
     number_of_blocking_primitives = blocking_primitives_corners.shape[0]
-    blocker_ids = torch.arange(number_of_blocking_primitives, dtype=torch.int32, device=device)
+    blocker_ids = torch.arange(
+        number_of_blocking_primitives, dtype=torch.int32, device=device
+    )
 
     if number_of_blocking_primitives == 0:
         log.warning(
@@ -586,18 +590,16 @@ def build_linear_bounding_volume_hierarchies(
     # Find threshold (delta_min) for node expansion by determining how different the next Morton code in the direction of the less similar neighbor is.
     # Find the range of blocking primitives that share a common prefix larger than delta_min.
     delta_min = torch.min(lcp_left, lcp_right)
-    
+
     # Find the farthest index j along direction d[i] where LCP > delta_min[i].
     # Start at l_max=2 and double until delta(i, i + l_max * d) <= delta_min.
-    l_max = torch.full(
-        (number_of_blocking_primitives,), 2, device=device
-    )
+    l_max = torch.full((number_of_blocking_primitives,), 2, device=device)
     while True:
         candidates_lcp = longest_common_prefix(
-            codes=sorted_codes, 
-            i=blocker_ids, 
-            j=blocker_ids+l_max*direction_to_similar_codes, 
-            device=device
+            codes=sorted_codes,
+            i=blocker_ids,
+            j=blocker_ids + l_max * direction_to_similar_codes,
+            device=device,
         )
         still_expanding = candidates_lcp > delta_min
         if not still_expanding.any():
@@ -608,41 +610,43 @@ def build_linear_bounding_volume_hierarchies(
     t = l_max // 2
     while t.max() >= 1:
         candidates_lcp = longest_common_prefix(
-            codes=sorted_codes, 
-            i=blocker_ids, 
-            j=blocker_ids + (l + t) * direction_to_similar_codes, 
-            device=device
+            codes=sorted_codes,
+            i=blocker_ids,
+            j=blocker_ids + (l + t) * direction_to_similar_codes,
+            device=device,
         )
         mask = candidates_lcp > delta_min
         l = torch.where(mask, l + t, l)
         t = t // 2
-    
+
     farthest_index = blocker_ids + l * direction_to_similar_codes
-    
+
     # Construct binary radix tree.
     # The range [first[i], last[i]] corresponds to the spatial cluster of blocking primitives that share a common prefix in Morton code.
     # Compute splits to build LBVH tree, each internal node is assigned two children.
     delta_node = longest_common_prefix(
         codes=sorted_codes, i=blocker_ids, j=farthest_index, device=device
     )
-    split = torch.zeros(
-        number_of_blocking_primitives, dtype=torch.int32, device=device
-    )
-    
+    split = torch.zeros(number_of_blocking_primitives, dtype=torch.int32, device=device)
+
     t = (l + 1) // 2
     while t.max() >= 1:
         candidates_lcp = longest_common_prefix(
-            codes=sorted_codes, 
-            i=blocker_ids, 
-            j=blocker_ids + (split + t) * direction_to_similar_codes, 
-            device=device
+            codes=sorted_codes,
+            i=blocker_ids,
+            j=blocker_ids + (split + t) * direction_to_similar_codes,
+            device=device,
         )
         mask = candidates_lcp > delta_node
         split = torch.where(mask, split + t, split)
         t = t // 2
 
-    gamma = blocker_ids + split * direction_to_similar_codes + torch.clamp(direction_to_similar_codes, max=0)
-    
+    gamma = (
+        blocker_ids
+        + split * direction_to_similar_codes
+        + torch.clamp(direction_to_similar_codes, max=0)
+    )
+
     # LBVH:
     # left, right: Indices of the left and right child of each node (-1 if not set).
     # aabb_min, aabb_max: axis aligned bounding box of the node.
@@ -669,21 +673,21 @@ def build_linear_bounding_volume_hierarchies(
     is_leaf[leaf_offset:] = True
     primitive_index[leaf_offset:] = sorted_primitive_indices.to(torch.int32)
 
-    # The lower and upper bound for the contiguous range of Morton codes that belong 
+    # The lower and upper bound for the contiguous range of Morton codes that belong
     # to the cluster of a node.
     min_index = torch.minimum(blocker_ids, farthest_index)
     max_index = torch.maximum(blocker_ids, farthest_index)
-    
+
     left_internal = torch.where(
-        min_index[:internal_count] == gamma[:internal_count], 
-        (leaf_offset + gamma[:internal_count]).to(torch.int32), 
-        gamma[:internal_count].to(torch.int32)
+        min_index[:internal_count] == gamma[:internal_count],
+        (leaf_offset + gamma[:internal_count]).to(torch.int32),
+        gamma[:internal_count].to(torch.int32),
     )
 
     right_internal = torch.where(
-        max_index[:internal_count] == gamma[:internal_count] + 1, 
-        (leaf_offset + gamma[:internal_count] + 1).to(torch.int32), 
-        (gamma[:internal_count] + 1).to(torch.int32)
+        max_index[:internal_count] == gamma[:internal_count] + 1,
+        (leaf_offset + gamma[:internal_count] + 1).to(torch.int32),
+        (gamma[:internal_count] + 1).to(torch.int32),
     )
 
     left[internal_nodes_indices] = left_internal.to(dtype=torch.int32, device=device)
@@ -702,7 +706,6 @@ def build_linear_bounding_volume_hierarchies(
     right_done = torch.ones_like(right_internal, dtype=torch.bool, device=device)
     right_mask = (right_internal >= 0) & (right_internal < internal_count)
     while not nodes_with_complete_aabb.all() and rounds < internal_count * 2:
-
         left_done[left_mask] = nodes_with_complete_aabb[left_internal[left_mask]]
         right_done[right_mask] = nodes_with_complete_aabb[right_internal[right_mask]]
 
@@ -712,18 +715,22 @@ def build_linear_bounding_volume_hierarchies(
 
         index = torch.nonzero(nodes_to_compute, as_tuple=True)[0].to(device)
 
-        aabb_min[index] = torch.minimum(aabb_min[left_internal[index]], aabb_min[right_internal[index]])
-        aabb_max[index] = torch.maximum(aabb_max[left_internal[index]], aabb_max[right_internal[index]])
+        aabb_min[index] = torch.minimum(
+            aabb_min[left_internal[index]], aabb_min[right_internal[index]]
+        )
+        aabb_max[index] = torch.maximum(
+            aabb_max[left_internal[index]], aabb_max[right_internal[index]]
+        )
         nodes_with_complete_aabb[index] = True
         rounds += 1
 
     # Warning, if some axis aligned bounding boxes have not been computed.
     if not nodes_with_complete_aabb.all():
         log.warning(
-            f"Some internal nodes did not receive AABBs via DAG propagation. This means the tree was built incorrectly.",
+            "Some internal nodes did not receive AABBs via DAG propagation. This means the tree was built incorrectly.",
             RuntimeWarning,
         )
- 
+
     return {
         config_dictionary.left_node: left,
         config_dictionary.right_node: right,
@@ -776,7 +783,9 @@ def ray_aabb_intersect(
     return entry_distance_to_aabb, exit_distance_to_aabb
 
 
-def compute_lbvh_max_depth(left: torch.Tensor, right: torch.Tensor, device: torch.device | None = None) -> int:
+def compute_lbvh_max_depth(
+    left: torch.Tensor, right: torch.Tensor, device: torch.device | None = None
+) -> int:
     """
     Compute the maximum depth of the LBVH tree.
 
@@ -813,6 +822,7 @@ def compute_lbvh_max_depth(left: torch.Tensor, right: torch.Tensor, device: torc
             stack.append((r, depth + 1))
 
     return max_depth
+
 
 @torch.no_grad()
 def lbvh_filter_blocking_planes(
@@ -882,11 +892,13 @@ def lbvh_filter_blocking_planes(
         dtype=torch.int32,
         device=device,
     )
-    
+
     node_traversal_stack[:, 0] = 0
     stack_pointer = torch.ones(total_number_of_rays, dtype=torch.int32, device=device)
 
-    hit_primitives_flag = torch.zeros(number_of_primitives, dtype=torch.bool, device=device)
+    hit_primitives_flag = torch.zeros(
+        number_of_primitives, dtype=torch.bool, device=device
+    )
 
     inverse_directions = 1.0 / (ray_directions + 1e-12)
     active_rays = torch.arange(total_number_of_rays, device=device)
@@ -904,9 +916,11 @@ def lbvh_filter_blocking_planes(
             aabb_min[nodes],
             aabb_max[nodes],
         )
-        mask_hit = (exit_distance_to_aabb >= entry_distance_to_aabb) & (
-            exit_distance_to_aabb > 1e-6
-        ) & (entry_distance_to_aabb <= intersection_distances_target[active_rays])
+        mask_hit = (
+            (exit_distance_to_aabb >= entry_distance_to_aabb)
+            & (exit_distance_to_aabb > 1e-6)
+            & (entry_distance_to_aabb <= intersection_distances_target[active_rays])
+        )
 
         if mask_hit.any():
             hit_rays = active_rays[mask_hit]
@@ -917,7 +931,7 @@ def lbvh_filter_blocking_planes(
                 leaf_rays = hit_rays[leaf_mask]
                 leaf_nodes = hit_nodes[leaf_mask]
                 leaf_primitives = primitive_index[leaf_nodes]
-                
+
                 # Remove self-intersections.
                 ray_owner_hit = ray_to_heliostat_mapping[leaf_rays]
                 non_self_mask = ray_owner_hit != leaf_primitives

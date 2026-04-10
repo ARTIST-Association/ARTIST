@@ -80,7 +80,7 @@ basic_config:
   baseline_incident_ray_direction: [0.411, 0.706, -0.576, 0.0]
   baseline_target_area: "receiver"
   #baseline_aim_point: [-0.3299, -0.5030, 55.4552,  1.0000]        # Focal spot extracted from measured flux
-  baseline_aim_point: [-0.19720931, -0.03458419, 54.929, 1.0]    # Aim point from protocol 
+  baseline_aim_point: [-0.19720931, -0.03458419, 54.929, 1.0]    # Aim point from protocol
   log_step: 1
 heliostat_list_baseline:
   - "AG48"

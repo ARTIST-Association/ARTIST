@@ -1,31 +1,25 @@
-
-
 from unittest import mock
 
 import pytest
-import torch 
+import torch
+
 from artist.field.solar_tower import SolarTower
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+
 
 @pytest.mark.parametrize(
     "target_area_indices, expected",
     [
         (
             torch.tensor([0, 3]),
-            torch.tensor(
-            [[ 1.0,  1.0,  1.0,  1.0],
-            [20.,  2.,  0.0,  1.0]])
+            torch.tensor([[1.0, 1.0, 1.0, 1.0], [20.0, 2.0, 0.0, 1.0]]),
         ),
         (
             torch.tensor([2, 3]),
-            torch.tensor(
-            [[ 11.0, 0.0,  0.0,  1.0],
-            [20.,  2.,  0.0,  1.0]])
+            torch.tensor([[11.0, 0.0, 0.0, 1.0], [20.0, 2.0, 0.0, 1.0]]),
         ),
-
-
-    ]
+    ],
 )
 def test_get_centers_of_target_areas(
     target_area_indices,
@@ -72,5 +66,5 @@ def test_get_centers_of_target_areas(
         target_area_indices=target_area_indices.to(device),
         device=device,
     )
-    
+
     torch.testing.assert_close(centers, expected.to(device), atol=1e-6, rtol=1e-6)

@@ -104,7 +104,9 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         if rank == 0:
             log.info("Loading the planar tower target areas from an HDF5 file.")
 
-        number_of_target_areas = len(config_file[config_dictionary.target_area_planar_key])
+        number_of_target_areas = len(
+            config_file[config_dictionary.target_area_planar_key]
+        )
 
         names = []
         centers = torch.zeros((number_of_target_areas, 4), device=device)
@@ -114,9 +116,9 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         for index, target_area_name in enumerate(
             config_file[config_dictionary.target_area_planar_key].keys()
         ):
-            single_target_area_config = config_file[config_dictionary.target_area_planar_key][
-                target_area_name
-            ]
+            single_target_area_config = config_file[
+                config_dictionary.target_area_planar_key
+            ][target_area_name]
             names.append(target_area_name)
             centers[index] = torch.tensor(
                 single_target_area_config[

@@ -167,9 +167,7 @@ def find_viable_heliostats(
                     flux_images_kinematics_reconstruction[
                         :minimum_number_of_measurements
                     ],
-                    flux_images_surface_reconstruction[
-                        :minimum_number_of_measurements
-                    ],
+                    flux_images_surface_reconstruction[:minimum_number_of_measurements],
                     properties_path,
                 )
             )
@@ -443,4 +441,6 @@ if __name__ == "__main__":
             with open(results_path, "w") as output_file:
                 json.dump(selected_viable_heliostats, output_file, indent=2)
 
-            print(f"Saved {len(selected_viable_heliostats)} heliostat entries to {results_path}")
+            print(
+                f"Saved {len(selected_viable_heliostats)} heliostat entries to {results_path}"
+            )

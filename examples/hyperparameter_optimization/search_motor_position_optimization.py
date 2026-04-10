@@ -168,7 +168,13 @@ def motor_position_optimizer_for_hpo(
         dni=500,
         device=device,
     )
-    loss, _, _, _, _, = motor_positions_optimizer.optimize(
+    (
+        loss,
+        _,
+        _,
+        _,
+        _,
+    ) = motor_positions_optimizer.optimize(
         loss_definition=loss_functions.KLDivergenceLoss(), device=device
     )
 
@@ -233,7 +239,7 @@ if __name__ == "__main__":
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
             "rho_energy": [0.1, 1.0],
-            "rho_pixel": [0.1, 1.0]
+            "rho_pixel": [0.1, 1.0],
         },
     )
 

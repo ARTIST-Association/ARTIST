@@ -306,7 +306,9 @@ def create_flux_plots(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=validation_target_area_indices, device=device),
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=validation_target_area_indices, device=device
+                ),
                 incident_ray_directions=validation_incident_ray_directions,
                 active_heliostats_mask=validation_active_heliostats_mask,
                 device=device,
@@ -323,11 +325,13 @@ def create_flux_plots(
             )
 
             # Perform heliostat-based ray tracing.
-            validation_bitmaps_per_heliostat, _, _, _ = validation_ray_tracer.trace_rays(
-                incident_ray_directions=validation_incident_ray_directions,
-                active_heliostats_mask=validation_active_heliostats_mask,
-                target_area_indices=validation_target_area_indices,
-                device=device,
+            validation_bitmaps_per_heliostat, _, _, _ = (
+                validation_ray_tracer.trace_rays(
+                    incident_ray_directions=validation_incident_ray_directions,
+                    active_heliostats_mask=validation_active_heliostats_mask,
+                    target_area_indices=validation_target_area_indices,
+                    device=device,
+                )
             )
 
             # Create the plots.

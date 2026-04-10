@@ -5,14 +5,10 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.data_parser import paint_scenario_parser
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
-import paint.util.paint_mappings as paint_mappings
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -103,7 +99,9 @@ with setup_distributed_environment(
 
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices, device=device),
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,

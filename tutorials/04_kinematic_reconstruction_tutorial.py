@@ -1,6 +1,5 @@
 import logging
 import pathlib
-from typing import cast
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
@@ -9,8 +8,7 @@ from matplotlib import pyplot as plt
 
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematics_reconstructor import KinematicsReconstructor
-from artist.core.loss_functions import AngleLoss, FocalSpotLoss, VectorLoss
-from artist.data_parser import paint_scenario_parser
+from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
@@ -49,9 +47,9 @@ def create_fluxes(
     measured_bitmaps = []
     scenario.set_number_of_rays(number_of_rays=500)
     for heliostat_group_index in range(len(scenario.heliostat_field.heliostat_groups)):
-        heliostat_group: HeliostatGroup = (
-            scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-        )
+        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
         (
             measured_flux,
             _,
@@ -78,7 +76,9 @@ def create_fluxes(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices, device=device
+                ),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
@@ -105,6 +105,7 @@ def create_fluxes(
     scenario.set_number_of_rays(number_of_rays=4)
 
     return bitmaps, measured_bitmaps
+
 
 def create_plots(
     fluxes_before: torch.Tensor,
@@ -282,7 +283,7 @@ with setup_distributed_environment(
         data=data,
         dni=500,
         optimization_configuration=optimization_configuration,
-        reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing
+        reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
     )
 
     # Reconstruct the kinematics.

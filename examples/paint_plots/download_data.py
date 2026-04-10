@@ -115,7 +115,7 @@ if __name__ == "__main__":
     )
     # Download heliostat data.
     client.get_heliostat_data(
-        #heliostats=viable_heliostats,
+        # heliostats=viable_heliostats,
         collections=[
             paint_mappings.SAVE_CALIBRATION.lower(),
             paint_mappings.SAVE_DEFLECTOMETRY.lower(),

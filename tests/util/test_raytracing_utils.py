@@ -2,7 +2,10 @@ import pytest
 import torch
 
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import TowerTargetAreas, TowerTargetAreasPlanar
+from artist.field.tower_target_areas_planar import (
+    TowerTargetAreas,
+    TowerTargetAreasPlanar,
+)
 from artist.scene.rays import Rays
 from artist.util import raytracing_utils
 
@@ -210,7 +213,10 @@ def target_area_indices(
             torch.tensor([[[1.0]]]),
         ),
         (  # Single intersection not perpendicular to plane.
-            (torch.tensor([[[[ 0.5774,  -0.5774, 0.5774, 0.0]]]]), torch.tensor([[[1.0]]])),
+            (
+                torch.tensor([[[[0.5774, -0.5774, 0.5774, 0.0]]]]),
+                torch.tensor([[[1.0]]]),
+            ),
             "target_area_1_planar",
             torch.tensor([[[0.0, 1.0, 0.0, 1.0]]]),
             torch.tensor([[[0.0]]]),
@@ -293,7 +299,12 @@ def test_line_plane_intersection(
     AssertionError
         If test does not complete as expected.
     """
-    bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities = raytracing_utils.line_plane_intersections(
+    (
+        bitmap_intersections_e,
+        bitmap_intersections_u,
+        intersection_distances,
+        intensities,
+    ) = raytracing_utils.line_plane_intersections(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
@@ -302,13 +313,22 @@ def test_line_plane_intersection(
     )
 
     torch.testing.assert_close(
-        bitmap_intersections_e, expected_intersections_e.to(device), rtol=1e-4, atol=1e-4
+        bitmap_intersections_e,
+        expected_intersections_e.to(device),
+        rtol=1e-4,
+        atol=1e-4,
     )
     torch.testing.assert_close(
-        bitmap_intersections_u, expected_intersections_u.to(device), rtol=1e-4, atol=1e-4
+        bitmap_intersections_u,
+        expected_intersections_u.to(device),
+        rtol=1e-4,
+        atol=1e-4,
     )
     torch.testing.assert_close(
-        intersection_distances, expected_intersection_distances.to(device), rtol=1e-4, atol=1e-4
+        intersection_distances,
+        expected_intersection_distances.to(device),
+        rtol=1e-4,
+        atol=1e-4,
     )
     torch.testing.assert_close(
         intensities,
@@ -325,7 +345,7 @@ def target_area_1_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
     axes = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
     radii = torch.tensor([1.0], device=device)
     heights = torch.tensor([2.0], device=device)
-    opening_angles = torch.tensor([2*torch.pi], device=device)
+    opening_angles = torch.tensor([2 * torch.pi], device=device)
 
     return TowerTargetAreasCylindrical(
         names=["cylinder1"],
@@ -334,8 +354,9 @@ def target_area_1_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
         axes=axes,
         radii=radii,
         heights=heights,
-        opening_angles=opening_angles
+        opening_angles=opening_angles,
     )
+
 
 @pytest.fixture
 def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindrical:
@@ -353,7 +374,7 @@ def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
         axes=axes,
         radii=radii,
         heights=heights,
-        opening_angles=opening_angles
+        opening_angles=opening_angles,
     )
 
 
@@ -419,7 +440,7 @@ def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
             torch.tensor([[[0.0]]]),
         ),
     ],
-    indirect=["rays"]
+    indirect=["rays"],
 )
 def test_line_cylinder_intersection(
     request: pytest.FixtureRequest,
@@ -433,7 +454,12 @@ def test_line_cylinder_intersection(
     expected_absolute_intensities: torch.Tensor,
     device: torch.device,
 ):
-    bitmap_intersections_e, bitmap_intersections_u, intersection_distances, intensities = raytracing_utils.line_cylinder_intersections(
+    (
+        bitmap_intersections_e,
+        bitmap_intersections_u,
+        intersection_distances,
+        intensities,
+    ) = raytracing_utils.line_cylinder_intersections(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
@@ -441,7 +467,24 @@ def test_line_cylinder_intersection(
         device=device,
     )
 
-    torch.testing.assert_close(bitmap_intersections_e, expected_intersections_e.to(device), rtol=1e-4, atol=1e-4)
-    torch.testing.assert_close(bitmap_intersections_u, expected_intersections_u.to(device), rtol=1e-4, atol=1e-4)
-    torch.testing.assert_close(intersection_distances, expected_intersection_distances.to(device), rtol=1e-4, atol=1e-4)
-    torch.testing.assert_close(intensities, expected_absolute_intensities.to(device), rtol=1e-4, atol=1e-4)
+    torch.testing.assert_close(
+        bitmap_intersections_e,
+        expected_intersections_e.to(device),
+        rtol=1e-4,
+        atol=1e-4,
+    )
+    torch.testing.assert_close(
+        bitmap_intersections_u,
+        expected_intersections_u.to(device),
+        rtol=1e-4,
+        atol=1e-4,
+    )
+    torch.testing.assert_close(
+        intersection_distances,
+        expected_intersection_distances.to(device),
+        rtol=1e-4,
+        atol=1e-4,
+    )
+    torch.testing.assert_close(
+        intensities, expected_absolute_intensities.to(device), rtol=1e-4, atol=1e-4
+    )

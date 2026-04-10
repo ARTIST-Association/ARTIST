@@ -38,7 +38,9 @@ log = logging.getLogger(__name__)
 def extract_paint_tower_measurements(
     tower_measurements_path: pathlib.Path,
     device: torch.device | None = None,
-) -> tuple[PowerPlantConfig, TargetAreaPlanarListConfig, TargetAreaCylindricalListConfig]:
+) -> tuple[
+    PowerPlantConfig, TargetAreaPlanarListConfig, TargetAreaCylindricalListConfig
+]:
     """
     Extract tower data from a ``PAINT`` tower measurements file for scenario generation.
 
@@ -77,8 +79,7 @@ def extract_paint_tower_measurements(
     target_area_cylindrical_configs = []
 
     for target_area in list(tower_dict.keys())[1:]:
-        if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "planar": 
-
+        if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "planar":
             target_area_corners = [
                 paint_mappings.UPPER_LEFT,
                 paint_mappings.LOWER_LEFT,
@@ -88,7 +89,9 @@ def extract_paint_tower_measurements(
 
             target_area_corner_points_wgs84 = torch.tensor(
                 [
-                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][corner]
+                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
+                        corner
+                    ]
                     for corner in target_area_corners
                 ],
                 dtype=torch.float64,
@@ -135,7 +138,7 @@ def extract_paint_tower_measurements(
             )
 
             target_area_planar_configs.append(tower_area_config)
-        
+
         if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "convex_cylinder":
             prefix = (
                 "receiver_inner_"
@@ -152,7 +155,9 @@ def extract_paint_tower_measurements(
 
             target_area_corner_points_wgs84 = torch.tensor(
                 [
-                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][corner]
+                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
+                        corner
+                    ]
                     for corner in target_area_corners
                 ],
                 dtype=torch.float64,
@@ -167,10 +172,18 @@ def extract_paint_tower_measurements(
 
             radius = tower_dict[target_area]["radius"]
 
-            opening_angle = torch.deg2rad(torch.tensor(tower_dict[target_area]["opening_angle"], device=device))
-            normal = torch.tensor(tower_dict[target_area]["normal_vector"], device=device)
-            ortho_radius = torch.cross(normal, torch.tensor([0.0, 0.0, 1.0], device=device), dim=-1)
-            axis = torch.nn.functional.normalize(torch.cross(ortho_radius, normal, dim=-1), dim=-1)
+            opening_angle = torch.deg2rad(
+                torch.tensor(tower_dict[target_area]["opening_angle"], device=device)
+            )
+            normal = torch.tensor(
+                tower_dict[target_area]["normal_vector"], device=device
+            )
+            ortho_radius = torch.cross(
+                normal, torch.tensor([0.0, 0.0, 1.0], device=device), dim=-1
+            )
+            axis = torch.nn.functional.normalize(
+                torch.cross(ortho_radius, normal, dim=-1), dim=-1
+            )
 
             # Calculate center and height from points on cylinder arch.
             midpoint_lower = (lower_left + lower_right) / 2
@@ -178,15 +191,19 @@ def extract_paint_tower_measurements(
 
             chord_lower = lower_right - lower_left
             chord_upper = upper_right - upper_left
-            
-            distance_to_center_lower = torch.sqrt(radius**2 - (torch.norm(chord_lower)/2)**2)
-            distance_to_center_upper = torch.sqrt(radius**2 - (torch.norm(chord_upper)/2)**2)
-            
-            center_lower = midpoint_lower -normal * distance_to_center_lower
-            center_upper = midpoint_upper -normal * distance_to_center_upper
+
+            distance_to_center_lower = torch.sqrt(
+                radius**2 - (torch.norm(chord_lower) / 2) ** 2
+            )
+            distance_to_center_upper = torch.sqrt(
+                radius**2 - (torch.norm(chord_upper) / 2) ** 2
+            )
+
+            center_lower = midpoint_lower - normal * distance_to_center_lower
+            center_upper = midpoint_upper - normal * distance_to_center_upper
 
             center = (center_lower + center_upper) / 2
-            height = torch.norm(center_lower-center_upper)
+            height = torch.norm(center_lower - center_upper)
 
             tower_area_config = TargetAreaCylindricalConfig(
                 target_area_key=target_area,
@@ -204,12 +221,20 @@ def extract_paint_tower_measurements(
     power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
 
     # Create the tower area configurations.
-    target_area_planar_list_config = TargetAreaPlanarListConfig(target_area_planar_configs)
-    target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(target_area_cylindrical_configs)
+    target_area_planar_list_config = TargetAreaPlanarListConfig(
+        target_area_planar_configs
+    )
+    target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
+        target_area_cylindrical_configs
+    )
 
     log.info("Loading tower data complete.")
 
-    return power_plant_config, target_area_planar_list_config, target_area_cylindrical_list_config
+    return (
+        power_plant_config,
+        target_area_planar_list_config,
+        target_area_cylindrical_list_config,
+    )
 
 
 def extract_paint_heliostat_properties(

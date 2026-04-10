@@ -360,7 +360,7 @@ def plot_motor_pos_fluxes(
         flux_data = reconstruction_results[key].cpu().detach()
         if key in ["flux_before", "flux_after"]:
             im = ax.imshow(flux_data, cmap=cmap, vmin=vmin, vmax=vmax)
-        else: 
+        else:
             im = ax.imshow(flux_data, cmap=cmap)
         axes.append(ax)
 
@@ -429,13 +429,17 @@ def plot_surface_reconstruction(
         axes[index, 1].imshow(
             heliostat_data["fluxes"][1].cpu().detach(), cmap="inferno"
         )
-        axes[index, 1].set_title(f"Surface not reconstructed {heliostat_data['fluxes'][1].cpu().detach().sum()}")
+        axes[index, 1].set_title(
+            f"Surface not reconstructed {heliostat_data['fluxes'][1].cpu().detach().sum()}"
+        )
         axes[index, 1].axis("off")
 
         axes[index, 2].imshow(
             heliostat_data["fluxes"][2].cpu().detach(), cmap="inferno"
         )
-        axes[index, 2].set_title(f"Surface reconstructed {heliostat_data['fluxes'][2].cpu().detach().sum()}")
+        axes[index, 2].set_title(
+            f"Surface reconstructed {heliostat_data['fluxes'][2].cpu().detach().sum()}"
+        )
         axes[index, 2].axis("off")
 
         reference_direction = torch.tensor([0.0, 0.0, 1.0], device=torch.device("cpu"))

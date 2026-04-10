@@ -123,7 +123,9 @@ def test_integration_alignment(
 
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices=target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -139,7 +141,7 @@ def test_integration_alignment(
         )
 
         # Perform heliostat-based ray tracing.
-        group_bitmaps_per_heliostat, _, _, _  = ray_tracer.trace_rays(
+        group_bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,

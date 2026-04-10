@@ -24,26 +24,41 @@ torch.cuda.manual_seed(7)
     [
         (
             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/tower-measurements.json",
-            [PowerPlantConfig, TargetAreaPlanarListConfig, TargetAreaCylindricalListConfig],
+            [
+                PowerPlantConfig,
+                TargetAreaPlanarListConfig,
+                TargetAreaCylindricalListConfig,
+            ],
             torch.tensor(
                 [50.913421122593, 6.387824755875, 87.000000000000], dtype=torch.float64
             ),
             [
                 "multi_focus_tower",
-                torch.tensor([-17.604515075684,  -2.744643926620,  51.979751586914,   1.000000000000]),
                 torch.tensor(
-                    [[0, 1, 0, 0]]
+                    [-17.604515075684, -2.744643926620, 51.979751586914, 1.000000000000]
                 ),
+                torch.tensor([[0, 1, 0, 0]]),
                 torch.tensor(5.411863327026),
                 torch.tensor(6.387498855591),
             ],
             [
                 "receiver",
                 4.14,
-                torch.tensor([-3.145754337311e-03, -3.755039930344e+00,  5.674332427979e+01, 1.000000000000e+00]),
+                torch.tensor(
+                    [
+                        -3.145754337311e-03,
+                        -3.755039930344e00,
+                        5.674332427979e01,
+                        1.000000000000e00,
+                    ]
+                ),
                 torch.tensor(5.229192256927),
-                torch.tensor([0.000000000000, 0.422618269920, 0.906307816505, 0.000000000000]),
-                torch.tensor([ 0.000000000000,  0.906307816505, -0.422618269920,  0.000000000000]),
+                torch.tensor(
+                    [0.000000000000, 0.422618269920, 0.906307816505, 0.000000000000]
+                ),
+                torch.tensor(
+                    [0.000000000000, 0.906307816505, -0.422618269920, 0.000000000000]
+                ),
                 torch.tensor(1.047197580338),
             ],
         )
@@ -53,7 +68,7 @@ def test_extract_paint_tower_measurements(
     file_path: pathlib.Path,
     expected_types: list[Any],
     expected_power_plant_position: torch.Tensor,
-    expected_multi_focus_properties : list[Any],
+    expected_multi_focus_properties: list[Any],
     expected_receiver_properties: list[Any],
     device: torch.device,
 ) -> None:
@@ -111,7 +126,7 @@ def test_extract_paint_tower_measurements(
         extracted_list[1].target_area_list[2].plane_u,
         expected_multi_focus_properties[4].to(device),
     )
-    
+
     # Receiver
     assert (
         extracted_list[2].target_area_list[0].target_area_key

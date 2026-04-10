@@ -213,7 +213,7 @@ def generate_optimization_results(
                 scenario_file=scenario_file,
                 device=device,
             )
-        
+
         batch_size = 500
 
         scenario.set_number_of_rays(number_of_rays=4)
@@ -367,9 +367,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "ideal_scenario_surface.h5"
-    )
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_surface.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The optimization scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -395,7 +393,7 @@ if __name__ == "__main__":
     )
     eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
-    target_distribution = (eu_trapezoid / eu_trapezoid.sum())
+    target_distribution = eu_trapezoid / eu_trapezoid.sum()
 
     with open(results_dir / "hpo_results_motor_positions.json", "r") as file:
         hyperparameters = json.load(file)

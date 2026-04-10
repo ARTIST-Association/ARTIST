@@ -2,7 +2,6 @@ import logging
 import pathlib
 from typing import Any, cast
 
-from matplotlib import pyplot as plt
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -12,7 +11,7 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, raytracing_utils
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -93,10 +92,10 @@ class KinematicsReconstructor:
         self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
         self.dni = dni
 
-        if (
-            reconstruction_method
-            in [config_dictionary.kinematics_reconstruction_raytracing, config_dictionary.kinematics_reconstruction_motor_positions]
-        ):
+        if reconstruction_method in [
+            config_dictionary.kinematics_reconstruction_raytracing,
+            config_dictionary.kinematics_reconstruction_motor_positions,
+        ]:
             self.reconstruction_method = reconstruction_method
         else:
             raise ValueError(
@@ -138,7 +137,7 @@ class KinematicsReconstructor:
             )
 
         return loss
-        
+
     def _reconstruct_kinematics_parameters_with_raytracing(
         self,
         loss_definition: Loss,
@@ -271,7 +270,9 @@ class KinematicsReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
+                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
+                            target_area_indices=target_area_indices, device=device
+                        ),
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -290,7 +291,7 @@ class KinematicsReconstructor:
                         random_seed=self.ddp_setup[
                             config_dictionary.heliostat_group_rank
                         ],
-                        dni=self.dni
+                        dni=self.dni,
                     )
 
                     # Perform heliostat-based ray tracing.

@@ -13,9 +13,7 @@ from artist.util import config_dictionary
     "kinematics_type",
     [("invalid_kinematics_type")],
 )
-def test_load_kinematics_deviations(
-    kinematics_type: str, device: torch.device
-) -> None:
+def test_load_kinematics_deviations(kinematics_type: str, device: torch.device) -> None:
     """
     Test errors raised when loading kinematics deviations from an hdf5 file.
 

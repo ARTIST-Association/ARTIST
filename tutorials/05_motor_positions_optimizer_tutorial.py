@@ -52,7 +52,9 @@ def create_flux_plot(id: str) -> None:
         # Align heliostats.
         if id == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices, device=device
+                ),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
@@ -180,13 +182,20 @@ with setup_distributed_environment(
     # Set incident ray direction.
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
     # Set target area.
-    target_area_index = 3 #(receiver)
+    target_area_index = 3  # (receiver)
     # Set target flux integral.
-    canting_norm = (torch.norm(scenario.heliostat_field.heliostat_groups[0].canting[0], dim=1)[0])[:2]
+    canting_norm = (
+        torch.norm(scenario.heliostat_field.heliostat_groups[0].canting[0], dim=1)[0]
+    )[:2]
     dimensions = (canting_norm * 4) + 0.02
     heliostat_surface_area = dimensions[0] * dimensions[1]
-    total_heliostat_area = heliostat_surface_area * scenario.heliostat_field.number_of_heliostats_per_group.sum()
-    target_flux_integral = dni * total_heliostat_area * 0.75 # account for mirror and angle based losses.
+    total_heliostat_area = (
+        heliostat_surface_area
+        * scenario.heliostat_field.number_of_heliostats_per_group.sum()
+    )
+    target_flux_integral = (
+        dni * total_heliostat_area * 0.75
+    )  # account for mirror and angle based losses.
 
     # Set loss function and define the ground truth.
     # For an optimization using a focal spot as ground truth use this loss definition:

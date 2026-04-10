@@ -58,10 +58,12 @@ if not pathlib.Path(scenario_path).parent.is_dir():
     )
 
 # Include the power plant and target area configuration.
-power_plant_config, target_area_list_planar_config, target_area_list_cylindrical_config = (
-    paint_scenario_parser.extract_paint_tower_measurements(
-        tower_measurements_path=tower_file, device=device
-    )
+(
+    power_plant_config,
+    target_area_list_planar_config,
+    target_area_list_cylindrical_config,
+) = paint_scenario_parser.extract_paint_tower_measurements(
+    tower_measurements_path=tower_file, device=device
 )
 
 # Include the light source configuration.

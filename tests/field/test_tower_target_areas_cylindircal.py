@@ -1,5 +1,5 @@
-
 from unittest import mock
+
 import h5py
 import torch
 
@@ -51,7 +51,7 @@ def test_target_area_load_from_hdf5(
         config_dictionary.target_area_cylinder_axis: mock_axis,
         config_dictionary.target_area_cylinder_radius: mock_radius,
         config_dictionary.target_area_cylinder_height: mock_height,
-        config_dictionary.target_area_cylinder_opening_angle: mock_opening_angle
+        config_dictionary.target_area_cylinder_opening_angle: mock_opening_angle,
     }[key]
 
     mock_level_target_areas = mock.MagicMock()
@@ -109,5 +109,4 @@ def test_target_area_load_from_hdf5(
         atol=1e-5,
         rtol=1e-5,
     )
-    assert(target_areas.number_of_target_areas == 1)
-
+    assert target_areas.number_of_target_areas == 1

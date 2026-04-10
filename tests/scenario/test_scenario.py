@@ -10,7 +10,9 @@ from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.field.solar_tower import SolarTower
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import TowerTargetAreas, TowerTargetAreasPlanar
+from artist.field.tower_target_areas_planar import (
+    TowerTargetAreasPlanar,
+)
 from artist.scenario.scenario import Scenario
 
 
@@ -250,11 +252,26 @@ def test_index_mapping(
     mock_target_areas_cylindrical = MagicMock(spec=TowerTargetAreasCylindrical)
     mock_target_areas_cylindrical.names = ["receiver"]
 
-    mock_solar_tower.target_areas =  [mock_target_areas_planar, mock_target_areas_cylindrical]
+    mock_solar_tower.target_areas = [
+        mock_target_areas_planar,
+        mock_target_areas_cylindrical,
+    ]
     mock_solar_tower.number_of_target_area_types = 2
-    mock_solar_tower.number_of_target_areas_per_type = torch.tensor([3, 1], device=device)
-    mock_solar_tower.target_name_to_index = {'multi_focus_tower': 0, 'solar_tower_juelich_lower': 1, 'solar_tower_juelich_upper': 2, 'receiver': 3}
-    mock_solar_tower.index_to_target_area = {0: 'multi_focus_tower', 1: 'solar_tower_juelich_lower', 2: 'solar_tower_juelich_upper', 3: 'receiver'}
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor(
+        [3, 1], device=device
+    )
+    mock_solar_tower.target_name_to_index = {
+        "multi_focus_tower": 0,
+        "solar_tower_juelich_lower": 1,
+        "solar_tower_juelich_upper": 2,
+        "receiver": 3,
+    }
+    mock_solar_tower.index_to_target_area = {
+        0: "multi_focus_tower",
+        1: "solar_tower_juelich_lower",
+        2: "solar_tower_juelich_upper",
+        3: "receiver",
+    }
 
     mock_scenario.solar_tower = mock_solar_tower
 

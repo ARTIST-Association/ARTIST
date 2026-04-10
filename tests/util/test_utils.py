@@ -586,69 +586,108 @@ def test_trapezoid_distribution(
     [
         # Symmetric bitmaps and no change in dimensions.
         (
-            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]], [[0.5, 0.0, 0.5], [0.5, 1.0, 0.5], [0.5, 0.0, 0.5]]]),
+            torch.tensor(
+                [
+                    [[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]],
+                    [[0.5, 0.0, 0.5], [0.5, 1.0, 0.5], [0.5, 0.0, 0.5]],
+                ]
+            ),
             3.0,
             3.0,
             torch.tensor([0, 1]),
-            torch.tensor([[[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]],[[0.5, 0.0, 0.5], [0.5, 1.0, 0.5], [0.5, 0.0, 0.5]]]),
+            torch.tensor(
+                [
+                    [[1.0, 2.0, 1.0], [2.0, 3.0, 2.0], [1.0, 2.0, 1.0]],
+                    [[0.5, 0.0, 0.5], [0.5, 1.0, 0.5], [0.5, 0.0, 0.5]],
+                ]
+            ),
         ),
         # Symmetric bitmaps and change in dimensions.
         (
-            torch.tensor([
+            torch.tensor(
                 [
-                    [1.0, 2.0, 2.0, 1.0],
-                    [2.0, 3.0, 3.0, 2.0],
-                    [2.0, 3.0, 3.0, 2.0],
-                    [1.0, 2.0, 2.0, 1.0],
-                ],
-                [
-                    [1.0, 2.0, 2.0, 1.0],
-                    [2.0, 3.0, 3.0, 2.0],
-                    [2.0, 3.0, 3.0, 2.0],
-                    [1.0, 2.0, 2.0, 1.0],
+                    [
+                        [1.0, 2.0, 2.0, 1.0],
+                        [2.0, 3.0, 3.0, 2.0],
+                        [2.0, 3.0, 3.0, 2.0],
+                        [1.0, 2.0, 2.0, 1.0],
+                    ],
+                    [
+                        [1.0, 2.0, 2.0, 1.0],
+                        [2.0, 3.0, 3.0, 2.0],
+                        [2.0, 3.0, 3.0, 2.0],
+                        [1.0, 2.0, 2.0, 1.0],
+                    ],
                 ]
-            ]),
+            ),
             5.0,
             5.0,
             torch.tensor([0, 1]),
-            torch.tensor([[[0.0000, 0.0000, 0.0000, 0.0000],
-                [0.0000, 2.3333, 2.3333, 0.0000],
-                [0.0000, 2.3333, 2.3333, 0.0000],
-                [0.0000, 0.0000, 0.0000, 0.0000]],
-
-                [[0.0000, 0.0000, 0.0000, 0.0000],
-                [0.0000, 2.3333, 2.3333, 0.0000],
-                [0.0000, 2.3333, 2.3333, 0.0000],
-                [0.0000, 0.0000, 0.0000, 0.0000]]])
+            torch.tensor(
+                [
+                    [
+                        [0.0000, 0.0000, 0.0000, 0.0000],
+                        [0.0000, 2.3333, 2.3333, 0.0000],
+                        [0.0000, 2.3333, 2.3333, 0.0000],
+                        [0.0000, 0.0000, 0.0000, 0.0000],
+                    ],
+                    [
+                        [0.0000, 0.0000, 0.0000, 0.0000],
+                        [0.0000, 2.3333, 2.3333, 0.0000],
+                        [0.0000, 2.3333, 2.3333, 0.0000],
+                        [0.0000, 0.0000, 0.0000, 0.0000],
+                    ],
+                ]
+            ),
         ),
         # Asymmetric bitmaps and no change in dimensions.
         (
-            torch.tensor([[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]]),
+            torch.tensor(
+                [
+                    [[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                    [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+                ]
+            ),
             3.0,
             3.0,
             torch.tensor([0, 1]),
-            torch.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]], [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]]]),
+            torch.tensor(
+                [
+                    [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]],
+                    [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]],
+                ]
+            ),
         ),
         # Asymmetric bitmaps and change in dimensions.
         (
-            torch.tensor([[
-                [1., 1., 1., 0., 0., 0.],
-                [1., 2., 1., 0., 0., 0.],
-                [1., 1., 1., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0., 0.]]]),
+            torch.tensor(
+                [
+                    [
+                        [1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+                        [1.0, 2.0, 1.0, 0.0, 0.0, 0.0],
+                        [1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    ]
+                ]
+            ),
             2.0,
             2.0,
             torch.tensor([0]),
-            torch.tensor([[[0.1111, 0.3333, 0.3333, 0.3333, 0.3333, 0.1111],
-                [0.3333, 1.0000, 1.0000, 1.0000, 1.0000, 0.3333],
-                [0.3333, 1.0000, 1.4444, 1.4444, 1.0000, 0.3333],
-                [0.3333, 1.0000, 1.4444, 1.4444, 1.0000, 0.3333],
-                [0.3333, 1.0000, 1.0000, 1.0000, 1.0000, 0.3333],
-                [0.1111, 0.3333, 0.3333, 0.3333, 0.3333, 0.1111]]])
-
-        )
+            torch.tensor(
+                [
+                    [
+                        [0.1111, 0.3333, 0.3333, 0.3333, 0.3333, 0.1111],
+                        [0.3333, 1.0000, 1.0000, 1.0000, 1.0000, 0.3333],
+                        [0.3333, 1.0000, 1.4444, 1.4444, 1.0000, 0.3333],
+                        [0.3333, 1.0000, 1.4444, 1.4444, 1.0000, 0.3333],
+                        [0.3333, 1.0000, 1.0000, 1.0000, 1.0000, 0.3333],
+                        [0.1111, 0.3333, 0.3333, 0.3333, 0.3333, 0.1111],
+                    ]
+                ]
+            ),
+        ),
     ],
 )
 def test_crop_flux_distributions_around_center_centering(
@@ -694,13 +733,20 @@ def test_crop_flux_distributions_around_center_centering(
     mock_target_areas_cylindrical.names = ["receiver"]
     mock_target_areas_cylindrical.radii = torch.tensor(([[1.0]]), device=device)
     mock_target_areas_cylindrical.heights = torch.tensor(([[3.0]]), device=device)
-    mock_target_areas_cylindrical.opening_angles = torch.tensor(([[3.0]]), device=device)
+    mock_target_areas_cylindrical.opening_angles = torch.tensor(
+        ([[3.0]]), device=device
+    )
 
-    mock_solar_tower.target_areas =  [mock_target_areas_planar, mock_target_areas_cylindrical]
+    mock_solar_tower.target_areas = [
+        mock_target_areas_planar,
+        mock_target_areas_cylindrical,
+    ]
     mock_solar_tower.number_of_target_area_types = 2
-    mock_solar_tower.number_of_target_areas_per_type = torch.tensor([1, 1], device=device)
-    mock_solar_tower.target_name_to_index = {'multi_focus_tower': 0, 'receiver': 1}
-    mock_solar_tower.index_to_target_area = {0: 'multi_focus_tower', 1: 'receiver'}
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor(
+        [1, 1], device=device
+    )
+    mock_solar_tower.target_name_to_index = {"multi_focus_tower": 0, "receiver": 1}
+    mock_solar_tower.index_to_target_area = {0: "multi_focus_tower", 1: "receiver"}
 
     cropped = utils.crop_flux_distributions_around_center(
         flux_distributions=image.to(device),
@@ -852,35 +898,35 @@ def test_azimuth_elevation_to_enu(
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([1.0, 0.0, 0.0]),
-            torch.tensor([0.0])
+            torch.tensor([0.0]),
         ),
         # From x-axis to y-axis, 90 degrees rotation around z.
         (
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 1.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0]),
-            torch.tensor([torch.pi / 2])
+            torch.tensor([torch.pi / 2]),
         ),
         # From y-axis to z-axis, 90 degrees rotation around x.
         (
             torch.tensor([0.0, 1.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor([1.0, 0.0, 0.0]),
-            torch.tensor([torch.pi / 2])
+            torch.tensor([torch.pi / 2]),
         ),
         # From positive x-axis, ti negative x-axis, 180 degrees rotation, .
         (
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0]),
-            torch.tensor([torch.pi])
+            torch.tensor([torch.pi]),
         ),
         # Non-normalized input vectors, from x-axis to y-axis, 90 degrees.
         (
             torch.tensor([2.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 3.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0]),
-            torch.tensor([torch.pi / 2])
+            torch.tensor([torch.pi / 2]),
         ),
     ],
 )
@@ -892,9 +938,9 @@ def test_rotation_angle_and_axis(
     device: torch.device,
 ):
     axis, angle = utils.rotation_angle_and_axis(
-        from_orientation=from_orientation.to(device), 
+        from_orientation=from_orientation.to(device),
         to_orientation=to_orientation.to(device),
-        device=device
+        device=device,
     )
 
     assert torch.allclose(axis, expected_axis.to(device), atol=1e-5)
@@ -908,19 +954,23 @@ def test_rotation_angle_and_axis(
             torch.tensor([[127.5, 127.5], [63.75, 255.0], [0.0, 0.0]]),
             torch.tensor([256, 256]),
             torch.tensor([0, 0, 1]),
-            torch.tensor([[0.0, 0.0, 0.0, 1.0], [1.5, 0.0, -3.0, 1.0], [2.0, 0.0, 4.0, 1.0]])
+            torch.tensor(
+                [[0.0, 0.0, 0.0, 1.0], [1.5, 0.0, -3.0, 1.0], [2.0, 0.0, 4.0, 1.0]]
+            ),
         ),
         (
             torch.tensor([[127.5, 127.5], [127.5, 255.0], [0.0, 63.75]]),
             torch.tensor([256, 256]),
             torch.tensor([2, 2, 2]),
-            torch.tensor([[0.0, 2.0, 0.0, 1.0], [0.0, 2.0, -3.0, 1.0], [2.0, 0.0, 1.5, 1.0]])
+            torch.tensor(
+                [[0.0, 2.0, 0.0, 1.0], [0.0, 2.0, -3.0, 1.0], [2.0, 0.0, 1.5, 1.0]]
+            ),
         ),
         (
             torch.tensor([[255.0, 191.25], [255.0, 255.0]]),
             torch.tensor([256, 256]),
             torch.tensor([2, 0]),
-            torch.tensor([[-2.0, 0.0, -1.5, 1.0], [-3.0, 0.0, -3.0, 1.0]])
+            torch.tensor([[-2.0, 0.0, -1.5, 1.0], [-3.0, 0.0, -3.0, 1.0]]),
         ),
     ],
 )
@@ -929,34 +979,51 @@ def test_bitmap_coordinates_to_target_coordinates(
     bitmap_resolution: torch.Tensor,
     target_area_indices: torch.Tensor,
     expected_coordinates: torch.Tensor,
-    device: torch.device
+    device: torch.device,
 ):
     mock_solar_tower = MagicMock(spec=SolarTower)
     mock_target_areas_planar = MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["planar1", "planar2"]
-    mock_target_areas_planar.dimensions = torch.tensor([[6.0, 6.0], [2.0, 4.0]], device=device)
-    mock_target_areas_planar.centers = torch.tensor([[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 2.0, 1.0]], device=device)
+    mock_target_areas_planar.dimensions = torch.tensor(
+        [[6.0, 6.0], [2.0, 4.0]], device=device
+    )
+    mock_target_areas_planar.centers = torch.tensor(
+        [[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 2.0, 1.0]], device=device
+    )
     mock_target_areas_cylindrical = MagicMock(spec=TowerTargetAreasCylindrical)
     mock_target_areas_cylindrical.names = ["cylinder1"]
-    mock_target_areas_cylindrical.normals = torch.tensor(([[0.0, 1.0, 0.0, 0.0]]), device=device)
-    mock_target_areas_cylindrical.axes = torch.tensor(([[0.0, 0.0, 1.0, 0.0]]), device=device)
+    mock_target_areas_cylindrical.normals = torch.tensor(
+        ([[0.0, 1.0, 0.0, 0.0]]), device=device
+    )
+    mock_target_areas_cylindrical.axes = torch.tensor(
+        ([[0.0, 0.0, 1.0, 0.0]]), device=device
+    )
     mock_target_areas_cylindrical.radii = torch.tensor(([[2.0]]), device=device)
     mock_target_areas_cylindrical.heights = torch.tensor(([[6.0]]), device=device)
-    mock_target_areas_cylindrical.opening_angles = torch.tensor(([[math.pi]]), device=device)
-    mock_target_areas_cylindrical.centers = torch.tensor(([[0.0, 0.0, 0.0, 1.0]]), device=device)
+    mock_target_areas_cylindrical.opening_angles = torch.tensor(
+        ([[math.pi]]), device=device
+    )
+    mock_target_areas_cylindrical.centers = torch.tensor(
+        ([[0.0, 0.0, 0.0, 1.0]]), device=device
+    )
 
-    mock_solar_tower.target_areas = [mock_target_areas_planar, mock_target_areas_cylindrical]
+    mock_solar_tower.target_areas = [
+        mock_target_areas_planar,
+        mock_target_areas_cylindrical,
+    ]
     mock_solar_tower.number_of_target_area_types = 2
-    mock_solar_tower.number_of_target_areas_per_type = torch.tensor([2, 1], device=device)
-    mock_solar_tower.target_name_to_index = {'planar1': 0, 'planar2': 1, "cylinder1": 2}
-    mock_solar_tower.index_to_target_area = {0: 'planar1', 1: 'planar2', 2: "cylinder1"}
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor(
+        [2, 1], device=device
+    )
+    mock_solar_tower.target_name_to_index = {"planar1": 0, "planar2": 1, "cylinder1": 2}
+    mock_solar_tower.index_to_target_area = {0: "planar1", 1: "planar2", 2: "cylinder1"}
 
     target_coordinates = utils.bitmap_coordinates_to_target_coordinates(
         bitmap_coordinates=bitmap_coordinates.to(device),
         bitmap_resolution=bitmap_resolution.to(device),
         solar_tower=mock_solar_tower,
         target_area_indices=target_area_indices.to(device),
-        device=device
+        device=device,
     )
 
     torch.testing.assert_close(

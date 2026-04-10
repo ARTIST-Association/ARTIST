@@ -75,10 +75,12 @@ def generate_ideal_scenario(
     device = get_device(device=device)
 
     # Generate power plant configuration and target area list.
-    power_plant_config, target_area_list_planar_config, target_area_list_cylindrical_config = (
-        paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file, device=device
-        )
+    (
+        power_plant_config,
+        target_area_list_planar_config,
+        target_area_list_cylindrical_config,
+    ) = paint_scenario_parser.extract_paint_tower_measurements(
+        tower_measurements_path=tower_file, device=device
     )
 
     # Set up light source configuration.
@@ -145,10 +147,12 @@ def generate_fitted_scenario(
     device = get_device(device=device)
 
     # Include the power plant configuration.
-    power_plant_config, target_area_list_planar_config, target_area_list_cylindrical_config = (
-        paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file, device=device
-        )
+    (
+        power_plant_config,
+        target_area_list_planar_config,
+        target_area_list_cylindrical_config,
+    ) = paint_scenario_parser.extract_paint_tower_measurements(
+        tower_measurements_path=tower_file, device=device
     )
 
     # Include the light source configuration.

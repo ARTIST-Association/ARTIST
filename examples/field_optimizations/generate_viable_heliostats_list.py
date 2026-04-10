@@ -78,7 +78,9 @@ def find_viable_heliostats(
         calibration_dir = heliostat_directory / paint_mappings.SAVE_CALIBRATION
 
         if not calibration_dir.exists():
-            print(f"Skipping {heliostat_name}, no calibration directory found for this heliostat.")
+            print(
+                f"Skipping {heliostat_name}, no calibration directory found for this heliostat."
+            )
             continue
 
         valid_calibration_files = []
