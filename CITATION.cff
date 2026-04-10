@@ -10,31 +10,35 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: Max
-    family-names: Pargmann
-    email: max.pargmann@dlr.de
-    affiliation: German Aerospace Center (DLR)
-    orcid: 'https://orcid.org/0000-0002-4705-6285'
   - given-names: Marlene
     family-names: Busch
     email: marlene.busch@dlr.de
     affiliation: German Aerospace Center (DLR)
     orcid: 'https://orcid.org/0009-0008-5730-7528'
-  - given-names: Kaleb
-    family-names: Phipps
-    email: kaleb.phipps@kit.edu
-    affiliation: Karlsruhe Institute of Technology (KIT)
-    orcid: 'https://orcid.org/0000-0002-9197-1739'
-  - given-names: Mathias
-    family-names: Kuhl
-    email: mathias.kuhl@dlr.de
-    affiliation: German Aerospace Center (DLR)
-    orcid: 'https://orcid.org/0000-0003-0097-7260'
   - given-names: Marie
     family-names: Weiel
     email: marie.weiel@kit.edu
     affiliation: Karlsruhe Institute of Technology (KIT)
     orcid: 'https://orcid.org/0000-0001-9648-4385'
+  - given-names: Mathias
+    family-names: Kuhl
+    email: mathias.kuhl@dlr.de
+    affiliation: German Aerospace Center (DLR)
+    orcid: 'https://orcid.org/0000-0003-0097-7260'
+  - given-names: Kaleb
+    family-names: Phipps
+    email: kaleb.phipps@kit.edu
+    affiliation: Karlsruhe Institute of Technology (KIT)
+    orcid: 'https://orcid.org/0000-0002-9197-1739'
+  - given-names: Max
+    family-names: Pargmann
+    email: max.pargmann@dlr.de
+    affiliation: German Aerospace Center (DLR)
+    orcid: 'https://orcid.org/0000-0002-4705-6285'
+  - given-names: Jan
+    family-names: Ebert
+    email: janpublicebert@posteo.net
+    orcid: 'https://orcid.org/0000-0001-7118-0481'
   - given-names: Felix
     family-names: Göhring
     email: felix.goehring@dlr.de
