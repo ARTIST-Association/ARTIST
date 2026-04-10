@@ -253,7 +253,7 @@ def line_cylinder_intersections(
 
     # If there are no intersections, return empty coordinates, intensities and distances.
     if not torch.any(mask_infinite_cylinder_hits):
-        empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device),
+        empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device)
         return empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
     sqrt_discriminant = torch.sqrt(discriminant * mask_infinite_cylinder_hits + 1e-12)
@@ -268,7 +268,7 @@ def line_cylinder_intersections(
     valid_distances = intersection_distances > 0
     
     if (intersection_distances == 0.0).all():
-        empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device), torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device),
+        empty_tensor = torch.zeros((directions.shape[0], directions.shape[1], directions.shape[2]), device=device)
         return empty_tensor, empty_tensor, empty_tensor, empty_tensor
 
     # Intersection points (local cylinder frame).

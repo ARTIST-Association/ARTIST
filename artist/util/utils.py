@@ -477,16 +477,28 @@ def rotation_angle_and_axis(
     from_orientation = from_orientation[:3] / torch.norm(from_orientation[:3])
     to_orientation = to_orientation[:3] / torch.norm(to_orientation[:3])
 
+    dot = torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
+    angle = torch.acos(dot)
+
     axis = torch.linalg.cross(from_orientation, to_orientation)
     axis_norm = torch.norm(axis)
-    if axis_norm < 1e-6:
-        return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(
-            0.0, device=device
-        )
+
+    # Parallel vectors.
+    if axis_norm < 1e-6 and dot > 0:
+        return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(0.0, device=device)
+
+    # Inverse vectors.
+    if axis_norm < 1e-6 and dot < 0:
+        if abs(from_orientation[0]) < abs(from_orientation[1]):
+            orthogonal = torch.tensor([1.0, 0.0, 0.0], device=device)
+        else:
+            orthogonal = torch.tensor([0.0, 1.0, 0.0], device=device)
+        axis = torch.linalg.cross(from_orientation, orthogonal)
+        axis = axis / torch.norm(axis)
+        return axis, torch.tensor(torch.pi, device=device)
+
     axis = axis / axis_norm
-    angle = torch.acos(
-        torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
-    )
+
     return axis, angle
 
 
@@ -574,26 +586,26 @@ def bitmap_coordinates_to_target_coordinates(
         center_coordinates[planar_mask] = (
             solar_tower.target_areas[0].centers[planar_indices] 
             - 0.5 * target_dimensions
-            + coordinates / resolution * target_dimensions
+            + coordinates / (resolution - 1) * target_dimensions
         )
 
     if target_area_indices[~planar_mask].numel() > 0:
         cylinder_indices = target_area_indices[~planar_mask] - solar_tower.number_of_target_areas_per_type[0]
 
         cylinder_normals = solar_tower.target_areas[1].normals[cylinder_indices][:, :3]
-        cylinder_axis = solar_tower.target_areas[1].axes[cylinder_indices][:, :3]
-        cylinder_center = solar_tower.target_areas[1].centers[cylinder_indices]
-        radii = solar_tower.target_areas[1].radii[cylinder_indices]
+        cylinder_axes = solar_tower.target_areas[1].axes[cylinder_indices][:, :3]
+        cylinder_centers = solar_tower.target_areas[1].centers[cylinder_indices]
+        radii = solar_tower.target_areas[1].radii[cylinder_indices].flatten()
         
-        theta = (bitmap_coordinates[~planar_mask,0] / bitmap_resolution[0] - 0.5) * solar_tower.target_areas[1].opening_angles[cylinder_indices]
-        z = (bitmap_coordinates[~planar_mask,1] / bitmap_resolution[1] - 0.5) * solar_tower.target_areas[1].heights[cylinder_indices]
+        theta = (bitmap_coordinates[~planar_mask,0] / (bitmap_resolution[0] - 1) - 0.5) * solar_tower.target_areas[1].opening_angles[cylinder_indices].flatten()
+        z = (((bitmap_resolution[0] - 1) - bitmap_coordinates[~planar_mask,1]) / (bitmap_resolution[1] -1) - 0.5) * solar_tower.target_areas[1].heights[cylinder_indices].flatten()
 
-        v = torch.cross(cylinder_axis, cylinder_normals, dim=-1)
+        v = torch.cross(cylinder_axes, cylinder_normals, dim=-1)
 
-        center_coordinates[~planar_mask, :3] = cylinder_center[:, :3] + (
+        center_coordinates[~planar_mask, :3] = cylinder_centers[:, :3] + (
             radii[:,None] * torch.cos(theta)[:,None] * cylinder_normals +
             radii[:,None] * torch.sin(theta)[:,None] * v +
-            z[:,None] * cylinder_axis
+            z[:,None] * cylinder_axes
         )
     
     return center_coordinates
