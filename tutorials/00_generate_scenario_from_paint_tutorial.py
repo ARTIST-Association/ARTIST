@@ -23,43 +23,29 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_paint_mix_ideal_prototype_deflectometry.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/tower-measurements.json"
+    "please/insert/the/path/to/the/paint/data/here/tower-measurements.json"
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:
 # A tuple of: (heliostat-name, heliostat-properties.json, deflectometry.h5)
 heliostat_files_list = [
     (
-        "AA39",
+        "name",
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/heliostat-properties.json"
+            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/deflectometry.h5"),
+        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
     ),
     (
-        "AA31",
+        "name2",
         pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/heliostat-properties.json"
+            "please/insert/the/path/to/the/paint/data/here/heliostat-properties.json"
         ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/deflectometry.h5"),
-    ),
-    (
-        "AA28",
-        pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/heliostat-properties.json"
-        ),
-        #pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA28/deflectometry.h5"),
-    ),
-    (
-        "AC43",
-        pathlib.Path(
-            "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/heliostat-properties.json"
-        ),
-        pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AC43/deflectometry.h5"),
+        pathlib.Path("please/insert/the/path/to/the/paint/data/here/deflectometry.h5"),
     ),
     # ... Include as many as you want, but at least one!
 ]

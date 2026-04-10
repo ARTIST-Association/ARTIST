@@ -36,7 +36,7 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_stral_single_heliostat.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your stral_data.binp file.
 stral_file_path = pathlib.Path(
@@ -58,7 +58,7 @@ power_plant_config = PowerPlantConfig(
 # Include a single planar tower area (receiver).
 target_area_list_planar_config = TargetAreaPlanarConfig(
     target_area_key="receiver",
-    center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
+    center=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
     normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
     plane_e=8.629666667,
     plane_u=7.0,

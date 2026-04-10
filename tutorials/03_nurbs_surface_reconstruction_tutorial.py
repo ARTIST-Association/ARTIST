@@ -306,9 +306,7 @@ def create_flux_plots(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[
-                    validation_target_area_indices
-                ],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=validation_target_area_indices, device=device),
                 incident_ray_directions=validation_incident_ray_directions,
                 active_heliostats_mask=validation_active_heliostats_mask,
                 device=device,
@@ -402,7 +400,7 @@ heliostat_data_mapping = [
 optimizer_dict = {
     config_dictionary.initial_learning_rate: 1e-4,
     config_dictionary.tolerance: 1e-5,
-    config_dictionary.max_epoch: 30,
+    config_dictionary.max_epoch: 100,
     config_dictionary.batch_size: 30,
     config_dictionary.log_step: 1,
     config_dictionary.early_stopping_delta: 1e-4,

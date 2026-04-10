@@ -24,7 +24,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_paint_four_heliostats.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -56,35 +56,13 @@ with setup_distributed_environment(
     # from a sun located directly in the south and be ray-traced on the first target found in the scenario.
     heliostat_target_light_source_mapping = None
     # If you want to customize the mapping, choose the following style: list[tuple[str, str, torch.Tensor]]
-    heliostat_target_light_source_mapping = [
-        ("AA39", "receiver", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        ("AA39", "multi_focus_tower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        ("AA39", "solar_tower_juelich_lower", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-        ("AA39", "solar_tower_juelich_upper", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
-    ]
+    # heliostat_target_light_source_mapping = [
+    #     ("heliostat_1", "target_name_2", incident_ray_direction_tensor_1),
+    #     ("heliostat_2", "target_name_2", incident_ray_direction_tensor_2),
+    #     (...)
+    # ]
 
-    heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-        base_path="/workVERLEIHNIX/share/PAINT_data",
-        heliostat_names=["AA39"],
-        number_of_measurements=2,
-        image_variant="flux-centered",
-        randomize=True,
-    )
-
-    data_parser_plots = PaintCalibrationDataParser(
-        sample_limit=2, centroid_extraction_method=paint_mappings.UTIS_KEY
-    )
-
-    # Create dict for the data parser and the heliostat_data_mapping.
-    # data: dict[
-    #     str,
-    #     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    # ] = {
-    #     config_dictionary.data_parser: data_parser_plots,
-    #     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
-    # }
-
-    bitmap_resolution = torch.tensor([431, 360])
+    bitmap_resolution = torch.tensor([256, 256])
 
     combined_bitmaps_per_target = torch.zeros(
         (
@@ -106,16 +84,12 @@ with setup_distributed_environment(
         # to the first target area found in the scenario and receive an incident ray direction "north" (meaning the
         # light source position is directly in the south).
         (
-            measured,
-            focal_spots_measured,
-            incident_ray_directions,
-            _,
             active_heliostats_mask,
             target_area_indices,
-        ) = data_parser_plots.parse_data_for_reconstruction(
-            heliostat_data_mapping=heliostat_data_mapping,
+            incident_ray_directions,
+        ) = scenario.index_mapping(
             heliostat_group=heliostat_group_alignment,
-            scenario=scenario,
+            string_mapping=heliostat_target_light_source_mapping,
             device=device,
         )
 
@@ -127,7 +101,6 @@ with setup_distributed_environment(
             active_heliostats_mask=active_heliostats_mask, device=device
         )
 
-        target_area_indices[0] = 3
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
             aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices, device=device),
@@ -145,20 +118,14 @@ with setup_distributed_environment(
         ]
         if heliostat_group.active_heliostats_mask.sum() > 0:
             (
-                measured,
-                focal_spots_measured,
-                incident_ray_directions,
-                _,
                 active_heliostats_mask,
                 target_area_indices,
-            ) = data_parser_plots.parse_data_for_reconstruction(
-                heliostat_data_mapping=heliostat_data_mapping,
-                heliostat_group=heliostat_group_alignment,
-                scenario=scenario,
+                incident_ray_directions,
+            ) = scenario.index_mapping(
+                heliostat_group=heliostat_group,
+                string_mapping=heliostat_target_light_source_mapping,
                 device=device,
             )
-            target_area_indices[0] = 3
-            scenario.set_number_of_rays(number_of_rays=300)
 
             # Create a distributed ray tracer.
             ray_tracer = HeliostatRayTracer(
@@ -191,7 +158,7 @@ with setup_distributed_environment(
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
-                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_indices[i]]}"
+                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.solar_tower.index_to_target_area[target_area_indices[i]]}"
                 )
                 plt.savefig(
                     f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
@@ -218,17 +185,17 @@ with setup_distributed_environment(
         )
 
         # Plot the combined bitmaps of heliostats on the same target reduced within each group.
-        for target_area_index in range(scenario.target_areas.number_of_target_areas):
+        for target_area_index in range(combined_bitmaps_per_target.shape[0]):
             plt.imshow(
                 combined_bitmaps_per_target[target_area_index].cpu().detach(),
                 cmap="gray",
             )
             plt.axis("off")
             plt.title(
-                f"Reduced within group, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+                f"Reduced within group, Target area: {scenario.solar_tower.index_to_target_area[target_area_index]}, Rank: {ddp_setup['rank']}"
             )
             plt.savefig(
-                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.target_areas.names[target_area_index]}.png"
+                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
             )
 
     if ddp_setup[config_dictionary.is_distributed]:
@@ -237,15 +204,15 @@ with setup_distributed_environment(
         )
 
     # Plot the final combined bitmaps of heliostats on the same target fully reduced.
-    for target_area_index in range(scenario.target_areas.number_of_target_areas):
+    for target_area_index in range(combined_bitmaps_per_target.shape[0]):
         plt.imshow(
             combined_bitmaps_per_target[target_area_index].cpu().detach(),
             cmap="gray",
         )
         plt.axis("off")
         plt.title(
-            f"Final bitmap, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+            f"Final bitmap, Target area: {scenario.solar_tower.index_to_target_area[target_area_index]}, Rank: {ddp_setup['rank']}"
         )
         plt.savefig(
-            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.target_areas.names[target_area_index]}.png"
+            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
         )

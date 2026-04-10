@@ -158,34 +158,34 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tests/data/scenarios/test_scenario_paint_four_heliostats.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
 heliostat_data_mapping = [
     (
-        "AA39",
+        "heliostat_name_1",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA39/271633-flux.png"),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
     (
-        "AA31",
+        "heliostat_name_2",
         [
             pathlib.Path(
-                "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-calibration-properties.json"
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
             ),
             # ....
         ],
         [
-            pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/AA31/126372-flux.png"),
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
             # ....
         ],
     ),
@@ -204,7 +204,7 @@ heliostat_data_mapping = [
 optimizer_dict = {
     config_dictionary.initial_learning_rate: 0.00005,
     config_dictionary.tolerance: 0.0000,
-    config_dictionary.max_epoch: 2,
+    config_dictionary.max_epoch: 50,
     config_dictionary.batch_size: 50,
     config_dictionary.log_step: 1,
     config_dictionary.early_stopping_delta: 1e-8,
