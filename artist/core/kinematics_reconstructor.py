@@ -62,8 +62,8 @@ class KinematicsReconstructor:
             CalibrationDataParser
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
-        dni: float,
         optimization_configuration: dict[str, Any],
+        dni: float = None,
         reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
     ) -> None:
         """
@@ -271,9 +271,7 @@ class KinematicsReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device)[
-                            target_area_indices
-                        ],
+                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -382,20 +380,6 @@ class KinematicsReconstructor:
                         break
 
                     epoch += 1
-                
-                # Uncomment for analyses of single fluxes
-                # for i in range(flux_distributions.shape[0]):
-                #     _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-                #     axes[0].imshow(flux_distributions[i].cpu().detach(), cmap="gray")
-                #     axes[0].set_title("Reconstruction", fontsize=16)
-                #     axes[0].axis("off")
-                #     axes[1].imshow(measured[i].cpu().detach(), cmap="gray")
-                #     axes[1].set_title("Measured", fontsize=16)
-                #     axes[1].axis("off")
-                #     plt.subplots_adjust(wspace=0.05)
-                #     plt.show()
-                #     plt.savefig(f"bitmaps/kinematics/sample_{i}.png")
-                #     plt.close()
 
                 loss_history = {
                     "total_loss": loss_history,

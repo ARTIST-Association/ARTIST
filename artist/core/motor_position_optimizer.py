@@ -191,6 +191,11 @@ class MotorPositionsOptimizer:
         target_area_indices_all_groups = []
         incident_ray_directions_all_groups = []
 
+        group_offsets = torch.cat([
+            torch.tensor([0], device=device),
+            self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(0)[:-1]
+        ])
+
         for group_index, group in enumerate(
             self.scenario.heliostat_field.heliostat_groups
         ):
@@ -291,7 +296,6 @@ class MotorPositionsOptimizer:
             target_plane_dimensions[0] = target_areas.radii[cylinder_indices] * target_areas.opening_angles[cylinder_indices]
             target_plane_dimensions[1] = target_areas.heights[cylinder_indices]
 
-
         # Set up constraints.
         flux_integral_reference = 0.0
         lambda_local_flux = 0.0
@@ -331,9 +335,9 @@ class MotorPositionsOptimizer:
                 ),
                 device=device,
             )
-            intercept_factors = 0
-            on_target_factors = 0
-            blocking_factors = 0
+            intercept_factors = torch.zeros((sum(actives.sum() for actives in active_heliostats_masks_all_groups)), device=device)
+            on_target_factors = torch.zeros_like(intercept_factors, device=device)
+            blocking_factors = torch.zeros_like(intercept_factors, device=device)
 
             for heliostat_group_index in self.ddp_setup[
                 config_dictionary.groups_to_ranks_mapping
@@ -420,9 +424,11 @@ class MotorPositionsOptimizer:
                 )[self.target_area_index]
 
                 total_flux = total_flux + flux_distribution_on_target
-                intercept_factors = intercept_factors + intercept_factor
-                on_target_factors = on_target_factors + on_target_factor
-                blocking_factors = blocking_factors + blocking_factor
+
+                global_indices = group_offsets[heliostat_group_index] + sample_indices_for_local_rank
+                intercept_factors[global_indices] = intercept_factor
+                on_target_factors[global_indices] = on_target_factor
+                blocking_factors[global_indices] = blocking_factor
             
             if self.ddp_setup[config_dictionary.is_distributed]:
                 total_flux = torch.distributed.nn.functional.all_reduce(
@@ -509,10 +515,11 @@ class MotorPositionsOptimizer:
             
             total_loss_history.append(loss.detach().cpu().item())
             flux_loss_history.append(flux_loss.detach().cpu().item())
-            flux_integral.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
-            local_flux_constraint_history.append(local_flux_constraint.detach().cpu().item())
-            intercept_constraint_history.append(intercept_factor_constraint.detach().cpu().item())
-            flux_integral_constraint_history.append(flux_integral_constraint.detach().cpu().item())
+            if isinstance(loss_definition, KLDivergenceLoss):
+                flux_integral.append((100 / flux_integral_reference * (total_flux.sum()-flux_integral_reference + 1e-8)).detach().cpu().item())
+                local_flux_constraint_history.append(local_flux_constraint.detach().cpu().item())
+                intercept_constraint_history.append(intercept_factor_constraint.detach().cpu().item())
+                flux_integral_constraint_history.append(flux_integral_constraint.detach().cpu().item())
 
             # Early stopping when loss did not improve since a predefined number of epochs.
             stop = early_stopper.step(loss)

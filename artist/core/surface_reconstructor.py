@@ -370,10 +370,6 @@ class SurfaceReconstructor:
                         bitmap_resolution=self.bitmap_resolution,
                         dni=self.dni
                     )
-                    def print_grad(name):
-                        def hook(grad):
-                            print(f"Gradient reached {name}: {grad}")
-                        return hook
 
                     # Perform heliostat-based ray tracing.
                     flux_distributions, _, _, _ = ray_tracer.trace_rays(
@@ -382,7 +378,6 @@ class SurfaceReconstructor:
                         target_area_indices=target_area_indices,
                         device=device,
                     )
-                    #flux_distributions.register_hook(print_grad("flux_distributions"))
 
                     sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
                     number_of_samples_per_heliostat = int(
@@ -402,7 +397,6 @@ class SurfaceReconstructor:
                             device=device,
                         )
                     )
-                    #cropped_flux_distributions.register_hook(print_grad("cropped_flux_distributions"))
 
                     # Flux loss.
                     flux_loss_per_sample = loss_definition(
@@ -544,20 +538,6 @@ class SurfaceReconstructor:
                         break
 
                     epoch += 1
-                
-                # Uncomment for analyses of single fluxes
-                # for i in range(cropped_flux_distributions.shape[0]):
-                #     _, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-                #     axes[0].imshow(cropped_flux_distributions[i].cpu().detach(), cmap="gray")
-                #     axes[0].set_title("Reconstruction", fontsize=16)
-                #     axes[0].axis("off")
-                #     axes[1].imshow(measured_flux_distributions[sample_indices_for_local_rank][i].cpu().detach(), cmap="gray")
-                #     axes[1].set_title("Measured", fontsize=16)
-                #     axes[1].axis("off")
-                #     plt.subplots_adjust(wspace=0.05)
-                #     plt.show()
-                #     plt.savefig(f"bitmaps/surfaces/sample_{i}.png")
-                #     plt.close()
 
                 loss_history = {
                     "total_loss": total_loss_history,
