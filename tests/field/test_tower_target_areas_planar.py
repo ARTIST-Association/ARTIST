@@ -1,13 +1,12 @@
+from unittest import mock
 import h5py
 import torch
-from pytest_mock import MockerFixture
 
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.util import config_dictionary
 
 
 def test_target_area_load_from_hdf5(
-    mocker: MockerFixture,
     device: torch.device,
 ) -> None:
     """
@@ -15,8 +14,6 @@ def test_target_area_load_from_hdf5(
 
     Parameters
     ----------
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -25,21 +22,21 @@ def test_target_area_load_from_hdf5(
     AssertionError
         If test does not complete as expected.
     """
-    mock_h5_file = mocker.MagicMock(spec=h5py.File)
+    mock_h5_file = mock.MagicMock(spec=h5py.File)
 
-    mock_center = mocker.MagicMock()
+    mock_center = mock.MagicMock()
     mock_center.__getitem__.return_value = [0.0, 0.0, 0.0, 1.0]
 
-    mock_normal = mocker.MagicMock()
+    mock_normal = mock.MagicMock()
     mock_normal.__getitem__.return_value = [0.0, 1.0, 0.0, 0.0]
 
-    mock_plane_e = mocker.MagicMock()
+    mock_plane_e = mock.MagicMock()
     mock_plane_e.__getitem__.return_value = 2.0
 
-    mock_plane_u = mocker.MagicMock()
+    mock_plane_u = mock.MagicMock()
     mock_plane_u.__getitem__.return_value = 2.0
 
-    mock_level_planar_target = mocker.MagicMock()
+    mock_level_planar_target = mock.MagicMock()
 
     mock_level_planar_target.__getitem__.side_effect = lambda key: {
         config_dictionary.target_area_position_center: mock_center,
@@ -48,7 +45,7 @@ def test_target_area_load_from_hdf5(
         config_dictionary.target_area_plane_u: mock_plane_u,
     }[key]
 
-    mock_level_target_areas = mocker.MagicMock()
+    mock_level_target_areas = mock.MagicMock()
     mock_level_target_areas.__getitem__.side_effect = lambda key: {
         config_dictionary.target_area_receiver: mock_level_planar_target
     }[key]
