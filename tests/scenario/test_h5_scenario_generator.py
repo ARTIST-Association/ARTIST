@@ -1,8 +1,8 @@
 import pathlib
-from unittest import mock
 
 import h5py
 import pytest
+from pytest_mock import MockerFixture
 
 from artist.scenario.configuration_classes import (
     HeliostatListConfig,
@@ -17,21 +17,26 @@ from artist.util import config_dictionary
 
 
 @pytest.fixture
-def scenario_generator() -> H5ScenarioGenerator:
+def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
     """
     Create the h5 scenario generator.
+
+    Parameters
+    ----------
+    mocker : MockerFixture
+        A pytest-mocker fixture used to create mock objects.
 
     Returns
     -------
     H5ScenarioGenerator
         The h5 scenario generator.
     """
-    mock_power_plant_config = mock.MagicMock(spec=PowerPlantConfig)
-    mock_target_area_list_planar_config = mock.MagicMock(spec=TargetAreaPlanarListConfig)
-    mock_target_area_list_cylindrical_config = mock.MagicMock(spec=TargetAreaCylindricalListConfig)
-    mock_light_source_list_config = mock.MagicMock(spec=LightSourceListConfig)
-    mock_prototype_config = mock.MagicMock(spec=PrototypeConfig)
-    mock_heliostat_list_config = mock.MagicMock(spec=HeliostatListConfig)
+    mock_power_plant_config = mocker.MagicMock(spec=PowerPlantConfig)
+    mock_target_area_list_planar_config = mocker.MagicMock(spec=TargetAreaPlanarListConfig)
+    mock_target_area_list_cylindrical_config = mocker.MagicMock(spec=TargetAreaCylindricalListConfig)
+    mock_light_source_list_config = mocker.MagicMock(spec=LightSourceListConfig)
+    mock_prototype_config = mocker.MagicMock(spec=PrototypeConfig)
+    mock_heliostat_list_config = mocker.MagicMock(spec=HeliostatListConfig)
 
     mock_power_plant_config.create_power_plant_dict.return_value = {"param1": 123}
     mock_target_area_list_planar_config.create_target_area_list_dict.return_value = {
@@ -48,7 +53,7 @@ def scenario_generator() -> H5ScenarioGenerator:
         "param6": "xyz"
     }
 
-    mock.patch.object(
+    mocker.patch.object(
         H5ScenarioGenerator, "_check_equal_facet_numbers", return_value=None
     )
 
@@ -63,13 +68,13 @@ def scenario_generator() -> H5ScenarioGenerator:
         heliostat_list_config=mock_heliostat_list_config,
     )
 
-    mock.patch.object(
+    mocker.patch.object(
         scenario_generator, "_get_number_of_heliostat_groups", return_value=3
     )
-    mock.patch.object(
+    mocker.patch.object(
         scenario_generator, "_flatten_dict", side_effect=lambda d, *_: d
     )
-    mock.patch.object(
+    mocker.patch.object(
         scenario_generator,
         "_include_parameters",
         side_effect=lambda file, prefix, parameters: [
