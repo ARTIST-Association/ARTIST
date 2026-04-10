@@ -1,9 +1,9 @@
 import logging
+from unittest import mock
 
 import h5py
 import pytest
 import torch
-from pytest_mock import MockerFixture
 
 from artist.data_parser import h5_scenario_parser
 from artist.util import config_dictionary
@@ -14,15 +14,13 @@ from artist.util import config_dictionary
     [("invalid_kinematics_type")],
 )
 def test_load_kinematics_deviations(
-    mocker: MockerFixture, kinematics_type: str, device: torch.device
+    kinematics_type: str, device: torch.device
 ) -> None:
     """
     Test errors raised when loading kinematics deviations from an hdf5 file.
 
     Parameters
     ----------
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     kinematics_type : str
         The kinematics type to be tested.
     device : torch.device
@@ -33,15 +31,15 @@ def test_load_kinematics_deviations(
     AssertionError
         If test does not complete as expected.
     """
-    scenario_file = mocker.MagicMock(spec=h5py.File)
+    scenario_file = mock.MagicMock(spec=h5py.File)
 
-    mock_level_1 = mocker.MagicMock()
+    mock_level_1 = mock.MagicMock()
 
     scenario_file.__getitem__.side_effect = lambda key: {
         config_dictionary.heliostat_kinematics_key: mock_level_1
     }[key]
 
-    log = mocker.MagicMock(spec=logging.Logger)
+    log = mock.MagicMock(spec=logging.Logger)
 
     with pytest.raises(ValueError) as exc_info:
         h5_scenario_parser.kinematics_deviations(
@@ -75,15 +73,13 @@ def test_load_kinematics_deviations(
     ],
 )
 def test_load_actuator_parameters(
-    mocker: MockerFixture, actuator_type: str, error_message: str, device: torch.device
+    actuator_type: str, error_message: str, device: torch.device
 ) -> None:
     """
     Test errors raised when loading actuator parameters from an hdf5 file.
 
     Parameters
     ----------
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     actuator_type : str
         The actuator type to be tested.
     error_message : str
@@ -96,15 +92,15 @@ def test_load_actuator_parameters(
     AssertionError
         If test does not complete as expected.
     """
-    scenario_file = mocker.MagicMock(spec=h5py.File)
+    scenario_file = mock.MagicMock(spec=h5py.File)
 
-    mock_level_actuators = mocker.MagicMock()
+    mock_level_actuators = mock.MagicMock()
 
     scenario_file.__getitem__.side_effect = lambda key: {
         config_dictionary.heliostat_actuator_key: mock_level_actuators
     }[key]
 
-    log = mocker.MagicMock(spec=logging.Logger)
+    log = mock.MagicMock(spec=logging.Logger)
 
     with pytest.raises(ValueError) as exc_info:
         h5_scenario_parser.actuator_parameters(
