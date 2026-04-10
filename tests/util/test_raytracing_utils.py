@@ -398,6 +398,26 @@ def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
             torch.tensor([[[0.0]]]),
             torch.tensor([[[0.0]]]),
         ),
+        # Single ray completely misses the cylinder.
+        (
+            (torch.tensor([[[[-1.0, 1.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_1_cylindrical",
+            torch.tensor([[[-10.0, 0.0, 0.0, 1.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+        ),
+        # Single ray with origin on the cylinder.
+        (
+            (torch.tensor([[[[-1.0, 1.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
+            "target_area_1_cylindrical",
+            torch.tensor([[[0.0, 1.0, 0.0, 1.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+            torch.tensor([[[0.0]]]),
+        ),
     ],
     indirect=["rays"]
 )
