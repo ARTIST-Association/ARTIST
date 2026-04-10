@@ -120,7 +120,7 @@ def generate_ideal_scenario(
 def generate_fitted_scenario(
     data_directory: pathlib.Path,
     scenario_path: pathlib.Path,
-    tower_file_path: pathlib.Path,
+    tower_file: pathlib.Path,
     heliostat_names: list[str],
     device: torch.device | None = None,
 ) -> None:
@@ -133,7 +133,7 @@ def generate_fitted_scenario(
         Path to the data directory.
     scenario_path : pathlib.Path
         Path to where the scenarios will be saved.
-    tower_file_path : pathlib.Path
+    tower_file : pathlib.Path
         Path to the tower data file.
     heliostat_names : list[str]
         List of heliostat names to include in the scenario.
@@ -145,10 +145,9 @@ def generate_fitted_scenario(
     device = get_device(device=device)
 
     # Include the power plant configuration.
-    power_plant_config, target_area_list_config = (
+    power_plant_config, target_area_list_planar_config, target_area_list_cylindrical_config = (
         paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file_path,
-            device=device,
+            tower_measurements_path=tower_file, device=device
         )
     )
 
@@ -220,7 +219,8 @@ def generate_fitted_scenario(
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,
@@ -393,7 +393,7 @@ if __name__ == "__main__":
         generate_fitted_scenario(
             data_directory=data_dir,
             scenario_path=deflectometry_scenario_path,
-            tower_file_path=tower_file,
+            tower_file=tower_file,
             heliostat_names=args.heliostat_list_baseline,
             device=device,
         )

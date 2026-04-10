@@ -274,7 +274,7 @@ if __name__ == "__main__":
     data_dir = pathlib.Path(args.data_dir)
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
-    for case in ["baseline"]:#, "full_field"]:
+    for case in ["baseline", "full_field"]:
         if case == "baseline":
             heliostat_list = args.heliostat_list_baseline
         else:
