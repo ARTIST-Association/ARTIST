@@ -784,7 +784,7 @@ def ray_aabb_intersect(
 
 
 def compute_lbvh_max_depth(
-    left: torch.Tensor, right: torch.Tensor, device: torch.device | None = None
+    left: torch.Tensor, right: torch.Tensor,
 ) -> int:
     """
     Compute the maximum depth of the LBVH tree.
@@ -795,17 +795,12 @@ def compute_lbvh_max_depth(
         Left child indices.
     right : torch.Tensor
         Right child indices.
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
     int
         Maximum depth of the tree.
     """
-    device = get_device(device=device)
     stack = [(0, 1)]
     max_depth = 1
 
