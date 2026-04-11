@@ -784,7 +784,8 @@ def ray_aabb_intersect(
 
 
 def compute_lbvh_max_depth(
-    left: torch.Tensor, right: torch.Tensor,
+    left: torch.Tensor,
+    right: torch.Tensor,
 ) -> int:
     """
     Compute the maximum depth of the LBVH tree.
