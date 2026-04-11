@@ -834,7 +834,7 @@ def lbvh_filter_blocking_planes(
     Parameters
     ----------
     points_at_ray_origins : torch.Tensor
-        Origin points of the rays, i.e. the surface points, expanded in the ray dimension.
+        Origin points of the rays, i.e., the surface points, expanded in the ray dimension.
         Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 3].
     ray_directions : torch.Tensor
         Ray directions.
@@ -879,7 +879,7 @@ def lbvh_filter_blocking_planes(
     total_number_of_rays = ray_origins.shape[0]
     number_of_primitives = blocking_primitives_corners.shape[0]
 
-    max_tree_depth = compute_lbvh_max_depth(left=left, right=right, device=device)
+    max_tree_depth = compute_lbvh_max_depth(left=left, right=right)
 
     node_traversal_stack = torch.full(
         (total_number_of_rays, max_tree_depth),
