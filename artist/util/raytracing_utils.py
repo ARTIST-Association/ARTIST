@@ -334,14 +334,16 @@ def line_cylinder_intersections(
     distance_candidates = torch.where(
         distance_candidates > 0,
         distance_candidates,
-        torch.full_like(distance_candidates, torch.inf)
+        torch.full_like(distance_candidates, torch.inf),
     )
     intersection_distances, _ = torch.min(distance_candidates, dim=-1)
-    valid_distances = torch.isfinite(intersection_distances) & mask_infinite_cylinder_hits
+    valid_distances = (
+        torch.isfinite(intersection_distances) & mask_infinite_cylinder_hits
+    )
     intersection_distances = torch.where(
         valid_distances,
         intersection_distances,
-        torch.zeros_like(intersection_distances)
+        torch.zeros_like(intersection_distances),
     )
 
     if (intersection_distances == 0.0).all():
