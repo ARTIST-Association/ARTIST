@@ -1,6 +1,8 @@
 import torch
 
 from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
@@ -23,8 +25,10 @@ def rotate_distortions(
     ----------
     e : torch.Tensor
         East rotation angles in radians.
+        Tensor of shape [number_of_heliostats, number_of_rays, number_of_surface_points].
     u : torch.Tensor
         Up rotation angles in radians.
+        Tensor of shape [number_of_heliostats, number_of_rays, number_of_surface_points].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -33,12 +37,13 @@ def rotate_distortions(
     Raises
     ------
     ValueError
-        If the sizes of the input tensors do not match.
+        If the shapes of the input tensors do not match.
 
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 rotation matrices, one per distortion sample.
+        Tensor of shape [number_of_heliostats, number_of_rays, number_of_surface_points, 4, 4].
     """
     device = get_device(device=device)
 
@@ -88,11 +93,11 @@ def rotate_e(
     in the mathematical direction of rotation, i.e., counter-clockwise. Points need to be multiplied as column vectors
     from the right-hand side with the resulting rotation matrix.
 
-
     Parameters
     ----------
     e : torch.Tensor
         East rotation angles in radians.
+        Tensor of shape [number_of_heliostats].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -101,7 +106,8 @@ def rotate_e(
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 east-axis rotation matrices, one per heliostat.
+        Tensor of shape [number_of_heliostats, 4, 4].
     """
     device = get_device(device=device)
 
@@ -137,6 +143,7 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     ----------
     n : torch.Tensor
         North rotation angles in radians.
+        Tensor of shape [number_of_heliostats].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -145,7 +152,8 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 north-axis rotation matrices, one per heliostat.
+        Tensor of shape [number_of_heliostats, 4, 4].
     """
     device = get_device(device=device)
 
@@ -181,6 +189,7 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     ----------
     u : torch.Tensor
         Up rotation angles in radians.
+        Tensor of shape [number_of_heliostats].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -189,7 +198,8 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 up-axis rotation matrices, one per heliostat.
+        Tensor of shape [number_of_heliostats, 4, 4].
     """
     device = get_device(device=device)
 
@@ -246,7 +256,8 @@ def translate_enu(
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 translation matrices, one per heliostat.
+        Tensor of shape [number_of_heliostats, 4, 4].
     """
     device = get_device(device=device)
 
@@ -391,15 +402,15 @@ def decompose_rotations(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Get the individual angles along the east-, north- and up-axis, to rotate and initial vector into a target vector.
+    Get the individual angles along the east-, north- and up-axis, to rotate an initial vector into a target vector.
 
     Parameters
     ----------
     initial_vector : torch.Tensor
         The initial vector.
         Tensor of shape [number_of_heliostats, 4].
-    rotated_vector : torch.Tensor
-        The rotated vector.
+    target_vector : torch.Tensor
+        The target vector to rotate toward.
         Tensor of shape [4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -448,7 +459,7 @@ def rotation_angle_and_axis(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute the rotation axis and angle between to orientations.
+    Compute the rotation axis and angle between two orientations.
 
     Parameters
     ----------
@@ -529,8 +540,8 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        Bitmap coordinates of the flux density centers of mass.
-        Tensor of shape [number_of_active_heliostats, 4].
+        Bitmap coordinates of the flux density centers of mass (x pixel, y pixel).
+        Tensor of shape [number_of_active_heliostats, 2].
     """
     device = get_device(device=device)
 
@@ -567,6 +578,37 @@ def bitmap_coordinates_to_target_coordinates(
     target_area_indices: torch.Tensor,
     device: torch.device | None = None,
 ) -> torch.Tensor:
+    """
+    Convert bitmap pixel coordinates to 3D world coordinates on the target surface.
+
+    For planar target areas the pixel coordinates are mapped linearly to target plane coordinates.
+    For cylindrical target areas the pixel coordinates are mapped to cylindrical surface coordinates
+    using the cylinder's radius, opening angle, height, axis, and normal.
+
+    Parameters
+    ----------
+    bitmap_coordinates : torch.Tensor
+        Pixel coordinates in the bitmap for each heliostat, as (x, y) pairs.
+        Tensor of shape [number_of_active_heliostats, 2].
+    bitmap_resolution : torch.Tensor
+        The resolution of the bitmap (width, height) in pixels.
+        Tensor of shape [2].
+    solar_tower : SolarTower
+        The solar tower containing all target area definitions (planar and cylindrical).
+    target_area_indices : torch.Tensor
+        Global target area index for each heliostat (planar indices first, cylindrical second).
+        Tensor of shape [number_of_active_heliostats].
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        World coordinates on the target surface in homogeneous format.
+        Tensor of shape [number_of_active_heliostats, 4].
+    """
     device = get_device(device=device)
 
     center_coordinates = torch.zeros((target_area_indices.numel(), 4), device=device)
@@ -585,6 +627,7 @@ def bitmap_coordinates_to_target_coordinates(
 
         # Account for flips from bitmap to target coordinates.
         target_dimensions = torch.zeros((planar_mask.sum(), 4), device=device)
+        assert isinstance(solar_tower.target_areas[0], TowerTargetAreasPlanar)
         target_dimensions[:, index_mapping.e] = -solar_tower.target_areas[0].dimensions[
             planar_indices, 0
         ]
@@ -604,6 +647,7 @@ def bitmap_coordinates_to_target_coordinates(
             - solar_tower.number_of_target_areas_per_type[0]
         )
 
+        assert isinstance(solar_tower.target_areas[1], TowerTargetAreasCylindrical)
         cylinder_normals = solar_tower.target_areas[1].normals[cylinder_indices][:, :3]
         cylinder_axes = solar_tower.target_areas[1].axes[cylinder_indices][:, :3]
         cylinder_centers = solar_tower.target_areas[1].centers[cylinder_indices]
@@ -655,7 +699,7 @@ def create_nurbs_evaluation_grid(
     -------
     torch.Tensor
         The evaluation points.
-        Tensor of shape [number_of_evaluation_points_e * number_of_evaluation_points_e, 2].
+        Tensor of shape [number_of_evaluation_points_e * number_of_evaluation_points_n, 2].
     """
     device = get_device(device=device)
 
@@ -776,9 +820,9 @@ def perform_canting(
         Tensor of shape [number_of_surfaces, number_of_facets, 2, 4].
     data : torch.Tensor
         Data to be canted.
-        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_facet, 4].
     inverse : bool
-        Indicates the direction of the rotation. Use inverse=False for canting and inverse=True for decanting (default is False).
+        Indicates the direction of the rotation. Use ``inverse=False`` for canting and ``inverse=True`` for decanting (default is False).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -788,7 +832,7 @@ def perform_canting(
     -------
     torch.Tensor
         The (de-)canted data.
-        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_facet, 4].
     """
     number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
     number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
@@ -884,18 +928,17 @@ def crop_flux_distributions_around_center(
     Parameters
     ----------
     flux_distributions : torch.Tensor
-        Grayscale intensity images.
+        Flux density bitmaps, one per heliostat.
         Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
+    solar_tower : SolarTower
+        The solar tower containing the physical target area dimensions.
+    target_area_indices : torch.Tensor
+        Global target area index for each bitmap (planar indices first, cylindrical second).
+        Tensor of shape [number_of_bitmaps].
     crop_width : float
-        Desired width of the cropped region in meters.
+        Desired width of the cropped region in meters (default is ``config_dictionary.utis_crop_width``).
     crop_height : float
-        Desired height of the cropped region in meters.
-    target_plane_widths : torch.Tensor
-        Physical widths in meters of each image in the batch.
-        Tensor of shape [number_of_bitmaps].
-    target_plane_heights : torch.Tensor
-        Physical heights in meters of each image in the batch.
-        Tensor of shape [number_of_bitmaps].
+        Desired height of the cropped region in meters (default is ``config_dictionary.utis_crop_height``).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -936,6 +979,7 @@ def crop_flux_distributions_around_center(
     target_dimensions = torch.empty((number_of_flux_distributions, 2), device=device)
     planar_mask = target_area_indices < solar_tower.number_of_target_areas_per_type[0]
     if target_area_indices[planar_mask].numel() > 0:
+        assert isinstance(solar_tower.target_areas[0], TowerTargetAreasPlanar)
         target_dimensions[planar_mask] = solar_tower.target_areas[0].dimensions[
             target_area_indices[planar_mask]
         ]
@@ -944,6 +988,7 @@ def crop_flux_distributions_around_center(
             target_area_indices[~planar_mask]
             - solar_tower.number_of_target_areas_per_type[0]
         )
+        assert isinstance(solar_tower.target_areas[1], TowerTargetAreasCylindrical)
         target_dimensions[~planar_mask, 0] = (
             solar_tower.target_areas[1].radii[cylinder_indices]
             * solar_tower.target_areas[1].opening_angles[cylinder_indices]
@@ -1060,7 +1105,7 @@ def convert_wgs84_coordinates_to_local_enu(
     Returns
     -------
     torch.Tensor
-        The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
+        The east offsets in meters, north offsets in meters, and the altitude differences from the reference point.
         Tensor of shape [number_of_coordinates, 3].
     """
     device = get_device(device=device)

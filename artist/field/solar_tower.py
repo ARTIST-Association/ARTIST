@@ -11,33 +11,39 @@ from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the heliostat field."""
+"""A logger for the solar tower."""
 
 
 class SolarTower:
     """
-    The heliostat field.
+    The solar tower with its associated target areas.
 
-    A heliostat field consists of one or multiple heliostat groups. Each heliostat group contains all
-    heliostats with a specific kinematics type and actuator type. The heliostats in the field are aligned
-    individually to reflect the incoming light in a way that ensures maximum efficiency for the whole power plant.
+    A solar tower holds one or more types of target areas (planar receiver panels and/or
+    cylindrical tower surfaces) onto which heliostats focus the reflected sunlight.
+    Target areas are grouped by geometry type; within each type they are indexed
+    consecutively, with planar areas assigned lower global indices than cylindrical ones.
 
     Attributes
     ----------
-    heliostat_groups : Sequence[HeliostatGroup]
-        A list containing all heliostat groups.
-    number_of_heliostat_groups : int
-        The number of different heliostat groups in the heliostat field.
-    number_of_heliostats_per_group : torch.Tensor
-        The number of heliostats per group.
-        Tensor of shape [number_of_heliostat_groups].
+    target_areas : Sequence[TowerTargetAreas]
+        A list containing all target area groups, ordered as planar first, cylindrical second.
+    number_of_target_area_types : int
+        The number of distinct target area geometry types (e.g., planar and cylindrical).
+    number_of_target_areas_per_type : torch.Tensor
+        The number of individual target areas in each geometry type group.
+        Tensor of shape [number_of_target_area_types].
+    target_name_to_index : dict[str, int]
+        Mapping from a target area name to its global integer index.
+    index_to_target_area : list[tuple[TowerTargetAreas, int]]
+        Mapping from a global target area index to the corresponding
+        ``TowerTargetAreas`` group object and the local index within that group.
 
     Methods
     -------
     from_hdf5()
-        Load a heliostat field from an HDF5 file.
-    update_surfaces()
-        Update surface points and normals using new NURBS control points.
+        Load a solar tower from an HDF5 file.
+    get_centers_of_target_areas()
+        Get the center coordinates of the specified target areas.
     """
 
     def __init__(
@@ -46,13 +52,14 @@ class SolarTower:
         device: torch.device | None = None,
     ) -> None:
         """
-        Initialize the heliostat field with heliostat groups.
+        Initialize the solar tower with its target areas.
 
         Parameters
         ----------
-        heliostat_groups : Sequence[HeliostatGroup]
-            A list containing all heliostat groups.
-        device : device: torch.device | None
+        target_areas : Sequence[TowerTargetAreas]
+            A list containing all target area groups. The expected order is planar
+            target areas first, followed by cylindrical target areas.
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
@@ -71,15 +78,15 @@ class SolarTower:
 
         self.target_name_to_index = {}
         idx = 0
-        for target_areas in self.target_areas:
-            for name in target_areas.names:
+        for target_area_type in self.target_areas:
+            for name in target_area_type.names:
                 self.target_name_to_index[name] = idx
                 idx += 1
 
         self.index_to_target_area = []
-        for target_areas in self.target_areas:
-            for local_idx, name in enumerate(target_areas.names):
-                self.index_to_target_area.append((target_areas, local_idx))
+        for target_area_type in self.target_areas:
+            for local_idx, name in enumerate(target_area_type.names):
+                self.index_to_target_area.append((target_area_type, local_idx))
 
     @classmethod
     def from_hdf5(
@@ -87,6 +94,23 @@ class SolarTower:
         config_file: h5py.File,
         device: torch.device | None = None,
     ) -> Self:
+        """
+        Load a solar tower from an HDF5 file.
+
+        Parameters
+        ----------
+        config_file : h5py.File
+            The HDF5 file containing the configuration to be loaded.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        Self
+            A ``SolarTower`` instance loaded from the HDF5 file.
+        """
         device = get_device(device=device)
 
         target_areas_planar = TowerTargetAreasPlanar.from_hdf5(
@@ -102,8 +126,34 @@ class SolarTower:
         )
 
     def get_centers_of_target_areas(
-        self, target_area_indices: torch.Tensor, device
+        self,
+        target_area_indices: torch.Tensor,
+        device: torch.device | None = None,
     ) -> torch.Tensor:
+        """
+        Get the center coordinates of the specified target areas.
+
+        For planar target areas the center is returned directly. For cylindrical target areas
+        the center is offset outward along the surface normal by the cylinder radius, giving
+        the point on the curved surface facing the heliostats.
+
+        Parameters
+        ----------
+        target_area_indices : torch.Tensor
+            Global target area indices (planar first, cylindrical second) for which
+            to retrieve the center coordinates.
+            Tensor of shape [number_of_active_heliostats].
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The center coordinates of the requested target areas in homogeneous coordinates.
+            Tensor of shape [number_of_active_heliostats, 4].
+        """
         device = get_device(device=device)
 
         aim_points = torch.zeros((target_area_indices.shape[0], 4), device=device)
@@ -117,10 +167,12 @@ class SolarTower:
             target_area_indices[~planar_mask] - self.number_of_target_areas_per_type[0]
         )
         if target_area_indices[~planar_mask].numel() > 0:
+            assert isinstance(self.target_areas[1], TowerTargetAreasCylindrical)
+            cylindrical = self.target_areas[1]
             aim_points[~planar_mask] = (
-                self.target_areas[1].centers[cylinder_indices]
-                + self.target_areas[1].radii[cylinder_indices][:, None]
-                * self.target_areas[1].normals[cylinder_indices]
+                cylindrical.centers[cylinder_indices]
+                + cylindrical.radii[cylinder_indices][:, None]
+                * cylindrical.normals[cylinder_indices]
             )
             aim_points[:, 3] = 1.0
         return aim_points
