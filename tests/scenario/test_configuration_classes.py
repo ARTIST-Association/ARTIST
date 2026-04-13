@@ -2,29 +2,29 @@ import pytest
 import torch
 
 from artist.scenario.configuration_classes import (
-    PowerPlantConfig,
-    TargetAreaPlanarConfig,
-    TargetAreaPlanarListConfig,
-    TargetAreaCylindricalConfig,
-    TargetAreaCylindricalListConfig,
-    LightSourceConfig,
-    LightSourceListConfig,
-    FacetConfig,
-    SurfaceConfig,
-    SurfacePrototypeConfig,
-    KinematicsDeviations,
-    KinematicsConfig,
-    KinematicsPrototypeConfig,
-    ActuatorParameters,
     ActuatorConfig,
     ActuatorListConfig,
+    ActuatorParameters,
     ActuatorPrototypeConfig,
-    PrototypeConfig,
+    FacetConfig,
     HeliostatConfig,
     HeliostatListConfig,
+    KinematicsConfig,
+    KinematicsDeviations,
+    KinematicsPrototypeConfig,
+    LightSourceConfig,
+    LightSourceListConfig,
+    PowerPlantConfig,
+    PrototypeConfig,
+    SurfaceConfig,
+    SurfacePrototypeConfig,
+    TargetAreaCylindricalConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarConfig,
+    TargetAreaPlanarListConfig,
 )
-
 from artist.util import config_dictionary
+
 
 @pytest.fixture
 def tensor():
@@ -40,7 +40,9 @@ def normal():
     "power_plant_config_dict, expected_keys",
     [
         (
-            lambda power_plant_position: PowerPlantConfig(power_plant_position=power_plant_position).create_power_plant_dict(),
+            lambda power_plant_position: PowerPlantConfig(
+                power_plant_position=power_plant_position
+            ).create_power_plant_dict(),
             [config_dictionary.power_plant_position],
         ),
     ],
@@ -71,11 +73,11 @@ def test_target_area_planar(normal):
 
 def test_target_area_planar_list(normal):
     target_area_config = TargetAreaPlanarConfig(
-        target_area_key="area_1", 
-        center=torch.zeros(3), 
-        normal_vector=normal, 
-        plane_e=1, 
-        plane_u=2
+        target_area_key="area_1",
+        center=torch.zeros(3),
+        normal_vector=normal,
+        plane_e=1,
+        plane_u=2,
     )
 
     list_config = TargetAreaPlanarListConfig(target_area_list=[target_area_config])
@@ -167,6 +169,7 @@ def facet():
         translation_vector=torch.zeros(3),
         canting=torch.zeros(2),
     )
+
 
 def test_facet_dict(facet):
     dictionary = facet.create_facet_dict()
