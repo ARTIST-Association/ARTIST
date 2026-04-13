@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 
 import artist.util.index_mapping
 from artist.core import blocking
-from artist.field import TowerTargetAreasPlanar, TowerTargetAreasCylindrical
+from artist.field import TowerTargetAreasCylindrical, TowerTargetAreasPlanar
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
@@ -414,6 +414,15 @@ class HeliostatRayTracer:
         torch.Tensor
             The resulting bitmaps per heliostat.
             Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+        torch.Tensor
+            The fraction of rays hitting the target, neglecting blocking effects.
+            Shape is [number_of_active_heliostats].
+        torch.Tensor
+            The fraction of rays not being blocked.
+            Shape is [number_of_active_heliostats].
+        torch.Tensor
+            The fraction of rays actually hitting the target, taking into account blocking effects.
+            Shape is [number_of_active_heliostats].
         """
         device = get_device(device=device)
 
@@ -525,23 +534,32 @@ class HeliostatRayTracer:
             )
 
             if planar_active_mask.sum() > 0:
-                assert isinstance(self.scenario.solar_tower.target_areas[0], TowerTargetAreasPlanar)
+                assert isinstance(
+                    self.scenario.solar_tower.target_areas[0], TowerTargetAreasPlanar
+                )
                 (
                     bitmap_intersections_e[planar_active_mask],
                     bitmap_intersections_u[planar_active_mask],
                     intersection_distances_target[planar_active_mask],
                     angle_reduced_intensities[planar_active_mask],
-                ) = raytracing_utils.line_plane_intersections(rays=rays_planar_targets, points_at_ray_origins=
-                self.heliostat_group.active_surface_points[
-                    active_heliostats_mask_batch
-                ][planar_active_mask], target_areas=self.scenario.solar_tower.target_areas[0],
-                                                              target_area_indices=target_area_indices[
-                                                                  active_heliostats_mask_batch
-                                                              ][planar_active_mask],
-                                                              bitmap_resolution=self.bitmap_resolution, device=device)
+                ) = raytracing_utils.line_plane_intersections(
+                    rays=rays_planar_targets,
+                    points_at_ray_origins=self.heliostat_group.active_surface_points[
+                        active_heliostats_mask_batch
+                    ][planar_active_mask],
+                    target_areas=self.scenario.solar_tower.target_areas[0],
+                    target_area_indices=target_area_indices[
+                        active_heliostats_mask_batch
+                    ][planar_active_mask],
+                    bitmap_resolution=self.bitmap_resolution,
+                    device=device,
+                )
 
             if (~planar_active_mask).sum() > 0:
-                assert isinstance(self.scenario.solar_tower.target_areas[1], TowerTargetAreasCylindrical)
+                assert isinstance(
+                    self.scenario.solar_tower.target_areas[1],
+                    TowerTargetAreasCylindrical,
+                )
                 (
                     bitmap_intersections_e[~planar_active_mask],
                     bitmap_intersections_u[~planar_active_mask],
@@ -752,18 +770,12 @@ class HeliostatRayTracer:
         bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
         num_heliostats = absolute_intensities.shape[0]
 
-        # As bilinear weights assume integer indices are at pixel centers, the
-        # scaling uses `(bitmap_width - 1)` and `(bitmap_height - 1)` so that
-        # continuous coordinates map correctly to pixel centers when discretized
         bitmap_intersections_e = bitmap_intersections_e.reshape(num_heliostats, -1)
-        bitmap_intersections_u = 1.0 + bitmap_intersections_u.reshape(
-            num_heliostats, -1
-        )
-
+        bitmap_intersections_u = bitmap_intersections_u.reshape(num_heliostats, -1)
         absolute_intensities = absolute_intensities.reshape(num_heliostats, -1)
 
-        # To ensure differentiability of the ray tracing process, the intensity of each ray
-        # is distributed via bilinear splatting.
+        # To ensure differentiability of the ray tracing process, the
+        # intensity of each ray is distributed via bilinear splatting.
         # We assume a continuously positioned value in-between four
         # discretely positioned pixels, similar to this:
         #
@@ -859,10 +871,10 @@ class HeliostatRayTracer:
         index_3 = indices_low_u * bitmap_width + indices_low_e + 1
         index_4 = indices_low_u * bitmap_width + indices_low_e
 
-        # We need to filter out out of bounds indices. scatter_add_ cannot handle advanced indexing in its parameters,
-        # therefore we cannot filter out invalid intersections by their indices. Instead we set all out of bounds indices
-        # to 0, that way they do not cause index out of bounds errors, and we also set the intensities at these indices
-        # to 0 so they do not add to the flux.
+        # We need to filter out out-of-bounds indices. `scatter_add_` cannot handle advanced indexing in its parameters,
+        # therefore we cannot filter out invalid intersections by their indices. Instead, we set all out-of-bounds
+        # indices to 0. That way, they do not cause index-out-of-bounds errors, and we also set the intensities at these
+        # indices to 0 so they do not add to the flux.
         index_1[~intersection_indices_on_target] = 0
         index_2[~intersection_indices_on_target] = 0
         index_3[~intersection_indices_on_target] = 0

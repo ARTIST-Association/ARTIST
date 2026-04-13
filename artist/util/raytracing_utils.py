@@ -162,7 +162,9 @@ def line_plane_intersections(
 
     # Scale target intersection coordinates into bitmap space.
     # The resulting `bitmap_intersections_e/u` represent continuous coordinates
-    # in pixel units.
+    # in pixel units. As bilinear weights assume integer indices are at pixel centers, the
+    # scaling uses `(bitmap_resolution[0] - 1)` and `(bitmap_resolution[1] - 1)` so that
+    # continuous coordinates map correctly to pixel centers when discretized.
     bitmap_intersections_e = (
         target_intersections_e
         / plane_dimensions[:, 0, None, None]
