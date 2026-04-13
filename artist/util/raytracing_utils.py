@@ -1,4 +1,7 @@
+from typing import Any
+
 import torch
+from torch import Tensor
 
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
@@ -47,16 +50,15 @@ def line_plane_intersections(
     target_areas: TowerTargetAreasPlanar,
     target_area_indices: torch.Tensor | None = None,
     bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
-    epsilon: float = 1e-6,
     device: torch.device | None = None,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     """
     Compute line-plane intersections of the rays and the (receiver) planes.
 
     Parameters
     ----------
     rays : Rays
-        Rays with directions and magnitudes, the directions must be normalized.
+        Ray container with directions and magnitudes, the directions must be normalized.
     points_at_ray_origins : torch.Tensor
         Origins of the rays, which coincide with the surface points of the heliostats.
         Tensor of shape [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
@@ -66,8 +68,8 @@ def line_plane_intersections(
         Indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
         Tensor of shape [number_of_active_heliostats].
-    epsilon : float
-        A small value corresponding to the upper limit (default is 1e-6).
+    bitmap_resolution : torch.Tensor | None
+        The resulting bitmap's resolution.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -76,11 +78,17 @@ def line_plane_intersections(
     Returns
     -------
     torch.Tensor
-        The intersections of the lines and planes.
-        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets, 4].
+        The east component of the bitmap intersections.
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+    torch.Tensor
+        The up component of the bitmap intersections.
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+    torch.Tensor
+        The intersection distances.
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
     torch.Tensor
         The absolute intensities of the rays hitting the target planes.
-        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
     """
     device = get_device(device=device)
     bitmap_resolution = bitmap_resolution.to(device)
@@ -182,7 +190,7 @@ def line_plane_intersections(
     intensities = intensities * valid_mask
 
     # The column indices need to be flipped because the more intuitive way to look at flux prediction
-    # bitmaps, is to imagine oneself to stand in the heliostat field looking at the receiver.
+    # bitmaps is to imagine oneself to stand in the heliostat field looking at the receiver.
     # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
     # i.e., subtracting the intersections from the total E-resolution to flip left and right.
     bitmap_intersections_e = (bitmap_resolution[0] - 1) - bitmap_intersections_e
@@ -202,19 +210,62 @@ def line_cylinder_intersections(
     target_area_indices: torch.Tensor | None = None,
     bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     device: torch.device | None = None,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[Tensor, Tensor, Tensor, Tensor] | tuple[Any, Any, Any, Any]:
     """
-    World space
-      ↓
-    rotate rays into receiver frame
-        ↓
-    cylinder aligned with z
-        ↓
-    intersect cylinder
-        ↓
-    unwrap cylinder patch
-        ↓
-    2D receiver grid
+    Compute ray intersections with cylindrical receiver target areas and map hits into bitmap coordinates.
+
+    This routine transforms rays from world space into each target cylinder's local frame, computes
+    intersections with the infinite cylinder side surface, filters intersections to the finite receiver
+    patch (height + opening angle), and returns per-ray bitmap coordinates, intersection distances,
+    and Lambert-weighted intensities.
+
+    Pipeline:
+    1. Select target area per heliostat (or default to index 0).
+    2. Build local cylinder frame and transform ray origins/directions into that frame.
+    3. Solve quadratic for intersections with the infinite cylinder (x^2 + y^2 = r^2).
+    4. Select the smallest strictly positive intersection distance per ray.
+    5. Compute local intersection points, surface normals, and cosine-based intensity factor.
+    6. Filter to finite cylinder patch bounds:
+       - height range [0, h]
+       - angle range [0, opening_angle]
+    7. Convert valid local coordinates to continuous bitmap coordinates.
+
+    Parameters
+    ----------
+    rays : Rays
+        Ray container with directions and magnitudes, the directions must be normalized.
+    points_at_ray_origins : torch.Tensor
+        Ray origins in world space.
+        Shape is [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
+    target_areas : TowerTargetAreasCylindrical
+        Cylindrical receiver definitions (centers, axes, normals, radii, heights, opening angles).
+    target_area_indices : torch.Tensor | None, optional
+        Per-heliostat target-area indices. Shape is [number_of_active_heliostats].
+        If None, all heliostats use target area 0.
+    bitmap_resolution : torch.Tensor, optional
+        Bitmap resolution [E_res, U_res]. Default: [256, 256].
+    device : torch.device | None, optional
+        Compute device. If None, auto-selected.
+
+    Returns
+    -------
+    torch.Tensor
+        Continuous E (horizontal/unwrapped-angle) bitmap coordinates in pixel units.
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Invalid rays are 0.
+    torch.Tensor
+        Continuous U (vertical/height) bitmap coordinates in pixel units.
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Invalid rays are 0.
+    torch.Tensor
+        Ray parameter distance t to the selected cylinder intersection.
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Invalid rays are 0.
+    torch.Tensor
+        Lambert-weighted hit intensities:
+        ray_magnitudes * max(0, -dot(ray_dir_local, normal_local)).
+        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Invalid rays are 0.
     """
     device = get_device(device=device)
     bitmap_resolution = bitmap_resolution.to(device)
@@ -279,11 +330,21 @@ def line_cylinder_intersections(
     distance_candidates[:, :, :, 0] = (-b - sqrt_discriminant) / (2 * a)
     distance_candidates[:, :, :, 1] = (-b + sqrt_discriminant) / (2 * a)
 
-    # All invalid intersection distances are set to zero.
-    intersection_distances, _ = torch.min(
-        torch.clamp(distance_candidates, min=0.0), dim=-1
+    # Keep only strictly positive solutions; invalidate others with +inf.
+    distance_candidates = torch.where(
+        distance_candidates > 0,
+        distance_candidates,
+        torch.full_like(distance_candidates, torch.inf),
     )
-    valid_distances = intersection_distances > 0
+    intersection_distances, _ = torch.min(distance_candidates, dim=-1)
+    valid_distances = (
+        torch.isfinite(intersection_distances) & mask_infinite_cylinder_hits
+    )
+    intersection_distances = torch.where(
+        valid_distances,
+        intersection_distances,
+        torch.zeros_like(intersection_distances),
+    )
 
     if (intersection_distances == 0.0).all():
         empty_tensor = torch.zeros(
