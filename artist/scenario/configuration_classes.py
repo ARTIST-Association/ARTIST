@@ -369,22 +369,14 @@ class LightSourceConfig:
         dict[str, Any]
             A dictionary containing the configuration parameters for the light source.
         """
-        # Check if the distribution type is implemented.
-        if (
-            self.distribution_type
-            == config_dictionary.light_source_distribution_is_normal
-        ):
-            light_source_distribution_parameters_dict = {
-                config_dictionary.light_source_distribution_type: str(
-                    self.distribution_type
-                ),
-                config_dictionary.light_source_mean: self.mean,
-                config_dictionary.light_source_covariance: self.covariance,
-            }
-        else:
-            raise NotImplementedError("Unknown light source distribution type.")
+        light_source_distribution_parameters_dict = {
+            config_dictionary.light_source_distribution_type: str(
+                self.distribution_type
+            ),
+            config_dictionary.light_source_mean: self.mean,
+            config_dictionary.light_source_covariance: self.covariance,
+        }
 
-        # Return the desired dictionary.
         return {
             config_dictionary.light_source_type: self.light_source_type,
             config_dictionary.light_source_number_of_rays: self.number_of_rays,
@@ -844,43 +836,6 @@ class KinematicsPrototypeConfig(KinematicsConfig):
             initial_orientation=initial_orientation,
             deviations=deviations,
         )
-
-
-class KinematicsLoadConfig:
-    """
-    Store the configuration parameters for the kinematics when loaded in ``ARTIST``.
-
-    Attributes
-    ----------
-    type : str
-        The type of kinematics used.
-    initial_orientation : torch.Tensor
-        The initial orientation of the kinematics configuration.
-    deviations : KinematicsDeviations
-        The kinematics deviations.
-    """
-
-    def __init__(
-        self,
-        type: str,
-        initial_orientation: torch.Tensor,
-        deviations: KinematicsDeviations,
-    ) -> None:
-        """
-        Initialize the kinematics configuration for loading in ``ARTIST``.
-
-        Parameters
-        ----------
-        type : str
-            The type of kinematics used.
-        initial_orientation : torch.Tensor
-            The initial orientation of the kinematics configuration.
-        deviations : KinematicsDeviations
-            The kinematics deviations.
-        """
-        self.type = type
-        self.initial_orientation = initial_orientation
-        self.deviations = deviations
 
 
 class ActuatorParameters:
