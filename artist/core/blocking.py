@@ -2,7 +2,6 @@ import logging
 import math
 
 import torch
-import torch.nn.functional as F
 
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -329,11 +328,15 @@ def soft_ray_blocking_mask(
     # Each blocking primitive contributes a non-negative soft density along the ray rather than a hard binary mask.
     # These contributions are summed to form an optical depth, representing total accumulated occlusion.
     # The final visibility is computed as an exponential decay of this optical depth, ensuring stable, differentiable aggregation.
-    inside_u = torch.sigmoid(softness * u_coordinate_on_plane) * torch.sigmoid(softness * (1 - u_coordinate_on_plane))
-    inside_v = torch.sigmoid(softness * v_coordinate_on_plane) * torch.sigmoid(softness * (1 - v_coordinate_on_plane))
+    inside_u = torch.sigmoid(softness * u_coordinate_on_plane) * torch.sigmoid(
+        softness * (1 - u_coordinate_on_plane)
+    )
+    inside_v = torch.sigmoid(softness * v_coordinate_on_plane) * torch.sigmoid(
+        softness * (1 - v_coordinate_on_plane)
+    )
 
     inside_plane = inside_u * inside_v
-    
+
     sigma = inside_plane * blocking_planes_in_front_of_heliostats
     sigma = sigma.clamp(0.0, 1.0)
 
