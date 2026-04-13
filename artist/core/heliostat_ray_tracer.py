@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 
 import artist.util.index_mapping
 from artist.core import blocking
-from artist.field import TowerTargetAreasPlanar, TowerTargetAreasCylindrical
+from artist.field import TowerTargetAreasCylindrical, TowerTargetAreasPlanar
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
@@ -525,23 +525,32 @@ class HeliostatRayTracer:
             )
 
             if planar_active_mask.sum() > 0:
-                assert isinstance(self.scenario.solar_tower.target_areas[0], TowerTargetAreasPlanar)
+                assert isinstance(
+                    self.scenario.solar_tower.target_areas[0], TowerTargetAreasPlanar
+                )
                 (
                     bitmap_intersections_e[planar_active_mask],
                     bitmap_intersections_u[planar_active_mask],
                     intersection_distances_target[planar_active_mask],
                     angle_reduced_intensities[planar_active_mask],
-                ) = raytracing_utils.line_plane_intersections(rays=rays_planar_targets, points_at_ray_origins=
-                self.heliostat_group.active_surface_points[
-                    active_heliostats_mask_batch
-                ][planar_active_mask], target_areas=self.scenario.solar_tower.target_areas[0],
-                                                              target_area_indices=target_area_indices[
-                                                                  active_heliostats_mask_batch
-                                                              ][planar_active_mask],
-                                                              bitmap_resolution=self.bitmap_resolution, device=device)
+                ) = raytracing_utils.line_plane_intersections(
+                    rays=rays_planar_targets,
+                    points_at_ray_origins=self.heliostat_group.active_surface_points[
+                        active_heliostats_mask_batch
+                    ][planar_active_mask],
+                    target_areas=self.scenario.solar_tower.target_areas[0],
+                    target_area_indices=target_area_indices[
+                        active_heliostats_mask_batch
+                    ][planar_active_mask],
+                    bitmap_resolution=self.bitmap_resolution,
+                    device=device,
+                )
 
             if (~planar_active_mask).sum() > 0:
-                assert isinstance(self.scenario.solar_tower.target_areas[1], TowerTargetAreasCylindrical)
+                assert isinstance(
+                    self.scenario.solar_tower.target_areas[1],
+                    TowerTargetAreasCylindrical,
+                )
                 (
                     bitmap_intersections_e[~planar_active_mask],
                     bitmap_intersections_u[~planar_active_mask],
