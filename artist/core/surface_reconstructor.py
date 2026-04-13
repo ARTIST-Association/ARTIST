@@ -39,7 +39,7 @@ class SurfaceReconstructor:
     Attributes
     ----------
     ddp_setup : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
@@ -50,14 +50,17 @@ class SurfaceReconstructor:
         The parameters for the scheduler.
     constraint_dict : dict[str, Any]
         The parameters for the constraints.
+    dni : float | None
+        Direct normal irradiance in W/m² used to scale the ray-traced flux. If None, the
+        ``HeliostatRayTracer`` uses its own default.
     number_of_surface_points : torch.Tensor
         The number of surface points of the reconstructed surfaces.
         Tensor of shape [2].
-    epsilon : float
-        A small value.
     bitmap_resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
+    epsilon : float | None
+        Small numerical offset used to avoid division by zero in the energy constraint.
 
     Note
     ----
@@ -81,7 +84,7 @@ class SurfaceReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        dni: float = None,
+        dni: float | None = None,
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         epsilon: float | None = 1e-12,
@@ -93,21 +96,24 @@ class SurfaceReconstructor:
         Parameters
         ----------
         ddp_setup : dict[str, Any]
-           Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+            Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             The parameters for the optimizer, learning rate scheduler, early stopping, and constraints.
+        dni : float | None
+            Direct normal irradiance in W/m² used to scale the ray-traced flux (default is None).
+            If None, the ``HeliostatRayTracer`` uses its own default.
         number_of_surface_points : torch.Tensor
-            The number of surface points of the reconstructed surfaces (default is torch.tensor([50,50])).
+            The number of surface points of the reconstructed surfaces (default is torch.tensor([50, 50])).
             Tensor of shape [2].
         bitmap_resolution : torch.Tensor
-            The resolution of all bitmaps during reconstruction (default is torch.tensor([256,256])).
+            The resolution of all bitmaps during reconstruction (default is torch.tensor([256, 256])).
             Tensor of shape [2].
         epsilon : float | None
-            A small value (default is 1e-12).
+            Small numerical offset used to avoid division by zero in the energy constraint (default is 1e-12).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -151,8 +157,12 @@ class SurfaceReconstructor:
         Returns
         -------
         torch.Tensor
-            The final loss of the surface reconstruction for each heliostat in each group.
+            The final reconstruction loss per heliostat, one entry per heliostat in the scenario.
             Tensor of shape [total_number_of_heliostats_in_scenario].
+        dict[str, list]
+            Loss history over epochs, with keys ``"total_loss"``, ``"flux_loss"``,
+            ``"smoothness_regularizer"``, ``"ideal_regularizer"``, ``"flux_integral"``,
+            and ``"flux_integral_constraint"``. Each value is a list of per-epoch scalar floats.
         """
         device = get_device(device=device)
 
@@ -633,7 +643,8 @@ class SurfaceReconstructor:
         Parameters
         ----------
         gradients : torch.Tensor
-            The gradients of the outer control points.
+            The full control point gradient tensor for all active heliostats. Gradients on the
+            outer edges will be zeroed; interior gradients are returned unchanged.
             Tensor of shape [number_of_active_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
