@@ -147,6 +147,7 @@ def test_light_source_list(light_source):
 
     assert "sun" in dictionary
 
+
 def test_light_source_invalid_distribution():
     with pytest.raises(ValueError) as exc_info:
         LightSourceConfig(
@@ -159,6 +160,7 @@ def test_light_source_invalid_distribution():
         )
 
     assert "Unknown light source distribution type" in str(exc_info.value)
+
 
 @pytest.fixture
 def facet():
@@ -211,6 +213,7 @@ def kinematics_deviations():
         concentrator_translation_u=torch.tensor(13.0),
     )
 
+
 @pytest.mark.parametrize(
     "kinematics_config",
     [
@@ -231,6 +234,7 @@ def test_kinematics_configs(kinematics_config, kinematics_deviations):
     assert config_dictionary.kinematics_initial_orientation in dictionary
     assert config_dictionary.kinematics_deviations in dictionary
 
+
 def test_actuator_parameters():
     actuator_parameters = ActuatorParameters(
         increment=torch.tensor(1.0),
@@ -248,6 +252,7 @@ def test_actuator_parameters():
     assert config_dictionary.actuator_pivot_radius in dictionary
     assert config_dictionary.actuator_initial_angle in dictionary
 
+
 @pytest.fixture
 def actuator():
     return ActuatorConfig(
@@ -260,6 +265,7 @@ def actuator():
             initial_stroke_length=torch.tensor(2.0),
         ),
     )
+
 
 def test_actuator_config(actuator):
     dictionary = actuator.create_actuator_dict()
@@ -327,6 +333,7 @@ def test_heliostat_all_branches(facet, kinematics_deviations, actuator):
     assert config_dictionary.heliostat_kinematics_key in d
     assert config_dictionary.heliostat_actuator_key in d
 
+
 @pytest.fixture
 def heliostat():
     return HeliostatConfig(
@@ -334,6 +341,7 @@ def heliostat():
         id=1,
         position=torch.zeros(3),
     )
+
 
 def test_heliostat_list(heliostat):
     list_config = HeliostatListConfig(heliostat_list=[heliostat])
