@@ -2,10 +2,12 @@ import logging
 from typing import TYPE_CHECKING, Iterator
 
 import torch
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Sampler
 
 import artist.util.index_mapping
 from artist.core import blocking
+from artist.field import TowerTargetAreasPlanar, TowerTargetAreasCylindrical
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
@@ -373,7 +375,7 @@ class HeliostatRayTracer:
         ray_extinction_factor: float = 0.0,
         mirror_reflectivity: float = 0.935,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """
         Perform heliostat ray tracing.
 
@@ -439,9 +441,9 @@ class HeliostatRayTracer:
 
         flux_distributions = torch.empty(
             (
-                active_heliostats_mask.sum(),
-                self.bitmap_resolution[0],
-                self.bitmap_resolution[1],
+                int(active_heliostats_mask.sum()),
+                int(self.bitmap_resolution[0]),
+                int(self.bitmap_resolution[1]),
             ),
             device=device,
         )
@@ -491,7 +493,7 @@ class HeliostatRayTracer:
 
             intersection_distances_target = torch.zeros(
                 (
-                    active_heliostats_mask_batch.sum(),
+                    int(active_heliostats_mask_batch.sum()),
                     self.light_source.number_of_rays,
                     self.heliostat_group.surface_points.shape[1],
                 ),
@@ -499,7 +501,7 @@ class HeliostatRayTracer:
             )
             angle_reduced_intensities = torch.zeros(
                 (
-                    active_heliostats_mask_batch.sum(),
+                    int(active_heliostats_mask_batch.sum()),
                     self.light_source.number_of_rays,
                     self.heliostat_group.surface_points.shape[1],
                 ),
@@ -507,7 +509,7 @@ class HeliostatRayTracer:
             )
             bitmap_intersections_e = torch.zeros(
                 (
-                    active_heliostats_mask_batch.sum(),
+                    int(active_heliostats_mask_batch.sum()),
                     self.light_source.number_of_rays,
                     self.heliostat_group.surface_points.shape[1],
                 ),
@@ -515,7 +517,7 @@ class HeliostatRayTracer:
             )
             bitmap_intersections_u = torch.zeros(
                 (
-                    active_heliostats_mask_batch.sum(),
+                    int(active_heliostats_mask_batch.sum()),
                     self.light_source.number_of_rays,
                     self.heliostat_group.surface_points.shape[1],
                 ),
@@ -523,25 +525,23 @@ class HeliostatRayTracer:
             )
 
             if planar_active_mask.sum() > 0:
+                assert isinstance(self.scenario.solar_tower.target_areas[0], TowerTargetAreasPlanar)
                 (
                     bitmap_intersections_e[planar_active_mask],
                     bitmap_intersections_u[planar_active_mask],
                     intersection_distances_target[planar_active_mask],
                     angle_reduced_intensities[planar_active_mask],
-                ) = raytracing_utils.line_plane_intersections(
-                    rays=rays_planar_targets,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ][planar_active_mask],
-                    target_areas=self.scenario.solar_tower.target_areas[0],
-                    target_area_indices=target_area_indices[
-                        active_heliostats_mask_batch
-                    ][planar_active_mask],
-                    bitmap_resolution=self.bitmap_resolution,
-                    device=device,
-                )
+                ) = raytracing_utils.line_plane_intersections(rays=rays_planar_targets, points_at_ray_origins=
+                self.heliostat_group.active_surface_points[
+                    active_heliostats_mask_batch
+                ][planar_active_mask], target_areas=self.scenario.solar_tower.target_areas[0],
+                                                              target_area_indices=target_area_indices[
+                                                                  active_heliostats_mask_batch
+                                                              ][planar_active_mask],
+                                                              bitmap_resolution=self.bitmap_resolution, device=device)
 
             if (~planar_active_mask).sum() > 0:
+                assert isinstance(self.scenario.solar_tower.target_areas[1], TowerTargetAreasCylindrical)
                 (
                     bitmap_intersections_e[~planar_active_mask],
                     bitmap_intersections_u[~planar_active_mask],
@@ -726,9 +726,9 @@ class HeliostatRayTracer:
 
         group_bitmaps_per_target = torch.zeros(
             (
-                self.scenario.solar_tower.number_of_target_areas_per_type.sum(),
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_e],
-                self.bitmap_resolution[index_mapping.unbatched_bitmap_u],
+                int(self.scenario.solar_tower.number_of_target_areas_per_type.sum()),
+                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
             ),
             device=device,
         )
@@ -862,7 +862,7 @@ class HeliostatRayTracer:
 
         # Flux density maps for each active heliostat.
         bitmaps_flat = torch.zeros(
-            (num_heliostats, bitmap_height * bitmap_width), device=device
+            (int(num_heliostats), int(bitmap_height * bitmap_width)), device=device
         )
 
         # scatter_add_ can only handle flat tensors per batch. That is why the bitmaps are flattened.
@@ -903,7 +903,7 @@ class HeliostatRayTracer:
         bitmaps_flat.scatter_add_(1, index_4, intensities_pixel_4)
 
         bitmaps_per_heliostat = bitmaps_flat.view(
-            num_heliostats, bitmap_height, bitmap_width
+            num_heliostats, int(bitmap_height), int(bitmap_width)
         )
 
         # Since tensor indices have their origin of (0,0) in the top left, but our image indices have their
