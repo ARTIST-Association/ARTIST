@@ -752,31 +752,13 @@ class HeliostatRayTracer:
         bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
         num_heliostats = absolute_intensities.shape[0]
 
-        # A one-pixel margin is implicitly added around the actual target area.
-        # This is required for bilinear splatting: rays that intersect close to
-        # the target boundary must still contribute partially to pixels inside
-        # the target region. Without this margin, contributions from neighboring
-        # pixels could be lost.
-        #
-        # To ensure that bilinear weights remain non-negative within the target
-        # area and its margin, all bitmap indices are shifted by +1. This avoids
-        # negative interpolation weights near the lower boundary.
-        #
-        # For intersections within the area of interest (i.e. the physical target
-        # plus its one-pixel margin), the coordinates lie in the range
-        # [1, `bitmap_resolution_e/u`].
-        # Intersections outside this region may produce coordinates outside this
-        # range (negative or larger than the bitmap size). This is intentional:
-        # such contributions are computed during splatting but later masked out
-        # when assembling the final bitmap.
-        #
         # As bilinear weights assume integer indices are at pixel centers, the
         # scaling uses `(bitmap_width - 1)` and `(bitmap_height - 1)` so that
         # continuous coordinates map correctly to pixel centers when discretized
-        bitmap_intersections_e = (1.0 + bitmap_intersections_e).reshape(
+        bitmap_intersections_e = bitmap_intersections_e.reshape(
             num_heliostats, -1
         )
-        bitmap_intersections_u = (1.0 + bitmap_intersections_u).reshape(
+        bitmap_intersections_u = 1.0 + bitmap_intersections_u.reshape(
             num_heliostats, -1
         )
 
@@ -827,10 +809,6 @@ class HeliostatRayTracer:
         contributions_high_e = bitmap_intersections_e - indices_low_e
         # U-value contribution to 1 and 2
         contributions_high_u = bitmap_intersections_u - indices_low_u
-
-        # Here we shift the bitmap indices back to the original range from 0 to bitmap_width/height - 1.
-        indices_low_e = indices_low_e - 1
-        indices_low_u = indices_low_u - 1
 
         # We now calculate the distributed intensities for each neighboring
         # pixel and assign the correctly ordered indices to the intensities
