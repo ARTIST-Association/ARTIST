@@ -215,17 +215,26 @@ class KinematicsReconstructor:
             if active_heliostats_mask.sum() > 0:
                 # Create the optimizer.
 
-                initial_angle = heliostat_group.kinematics.actuators.optimizable_parameters[:, 0]
-                initial_stroke = heliostat_group.kinematics.actuators.optimizable_parameters[:, 1]
+                initial_angle = (
+                    heliostat_group.kinematics.actuators.optimizable_parameters[:, 0]
+                )
+                initial_stroke = (
+                    heliostat_group.kinematics.actuators.optimizable_parameters[:, 1]
+                )
 
                 delta_angle = torch.zeros_like(initial_angle).requires_grad_()
                 delta_stroke = torch.zeros_like(initial_stroke).requires_grad_()
 
-                optimizer = torch.optim.Adam([
-                    {"params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(), "lr": 0.0005},
-                    {"params": delta_angle, "lr": 0.005},
-                    {"params": delta_stroke, "lr": 0.005},
-                ])
+                optimizer = torch.optim.Adam(
+                    [
+                        {
+                            "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+                            "lr": 0.0005,
+                        },
+                        {"params": delta_angle, "lr": 0.005},
+                        {"params": delta_stroke, "lr": 0.005},
+                    ]
+                )
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
@@ -266,8 +275,16 @@ class KinematicsReconstructor:
                 ):
                     optimizer.zero_grad()
 
-                    actuator_params = torch.cat([(initial_angle + delta_angle).unsqueeze(1), (initial_stroke + delta_stroke).unsqueeze(1)], dim=-1).reshape(2, 2, 2)
-                    heliostat_group.kinematics.actuators.optimizable_parameters = actuator_params
+                    actuator_params = torch.cat(
+                        [
+                            (initial_angle + delta_angle).unsqueeze(1),
+                            (initial_stroke + delta_stroke).unsqueeze(1),
+                        ],
+                        dim=-1,
+                    ).reshape(2, 2, 2)
+                    heliostat_group.kinematics.actuators.optimizable_parameters = (
+                        actuator_params
+                    )
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
