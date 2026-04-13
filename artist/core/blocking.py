@@ -214,7 +214,8 @@ def soft_ray_blocking_mask(
     blocking_primitives_spans: torch.Tensor,
     blocking_primitives_normals: torch.Tensor,
     epsilon: float = 1e-12,
-    softness: float = 5000.0,
+    softness: float = 1000.0,
+    alpha: float = 100.0,
     ray_origin_offset=0.05,
 ) -> torch.Tensor:
     r"""
@@ -267,7 +268,7 @@ def soft_ray_blocking_mask(
     epsilon : float
         A small value (default is 1e-12).
     softness : float
-        Controls how soft the sigmoid approximates the blocking (default is 5000.0).
+        Controls how soft the sigmoid approximates the blocking (default is 100.0).
     ray_origin_offset
         Shift the ray origins a slight distance away from the heliostat planes to avoid self intersections (default is 0.05).
         The distance is measured in m, meaning the default offset pushes the ray origins 5cm along the ray direction.
@@ -290,7 +291,9 @@ def soft_ray_blocking_mask(
     # Solve the plane equation.
     denominator = torch.sum(ray_directions * blocking_primitives_normals, dim=-1)
     denominator_safe = torch.where(
-        denominator.abs() < epsilon, torch.sign(denominator) * epsilon, denominator
+        denominator.abs() < epsilon,
+        torch.where(denominator >= 0, epsilon, -epsilon),
+        denominator,
     )
     distances_to_blocking_planes = (
         torch.sum((corner_0 - ray_origins) * blocking_primitives_normals, dim=-1)
@@ -322,22 +325,21 @@ def soft_ray_blocking_mask(
 
     # Mask values are near 1 if intersection within parallelogram (plane),
     # mask values are near 0, if intersection outside plane boundaries.
-    # We intermediately transition to log space to avoid underflow and keep gradients alive.
+    # Beer–Lambert accumulation models occlusion as exponential attenuation through a continuous density field.
+    # Each blocking primitive contributes a non-negative soft density along the ray rather than a hard binary mask.
+    # These contributions are summed to form an optical depth, representing total accumulated occlusion.
+    # The final visibility is computed as an exponential decay of this optical depth, ensuring stable, differentiable aggregation.
+    inside_u = torch.sigmoid(softness * u_coordinate_on_plane) * torch.sigmoid(softness * (1 - u_coordinate_on_plane))
+    inside_v = torch.sigmoid(softness * v_coordinate_on_plane) * torch.sigmoid(softness * (1 - v_coordinate_on_plane))
 
-    log_blocking_within_plane = (
-        F.logsigmoid(softness * u_coordinate_on_plane)
-        + F.logsigmoid(softness * (1 - u_coordinate_on_plane))
-        + F.logsigmoid(softness * v_coordinate_on_plane)
-        + F.logsigmoid(softness * (1 - v_coordinate_on_plane))
-    )
-    blocking_within_plane = torch.exp(log_blocking_within_plane)
+    inside_plane = inside_u * inside_v
+    
+    sigma = inside_plane * blocking_planes_in_front_of_heliostats
+    sigma = sigma.clamp(0.0, 1.0)
 
-    blocking_mask_per_plane = (
-        blocking_within_plane * blocking_planes_in_front_of_heliostats
-    )
-
-    log_not_blocked = torch.sum(torch.log1p(-blocking_mask_per_plane + epsilon), dim=-1)
-    blocked = 1 - torch.exp(log_not_blocked)
+    optical_depth = alpha * torch.sum(sigma, dim=-1)
+    transmittance = torch.exp(-optical_depth)
+    blocked = 1.0 - transmittance
 
     return blocked
 

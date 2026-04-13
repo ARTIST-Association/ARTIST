@@ -610,7 +610,7 @@ class HeliostatRayTracer:
                             filtered_blocking_primitive_indices
                         ],
                         epsilon=1e-12,
-                        softness=5000.0,
+                        softness=1000.0,
                     )
 
             intensities = (
