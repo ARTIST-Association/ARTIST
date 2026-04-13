@@ -611,20 +611,20 @@ def build_linear_bounding_volume_hierarchies(
             break
         l_max = torch.where(still_expanding, l_max * 2, l_max)
 
-    l = torch.zeros(number_of_blocking_primitives, dtype=torch.int32, device=device)
+    l_ = torch.zeros(number_of_blocking_primitives, dtype=torch.int32, device=device)
     t = l_max // 2
     while t.max() >= 1:
         candidates_lcp = longest_common_prefix(
             codes=sorted_codes,
             i=blocker_ids,
-            j=blocker_ids + (l + t) * direction_to_similar_codes,
+            j=blocker_ids + (l_ + t) * direction_to_similar_codes,
             device=device,
         )
         mask = candidates_lcp > delta_min
-        l = torch.where(mask, l + t, l)
+        l_ = torch.where(mask, l_ + t, l_)
         t = t // 2
 
-    farthest_index = blocker_ids + l * direction_to_similar_codes
+    farthest_index = blocker_ids + l_ * direction_to_similar_codes
 
     # Construct binary radix tree.
     # The range [first[i], last[i]] corresponds to the spatial cluster of blocking primitives that share a common prefix in Morton code.
@@ -634,7 +634,7 @@ def build_linear_bounding_volume_hierarchies(
     )
     split = torch.zeros(number_of_blocking_primitives, dtype=torch.int32, device=device)
 
-    t = (l + 1) // 2
+    t = (l_ + 1) // 2
     while t.max() >= 1:
         candidates_lcp = longest_common_prefix(
             codes=sorted_codes,
@@ -814,13 +814,13 @@ def compute_lbvh_max_depth(
         node, depth = stack.pop()
         max_depth = max(max_depth, depth)
 
-        l = int(left[node].item())
-        r = int(right[node].item())
+        l_ = int(left[node].item())
+        r_ = int(right[node].item())
 
-        if l >= 0:
-            stack.append((l, depth + 1))
-        if r >= 0:
-            stack.append((r, depth + 1))
+        if l_ >= 0:
+            stack.append((l_, depth + 1))
+        if r_ >= 0:
+            stack.append((r_, depth + 1))
 
     return max_depth
 
