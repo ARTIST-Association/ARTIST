@@ -755,9 +755,7 @@ class HeliostatRayTracer:
         # As bilinear weights assume integer indices are at pixel centers, the
         # scaling uses `(bitmap_width - 1)` and `(bitmap_height - 1)` so that
         # continuous coordinates map correctly to pixel centers when discretized
-        bitmap_intersections_e = bitmap_intersections_e.reshape(
-            num_heliostats, -1
-        )
+        bitmap_intersections_e = bitmap_intersections_e.reshape(num_heliostats, -1)
         bitmap_intersections_u = 1.0 + bitmap_intersections_u.reshape(
             num_heliostats, -1
         )
