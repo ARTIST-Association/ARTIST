@@ -761,11 +761,42 @@ class HeliostatRayTracer:
 
     def bilinear_splatting(
         self,
-        bitmap_intersections_e,
-        bitmap_intersections_u,
-        absolute_intensities,
-        device,
-    ):
+        bitmap_intersections_e: torch.Tensor,
+        bitmap_intersections_u: torch.Tensor,
+        absolute_intensities: torch.Tensor,
+        device: torch.device | None,
+    ) -> torch.Tensor:
+        """
+        Distribute ray intensities onto bitmap pixels using bilinear splatting.
+
+        Each ray intersection with the target area is treated as a continuously
+        positioned value between four neighboring discrete pixels (east/west and
+        up/down neighbors). The intensity is split among these four pixels
+        proportionally to their proximity to the intersection point, yielding a
+        differentiable approximation of the discrete binning operation.
+
+        Parameters
+        ----------
+        bitmap_intersections_e : torch.Tensor
+            The east-component bitmap coordinates of ray intersections.
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_surface_points].
+        bitmap_intersections_u : torch.Tensor
+            The up-component bitmap coordinates of ray intersections.
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_surface_points].
+        absolute_intensities : torch.Tensor
+            The intensity of each ray at its intersection point.
+            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_surface_points].
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models.
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            The flux density bitmaps, one per active heliostat.
+            Tensor of shape [number_of_active_heliostats, bitmap_resolution_u, bitmap_resolution_e].
+        """
         bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
         bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
         num_heliostats = absolute_intensities.shape[0]
