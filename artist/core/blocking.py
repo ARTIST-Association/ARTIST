@@ -784,7 +784,8 @@ def ray_aabb_intersect(
 
 
 def compute_lbvh_max_depth(
-    left: torch.Tensor, right: torch.Tensor, device: torch.device | None = None
+    left: torch.Tensor,
+    right: torch.Tensor,
 ) -> int:
     """
     Compute the maximum depth of the LBVH tree.
@@ -795,17 +796,12 @@ def compute_lbvh_max_depth(
         Left child indices.
     right : torch.Tensor
         Right child indices.
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
 
     Returns
     -------
     int
         Maximum depth of the tree.
     """
-    device = get_device(device=device)
     stack = [(0, 1)]
     max_depth = 1
 
@@ -839,7 +835,7 @@ def lbvh_filter_blocking_planes(
     Parameters
     ----------
     points_at_ray_origins : torch.Tensor
-        Origin points of the rays, i.e. the surface points, expanded in the ray dimension.
+        Origin points of the rays, i.e., the surface points, expanded in the ray dimension.
         Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 3].
     ray_directions : torch.Tensor
         Ray directions.
@@ -884,7 +880,7 @@ def lbvh_filter_blocking_planes(
     total_number_of_rays = ray_origins.shape[0]
     number_of_primitives = blocking_primitives_corners.shape[0]
 
-    max_tree_depth = compute_lbvh_max_depth(left=left, right=right, device=device)
+    max_tree_depth = compute_lbvh_max_depth(left=left, right=right)
 
     node_traversal_stack = torch.full(
         (total_number_of_rays, max_tree_depth),
