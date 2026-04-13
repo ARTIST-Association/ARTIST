@@ -915,9 +915,9 @@ def plot_model_reconstruction(
     }
 
     measured = images[0]
-    Y, X = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
-    x_com_measured = (X * measured).sum() / measured.sum()
-    y_com_measured = (Y * measured).sum() / measured.sum()
+    y_grid, x_grid = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
+    x_com_measured = (x_grid * measured).sum() / measured.sum()
+    y_com_measured = (y_grid * measured).sum() / measured.sum()
 
     for idx, (ax, flux) in enumerate(zip(axes, images)):
         im = ax.imshow(flux, cmap=cmap, vmin=vmin, vmax=vmax)
@@ -932,9 +932,11 @@ def plot_model_reconstruction(
             label="center of mass reference",
         )
 
-        Y, X = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
-        x_com = (X * flux).sum() / flux.sum()
-        y_com = (Y * flux).sum() / flux.sum()
+        y_grid, x_grid = torch.meshgrid(
+            torch.arange(256), torch.arange(256), indexing="ij"
+        )
+        x_com = (x_grid * flux).sum() / flux.sum()
+        y_com = (y_grid * flux).sum() / flux.sum()
         ax.scatter(
             x_com, y_com, s=80, marker="o", color="green", label="center of mass"
         )
@@ -1327,7 +1329,11 @@ def plot_tradeoffs(df, save_path):
 
 
 def plot_run_analysis(save_dir: pathlib.Path, results_paths):
-    """CURRENTLY NOT WORKING"""
+    """
+    Generate analysis plots.
+
+    CURRENTLY NOT WORKING!
+    """
     counter = 1
     results_list = []
     for results_path, hardware in zip(
