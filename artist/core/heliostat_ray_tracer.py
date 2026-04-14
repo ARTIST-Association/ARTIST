@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 
 import artist.util.index_mapping
 from artist.core import blocking
-from artist.field import TowerTargetAreasCylindrical, TowerTargetAreasPlanar
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
@@ -534,9 +533,6 @@ class HeliostatRayTracer:
             )
 
             if planar_active_mask.sum() > 0:
-                assert isinstance(
-                    self.scenario.solar_tower.target_areas[0], TowerTargetAreasPlanar
-                )
                 (
                     bitmap_intersections_e[planar_active_mask],
                     bitmap_intersections_u[planar_active_mask],
@@ -556,10 +552,6 @@ class HeliostatRayTracer:
                 )
 
             if (~planar_active_mask).sum() > 0:
-                assert isinstance(
-                    self.scenario.solar_tower.target_areas[1],
-                    TowerTargetAreasCylindrical,
-                )
                 (
                     bitmap_intersections_e[~planar_active_mask],
                     bitmap_intersections_u[~planar_active_mask],
