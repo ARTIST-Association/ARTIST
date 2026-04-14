@@ -26,7 +26,7 @@ def test_get_centers_of_target_areas(
     expected,
     device,
 ):
-
+    """Test that ``SolarTower.get_centers_of_target_areas`` returns the correct center coordinates."""
     mock_target_areas_planar = mock.MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["plane_1", "plane_2"]
     mock_target_areas_planar.number_of_target_areas = 2
