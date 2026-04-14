@@ -619,24 +619,36 @@ def bitmap_coordinates_to_target_coordinates(
         planar_indices = target_area_indices[planar_mask]
 
         resolution = torch.tensor(
-            [bitmap_resolution[0], 1e-8, bitmap_resolution[1], 1e-8], device=device
+            [
+                bitmap_resolution[index_mapping.unbatched_bitmap_e],
+                1e-8,
+                bitmap_resolution[index_mapping.unbatched_bitmap_u],
+                1e-8,
+            ],
+            device=device,
         )
         coordinates = torch.zeros((planar_indices.numel(), 4), device=device)
-        coordinates[:, 0] = bitmap_coordinates[planar_mask, 0]
-        coordinates[:, 2] = bitmap_coordinates[planar_mask, 1]
+        coordinates[:, index_mapping.e] = bitmap_coordinates[
+            planar_mask, index_mapping.unbatched_bitmap_e
+        ]
+        coordinates[:, index_mapping.u] = bitmap_coordinates[
+            planar_mask, index_mapping.unbatched_bitmap_u
+        ]
 
         # Account for flips from bitmap to target coordinates.
         target_dimensions = torch.zeros((planar_mask.sum(), 4), device=device)
-        assert isinstance(solar_tower.target_areas[0], TowerTargetAreasPlanar)
-        target_dimensions[:, index_mapping.e] = -solar_tower.target_areas[0].dimensions[
-            planar_indices, 0
+        planar: TowerTargetAreasPlanar = solar_tower.target_areas[
+            index_mapping.planar_target_areas
+        ]  # type: ignore[assignment]
+        target_dimensions[:, index_mapping.e] = -planar.dimensions[
+            planar_indices, index_mapping.target_dimensions_width
         ]
-        target_dimensions[:, index_mapping.u] = -solar_tower.target_areas[0].dimensions[
-            planar_indices, 1
+        target_dimensions[:, index_mapping.u] = -planar.dimensions[
+            planar_indices, index_mapping.target_dimensions_height
         ]
 
         center_coordinates[planar_mask] = (
-            solar_tower.target_areas[0].centers[planar_indices]
+            planar.centers[planar_indices]
             - 0.5 * target_dimensions
             + coordinates / (resolution - 1) * target_dimensions
         )
@@ -644,23 +656,32 @@ def bitmap_coordinates_to_target_coordinates(
     if target_area_indices[~planar_mask].numel() > 0:
         cylinder_indices = (
             target_area_indices[~planar_mask]
-            - solar_tower.number_of_target_areas_per_type[0]
+            - solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
         )
 
-        assert isinstance(solar_tower.target_areas[1], TowerTargetAreasCylindrical)
-        cylinder_normals = solar_tower.target_areas[1].normals[cylinder_indices][:, :3]
-        cylinder_axes = solar_tower.target_areas[1].axes[cylinder_indices][:, :3]
-        cylinder_centers = solar_tower.target_areas[1].centers[cylinder_indices]
-        radii = solar_tower.target_areas[1].radii[cylinder_indices].flatten()
+        cylindrical: TowerTargetAreasCylindrical = solar_tower.target_areas[
+            index_mapping.cylindrical_target_areas
+        ]  # type: ignore[assignment]
+        cylinder_normals = cylindrical.normals[cylinder_indices][:, :3]
+        cylinder_axes = cylindrical.axes[cylinder_indices][:, :3]
+        cylinder_centers = cylindrical.centers[cylinder_indices]
+        radii = cylindrical.radii[cylinder_indices].flatten()
 
         theta = (
-            bitmap_coordinates[~planar_mask, 0] / (bitmap_resolution[0] - 1) - 0.5
-        ) * solar_tower.target_areas[1].opening_angles[cylinder_indices].flatten()
-        z = (
-            ((bitmap_resolution[0] - 1) - bitmap_coordinates[~planar_mask, 1])
-            / (bitmap_resolution[1] - 1)
+            bitmap_coordinates[~planar_mask, index_mapping.unbatched_bitmap_e]
+            / (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
             - 0.5
-        ) * solar_tower.target_areas[1].heights[cylinder_indices].flatten()
+        ) * cylindrical.opening_angles[cylinder_indices].flatten()
+        z = (
+            (
+                (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
+                - bitmap_coordinates[~planar_mask, index_mapping.unbatched_bitmap_u]
+            )
+            / (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
+            - 0.5
+        ) * cylindrical.heights[cylinder_indices].flatten()
 
         v = torch.cross(cylinder_axes, cylinder_normals, dim=-1)
 
@@ -679,7 +700,7 @@ def create_nurbs_evaluation_grid(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create a grid of evaluation points for a nurbs surface.
+    Create a grid of evaluation points for a NURBS surface.
 
     Parameters
     ----------
@@ -687,7 +708,7 @@ def create_nurbs_evaluation_grid(
         The number of nurbs evaluation points in east and north direction.
         Tensor of shape [2].
     epsilon : float
-        Offset for the nurbs evaluation points (default is 1e-7).
+        Offset for the NURBS evaluation points (default is 1e-7).
         NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints
         therefore the evaluation points need a small offset from the endpoints.
     device : torch.device | None
@@ -977,29 +998,38 @@ def crop_flux_distributions_around_center(
     )
 
     target_dimensions = torch.empty((number_of_flux_distributions, 2), device=device)
-    planar_mask = target_area_indices < solar_tower.number_of_target_areas_per_type[0]
+    planar_mask = (
+        target_area_indices
+        < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+    )
     if target_area_indices[planar_mask].numel() > 0:
-        assert isinstance(solar_tower.target_areas[0], TowerTargetAreasPlanar)
-        target_dimensions[planar_mask] = solar_tower.target_areas[0].dimensions[
+        planar: TowerTargetAreasPlanar = solar_tower.target_areas[
+            index_mapping.planar_target_areas
+        ]  # type: ignore[assignment]
+        target_dimensions[planar_mask] = planar.dimensions[
             target_area_indices[planar_mask]
         ]
     if target_area_indices[~planar_mask].numel() > 0:
         cylinder_indices = (
             target_area_indices[~planar_mask]
-            - solar_tower.number_of_target_areas_per_type[0]
+            - solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
         )
-        assert isinstance(solar_tower.target_areas[1], TowerTargetAreasCylindrical)
-        target_dimensions[~planar_mask, 0] = (
-            solar_tower.target_areas[1].radii[cylinder_indices]
-            * solar_tower.target_areas[1].opening_angles[cylinder_indices]
+        cylindrical: TowerTargetAreasCylindrical = solar_tower.target_areas[
+            index_mapping.cylindrical_target_areas
+        ]  # type: ignore[assignment]
+        target_dimensions[~planar_mask, index_mapping.target_dimensions_width] = (
+            cylindrical.radii[cylinder_indices]
+            * cylindrical.opening_angles[cylinder_indices]
         )
-        target_dimensions[~planar_mask, 1] = solar_tower.target_areas[1].heights[
-            cylinder_indices
-        ]
+        target_dimensions[~planar_mask, index_mapping.target_dimensions_height] = (
+            cylindrical.heights[cylinder_indices]
+        )
 
     # Compute scale to match desired crop size in meters.
-    scale_x = crop_width / target_dimensions[:, 0]
-    scale_y = crop_height / target_dimensions[:, 1]
+    scale_x = crop_width / target_dimensions[:, index_mapping.target_dimensions_width]
+    scale_y = crop_height / target_dimensions[:, index_mapping.target_dimensions_height]
 
     # Build affine transform matrices (scale and center).
     affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)

@@ -150,14 +150,18 @@ def line_plane_intersections(
 
     target_intersections_e = (
         intersections[..., index_mapping.e]
-        + (plane_dimensions[:, 0] / 2)[:, None, None]
-        - plane_centers[:, 0][:, None, None]
+        + (plane_dimensions[:, index_mapping.target_dimensions_width] / 2)[
+            :, None, None
+        ]
+        - plane_centers[:, index_mapping.e][:, None, None]
     )
 
     target_intersections_u = (
         intersections[..., index_mapping.u]
-        + (plane_dimensions[:, 1] / 2)[:, None, None]
-        - plane_centers[:, 2][:, None, None]
+        + (plane_dimensions[:, index_mapping.target_dimensions_height] / 2)[
+            :, None, None
+        ]
+        - plane_centers[:, index_mapping.u][:, None, None]
     )
 
     # Scale target intersection coordinates into bitmap space.
@@ -167,22 +171,28 @@ def line_plane_intersections(
     # continuous coordinates map correctly to pixel centers when discretized.
     bitmap_intersections_e = (
         target_intersections_e
-        / plane_dimensions[:, 0, None, None]
-        * (bitmap_resolution[0] - 1)
+        / plane_dimensions[:, index_mapping.target_dimensions_width, None, None]
+        * (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
     )
     bitmap_intersections_u = (
         target_intersections_u
-        / plane_dimensions[:, 1, None, None]
-        * (bitmap_resolution[1] - 1)
+        / plane_dimensions[:, index_mapping.target_dimensions_height, None, None]
+        * (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
     )
 
     # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.
     # Also filter out rays that hit the backside of the target or rays that are parallel to the target.
     valid_mask = (
         (0 <= bitmap_intersections_e)
-        & (bitmap_intersections_e <= bitmap_resolution[0] - 1)
+        & (
+            bitmap_intersections_e
+            <= bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1
+        )
         & (0 <= bitmap_intersections_u)
-        & (bitmap_intersections_u <= bitmap_resolution[1] - 1)
+        & (
+            bitmap_intersections_u
+            <= bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1
+        )
         & front_facing_mask
     )
 
@@ -195,7 +205,9 @@ def line_plane_intersections(
     # bitmaps is to imagine oneself to stand in the heliostat field looking at the receiver.
     # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
     # i.e., subtracting the intersections from the total E-resolution to flip left and right.
-    bitmap_intersections_e = (bitmap_resolution[0] - 1) - bitmap_intersections_e
+    bitmap_intersections_e = (
+        bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1
+    ) - bitmap_intersections_e
 
     return (
         bitmap_intersections_e,
@@ -395,9 +407,15 @@ def line_cylinder_intersections(
         & (angles <= opening_angles.view(-1, 1, 1))
     )
 
-    bitmap_intersections_u = z / heights.view(-1, 1, 1) * (bitmap_resolution[1] - 1)
+    bitmap_intersections_u = (
+        z
+        / heights.view(-1, 1, 1)
+        * (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
+    )
     bitmap_intersections_e = (
-        angles / opening_angles.view(-1, 1, 1) * (bitmap_resolution[0] - 1)
+        angles
+        / opening_angles.view(-1, 1, 1)
+        * (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
     )
 
     # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.

@@ -196,6 +196,10 @@ target_area_width = 0
 """Index to access the target area width."""
 target_area_height = 1
 """Index to access the target area height."""
+heliostat_width = 0
+"""Index to access the heliostat width."""
+heliostat_height = 1
+"""Index to access the heliostat height."""
 target_area_center_e = 0
 """Index to access the target area center in the east component."""
 target_area_center_u = 2
@@ -204,12 +208,6 @@ evaluation_points_e = 0
 """Index to access the evaluation points in the east component."""
 evaluation_points_n = 1
 """Index to access the evaluation points in the north component."""
-heliostat_position_e = 0
-"""Index to access the heliostat position in the east component."""
-heliostat_position_n = 1
-"""Index to access the heliostat position in the north component."""
-heliostat_position_u = 2
-"""Index to access the heliostat position in the up component."""
 first_joint_index = 0
 """Index to access the first joint."""
 second_joint_index = 1
@@ -270,6 +268,40 @@ target_area_curvature_u = 1
 """Index to access the target area curvature up."""
 number_of_facets = 0
 """Index to access the number of facets."""
+planar_target_areas = 0
+"""Index to access planar target areas in the solar tower target area list."""
+cylindrical_target_areas = 1
+"""Index to access cylindrical target areas in the solar tower target area list."""
+target_dimensions_width = 0
+"""Index to access the width dimension of a target area dimensions tensor."""
+target_dimensions_height = 1
+"""Index to access the height dimension of a target area dimensions tensor."""
+actuator_params_initial_angle = 0
+"""Column index for the initial angle in the optimizable actuator parameter tensors."""
+actuator_params_initial_stroke_length = 1
+"""Column index for the initial stroke length in the optimizable actuator parameter tensors."""
+distance_candidate_near = 0
+"""Index for the near (smaller) ray-cylinder intersection distance candidate."""
+distance_candidate_far = 1
+"""Index for the far (larger) ray-cylinder intersection distance candidate."""
+cylinder_local_x = 0
+"""Index for the x component in the cylinder-aligned local coordinate frame."""
+cylinder_local_y = 1
+"""Index for the y component in the cylinder-aligned local coordinate frame."""
+cylinder_local_z = 2
+"""Index for the z component in the cylinder-aligned local coordinate frame."""
+span_u = 0
+"""Index for the first (u) span direction of a blocking primitive."""
+span_v = 1
+"""Index for the second (v) span direction of a blocking primitive."""
+corner_lower_left = 0
+"""Index for the lower-left corner of a blocking primitive corner tensor."""
+corner_upper_left = 1
+"""Index for the upper-left corner of a blocking primitive corner tensor."""
+corner_upper_right = 2
+"""Index for the upper-right corner of a blocking primitive corner tensor."""
+corner_lower_right = 3
+"""Index for the lower-right corner of a blocking primitive corner tensor."""
 bitmap_normalizer = 255.0
 """Constant to normalize bitmaps."""
 bitmap_resolution = 256

@@ -8,6 +8,7 @@ from typing_extensions import Self
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -158,17 +159,23 @@ class SolarTower:
 
         aim_points = torch.zeros((target_area_indices.shape[0], 4), device=device)
 
-        planar_mask = target_area_indices < self.number_of_target_areas_per_type[0]
+        planar_mask = (
+            target_area_indices
+            < self.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+        )
         if target_area_indices[planar_mask].numel() > 0:
-            aim_points[planar_mask] = self.target_areas[0].centers[
-                target_area_indices[planar_mask]
-            ]
+            planar: TowerTargetAreasPlanar = self.target_areas[
+                index_mapping.planar_target_areas
+            ]  # type: ignore[assignment]
+            aim_points[planar_mask] = planar.centers[target_area_indices[planar_mask]]
         cylinder_indices = (
-            target_area_indices[~planar_mask] - self.number_of_target_areas_per_type[0]
+            target_area_indices[~planar_mask]
+            - self.number_of_target_areas_per_type[index_mapping.planar_target_areas]
         )
         if target_area_indices[~planar_mask].numel() > 0:
-            assert isinstance(self.target_areas[1], TowerTargetAreasCylindrical)
-            cylindrical = self.target_areas[1]
+            cylindrical: TowerTargetAreasCylindrical = self.target_areas[
+                index_mapping.cylindrical_target_areas
+            ]  # type: ignore[assignment]
             aim_points[~planar_mask] = (
                 cylindrical.centers[cylinder_indices]
                 + cylindrical.radii[cylinder_indices][:, None]
