@@ -340,6 +340,7 @@ def test_line_plane_intersection(
 
 @pytest.fixture
 def target_area_1_cylindrical(device: torch.device) -> TowerTargetAreasCylindrical:
+    """Return a full-circle cylindrical target area fixture centered at the origin."""
     centers = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
     normals = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
     axes = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
@@ -360,6 +361,7 @@ def target_area_1_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
 
 @pytest.fixture
 def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindrical:
+    """Return a quarter-circle cylindrical target area fixture centered at the origin."""
     centers = torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device)
     normals = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
     axes = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
@@ -454,6 +456,7 @@ def test_line_cylinder_intersection(
     expected_absolute_intensities: torch.Tensor,
     device: torch.device,
 ):
+    """Test line-cylinder intersections for various ray directions, heights, and opening angles."""
     (
         bitmap_intersections_e,
         bitmap_intersections_u,
