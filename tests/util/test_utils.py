@@ -934,9 +934,10 @@ def test_rotation_angle_and_axis(
     from_orientation: torch.Tensor,
     to_orientation: torch.Tensor,
     expected_axis: torch.Tensor,
-    expected_angle: float,
+    expected_angle: torch.Tensor,
     device: torch.device,
 ):
+    """Test that ``rotation_angle_and_axis`` returns the correct axis and angle between two orientations."""
     axis, angle = utils.rotation_angle_and_axis(
         from_orientation=from_orientation.to(device),
         to_orientation=to_orientation.to(device),
@@ -981,6 +982,7 @@ def test_bitmap_coordinates_to_target_coordinates(
     expected_coordinates: torch.Tensor,
     device: torch.device,
 ):
+    """Test that ``bitmap_coordinates_to_target_coordinates`` maps pixel coordinates to 3D target coordinates."""
     mock_solar_tower = MagicMock(spec=SolarTower)
     mock_target_areas_planar = MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["planar1", "planar2"]
