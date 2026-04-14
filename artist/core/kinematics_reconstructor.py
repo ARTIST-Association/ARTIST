@@ -215,19 +215,20 @@ class KinematicsReconstructor:
             if active_heliostats_mask.sum() > 0:
                 # Calculate focal spot from measured flux.
                 focal_spots_bitmap_coordinates = utils.get_center_of_mass(
-                    bitmaps=measured,
-                    device=device
+                    bitmaps=measured, device=device
                 )
                 focal_spots_measured = utils.bitmap_coordinates_to_target_coordinates(
                     bitmap_coordinates=focal_spots_bitmap_coordinates,
                     bitmap_resolution=torch.tensor([256, 256], device=device),
                     solar_tower=self.scenario.solar_tower,
                     target_area_indices=target_area_indices,
-                    device=device
+                    device=device,
                 )
 
                 # Reparametrize optimizable actuator parameters.
-                initial_actuator_params = heliostat_group.kinematics.actuators.optimizable_parameters.detach()
+                initial_actuator_params = (
+                    heliostat_group.kinematics.actuators.optimizable_parameters.detach()
+                )
 
                 angle_mean = initial_actuator_params[:, 0].mean()
                 angle_std = initial_actuator_params[:, 0].std().clamp(min=1e-3)
@@ -235,20 +236,38 @@ class KinematicsReconstructor:
                 stroke_mean = initial_actuator_params[:, 1].mean()
                 stroke_std = initial_actuator_params[:, 1].std().clamp(min=1e-3)
 
-                angle_normalized = (initial_actuator_params[:, 0] - angle_mean) / angle_std
-                stroke_length_normalized = (initial_actuator_params[:, 1] - stroke_mean) / stroke_std
+                angle_normalized = (
+                    initial_actuator_params[:, 0] - angle_mean
+                ) / angle_std
+                stroke_length_normalized = (
+                    initial_actuator_params[:, 1] - stroke_mean
+                ) / stroke_std
 
                 delta_angle = torch.zeros_like(angle_normalized, requires_grad=True)
-                delta_stroke = torch.zeros_like(stroke_length_normalized, requires_grad=True)
+                delta_stroke = torch.zeros_like(
+                    stroke_length_normalized, requires_grad=True
+                )
 
                 optimizer = torch.optim.Adam(
                     [
                         {
                             "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-                            "lr": self.optimizer_dict[config_dictionary.initial_learning_rate_rotation_deviation],
+                            "lr": self.optimizer_dict[
+                                config_dictionary.initial_learning_rate_rotation_deviation
+                            ],
                         },
-                        {"params": delta_angle, "lr": self.optimizer_dict[config_dictionary.initial_learning_rate_initial_angles]},
-                        {"params": delta_stroke, "lr": self.optimizer_dict[config_dictionary.initial_learning_rate_initial_stroke_length]},
+                        {
+                            "params": delta_angle,
+                            "lr": self.optimizer_dict[
+                                config_dictionary.initial_learning_rate_initial_angles
+                            ],
+                        },
+                        {
+                            "params": delta_stroke,
+                            "lr": self.optimizer_dict[
+                                config_dictionary.initial_learning_rate_initial_stroke_length
+                            ],
+                        },
                     ]
                 )
 
@@ -294,12 +313,21 @@ class KinematicsReconstructor:
                     # Get actuator parameters from reparametrized version.
                     actuator_params = torch.cat(
                         [
-                            ((angle_normalized + delta_angle) * angle_std + angle_mean)[:, None, :],
-                            ((stroke_length_normalized + delta_stroke) * stroke_std + stroke_mean)[:, None, :],
+                            ((angle_normalized + delta_angle) * angle_std + angle_mean)[
+                                :, None, :
+                            ],
+                            (
+                                (stroke_length_normalized + delta_stroke) * stroke_std
+                                + stroke_mean
+                            )[:, None, :],
                         ],
                         dim=-1,
-                    ).view_as(heliostat_group.kinematics.actuators.optimizable_parameters)
-                    heliostat_group.kinematics.actuators.optimizable_parameters = actuator_params
+                    ).view_as(
+                        heliostat_group.kinematics.actuators.optimizable_parameters
+                    )
+                    heliostat_group.kinematics.actuators.optimizable_parameters = (
+                        actuator_params
+                    )
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
