@@ -68,7 +68,7 @@ class MotorPositionsOptimizer:
         ground_truth: torch.Tensor,
         dni: float,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
-        epsilon: float | None = 1e-12,
+        epsilon: float = 1e-12,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -297,17 +297,17 @@ class MotorPositionsOptimizer:
             self.target_area_index
             < self.scenario.solar_tower.number_of_target_areas_per_type[0]
         ):
-            target_plane_dimensions = target_areas.dimensions[self.target_area_index]
+            target_plane_dimensions = target_areas.dimensions[self.target_area_index]  # type: ignore[attr-defined]
         else:
             cylinder_indices = (
                 self.target_area_index
                 - self.scenario.solar_tower.number_of_target_areas_per_type[0]
             )
-            target_plane_dimensions[0] = (
-                target_areas.radii[cylinder_indices]
-                * target_areas.opening_angles[cylinder_indices]
+            target_plane_dimensions[0] = (  # type: ignore[attr-defined]
+                target_areas.radii[cylinder_indices]  # type: ignore[attr-defined]
+                * target_areas.opening_angles[cylinder_indices]  # type: ignore[attr-defined]
             )
-            target_plane_dimensions[1] = target_areas.heights[cylinder_indices]
+            target_plane_dimensions[1] = target_areas.heights[cylinder_indices]  # type: ignore[attr-defined]
 
         # Set up constraints.
         flux_integral_reference = 0.0
