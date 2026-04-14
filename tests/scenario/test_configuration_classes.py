@@ -28,11 +28,13 @@ from artist.util import config_dictionary
 
 @pytest.fixture
 def tensor():
+    """Return a simple 3-element float tensor for use in tests."""
     return torch.tensor([1.0, 2.0, 3.0])
 
 
 @pytest.fixture
 def normal():
+    """Return a unit normal vector pointing in the up direction."""
     return torch.tensor([0.0, 0.0, 1.0])
 
 
@@ -48,6 +50,7 @@ def normal():
     ],
 )
 def test_power_plant_config(power_plant_config_dict, expected_keys, tensor):
+    """Test that ``PowerPlantConfig`` produces a dictionary with the expected keys."""
     dictionary = power_plant_config_dict(tensor)
 
     for key in expected_keys:
@@ -55,6 +58,7 @@ def test_power_plant_config(power_plant_config_dict, expected_keys, tensor):
 
 
 def test_target_area_planar(normal):
+    """Test that ``TargetAreaPlanarConfig`` creates a dict with all required planar target area keys."""
     target_area_planar = TargetAreaPlanarConfig(
         target_area_key="area_1",
         center=torch.zeros(3),
@@ -72,6 +76,7 @@ def test_target_area_planar(normal):
 
 
 def test_target_area_planar_list(normal):
+    """Test that ``TargetAreaPlanarListConfig`` creates a dict keyed by the target area name."""
     target_area_config = TargetAreaPlanarConfig(
         target_area_key="area_1",
         center=torch.zeros(3),
@@ -87,6 +92,7 @@ def test_target_area_planar_list(normal):
 
 
 def test_target_area_cylindrical():
+    """Test that ``TargetAreaCylindricalConfig`` creates a dict with all required cylindrical target area keys."""
     target_area_cylindrical = TargetAreaCylindricalConfig(
         target_area_key="cylinder_1",
         radius=3,
@@ -105,6 +111,7 @@ def test_target_area_cylindrical():
 
 
 def test_target_area_cylindrical_list():
+    """Test that ``TargetAreaCylindricalListConfig`` creates a dict keyed by the target area name."""
     target_area = TargetAreaCylindricalConfig(
         target_area_key="cylindrical",
         radius=1,
@@ -123,6 +130,7 @@ def test_target_area_cylindrical_list():
 
 @pytest.fixture
 def light_source():
+    """Return a ``LightSourceConfig`` instance configured with a normal distribution."""
     return LightSourceConfig(
         light_source_key="sun",
         light_source_type="sun",
@@ -134,6 +142,7 @@ def light_source():
 
 
 def test_light_source_dict(light_source):
+    """Test that ``LightSourceConfig`` produces a dict with type, ray count, and distribution keys."""
     dictionary = light_source.create_light_source_dict()
 
     assert config_dictionary.light_source_type in dictionary
@@ -142,6 +151,7 @@ def test_light_source_dict(light_source):
 
 
 def test_light_source_list(light_source):
+    """Test that ``LightSourceListConfig`` creates a dict keyed by the light source name."""
     list_config = LightSourceListConfig(light_source_list=[light_source])
     dictionary = list_config.create_light_source_list_dict()
 
@@ -149,6 +159,7 @@ def test_light_source_list(light_source):
 
 
 def test_light_source_invalid_distribution():
+    """Test that ``LightSourceConfig`` raises ValueError for an unknown distribution type."""
     with pytest.raises(ValueError) as exc_info:
         LightSourceConfig(
             light_source_key="sun",
@@ -164,6 +175,7 @@ def test_light_source_invalid_distribution():
 
 @pytest.fixture
 def facet():
+    """Return a ``FacetConfig`` instance with minimal valid parameters."""
     return FacetConfig(
         facet_key="facet_1",
         control_points=torch.zeros((3, 3)),
@@ -174,6 +186,7 @@ def facet():
 
 
 def test_facet_dict(facet):
+    """Test that ``FacetConfig`` produces a dict with control point and degree keys."""
     dictionary = facet.create_facet_dict()
 
     assert config_dictionary.facet_control_points in dictionary
@@ -188,6 +201,7 @@ def test_facet_dict(facet):
     ],
 )
 def test_surface_configs(surface_class, facet):
+    """Test that ``SurfaceConfig`` and ``SurfacePrototypeConfig`` produce dicts with the facets key."""
     surface_config = surface_class(facet_list=[facet])
     dictionary = surface_config.create_surface_dict()
 
@@ -197,6 +211,7 @@ def test_surface_configs(surface_class, facet):
 
 @pytest.fixture
 def kinematics_deviations():
+    """Return a ``KinematicsDeviations`` instance with all deviation parameters set."""
     return KinematicsDeviations(
         first_joint_translation_e=torch.tensor(1.0),
         first_joint_translation_n=torch.tensor(2.0),
@@ -222,6 +237,7 @@ def kinematics_deviations():
     ],
 )
 def test_kinematics_configs(kinematics_config, kinematics_deviations):
+    """Test that ``KinematicsConfig`` and ``KinematicsPrototypeConfig`` produce dicts with the required keys."""
     kinematics = kinematics_config(
         type="test",
         initial_orientation=torch.tensor([0, 0, 1]),
@@ -236,6 +252,7 @@ def test_kinematics_configs(kinematics_config, kinematics_deviations):
 
 
 def test_actuator_parameters():
+    """Test that ``ActuatorParameters`` produces a dict with all required actuator parameter keys."""
     actuator_parameters = ActuatorParameters(
         increment=torch.tensor(1.0),
         initial_stroke_length=torch.tensor(2.0),
@@ -255,6 +272,7 @@ def test_actuator_parameters():
 
 @pytest.fixture
 def actuator():
+    """Return an ``ActuatorConfig`` instance with minimal valid parameters."""
     return ActuatorConfig(
         key="actuator_1",
         type="linear",
@@ -268,6 +286,7 @@ def actuator():
 
 
 def test_actuator_config(actuator):
+    """Test that ``ActuatorConfig`` produces a dict with the actuator type and motor position keys."""
     dictionary = actuator.create_actuator_dict()
 
     assert config_dictionary.actuator_type_key in dictionary
@@ -282,6 +301,7 @@ def test_actuator_config(actuator):
     ],
 )
 def test_actuator_lists(list_class, actuator):
+    """Test that ``ActuatorListConfig`` and ``ActuatorPrototypeConfig`` create dicts keyed by actuator name."""
     list_config = list_class(actuator_list=[actuator])
     dictionary = list_config.create_actuator_list_dict()
 
@@ -289,6 +309,7 @@ def test_actuator_lists(list_class, actuator):
 
 
 def test_prototype_config(facet, actuator):
+    """Test that ``PrototypeConfig`` produces a dict with surface, kinematics, and actuator prototype keys."""
     surface_config = SurfacePrototypeConfig(facet_list=[facet])
 
     kinematics_config = KinematicsPrototypeConfig(
@@ -308,6 +329,7 @@ def test_prototype_config(facet, actuator):
 
 
 def test_heliostat_all_branches(facet, kinematics_deviations, actuator):
+    """Test that a fully configured ``HeliostatConfig`` produces a dict with surface, kinematics, and actuator keys."""
     surface = SurfaceConfig(facet_list=[facet])
 
     kinematics = KinematicsConfig(
@@ -336,6 +358,7 @@ def test_heliostat_all_branches(facet, kinematics_deviations, actuator):
 
 @pytest.fixture
 def heliostat():
+    """Return a minimal ``HeliostatConfig`` instance with name, id, and position."""
     return HeliostatConfig(
         name="heliostat_1",
         id=1,
@@ -344,6 +367,7 @@ def heliostat():
 
 
 def test_heliostat_list(heliostat):
+    """Test that ``HeliostatListConfig`` creates a dict keyed by the heliostat name."""
     list_config = HeliostatListConfig(heliostat_list=[heliostat])
     dictionary = list_config.create_heliostat_list_dict()
 
