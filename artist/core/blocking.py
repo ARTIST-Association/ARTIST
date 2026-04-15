@@ -265,17 +265,21 @@ def soft_ray_blocking_mask(
         The blocking primitives normals.
         Shape is [number_of_blocking_primitives, 4]
     epsilon : float
-        A small value (default is 1e-12).
+        A small value used to avoid division by zero in plane-ray intersection (default is 1e-12).
     softness : float
-        Controls how soft the sigmoid approximates the blocking (default is 100.0).
-    ray_origin_offset
-        Shift the ray origins a slight distance away from the heliostat planes to avoid self intersections (default is 0.05).
-        The distance is measured in m, meaning the default offset pushes the ray origins 5cm along the ray direction.
+        Controls how sharply the sigmoid approximates the hard blocking boundary (default is 1000.0).
+        Higher values produce a steeper, more binary transition.
+    alpha : float
+        Optical depth scale factor for Beer–Lambert accumulation across blocking primitives (default is 100.0).
+    ray_origin_offset : float
+        Shift the ray origins a slight distance away from the heliostat planes to avoid self intersections
+        (default is 0.05). The distance is measured in metres, so the default offset pushes the ray origins
+        5 cm along the ray direction.
 
     Returns
     -------
     torch.Tensor
-        A soft blocking mask.
+        A soft blocking mask, where values near 0 indicate no blocking and values near 1 indicate full blocking.
         Shape is [number_of_blocking_primitives, number_of_rays, number_of_combined_surface_points_all_facets].
     """
     # Dimensions [#heliostats, #rays, #surface_points, #blocking_primitives, 3D coordinates].
