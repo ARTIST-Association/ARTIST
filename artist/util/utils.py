@@ -502,7 +502,9 @@ def rotation_angle_and_axis(
 
     # Inverse vectors.
     if axis_norm < 1e-6 and dot < 0:
-        if abs(from_orientation[0]) < abs(from_orientation[1]):
+        if abs(from_orientation[index_mapping.e]) < abs(
+            from_orientation[index_mapping.n]
+        ):
             orthogonal = torch.tensor([1.0, 0.0, 0.0], device=device)
         else:
             orthogonal = torch.tensor([0.0, 1.0, 0.0], device=device)
@@ -614,7 +616,10 @@ def bitmap_coordinates_to_target_coordinates(
     center_coordinates = torch.zeros((target_area_indices.numel(), 4), device=device)
     center_coordinates[:, -1] = 1.0
 
-    planar_mask = target_area_indices < solar_tower.number_of_target_areas_per_type[0]
+    planar_mask = (
+        target_area_indices
+        < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+    )
     if target_area_indices[planar_mask].numel() > 0:
         planar_indices = target_area_indices[planar_mask]
 

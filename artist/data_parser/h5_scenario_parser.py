@@ -53,8 +53,12 @@ def surface_config(
             ),
             degrees=torch.tensor(
                 [
-                    facet_config[facet][config_dictionary.facet_degrees][()][0],
-                    facet_config[facet][config_dictionary.facet_degrees][()][1],
+                    facet_config[facet][config_dictionary.facet_degrees][()][
+                        index_mapping.nurbs_u
+                    ],
+                    facet_config[facet][config_dictionary.facet_degrees][()][
+                        index_mapping.nurbs_v
+                    ],
                 ],
                 dtype=torch.int32,
                 device=device,
@@ -652,7 +656,7 @@ def linear_actuators(
         to_orientation=surface_orientation,
         device=device,
     )
-    delta_angle = axis[0] * angle
+    delta_angle = axis[index_mapping.e] * angle
 
     actuator_parameters_optimizable[
         index_mapping.actuator_initial_angle, index_mapping.actuator_one_index

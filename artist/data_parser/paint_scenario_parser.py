@@ -1040,12 +1040,12 @@ def corner_points_to_plane(
         The plane measurement in up direction.
     """
     plane_e = (
-        torch.abs(upper_right[0] - upper_left[0])
-        + torch.abs(lower_right[0] - lower_left[0])
+        torch.abs(upper_right[index_mapping.e] - upper_left[index_mapping.e])
+        + torch.abs(lower_right[index_mapping.e] - lower_left[index_mapping.e])
     ) / 2
     plane_u = (
-        torch.abs(upper_left[2] - lower_left[2])
-        + torch.abs(upper_right[2] - lower_right[2])
+        torch.abs(upper_left[index_mapping.u] - lower_left[index_mapping.u])
+        + torch.abs(upper_right[index_mapping.u] - lower_right[index_mapping.u])
     ) / 2
     return plane_e, plane_u
 
