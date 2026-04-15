@@ -107,9 +107,11 @@ def test_kinematics_reconstructor(
         config_dictionary.cooldown: 20,
     }
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 1e-3,
+        config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+        config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+        config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 50,
+        config_dictionary.max_epoch: 250,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: 1.0,
@@ -243,12 +245,12 @@ def test_kinematics_reconstructor(
                     torch.testing.assert_close(
                         heliostat_group.kinematics.rotation_deviation_parameters,
                         expected["rotation_deviations"],
-                        atol=5e-4,
-                        rtol=5e-4,
+                        atol=1e-6 + 1e-3 * expected.abs(),
+                        rtol=0,
                     )
                     torch.testing.assert_close(
                         heliostat_group.kinematics.actuators.optimizable_parameters,
                         expected["optimizable_parameters"],
-                        atol=6e-2,
-                        rtol=7e-1,
+                        atol=1e-6 + 1e-3 * expected.abs(),
+                        rtol=0,
                     )
