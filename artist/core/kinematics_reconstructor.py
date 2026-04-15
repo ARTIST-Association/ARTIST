@@ -62,7 +62,7 @@ class KinematicsReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        dni: float = None,
+        dni: float | None = None,
         reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
     ) -> None:
         """
@@ -316,7 +316,7 @@ class KinematicsReconstructor:
                     relative=True,
                 )
 
-                loss_history = []
+                loss_history_list = []
 
                 # Start the optimization.
                 loss = torch.inf
@@ -449,7 +449,7 @@ class KinematicsReconstructor:
                             f"Rank: {rank}, Epoch: {epoch}, Loss: {loss},",
                         )
 
-                    loss_history.append(loss.detach().cpu().item())
+                    loss_history_list.append(loss.detach().cpu().item())
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     stop = early_stopper.step(loss)
@@ -461,7 +461,7 @@ class KinematicsReconstructor:
                     epoch += 1
 
                 loss_history = {
-                    "total_loss": loss_history,
+                    "total_loss": loss_history_list,
                 }
 
                 local_indices = (

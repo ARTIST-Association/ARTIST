@@ -46,7 +46,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         centroid_extraction_method: str = paint_mappings.UTIS_KEY,
     ) -> None:
         """
-        Initialize the the paint calibration data parser.
+        Initialize the PAINT calibration data parser.
 
         Parameters
         ----------
@@ -171,7 +171,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         self,
         heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
         heliostat_names: list[str],
-        target_name_to_index: list[str],
+        target_name_to_index: dict[str, int],
         power_plant_position: torch.Tensor,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:

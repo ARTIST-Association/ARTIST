@@ -75,8 +75,8 @@ def extract_paint_tower_measurements(
         device=device,
     )
 
-    target_area_planar_configs = []
-    target_area_cylindrical_configs = []
+    target_area_planar_configs: list[TargetAreaPlanarConfig] = []
+    target_area_cylindrical_configs: list[TargetAreaCylindricalConfig] = []
 
     for target_area in list(tower_dict.keys())[1:]:
         if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "planar":
@@ -205,7 +205,7 @@ def extract_paint_tower_measurements(
             center = (center_lower + center_upper) / 2
             height = torch.norm(center_lower - center_upper)
 
-            tower_area_config = TargetAreaCylindricalConfig(
+            tower_area_cylindrical_config = TargetAreaCylindricalConfig(
                 target_area_key=target_area,
                 radius=radius,
                 center=utils.convert_3d_points_to_4d_format(center, device=device),
@@ -215,7 +215,7 @@ def extract_paint_tower_measurements(
                 opening_angle=opening_angle,
             )
 
-            target_area_cylindrical_configs.append(tower_area_config)
+            target_area_cylindrical_configs.append(tower_area_cylindrical_config)
 
     # Create the power plant configuration.
     power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
