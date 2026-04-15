@@ -9,15 +9,16 @@ from matplotlib import pyplot as plt
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
+from artist.data_parser import paint_scenario_parser
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
+from artist.util import config_dictionary, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
-torch.manual_seed(9)
-torch.cuda.manual_seed(9)
+torch.manual_seed(7)
+torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
@@ -27,6 +28,7 @@ torch.cuda.manual_seed(9)
 
 def create_fluxes(
     data_parser: CalibrationDataParser,
+    heliostat_data_mapping,
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -127,15 +129,29 @@ def create_plots(
     for group_index, (flux_before, flux_after, flux_measured) in enumerate(
         zip(fluxes_before, fluxes_after, fluxes_measured)
     ):
+        center_measured = (
+            utils.get_center_of_mass(flux_measured, device=device).cpu().detach()
+        )
+        center_before = (
+            utils.get_center_of_mass(flux_before, device=device).cpu().detach()
+        )
+        center_after = (
+            utils.get_center_of_mass(flux_after, device=device).cpu().detach()
+        )
+
         for i in range(len(flux_before)):
             _, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
 
             axes[0].imshow(flux_before[i].cpu().detach(), cmap="gray")
             axes[0].set_title("Before reconstruction", fontsize=16)
+            axes[0].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="r")
+            axes[0].scatter(x=center_before[i, 0], y=center_before[i, 1], c="g")
             axes[0].axis("off")
 
             axes[1].imshow(flux_after[i].cpu().detach(), cmap="gray")
             axes[1].set_title("After reconstruction", fontsize=16)
+            axes[1].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="r")
+            axes[1].scatter(x=center_after[i, 0], y=center_after[i, 1], c="g")
             axes[1].axis("off")
 
             axes[2].imshow(flux_measured[i].cpu().detach(), cmap="gray")
@@ -203,9 +219,11 @@ heliostat_data_mapping = [
 
 # Configure the optimization.
 optimizer_dict = {
-    config_dictionary.initial_learning_rate: 0.00005,
+    config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+    config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+    config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
     config_dictionary.tolerance: 0.0000,
-    config_dictionary.max_epoch: 50,
+    config_dictionary.max_epoch: 200,
     config_dictionary.batch_size: 50,
     config_dictionary.log_step: 1,
     config_dictionary.early_stopping_delta: 1e-8,
@@ -272,6 +290,10 @@ with setup_distributed_environment(
 
     bitmaps_before, _ = create_fluxes(
         data_parser=data_parser_plots,
+        heliostat_data_mapping=[
+            (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
+            for heliostat in heliostat_data_mapping
+        ],
     )
 
     loss_definition = FocalSpotLoss(scenario=scenario)
@@ -296,6 +318,10 @@ print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_helio
 
 bitmaps_after, bitmaps_measured = create_fluxes(
     data_parser=data_parser_plots,
+    heliostat_data_mapping=[
+        (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
+        for heliostat in heliostat_data_mapping
+    ],
 )
 create_plots(
     fluxes_before=bitmaps_before,

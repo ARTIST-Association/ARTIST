@@ -199,7 +199,7 @@ class KinematicsReconstructor:
                 self.data[config_dictionary.heliostat_data_mapping],
             )
             (
-                measured,
+                flux_measured,
                 _,
                 incident_ray_directions,
                 _,
@@ -215,7 +215,7 @@ class KinematicsReconstructor:
             if active_heliostats_mask.sum() > 0:
                 # Calculate focal spot from measured flux.
                 focal_spots_bitmap_coordinates = utils.get_center_of_mass(
-                    bitmaps=measured, device=device
+                    bitmaps=flux_measured, device=device
                 )
                 focal_spots_measured = utils.bitmap_coordinates_to_target_coordinates(
                     bitmap_coordinates=focal_spots_bitmap_coordinates,
