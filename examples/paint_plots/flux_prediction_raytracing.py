@@ -371,7 +371,7 @@ def generate_flux_images(
             if heliostat_name in scenario.heliostat_field.heliostat_groups[0].names
         ],
         heliostat_names=scenario.heliostat_field.heliostat_groups[0].names,
-        target_area_names=scenario.target_areas.names,
+        target_name_to_index=scenario.solar_tower.target_name_to_index,
         power_plant_position=scenario.power_plant_position,
         device=device,
     )
@@ -507,7 +507,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
     heliostats_default = config.get(
         "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}

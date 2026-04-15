@@ -42,23 +42,25 @@ def generate_reconstruction_scenario(
     """
     device = get_device(device=device)
 
-    # Generate power plant configuration and target area list.
-    power_plant_config, target_area_list_config = (
-        paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file, device=device
-        )
+    # Include the power plant configuration and target area configurations.
+    (
+        power_plant_config,
+        target_area_list_planar_config,
+        target_area_list_cylindrical_config,
+    ) = paint_scenario_parser.extract_paint_tower_measurements(
+        tower_measurements_path=tower_file, device=device
     )
 
     # Set up light source configuration.
-    light_source1_config = LightSourceConfig(
-        light_source_key="sun_1",
+    light_source_config = LightSourceConfig(
+        light_source_key="sun",
         light_source_type=config_dictionary.sun_key,
         number_of_rays=10,
         distribution_type=config_dictionary.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )
-    light_source_list = [light_source1_config]
+    light_source_list = [light_source_config]
     light_source_list_config = LightSourceListConfig(
         light_source_list=light_source_list
     )
@@ -76,7 +78,8 @@ def generate_reconstruction_scenario(
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,
@@ -133,7 +136,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
