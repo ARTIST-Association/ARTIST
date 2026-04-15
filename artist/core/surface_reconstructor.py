@@ -17,7 +17,7 @@ from artist.util import (
     index_mapping,
     utils,
 )
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DdpSetup, get_device
 from artist.util.nurbs import NURBSSurfaces
 
 log = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class SurfaceReconstructor:
 
     Attributes
     ----------
-    ddp_setup : dict[str, Any]
+    ddp_setup : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
@@ -76,7 +76,7 @@ class SurfaceReconstructor:
 
     def __init__(
         self,
-        ddp_setup: dict[str, Any],
+        ddp_setup: DdpSetup,
         scenario: Scenario,
         data: dict[
             str,
@@ -95,7 +95,7 @@ class SurfaceReconstructor:
 
         Parameters
         ----------
-        ddp_setup : dict[str, Any]
+        ddp_setup : DdpSetup
             Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
@@ -121,7 +121,7 @@ class SurfaceReconstructor:
         """
         device = get_device(device=device)
 
-        rank = ddp_setup[config_dictionary.rank]
+        rank = ddp_setup[config_dictionary.rank]  # type: ignore
 
         if rank == 0:
             log.info("Create a surface reconstructor.")
@@ -166,7 +166,7 @@ class SurfaceReconstructor:
         """
         device = get_device(device=device)
 
-        rank = self.ddp_setup[config_dictionary.rank]
+        rank = self.ddp_setup[config_dictionary.rank]  # type: ignore
 
         if rank == 0:
             log.info("Beginning surface reconstruction.")
@@ -186,7 +186,7 @@ class SurfaceReconstructor:
         )
 
         for heliostat_group_index in self.ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
+            config_dictionary.groups_to_ranks_mapping  # type: ignore
         ][rank]:
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
@@ -372,12 +372,12 @@ class SurfaceReconstructor:
                         heliostat_group=heliostat_group,
                         blocking_active=False,
                         world_size=self.ddp_setup[
-                            config_dictionary.heliostat_group_world_size
+                            config_dictionary.heliostat_group_world_size  # type: ignore
                         ],
-                        rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
+                        rank=self.ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
-                            config_dictionary.heliostat_group_rank
+                            config_dictionary.heliostat_group_rank  # type: ignore
                         ],
                         bitmap_resolution=self.bitmap_resolution,
                         dni=self.dni,
@@ -506,7 +506,7 @@ class SurfaceReconstructor:
                             min=0.0,
                         )
 
-                    if self.ddp_setup[config_dictionary.is_nested]:
+                    if self.ddp_setup[config_dictionary.is_nested]:  # type: ignore
                         # Reduce gradients within each heliostat group.
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
@@ -515,11 +515,11 @@ class SurfaceReconstructor:
                                         param.grad,
                                         op=torch.distributed.ReduceOp.SUM,
                                         group=self.ddp_setup[
-                                            config_dictionary.process_subgroup
+                                            config_dictionary.process_subgroup  # type: ignore
                                         ],
                                     )
                                     param.grad /= self.ddp_setup[
-                                        config_dictionary.heliostat_group_world_size
+                                        config_dictionary.heliostat_group_world_size  # type: ignore
                                     ]
 
                     # Keep the surfaces in their original geometric shape by locking the control points on the outer edges.
@@ -605,11 +605,11 @@ class SurfaceReconstructor:
 
                 log.info(f"Rank: {rank}, Surfaces reconstructed.")
 
-        if self.ddp_setup[config_dictionary.is_distributed]:
+        if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
             for index, heliostat_group in enumerate(
                 self.scenario.heliostat_field.heliostat_groups
             ):
-                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
+                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][  # type: ignore
                     index
                 ]
                 torch.distributed.broadcast(

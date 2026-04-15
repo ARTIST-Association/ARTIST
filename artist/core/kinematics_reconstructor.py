@@ -12,7 +12,7 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, utils
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
@@ -29,7 +29,7 @@ class KinematicsReconstructor:
 
     Attributes
     ----------
-    ddp_setup : dict[str, Any]
+    ddp_setup : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
@@ -54,7 +54,7 @@ class KinematicsReconstructor:
 
     def __init__(
         self,
-        ddp_setup: dict[str, Any],
+        ddp_setup: DdpSetup,
         scenario: Scenario,
         data: dict[
             str,
@@ -70,7 +70,7 @@ class KinematicsReconstructor:
 
         Parameters
         ----------
-        ddp_setup : dict[str, Any]
+        ddp_setup : DdpSetup
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
@@ -81,7 +81,7 @@ class KinematicsReconstructor:
         reconstruction_method : str
             The reconstruction method. Currently only reconstruction via ray tracing is available (default is ray_tracing).
         """
-        rank = ddp_setup[config_dictionary.rank]
+        rank = ddp_setup[config_dictionary.rank]  # type:ignore
         if rank == 0:
             log.info("Create a kinematics reconstructor.")
 
@@ -166,7 +166,7 @@ class KinematicsReconstructor:
         """
         device = get_device(device=device)
 
-        rank = self.ddp_setup[config_dictionary.rank]
+        rank = self.ddp_setup[config_dictionary.rank]  # type: ignore
 
         if rank == 0:
             log.info("Beginning kinematics reconstruction with ray tracing.")
@@ -186,7 +186,7 @@ class KinematicsReconstructor:
         )
 
         for heliostat_group_index in self.ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
+            config_dictionary.groups_to_ranks_mapping  # type: ignore
         ][rank]:
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
@@ -372,12 +372,12 @@ class KinematicsReconstructor:
                         heliostat_group=heliostat_group,
                         blocking_active=False,
                         world_size=self.ddp_setup[
-                            config_dictionary.heliostat_group_world_size
+                            config_dictionary.heliostat_group_world_size  # type: ignore
                         ],
-                        rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
+                        rank=self.ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup[
-                            config_dictionary.heliostat_group_rank
+                            config_dictionary.heliostat_group_rank  # type: ignore
                         ],
                         dni=self.dni,
                     )
@@ -418,7 +418,7 @@ class KinematicsReconstructor:
 
                     loss.backward()
 
-                    if self.ddp_setup[config_dictionary.is_nested]:
+                    if self.ddp_setup[config_dictionary.is_nested]:  # type: ignore
                         # Reduce gradients within each heliostat group.
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
@@ -428,12 +428,12 @@ class KinematicsReconstructor:
                                             param.grad,
                                             op=torch.distributed.ReduceOp.SUM,
                                             group=self.ddp_setup[
-                                                config_dictionary.process_subgroup
+                                                config_dictionary.process_subgroup  # type: ignore
                                             ],
                                         )
                                     )
                                     param.grad /= self.ddp_setup[
-                                        config_dictionary.heliostat_group_world_size
+                                        config_dictionary.heliostat_group_world_size  # type: ignore
                                     ]
 
                     optimizer.step()
@@ -484,11 +484,11 @@ class KinematicsReconstructor:
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
-        if self.ddp_setup[config_dictionary.is_distributed]:
+        if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
             for index, heliostat_group in enumerate(
                 self.scenario.heliostat_field.heliostat_groups
             ):
-                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
+                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][  # type: ignore
                     index
                 ]
                 torch.distributed.broadcast(

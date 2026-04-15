@@ -28,7 +28,11 @@ from artist.util import (
     track_runtime,
     utils,
 )
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util.environment_setup import (
+    DdpSetup,
+    get_device,
+    setup_distributed_environment,
+)
 
 set_logger_config()
 torch.manual_seed(7)
@@ -183,7 +187,7 @@ def create_deflectometry_surface_for_comparison(
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        device = ddp_setup[config_dictionary.device]
+        device = ddp_setup[config_dictionary.device]  # type: ignore
 
         number_of_surface_points_per_facet = torch.tensor(
             [
@@ -361,7 +365,7 @@ def merge_data(
 
 def kinematics_plots(
     scenario: Scenario,
-    ddp_setup: dict[str, Any],
+    ddp_setup: DdpSetup,
     heliostat_data: dict[
         str,
         CalibrationDataParser
@@ -376,7 +380,7 @@ def kinematics_plots(
     ----------
     scenario : Scenario
         The scenario.
-    ddp_setup : dict[str, Any]
+    ddp_setup : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     heliostat_data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         Heliostat and calibration measurement data.
@@ -395,8 +399,8 @@ def kinematics_plots(
         bitmaps_for_plots = {}
 
         for heliostat_group_index in ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
-        ][ddp_setup[config_dictionary.rank]]:
+            config_dictionary.groups_to_ranks_mapping  # type: ignore
+        ][ddp_setup[config_dictionary.rank]]:  # type: ignore
             heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -436,10 +440,10 @@ def kinematics_plots(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type: ignore
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
             )
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
@@ -463,7 +467,7 @@ def kinematics_plots(
 
 def surface_plots(
     scenario: Scenario,
-    ddp_setup: dict[str, Any],
+    ddp_setup: DdpSetup,
     heliostat_data: dict[
         str,
         CalibrationDataParser
@@ -478,7 +482,7 @@ def surface_plots(
     ----------
     scenario : Scenario
         The scenario.
-    ddp_setup : dict[str, Any]
+    ddp_setup : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     heliostat_data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         Heliostat and calibration measurement data.
@@ -499,8 +503,8 @@ def surface_plots(
         data_for_plots = {}
 
         for heliostat_group_index in ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
-        ][ddp_setup[config_dictionary.rank]]:
+            config_dictionary.groups_to_ranks_mapping  # type: ignore
+        ][ddp_setup[config_dictionary.rank]]:  # type: ignore
             heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -540,10 +544,10 @@ def surface_plots(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type: ignore
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
             )
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
@@ -758,7 +762,12 @@ def full_field_optimizations(
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        device = ddp_setup[config_dictionary.device]
+        device = ddp_setup[config_dictionary.device]  # type: ignore
+
+        assert data_mappings is not None, "data_mappings must be provided."
+        assert surface_config is not None, "surface_config must be provided."
+        assert kinematics_config is not None, "kinematics_config must be provided."
+        assert aim_point_config is not None, "aim_point_config must be provided."
 
         bitmap_resolution = torch.tensor([256, 256], device=device)
         baseline_incident_ray_direction = torch.nn.functional.normalize(
@@ -876,7 +885,7 @@ def full_field_optimizations(
                 device=device,
             )
         )
-        if ddp_setup["is_distributed"]:
+        if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
             torch.distributed.barrier()
         kinematics_data_after = kinematics_plots(
             scenario=scenario_kinematics_ideal_surfaces,
@@ -1000,7 +1009,7 @@ def full_field_optimizations(
             )
             surface_reconstruction_final_loss_per_heliostat.append(losses_surfaces)
             loss_history_surface.append(loss_history_surface_part)
-            if ddp_setup["is_distributed"]:
+            if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
                 torch.distributed.barrier()
         surface_data_after = surface_plots(
             scenario=scenario_surface,
@@ -1075,7 +1084,7 @@ def full_field_optimizations(
                 device=device,
             )
         )
-        if ddp_setup["is_distributed"]:
+        if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
             torch.distributed.barrier()
         kinematics_data_after = kinematics_plots(
             scenario=scenario_kinematics,
@@ -1219,7 +1228,7 @@ def full_field_optimizations(
             number_of_rays=200,
             device=device,
         )
-        if ddp_setup["is_distributed"]:
+        if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
             torch.distributed.barrier()
         results_dict["aim_point_optimization_reconstructed_model"] = {
             "aim_point_plot": torch.stack(

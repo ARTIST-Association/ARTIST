@@ -10,7 +10,7 @@ from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
@@ -26,7 +26,7 @@ class MotorPositionsOptimizer:
 
     Attributes
     ----------
-    ddp_setup : dict[str, Any]
+    ddp_setup : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group_to_ranks mapping.
     scenario : Scenario
         The scenario.
@@ -60,7 +60,7 @@ class MotorPositionsOptimizer:
 
     def __init__(
         self,
-        ddp_setup: dict[str, Any],
+        ddp_setup: DdpSetup,
         scenario: Scenario,
         optimization_configuration: dict[str, Any],
         incident_ray_direction: torch.Tensor,
@@ -76,7 +76,7 @@ class MotorPositionsOptimizer:
 
         Parameters
         ----------
-        ddp_setup : dict[str, Any]
+        ddp_setup : DdpSetup
             Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
@@ -104,7 +104,7 @@ class MotorPositionsOptimizer:
         """
         device = get_device(device=device)
 
-        rank = ddp_setup[config_dictionary.rank]
+        rank = ddp_setup[config_dictionary.rank]  # type: ignore
 
         if rank == 0:
             log.info("Create a motor positions optimizer.")
@@ -176,7 +176,7 @@ class MotorPositionsOptimizer:
         """
         device = get_device(device)
 
-        rank = self.ddp_setup[config_dictionary.rank]
+        rank = self.ddp_setup[config_dictionary.rank]  # type: ignore
 
         if rank == 0:
             log.info("Start the motor positions optimization.")
@@ -365,7 +365,7 @@ class MotorPositionsOptimizer:
             blocking_factors = torch.zeros_like(intercept_factors, device=device)
 
             for heliostat_group_index in self.ddp_setup[
-                config_dictionary.groups_to_ranks_mapping
+                config_dictionary.groups_to_ranks_mapping  # type: ignore
             ][rank]:
                 heliostat_alignment_group: HeliostatGroup = (
                     self.scenario.heliostat_field.heliostat_groups[
@@ -403,7 +403,7 @@ class MotorPositionsOptimizer:
                 )
 
             for heliostat_group_index in self.ddp_setup[
-                config_dictionary.groups_to_ranks_mapping
+                config_dictionary.groups_to_ranks_mapping  # type: ignore
             ][rank]:
                 heliostat_group: HeliostatGroup = (
                     self.scenario.heliostat_field.heliostat_groups[
@@ -417,11 +417,11 @@ class MotorPositionsOptimizer:
                     heliostat_group=heliostat_group,
                     blocking_active=True,
                     world_size=self.ddp_setup[
-                        config_dictionary.heliostat_group_world_size
+                        config_dictionary.heliostat_group_world_size  # type: ignore
                     ],
-                    rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
+                    rank=self.ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
                     batch_size=self.optimizer_dict[config_dictionary.batch_size],
-                    random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],
+                    random_seed=self.ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
                     bitmap_resolution=self.bitmap_resolution,
                     dni=self.dni,
                 )
@@ -462,7 +462,7 @@ class MotorPositionsOptimizer:
                 on_target_factors[global_indices] = on_target_factor
                 blocking_factors[global_indices] = blocking_factor
 
-            if self.ddp_setup[config_dictionary.is_distributed]:
+            if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
                 total_flux = torch.distributed.nn.functional.all_reduce(
                     total_flux,
                     op=torch.distributed.ReduceOp.SUM,
@@ -552,7 +552,7 @@ class MotorPositionsOptimizer:
             loss.backward()
 
             # Reduce gradients across all ranks (global process group).
-            if self.ddp_setup[config_dictionary.is_distributed]:
+            if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
                 for param_group in optimizer.param_groups:
                     for param in param_group["params"]:
                         if param.grad is not None:
@@ -560,7 +560,7 @@ class MotorPositionsOptimizer:
                                 param.grad, op=torch.distributed.ReduceOp.SUM
                             )
                             # Average the gradients.
-                            param.grad /= self.ddp_setup[config_dictionary.world_size]
+                            param.grad /= self.ddp_setup[config_dictionary.world_size]  # type: ignore
 
             optimizer.step()
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
@@ -615,11 +615,11 @@ class MotorPositionsOptimizer:
         }
         log.info(f"Rank: {rank}, motor positions optimized.")
 
-        if self.ddp_setup[config_dictionary.is_distributed]:
+        if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
             for index, heliostat_group in enumerate(
                 self.scenario.heliostat_field.heliostat_groups
             ):
-                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
+                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][  # type: ignore
                     index
                 ]
                 torch.distributed.broadcast(
