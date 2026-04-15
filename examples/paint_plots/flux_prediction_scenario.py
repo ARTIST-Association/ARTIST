@@ -94,7 +94,7 @@ def generate_flux_prediction_scenario(
         target_area_list_planar_config,
         target_area_list_cylindrical_config,
     ) = paint_scenario_parser.extract_paint_tower_measurements(
-        tower_measurements_path=tower_file, device=device
+        tower_measurements_path=tower_file_path, device=device
     )
 
     # Include the light source configuration.
