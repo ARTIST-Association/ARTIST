@@ -63,7 +63,7 @@ class HeliostatField:
         ----------
         heliostat_groups : Sequence[HeliostatGroup]
             A list containing all heliostat groups.
-        device : device: torch.device | None
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
@@ -111,7 +111,7 @@ class HeliostatField:
             this parameter should be None, otherwise the deflectometry surface will be overwritten and become ideal.
             For ideal surfaces this parameter can be used to change the number of control points specified in the .h5 scenario.
             Tensor of shape [2].
-        device : device: torch.device | None
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.

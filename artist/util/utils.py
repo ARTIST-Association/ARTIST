@@ -238,11 +238,14 @@ def translate_enu(
     Parameters
     ----------
     e : torch.Tensor
-        East translations.
+        East translation distances in metres.
+        Tensor of shape [number_of_heliostats].
     n : torch.Tensor
-        North translations.
+        North translation distances in metres.
+        Tensor of shape [number_of_heliostats].
     u : torch.Tensor
-        Up translations.
+        Up translation distances in metres.
+        Tensor of shape [number_of_heliostats].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -353,7 +356,7 @@ def convert_3d_directions_to_4d_format(
     Returns
     -------
     torch.Tensor
-        Direction vectors with ones appended at the last dimension.
+        Direction vectors with zeros appended at the last dimension.
         Tensor of shape [..., 4].
     """
     device = get_device(device=device)

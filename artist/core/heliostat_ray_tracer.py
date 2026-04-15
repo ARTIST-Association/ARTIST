@@ -403,6 +403,8 @@ class HeliostatRayTracer:
             Tensor of shape [number_of_active_heliostats].
         ray_extinction_factor : float
             Amount of global ray extinction, responsible for shading (default is 0.0 -> no extinction).
+        mirror_reflectivity : float
+            Fraction of incident ray intensity reflected by the mirror surface (default is 0.935).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
