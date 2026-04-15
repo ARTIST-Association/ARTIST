@@ -201,7 +201,7 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     results_dir_default = config.get(
         "results_dir", "./examples/field_optimizations/results"
     )

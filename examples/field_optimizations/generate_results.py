@@ -645,14 +645,14 @@ def aim_point_plots(
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
-            if id == "before":
+            if label == "before":
                 heliostat_group.align_surfaces_with_incident_ray_directions(
                     aim_points=aim_point,
                     incident_ray_directions=incident_ray_directions,
                     active_heliostats_mask=active_heliostats_mask,
                     device=device,
                 )
-            elif id == "after":
+            elif label == "after":
                 heliostat_group.align_surfaces_with_motor_positions(
                     motor_positions=heliostat_group.kinematics.active_motor_positions,
                     active_heliostats_mask=active_heliostats_mask,
@@ -685,11 +685,6 @@ def aim_point_plots(
                 target_area_indices=target_area_indices,
                 device=device,
             )
-            # Uncomment for single heliostat flux analysis.
-            # for i in range(bitmaps_per_heliostat.shape[0]):
-            #     plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
-            #     plt.savefig(f"bitmaps/aim_points/{heliostat_group.names[i]}.png")
-            #     plt.close()
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
                 target_area_indices=target_area_indices,
@@ -1645,6 +1640,7 @@ def main() -> None:
             kinematics_config=kinematics_optimization_config,
             aim_point_config=aim_point_optimization_config,
             target_distribution=target_distribution,
+            data_for_stral_dir=data_for_stral_dir,
             device=device,
         )
 
