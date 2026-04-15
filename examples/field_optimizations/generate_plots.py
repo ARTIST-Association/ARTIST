@@ -34,7 +34,7 @@ cmap = "inferno"
 
 
 def plot_heliostat_positions(
-    results: list[dict[str, Any]], results_ftp, save_dir: pathlib.Path
+    results: dict[str, Any], results_ftp: dict[str, Any], save_dir: pathlib.Path
 ) -> None:
     """
     Plot heliostat positions.
@@ -1200,8 +1200,18 @@ def plot_aim_point_loss_history(
     print(f"Saved aim point optimization loss history plot at: {filename}.")
 
 
-def plot_tradeoffs(df, save_path):
+def plot_tradeoffs(df: pd.DataFrame, save_path: pathlib.Path) -> None:
+    """
+    Plot runtime tradeoffs and task-wise losses across runs.
 
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing run data with columns including ``run_id``, ``task``,
+        ``ablation_case``, ``runtime``, ``loss``, and ``hardware``.
+    save_path : pathlib.Path
+        Path where the resulting plot PDF will be saved.
+    """
     fig, axes = plt.subplots(1, 2, figsize=(18, 10))
 
     alpha = 0.5
@@ -1328,7 +1338,9 @@ def plot_tradeoffs(df, save_path):
     plt.close(fig)
 
 
-def plot_run_analysis(save_dir: pathlib.Path, results_paths):
+def plot_run_analysis(
+    save_dir: pathlib.Path, results_paths: list[pathlib.Path]
+) -> None:
     """
     Generate analysis plots.
 

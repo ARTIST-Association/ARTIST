@@ -2,7 +2,6 @@ import argparse
 import json
 import pathlib
 import warnings
-from pathlib import Path
 
 import paint.util.paint_mappings as paint_mappings
 import torch
@@ -21,8 +20,8 @@ set_logger_config()
 
 
 def find_latest_deflectometry_file(
-    heliostat_name: str, data_directory: Path
-) -> Path | None:
+    heliostat_name: str, data_directory: pathlib.Path
+) -> pathlib.Path | None:
     """
     Find the latest deflectometry HDF5 file for a given heliostat.
 

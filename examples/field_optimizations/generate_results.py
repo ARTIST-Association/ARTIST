@@ -1368,7 +1368,20 @@ def create_heliostat_data_mappings(
     return data_mappings
 
 
-def parse_runtimes(filepath):
+def parse_runtimes(filepath: pathlib.Path) -> dict[str, Any]:
+    """
+    Parse runtime information from a log file.
+
+    Parameters
+    ----------
+    filepath : pathlib.Path
+        Path to the runtime log file.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary containing the parsed runtimes and run identifier.
+    """
     with open(filepath, "r") as f:
         lines = f.readlines()
 
@@ -1495,31 +1508,31 @@ def main() -> None:
     )
     parser.add_argument(
         "--heliostats_for_plots",
-        type=list[str],
+        type=list[str],  # type: ignore[arg-type, misc]
         help="List of heliostat names used for the evaluation plots.",
         default=heliostats_for_plots_default,
     )
     parser.add_argument(
         "--surface_reconstruction_optimization_configuration",
-        type=dict[Any],
+        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=surface_reconstruction_optimization_configuration_default,
     )
     parser.add_argument(
         "--kinematics_reconstruction_optimization_configuration",
-        type=dict[Any],
+        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=kinematics_reconstruction_optimization_configuration_default,
     )
     parser.add_argument(
         "--aim_point_optimization_configuration",
-        type=dict[Any],
+        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=aim_point_optimization_configuration_default,
     )
     parser.add_argument(
         "--basic_config",
-        type=dict[Any],
+        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=basic_config_default,
     )
@@ -1644,7 +1657,7 @@ def main() -> None:
             device=device,
         )
 
-        run_info = parse_runtimes("runtime_log.txt")
+        run_info = parse_runtimes(pathlib.Path("runtime_log.txt"))
         loaded = torch.load(results_path, weights_only=False)
         results_dict = cast(dict[str, dict[str, torch.Tensor]], loaded)
         results_dict["run_info"] = run_info
