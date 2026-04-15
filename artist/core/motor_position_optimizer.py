@@ -295,19 +295,25 @@ class MotorPositionsOptimizer:
         ]
         if (
             self.target_area_index
-            < self.scenario.solar_tower.number_of_target_areas_per_type[0]
+            < self.scenario.solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
         ):
             target_plane_dimensions = target_areas.dimensions[self.target_area_index]  # type: ignore[attr-defined]
         else:
             cylinder_indices = (
                 self.target_area_index
-                - self.scenario.solar_tower.number_of_target_areas_per_type[0]
+                - self.scenario.solar_tower.number_of_target_areas_per_type[
+                    index_mapping.planar_target_areas
+                ]
             )
-            target_plane_dimensions[0] = (  # type: ignore[attr-defined]
+            target_plane_dimensions[index_mapping.target_area_width] = (  # type: ignore[attr-defined]
                 target_areas.radii[cylinder_indices]  # type: ignore[attr-defined]
                 * target_areas.opening_angles[cylinder_indices]  # type: ignore[attr-defined]
             )
-            target_plane_dimensions[1] = target_areas.heights[cylinder_indices]  # type: ignore[attr-defined]
+            target_plane_dimensions[index_mapping.target_area_height] = (
+                target_areas.heights[cylinder_indices]  # type: ignore[attr-defined]
+            )
 
         # Set up constraints.
         flux_integral_reference = 0.0

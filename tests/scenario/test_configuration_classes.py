@@ -239,7 +239,7 @@ def kinematics_deviations():
 def test_kinematics_configs(kinematics_config, kinematics_deviations):
     """Test that ``KinematicsConfig`` and ``KinematicsPrototypeConfig`` produce dicts with the required keys."""
     kinematics = kinematics_config(
-        type="test",
+        kinematics_type="test",
         initial_orientation=torch.tensor([0, 0, 1]),
         deviations=kinematics_deviations,
     )
@@ -275,7 +275,7 @@ def actuator():
     """Return an ``ActuatorConfig`` instance with minimal valid parameters."""
     return ActuatorConfig(
         key="actuator_1",
-        type="linear",
+        actuator_type="linear",
         clockwise_axis_movement=True,
         min_max_motor_positions=[0, 1],
         parameters=ActuatorParameters(
@@ -313,7 +313,7 @@ def test_prototype_config(facet, actuator):
     surface_config = SurfacePrototypeConfig(facet_list=[facet])
 
     kinematics_config = KinematicsPrototypeConfig(
-        type="test",
+        kinematics_type="test",
         initial_orientation=torch.tensor([0, 0, 1]),
     )
 
@@ -333,7 +333,7 @@ def test_heliostat_all_branches(facet, kinematics_deviations, actuator):
     surface = SurfaceConfig(facet_list=[facet])
 
     kinematics = KinematicsConfig(
-        type="test",
+        kinematics_type="test",
         initial_orientation=torch.tensor([0, 0, 1]),
         deviations=kinematics_deviations,
     )
@@ -342,7 +342,7 @@ def test_heliostat_all_branches(facet, kinematics_deviations, actuator):
 
     heliostat = HeliostatConfig(
         name="h_full",
-        id=10,
+        heliostat_id=10,
         position=torch.zeros(3),
         surface=surface,
         kinematics=kinematics,
@@ -361,7 +361,7 @@ def heliostat():
     """Return a minimal ``HeliostatConfig`` instance with name, id, and position."""
     return HeliostatConfig(
         name="heliostat_1",
-        id=1,
+        heliostat_id=1,
         position=torch.zeros(3),
     )
 

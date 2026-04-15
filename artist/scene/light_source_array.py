@@ -28,7 +28,7 @@ class LightSourceArray:
         Load the list of light sources from an HDF5 file.
     """
 
-    def __init__(self, light_source_list: Sequence[LightSource]):
+    def __init__(self, light_source_list: Sequence[LightSource]) -> None:
         """
         Initialize the light sources included in the considered scenario.
 

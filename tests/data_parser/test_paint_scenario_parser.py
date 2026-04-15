@@ -252,7 +252,7 @@ def test_extract_paint_heliostats_ideal_surface(
         == expected_heliostat[1]
     )
     assert (
-        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].type
+        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].actuator_type
         == expected_heliostat[2]
     )
     torch.testing.assert_close(
@@ -392,7 +392,7 @@ def test_extract_paint_heliostats_fitted_surface(
         == expected_heliostat[1]
     )
     assert (
-        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].type
+        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].actuator_type
         == expected_heliostat[2]
     )
     torch.testing.assert_close(
@@ -575,7 +575,8 @@ def test_extract_paint_heliostats_mixed_surface(
     )
     assert len(ideal_heliostat.actuators.actuator_list) == expected_heliostat_ideal[1]
     assert (
-        ideal_heliostat.actuators.actuator_list[0].type == expected_heliostat_ideal[2]
+        ideal_heliostat.actuators.actuator_list[0].actuator_type
+        == expected_heliostat_ideal[2]
     )
     torch.testing.assert_close(
         ideal_heliostat.actuators.actuator_list[0].parameters.increment,
@@ -601,7 +602,8 @@ def test_extract_paint_heliostats_mixed_surface(
     )
     assert len(fitted_heliostat.actuators.actuator_list) == expected_heliostat_fitted[1]
     assert (
-        fitted_heliostat.actuators.actuator_list[0].type == expected_heliostat_fitted[2]
+        fitted_heliostat.actuators.actuator_list[0].actuator_type
+        == expected_heliostat_fitted[2]
     )
     torch.testing.assert_close(
         fitted_heliostat.actuators.actuator_list[0].parameters.increment,

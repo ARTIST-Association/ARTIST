@@ -1,5 +1,3 @@
-from typing import Any
-
 import torch
 from torch import Tensor
 
@@ -224,7 +222,7 @@ def line_cylinder_intersections(
     target_area_indices: torch.Tensor | None = None,
     bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     device: torch.device | None = None,
-) -> tuple[Tensor, Tensor, Tensor, Tensor] | tuple[Any, Any, Any, Any]:
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     """
     Compute ray intersections with cylindrical receiver target areas and map hits into bitmap coordinates.
 
@@ -313,8 +311,14 @@ def line_cylinder_intersections(
     directions_local = directions @ rotations.transpose(1, 2)[:, None, :, :]
 
     # Cylinder intersection (aligned with z-axis).
-    ox, oy = origins_local[:, :, :, 0], origins_local[:, :, :, 1]
-    dx, dy = directions_local[:, :, :, 0], directions_local[:, :, :, 1]
+    ox, oy = (
+        origins_local[:, :, :, index_mapping.cylinder_local_x],
+        origins_local[:, :, :, index_mapping.cylinder_local_y],
+    )
+    dx, dy = (
+        directions_local[:, :, :, index_mapping.cylinder_local_x],
+        directions_local[:, :, :, index_mapping.cylinder_local_y],
+    )
 
     a = dx**2 + dy**2
     b = 2 * (ox * dx + oy * dy)
@@ -341,8 +345,12 @@ def line_cylinder_intersections(
         (directions.shape[0], directions.shape[1], directions.shape[2], 2),
         device=device,
     )
-    distance_candidates[:, :, :, 0] = (-b - sqrt_discriminant) / (2 * a)
-    distance_candidates[:, :, :, 1] = (-b + sqrt_discriminant) / (2 * a)
+    distance_candidates[:, :, :, index_mapping.distance_candidate_near] = (
+        -b - sqrt_discriminant
+    ) / (2 * a)
+    distance_candidates[:, :, :, index_mapping.distance_candidate_far] = (
+        -b + sqrt_discriminant
+    ) / (2 * a)
 
     # Keep only strictly positive solutions; invalidate others with +inf.
     distance_candidates = torch.where(
@@ -372,9 +380,9 @@ def line_cylinder_intersections(
         origins_local + intersection_distances[:, :, :, None] * directions_local
     )
     x, y, z = (
-        intersections[:, :, :, 0],
-        intersections[:, :, :, 1],
-        intersections[:, :, :, 2],
+        intersections[:, :, :, index_mapping.cylinder_local_x],
+        intersections[:, :, :, index_mapping.cylinder_local_y],
+        intersections[:, :, :, index_mapping.cylinder_local_z],
     )
 
     # Cylinder normals (local frame).
@@ -395,7 +403,8 @@ def line_cylinder_intersections(
     # Initially angles are defined 0° towards positive east axis, we want to define 0° as where the normal vector points towards.
     angles = torch.atan2(y, x) - (
         torch.atan2(
-            cylinder_normals[:, 1].view(-1, 1, 1), cylinder_normals[:, 0].view(-1, 1, 1)
+            cylinder_normals[:, index_mapping.cylinder_local_y].view(-1, 1, 1),
+            cylinder_normals[:, index_mapping.cylinder_local_x].view(-1, 1, 1),
         )
         - (opening_angles.view(-1, 1, 1) / 2)
     )

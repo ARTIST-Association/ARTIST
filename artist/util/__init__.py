@@ -3,10 +3,14 @@
 import logging
 import sys
 import time
+from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
+from typing import TypeVar
 
 import colorlog
+
+_T = TypeVar("_T")
 
 
 def set_logger_config(
@@ -106,7 +110,9 @@ def set_runtime_logger(
     return logger
 
 
-def track_runtime(logger: logging.Logger):
+def track_runtime(
+    logger: logging.Logger,
+) -> Callable[[Callable[..., _T]], Callable[..., _T]]:
     """
     Track and log start, finish, and duration of function execution.
 
@@ -117,13 +123,13 @@ def track_runtime(logger: logging.Logger):
 
     Returns
     -------
-    Callable
+    Callable[[Callable[..., _T]], Callable[..., _T]]
         The decorated function with runtime tracking.
     """
 
-    def decorator(func):
+    def decorator(func: Callable[..., _T]) -> Callable[..., _T]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: object, **kwargs: object) -> _T:
             func_name = func.__name__
             logger.info(f"{func_name} started")
             start_time = time.perf_counter()

@@ -316,3 +316,7 @@ rigid_body_motor_position_dimension = 2
 """Defines the dimensions for rigid body motor position tensor."""
 coordinates_dimension = 3
 """Index to access the coordinates dimension"""
+kinematics_type_index = 0
+"""Index of the kinematics type string in the heliostat group type list."""
+actuator_type_index = 1
+"""Index of the actuator type string in the heliostat group type list."""
