@@ -127,8 +127,8 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
     ],
 )
 def test_create_blocking_primitives_rectangle(
-    surface: torch.Tensor,
-    transformed_surface: torch.Tensor,
+    surface: str,
+    transformed_surface: str,
     expected: list[torch.Tensor],
     request: pytest.FixtureRequest,
     device: torch.device,
@@ -136,13 +136,13 @@ def test_create_blocking_primitives_rectangle(
     """
     Test that the creation of blocking primitives works as desired.
 
-    Parameter
-    ---------
-    surface : torch.Tensor
-        Surface at the origin.
-    transformed_surface : torch.Tensor
-        Surface that has been transformed.
-    expected : torch.Tensor
+    Parameters
+    ----------
+    surface : str
+        Name of the fixture providing the blocking surface.
+    transformed_surface : str
+        Name of the fixture providing the active (transformed) surface.
+    expected : list[torch.Tensor]
         The expected tensors.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
@@ -298,7 +298,7 @@ def surface_for_index_test_rotated_and_translated(
     ],
 )
 def test_create_blocking_primitives_rectangles_by_index(
-    surface: torch.Tensor,
+    surface: str,
     expected: list[torch.Tensor],
     request: pytest.FixtureRequest,
     device: torch.device,
@@ -306,11 +306,11 @@ def test_create_blocking_primitives_rectangles_by_index(
     """
     Test that the creation of blocking primitives works as desired.
 
-    Parameter
-    ---------
-    surface : torch.Tensor
-        Surface randomly transformed.
-    expected : torch.Tensor
+    Parameters
+    ----------
+    surface : str
+        Name of the fixture providing the active surface.
+    expected : list[torch.Tensor]
         The expected tensors.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
