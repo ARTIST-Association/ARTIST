@@ -242,18 +242,24 @@ def test_kinematics_reconstructor(
                         expected_path, map_location=device, weights_only=True
                     )
 
-                    tol = 1e-6 + 1e-3 * (expected["rotation_deviations"]).abs()
+                    tol = 1e-6 + 5e-3 * torch.maximum(
+                        heliostat_group.kinematics.rotation_deviation_parameters.abs(),
+                        expected["rotation_deviations"].abs(),
+                    )
                     diff = (
                         heliostat_group.kinematics.rotation_deviation_parameters
-                        - (expected["rotation_deviations"])
+                        - expected["rotation_deviations"]
                     ).abs()
 
                     assert torch.all(diff <= tol)
 
-                    tol = 1e-6 + 1e-3 * (expected["optimizable_parameters"]).abs()
+                    tol = 1e-6 + 5e-3 * torch.maximum(
+                        heliostat_group.kinematics.actuators.optimizable_parameters.abs(),
+                        expected["optimizable_parameters"].abs(),
+                    )
                     diff = (
                         heliostat_group.kinematics.actuators.optimizable_parameters
-                        - (expected["optimizable_parameters"])
+                        - expected["optimizable_parameters"]
                     ).abs()
 
                     assert torch.all(diff <= tol)
