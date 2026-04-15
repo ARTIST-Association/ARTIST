@@ -113,15 +113,15 @@ class H5ScenarioGenerator:
         unique_groups = set()
         for heliostat_config in self.heliostat_list_config.heliostat_list:
             if isinstance(heliostat_config.kinematics, KinematicsConfig):
-                selected_kinematics_type = heliostat_config.kinematics.type
+                selected_kinematics_type = heliostat_config.kinematics.kinematics_type
             else:
                 selected_kinematics_type = (
-                    self.prototype_config.kinematics_prototype.type
+                    self.prototype_config.kinematics_prototype.kinematics_type
                 )
             if isinstance(heliostat_config.actuators, ActuatorListConfig):
                 for actuator_config in heliostat_config.actuators.actuator_list:
                     assert isinstance(actuator_config, ActuatorConfig)
-                    selected_actuator_type = actuator_config.type
+                    selected_actuator_type = actuator_config.actuator_type
                     unique_groups.add(
                         (selected_kinematics_type, selected_actuator_type)
                     )
@@ -130,7 +130,7 @@ class H5ScenarioGenerator:
                     actuator_config
                 ) in self.prototype_config.actuators_prototype.actuator_list:
                     assert isinstance(actuator_config, ActuatorConfig)
-                    selected_actuator_type = actuator_config.type
+                    selected_actuator_type = actuator_config.actuator_type
                     unique_groups.add(
                         (selected_kinematics_type, selected_actuator_type)
                     )

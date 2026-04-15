@@ -729,7 +729,7 @@ def _process_heliostats_from_paths(
         prototype_surface = surface_config
 
         kinematics_config = KinematicsConfig(
-            type=config_dictionary.rigid_body_key,
+            kinematics_type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
             deviations=kinematics_deviations,
         )
@@ -741,7 +741,9 @@ def _process_heliostats_from_paths(
         ):
             actuator = ActuatorConfig(
                 key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
-                type=str(actuator_parameters_tuple[index_mapping.paint_actuator_type]),
+                actuator_type=str(
+                    actuator_parameters_tuple[index_mapping.paint_actuator_type]
+                ),
                 clockwise_axis_movement=bool(
                     actuator_parameters_tuple[
                         index_mapping.paint_actuator_clockwise_axis_movement
@@ -765,7 +767,7 @@ def _process_heliostats_from_paths(
         # Create the heliostat configuration with the generated surface config.
         heliostat_config = HeliostatConfig(
             name=str(file_tuple[0]),
-            id=heliostat_index,
+            heliostat_id=heliostat_index,
             position=heliostat_position,
             surface=surface_config,
             kinematics=kinematics_config,
@@ -778,7 +780,7 @@ def _process_heliostats_from_paths(
             facet_list=prototype_surface.facet_list
         )
         kinematics_prototype_config = KinematicsPrototypeConfig(
-            type=prototype_kinematics.type,
+            kinematics_type=prototype_kinematics.kinematics_type,
             initial_orientation=prototype_kinematics.initial_orientation,
             deviations=prototype_kinematics.deviations,
         )

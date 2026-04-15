@@ -176,7 +176,7 @@ class TargetAreaCylindricalConfig:
         Position of the center of the cylindrical target area.
     height : torch.Tensor
         Height of the cylindrical target area.
-    normal_vector : torch.Tensor
+    normal : torch.Tensor
         Normal vector of the cylindrical target area.
     opening_angle : torch.Tensor
         Opening angle of the cylindrical target area.
@@ -190,12 +190,12 @@ class TargetAreaCylindricalConfig:
     def __init__(
         self,
         target_area_key: str,
-        radius: float,
+        radius: torch.Tensor,
         center: torch.Tensor,
-        height: float,
+        height: torch.Tensor,
         axis: torch.Tensor,
         normal: torch.Tensor,
-        opening_angle: float,
+        opening_angle: torch.Tensor,
     ) -> None:
         """
         Initialize the target area configuration for planar target areas.
@@ -210,8 +210,8 @@ class TargetAreaCylindricalConfig:
             Position of the center of the cylindrical target area.
         height : torch.Tensor
             Height of the cylindrical target area.
-        normal_vector : torch.Tensor
-            Tilt angle of the cylindrical target area.
+        normal : torch.Tensor
+            Normal vector of the cylindrical target area.
         opening_angle : torch.Tensor
             Opening angle of the cylindrical target area.
         """
@@ -747,7 +747,7 @@ class KinematicsConfig:
 
     Attributes
     ----------
-    type : str
+    kinematics_type : str
         The type of kinematics used.
     initial_orientation : torch.Tensor
         The initial orientation of the kinematics configuration.
@@ -762,7 +762,7 @@ class KinematicsConfig:
 
     def __init__(
         self,
-        type: str,
+        kinematics_type: str,
         initial_orientation: torch.Tensor,
         deviations: KinematicsDeviations | None = None,
     ) -> None:
@@ -771,14 +771,14 @@ class KinematicsConfig:
 
         Parameters
         ----------
-        type : str
+        kinematics_type : str
             The type of kinematics used.
         initial_orientation : torch.Tensor
             The initial orientation of the kinematics configuration.
         deviations : KinematicsDeviations | None
             The kinematics deviations.
         """
-        self.type = type
+        self.kinematics_type = kinematics_type
         self.initial_orientation = initial_orientation
         self.deviations = deviations
 
@@ -792,7 +792,7 @@ class KinematicsConfig:
             A dictionary containing the configuration parameters for the kinematics.
         """
         kinematics_dict: dict[str, Any] = {
-            config_dictionary.kinematics_type: self.type,
+            config_dictionary.kinematics_type: self.kinematics_type,
             config_dictionary.kinematics_initial_orientation: self.initial_orientation,
         }
         if self.deviations is not None:
@@ -815,7 +815,7 @@ class KinematicsPrototypeConfig(KinematicsConfig):
 
     def __init__(
         self,
-        type: str,
+        kinematics_type: str,
         initial_orientation: torch.Tensor,
         deviations: KinematicsDeviations | None = None,
     ) -> None:
@@ -824,7 +824,7 @@ class KinematicsPrototypeConfig(KinematicsConfig):
 
         Parameters
         ----------
-        type : str
+        kinematics_type : str
             The type of kinematics used.
         initial_orientation : torch.Tensor
             The initial orientation of the kinematics configuration.
@@ -832,7 +832,7 @@ class KinematicsPrototypeConfig(KinematicsConfig):
             The kinematics deviations.
         """
         super().__init__(
-            type=type,
+            kinematics_type=kinematics_type,
             initial_orientation=initial_orientation,
             deviations=deviations,
         )
@@ -934,7 +934,7 @@ class ActuatorConfig:
     ----------
     key : str
         The name or descriptor of the actuator.
-    type : str
+    actuator_type : str
         The type of actuator to use, e.g. linear or ideal.
     clockwise_axis_movement : bool
         Boolean indicating if the actuator operates in a clockwise manner.
@@ -952,7 +952,7 @@ class ActuatorConfig:
     def __init__(
         self,
         key: str,
-        type: str,
+        actuator_type: str,
         clockwise_axis_movement: bool,
         min_max_motor_positions: list[float],
         parameters: ActuatorParameters | None = None,
@@ -964,7 +964,7 @@ class ActuatorConfig:
         ----------
         key : str
             The name or descriptor of the actuator.
-        type : str
+        actuator_type : str
             The type of actuator to use, e.g. linear or ideal.
         clockwise_axis_movement : bool
             Boolean indicating if the actuator operates in a clockwise or counterclockwise manner.
@@ -974,7 +974,7 @@ class ActuatorConfig:
             The parameters of the actuator.
         """
         self.key = key
-        self.type = type
+        self.actuator_type = actuator_type
         self.clockwise_axis_movement = clockwise_axis_movement
         self.min_max_motor_positions = min_max_motor_positions
         self.parameters = parameters
@@ -989,7 +989,7 @@ class ActuatorConfig:
             A dictionary containing the actuator configuration.
         """
         actuator_dict = {
-            config_dictionary.actuator_type_key: self.type,
+            config_dictionary.actuator_type_key: self.actuator_type,
             config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
             config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions,
         }
@@ -1137,7 +1137,7 @@ class HeliostatConfig:
     ----------
     name : str
         The name used to identify the heliostat in the HDF5 file.
-    id : int
+    heliostat_id : int
         The numerical ID of the heliostat.
     position : torch.Tensor
         The position of the heliostat.
@@ -1157,7 +1157,7 @@ class HeliostatConfig:
     def __init__(
         self,
         name: str,
-        id: int,
+        heliostat_id: int,
         position: torch.Tensor,
         surface: SurfaceConfig | None = None,
         kinematics: KinematicsConfig | None = None,
@@ -1170,7 +1170,7 @@ class HeliostatConfig:
         ----------
         name : str
             The name used to identify the heliostat in the HDF5 file.
-        id : int
+        heliostat_id : int
             The numerical ID of the heliostat.
         position : torch.Tensor
             The position of the heliostat.
@@ -1182,7 +1182,7 @@ class HeliostatConfig:
             An optional actuator list config for the heliostat.
         """
         self.name = name
-        self.id = id
+        self.heliostat_id = heliostat_id
         self.position = position
         self.surface = surface
         self.kinematics = kinematics
@@ -1198,7 +1198,7 @@ class HeliostatConfig:
             A dictionary containing the heliostat configuration parameters.
         """
         heliostat_dict = {
-            config_dictionary.heliostat_id: self.id,
+            config_dictionary.heliostat_id: self.heliostat_id,
             config_dictionary.heliostat_position: self.position,
         }
         if self.surface is not None:

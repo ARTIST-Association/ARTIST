@@ -144,7 +144,7 @@ surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.face
 
 # Include the kinematics prototype configuration.
 kinematics_prototype_config = KinematicsPrototypeConfig(
-    type=config_dictionary.rigid_body_key,
+    kinematics_type=config_dictionary.rigid_body_key,
     initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
@@ -156,13 +156,13 @@ min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 # Include two ideal actuators.
 actuator1_prototype = ActuatorConfig(
     key="actuator_1",
-    type=config_dictionary.ideal_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
     min_max_motor_positions=min_max_motor_positions_actuator_1,
 )
 actuator2_prototype = ActuatorConfig(
     key="actuator_2",
-    type=config_dictionary.ideal_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=True,
     min_max_motor_positions=min_max_motor_positions_actuator_2,
 )
@@ -185,7 +185,7 @@ prototype_config = PrototypeConfig(
 # Include the configuration for a heliostat.
 heliostat1 = HeliostatConfig(
     name="heliostat_1",
-    id=1,
+    heliostat_id=1,
     position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
 )
 

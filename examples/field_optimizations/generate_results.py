@@ -588,7 +588,7 @@ def aim_point_plots(
     target_area_index: int,
     aim_point,
     dni: float,
-    id: str,
+    label: str,
     batch_size: int = 96,
     number_of_rays=25,
     device: torch.device | None = None,
@@ -607,7 +607,7 @@ def aim_point_plots(
         The index of the target used for the optimization.
     dni : float
         Direct normal irradiance in W/m^2.
-    id : str
+    label : str
         Identifier fluxes.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -817,7 +817,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
-            id="before",
+            label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
@@ -895,7 +895,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
-            id="before",
+            label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
@@ -1023,7 +1023,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
-            id="before",
+            label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
@@ -1126,7 +1126,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
-            id="before",
+            label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
@@ -1169,7 +1169,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
-            id="before",
+            label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
@@ -1238,7 +1238,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
-            id="after",
+            label="after",
             batch_size=20,
             number_of_rays=200,
             device=device,

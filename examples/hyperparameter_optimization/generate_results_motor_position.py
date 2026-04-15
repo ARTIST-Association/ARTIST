@@ -44,7 +44,7 @@ def data_for_flux_plots(
     incident_ray_direction: torch.Tensor,
     target_area_index: int,
     dni: float,
-    id: str,
+    label: str,
     batch_size: int,
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
@@ -62,7 +62,7 @@ def data_for_flux_plots(
         The index of the target used for the optimization.
     dni : float
         Direct normal irradiance in W/m^2.
-    id : str
+    label : str
         Identifier fluxes.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -268,7 +268,7 @@ def generate_optimization_results(
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             dni=dni,
-            id="before",
+            label="before",
             batch_size=batch_size,
             device=device,
         )
@@ -282,7 +282,7 @@ def generate_optimization_results(
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             dni=dni,
-            id="after",
+            label="after",
             batch_size=batch_size,
             device=device,
         )
