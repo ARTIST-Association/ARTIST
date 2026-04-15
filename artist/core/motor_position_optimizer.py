@@ -311,6 +311,7 @@ class MotorPositionsOptimizer:
 
         # Set up constraints.
         flux_integral_reference = 0.0
+        intercept_factors_reference = 0.0
         lambda_local_flux = 0.0
         lambda_flux_integral = 0.0
         lambda_intercept = 0.0
@@ -484,6 +485,7 @@ class MotorPositionsOptimizer:
                 # Augmented Lagrangian to ensure that flux integral is maximized, i.e., intensity increases or stays the same.
                 if epoch == 0:
                     flux_integral_reference = total_flux.sum().detach()
+                    intercept_factors_reference = intercept_factors.detach()
                 flux_integral_difference = (
                     flux_integral_reference - total_flux.sum()
                 ) / (flux_integral_reference + self.epsilon)
@@ -495,12 +497,17 @@ class MotorPositionsOptimizer:
                     + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
                 )
 
-                # Augmented Lagrangian to ensure that spillage is eliminated.
-                intercept_factor_loss = 1.0 - intercept_factors.mean()
-                intercept_factor_constraint = (
-                    lambda_intercept * intercept_factor_loss
-                    + 0.5 * rho_intercept * intercept_factor_loss**2
+                # Augmented Lagrangian to ensure that spillage is reduced.
+                intercept_factors_differences = (
+                    intercept_factors_reference - intercept_factors
+                ) / (intercept_factors_reference + self.epsilon)
+                intercept_factors_differences_clamped = torch.clamp(
+                    intercept_factors_differences, min=0.0
                 )
+                intercept_factor_constraint = (
+                    lambda_intercept * intercept_factors_differences_clamped
+                    + 0.5 * rho_intercept * intercept_factors_differences_clamped**2
+                ).mean()
 
                 # Augmented Lagrangian to ensure that local heat spikes are avoided.
                 local_flux_violation = (
@@ -526,7 +533,8 @@ class MotorPositionsOptimizer:
                         min=0.0,
                     )
                     lambda_intercept = torch.clamp(
-                        lambda_intercept + rho_intercept * intercept_factor_constraint,
+                        lambda_intercept
+                        + rho_intercept * intercept_factors_differences.mean(),
                         min=0.0,
                     )
                     lambda_flux_integral = torch.clamp(
