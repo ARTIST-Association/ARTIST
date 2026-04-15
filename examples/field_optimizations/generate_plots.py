@@ -1161,8 +1161,8 @@ def plot_aim_point_loss_history(
 
     (l4,) = ax1.plot(
         epochs,
-        loss_history["spillage_constraint"],
-        label=r"Spillage Constraint",
+        loss_history["intercept_constraint"],
+        label=r"Intercept Constraint",
         color=plot_colors["blue_3"],
     )
     (l5,) = ax1.plot(
@@ -1492,7 +1492,7 @@ if __name__ == "__main__":
 
     # for case in ["baseline", "full_field"]:
     for case in ["baseline"]:
-        results_number = 1
+        results_number = 15
         results_path = (
             pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
         )
@@ -1518,9 +1518,11 @@ if __name__ == "__main__":
             map_location=device,
         )
 
-        # plot_heliostat_positions(results=results, results_ftp=results_ftp, save_dir=plots_path)
+        plot_heliostat_positions(
+            results=results, results_ftp=results_ftp, save_dir=plots_path
+        )
 
-        # plot_surface_reconstruction_flux(results=results, save_dir=plots_path)
+        plot_surface_reconstruction_flux(results=results, save_dir=plots_path)
         plot_surface_error_analysis(results=results, save_dir=plots_path)
         plot_surface_loss_history(results=results, save_dir=plots_path)
 

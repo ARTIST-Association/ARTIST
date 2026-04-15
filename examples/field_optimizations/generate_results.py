@@ -836,8 +836,14 @@ def full_field_optimizations(
         )
         optimization_configuration_kinematics = {
             config_dictionary.optimization: {
-                config_dictionary.initial_learning_rate: kinematics_config[
-                    "initial_learning_rate"
+                config_dictionary.initial_learning_rate_rotation_deviation: kinematics_config[
+                    "initial_learning_rate_rotation_deviation"
+                ],
+                config_dictionary.initial_learning_rate_initial_angles: kinematics_config[
+                    "initial_learning_rate_initial_angles"
+                ],
+                config_dictionary.initial_learning_rate_initial_stroke_length: kinematics_config[
+                    "initial_learning_rate_initial_stroke_length"
                 ],
                 config_dictionary.tolerance: 1e-5,
                 config_dictionary.max_epoch: kinematics_config["max_epoch"],
@@ -1060,31 +1066,6 @@ def full_field_optimizations(
         scenario_kinematics.set_number_of_rays(
             number_of_rays=kinematics_config["number_of_rays"]
         )
-        optimization_configuration_kinematics = {
-            config_dictionary.optimization: {
-                config_dictionary.initial_learning_rate: kinematics_config[
-                    "initial_learning_rate"
-                ],
-                config_dictionary.tolerance: 1e-5,
-                config_dictionary.max_epoch: kinematics_config["max_epoch"],
-                config_dictionary.batch_size: kinematics_config["batch_size"],
-                config_dictionary.log_step: basic_config[config_dictionary.log_step],
-                config_dictionary.early_stopping_delta: 1e-12,
-                config_dictionary.early_stopping_patience: 10000,
-                config_dictionary.early_stopping_window: 10000,
-            },
-            config_dictionary.scheduler: {
-                config_dictionary.scheduler_type: kinematics_config["scheduler"],
-                config_dictionary.gamma: kinematics_config["gamma"],
-                config_dictionary.min: kinematics_config["min_learning_rate"],
-                config_dictionary.max: kinematics_config["max_learning_rate"],
-                config_dictionary.step_size_up: kinematics_config["step_size_up"],
-                config_dictionary.reduce_factor: kinematics_config["reduce_factor"],
-                config_dictionary.patience: kinematics_config["patience"],
-                config_dictionary.threshold: kinematics_config["threshold"],
-                config_dictionary.cooldown: kinematics_config["cooldown"],
-            },
-        }
         kinematics_reconstructor = KinematicsReconstructor(
             ddp_setup=ddp_setup,
             scenario=scenario_kinematics,
@@ -1616,14 +1597,16 @@ def main() -> None:
             device=device,
         )
 
-        # create_deflectometry_surface_for_comparison(
-        #     scenario_path=scenario_path_deflectometry,
-        #     results_path=results_path,
-        #     measured_data_dir=measured_data_dir,
-        #     heliostats_for_plots=args.heliostats_for_plots,
-        #     number_of_surface_points=surface_optimization_config["number_of_surface_points"],
-        #     device=device,
-        # )
+        create_deflectometry_surface_for_comparison(
+            scenario_path=scenario_path_deflectometry,
+            results_path=results_path,
+            measured_data_dir=measured_data_dir,
+            heliostats_for_plots=args.heliostats_for_plots,
+            number_of_surface_points=surface_optimization_config[
+                "number_of_surface_points"
+            ],
+            device=device,
+        )
 
         loaded = torch.load(results_path, weights_only=False)
         results_dict = cast(dict[str, dict[str, torch.Tensor]], loaded)
