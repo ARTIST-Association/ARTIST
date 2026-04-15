@@ -76,7 +76,9 @@ def generate_reconstruction_results(
 
         # Configure the optimization.
         optimizer_dict = {
-            config_dictionary.initial_learning_rate: 1e-3,
+            config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+            config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+            config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
             config_dictionary.tolerance: 0,
             config_dictionary.max_epoch: 1000,
             config_dictionary.batch_size: 500,
@@ -127,7 +129,7 @@ def generate_reconstruction_results(
                 reconstruction_method=kinematics_reconstruction_method,
             )
 
-            per_heliostat_losses = kinematics_reconstructor.reconstruct_kinematics(
+            per_heliostat_losses, _ = kinematics_reconstructor.reconstruct_kinematics(
                 loss_definition=loss_definition, device=device
             )
 
