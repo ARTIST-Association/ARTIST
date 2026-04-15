@@ -1,7 +1,7 @@
 import argparse
 import pathlib
 import warnings
-from typing import Dict, cast
+from typing import cast
 
 import h5py
 import numpy as np
@@ -293,7 +293,7 @@ def generate_flux_images(
         Mapping containing the heliostats present in the scenario and the calibration measurement to be used.
     data_directory : pathlib.Path
         Path to the data directory.
-    result_file : pathlib.Path
+    results_file : pathlib.Path
         Path to the unified results file, saved as a torch checkpoint.
     result_key : str
         Key under which to store the result.
@@ -304,11 +304,11 @@ def generate_flux_images(
     """
     device = get_device(device)
 
-    results_dict: Dict[str, Dict[str, np.ndarray | torch.Tensor]] = {}
+    results_dict: dict[str, dict[str, np.ndarray | torch.Tensor]] = {}
 
     try:
         loaded = torch.load(results_file, weights_only=False)
-        results_dict = cast(Dict[str, Dict[str, np.ndarray | torch.Tensor]], loaded)
+        results_dict = cast(dict[str, dict[str, np.ndarray | torch.Tensor]], loaded)
     except FileNotFoundError:
         print(f"File not found: {results_file}. Initializing with an empty dictionary.")
     except Exception as e:

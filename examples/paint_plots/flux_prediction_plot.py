@@ -8,19 +8,18 @@ the measured deformations in the surface.
 Command-Line Arguments
 ----------------------
 config : str
-Path to the configuration file.
+    Path to the configuration file.
 device : str
-Device to use for the computation.
+    Device to use for the computation.
 results_dir : str
-Path to directory where the results are saved.
+    Path to directory where the results are saved.
 plots_dir : str
-Path to the directory where the plots are saved.
+    Path to the directory where the plots are saved.
 """
 
 import argparse
 import pathlib
 import warnings
-from typing import Dict
 
 import numpy as np
 import torch
@@ -70,7 +69,7 @@ def plot_flux_prediction(
     plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
 
     # Load results.
-    results_dict: Dict[str, Dict[str, np.ndarray]] = torch.load(
+    results_dict: dict[str, dict[str, np.ndarray]] = torch.load(
         results_file,
         weights_only=False,
         map_location=device,

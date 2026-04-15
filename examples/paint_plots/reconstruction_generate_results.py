@@ -3,7 +3,7 @@ import json
 import pathlib
 import warnings
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
@@ -42,7 +42,7 @@ def generate_reconstruction_results(
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Data mapping for each heliostat, containing a list of tuples with the heliostat name, the path to the calibration
         properties file, and the path to the flux images.
-    device : torch.device | None
+    device : torch.device
         Device used for optimization and tensor allocations.
 
     Returns
@@ -52,7 +52,7 @@ def generate_reconstruction_results(
     """
     device = get_device(device=device)
 
-    results_dict: dict = {}
+    results_dict: dict[str, dict[str, Any]] = {}
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -122,7 +122,7 @@ def generate_reconstruction_results(
             }
 
             kinematics_reconstructor = KinematicsReconstructor(
-                ddp_setup=ddp_setup,
+                ddp_setup=cast(dict[str, Any], ddp_setup),
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
