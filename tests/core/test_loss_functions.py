@@ -501,7 +501,7 @@ def test_angle_loss(
     device: torch.device,
 ) -> None:
     """
-    Test the vector loss.
+    Test the angle loss.
 
     Parameters
     ----------

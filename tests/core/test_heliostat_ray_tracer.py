@@ -32,6 +32,8 @@ def test_distributed_sampler(
     """
     Test the distributed sampler.
 
+    Parameters
+    ----------
     number_of_samples : int
         Number of samples to distribute among ranks.
     number_of_heliostats : int

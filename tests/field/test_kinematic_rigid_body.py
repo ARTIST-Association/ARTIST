@@ -36,7 +36,7 @@ def kinematics_parameters(device: torch.device) -> tuple[torch.Tensor, torch.Ten
 
 @pytest.fixture
 def kinematics_model_linear(
-    kinematics_parameters: torch.Tensor,
+    kinematics_parameters: tuple[torch.Tensor, torch.Tensor],
     device: torch.device,
 ) -> RigidBody:
     """
@@ -44,7 +44,7 @@ def kinematics_model_linear(
 
     Parameters
     ----------
-    kinematics_parameters : torch.Tensor
+    kinematics_parameters : tuple[torch.Tensor, torch.Tensor]
         The kinematics deviation parameters.
     device : torch.device
         The device on which to initialize tensors.

@@ -1,6 +1,7 @@
 import os
 import platform
 import random
+from collections.abc import Generator
 
 import numpy as np
 import pytest
@@ -81,7 +82,7 @@ def ddp_setup_for_testing() -> dict[
 
 
 @pytest.fixture(scope="session", autouse=True)
-def enforce_determinism():
+def enforce_determinism() -> Generator[None, None, None]:
     """
     Pytest fixture that enforces deterministic behavior across all tests.
 
@@ -92,10 +93,11 @@ def enforce_determinism():
       - Disabling cuDNN benchmarking to prevent algorithm auto-selection.
       - Making cuDNN operations deterministic (where supported).
 
-    Some PyTorch CUDA operations (e.g. `grid_sampler_2d_backward_cuda`) do not have
-    deterministic implementations. These may raise a `RuntimeError` when
-    `torch.use_deterministic_algorithms(True)` is enabled.
-    For these operations, determinism is temporarily disabled.
+    Note: Some PyTorch CUDA operations (e.g. `grid_sampler_2d_backward_cuda`) do not
+    have deterministic implementations. These raise a ``RuntimeError`` when
+    ``torch.use_deterministic_algorithms(True)`` is active. Tests that use such
+    operations must temporarily disable deterministic mode via
+    ``torch.use_deterministic_algorithms(False)`` for the affected call.
     """
     seed = 7
 
