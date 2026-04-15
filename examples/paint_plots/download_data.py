@@ -55,7 +55,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     metadata_root_default = config.get("metadata_root", "./")
     metadata_file_name_default = config.get(
         "metadata_file_name", "calibration_metadata_all_heliostats.csv"
@@ -115,15 +115,15 @@ if __name__ == "__main__":
     )
     # Download heliostat data.
     client.get_heliostat_data(
-        # heliostats=viable_heliostats,
+        heliostats=viable_heliostats,
         collections=[
             paint_mappings.SAVE_CALIBRATION.lower(),
             paint_mappings.SAVE_DEFLECTOMETRY.lower(),
             paint_mappings.SAVE_PROPERTIES.lower(),
         ],
-        # filtered_calibration_keys=[
-        #     paint_mappings.CALIBRATION_FLUX_IMAGE_KEY,
-        #     paint_mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
-        #     paint_mappings.CALIBRATION_PROPERTIES_KEY,
-        # ],
+        filtered_calibration_keys=[
+            paint_mappings.CALIBRATION_FLUX_IMAGE_KEY,
+            paint_mappings.CALIBRATION_FLUX_CENTERED_IMAGE_KEY,
+            paint_mappings.CALIBRATION_PROPERTIES_KEY,
+        ],
     )
