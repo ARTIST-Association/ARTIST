@@ -1,5 +1,3 @@
-from typing import Any
-
 import torch
 from torch import Tensor
 
@@ -224,7 +222,7 @@ def line_cylinder_intersections(
     target_area_indices: torch.Tensor | None = None,
     bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     device: torch.device | None = None,
-) -> tuple[Tensor, Tensor, Tensor, Tensor] | tuple[Any, Any, Any, Any]:
+) -> tuple[Tensor, Tensor, Tensor, Tensor]:
     """
     Compute ray intersections with cylindrical receiver target areas and map hits into bitmap coordinates.
 

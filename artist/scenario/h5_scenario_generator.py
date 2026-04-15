@@ -1,7 +1,7 @@
 import logging
 import pathlib
-from collections.abc import MutableMapping
-from typing import Any, Generator
+from collections.abc import Generator, MutableMapping
+from typing import Any
 
 import h5py
 import torch
@@ -136,7 +136,7 @@ class H5ScenarioGenerator:
                     )
         return len(unique_groups)
 
-    def _check_equal_facet_numbers(self):
+    def _check_equal_facet_numbers(self) -> None:
         """
         Check that each heliostat has the same number of facets.
 
@@ -182,7 +182,7 @@ class H5ScenarioGenerator:
 
     def _flatten_dict_gen(
         self, d: MutableMapping, parent_key: str, sep: str
-    ) -> Generator:
+    ) -> Generator[tuple[str, Any], None, None]:
         # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
         # separated by a defined separator.
         for k, v in d.items():
@@ -193,7 +193,9 @@ class H5ScenarioGenerator:
                 yield new_key, v
 
     @staticmethod
-    def _include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
+    def _include_parameters(
+        file: h5py.File, prefix: str, parameters: dict[str, Any]
+    ) -> None:
         """
         Include the parameters from a parameter dictionary.
 
@@ -203,7 +205,7 @@ class H5ScenarioGenerator:
             The HDF5 file to write to.
         prefix : str
             The prefix used for naming the parameters.
-        parameters : dict
+        parameters : dict[str, Any]
             The parameters to be included into the HFD5 file.
         """
         for key, value in parameters.items():
