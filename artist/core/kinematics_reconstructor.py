@@ -39,6 +39,8 @@ class KinematicsReconstructor:
         The parameters for the optimization.
     scheduler_dict : dict[str, Any]
         The parameters for the scheduler.
+    dni : float
+        Direct normal irradiance in W/m^2.
     reconstruction_method : str
         The reconstruction method. Currently only reconstruction via ray tracing is available.
 
@@ -75,11 +77,13 @@ class KinematicsReconstructor:
         scenario : Scenario
             The scenario.
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-            The data parser and the mapping of heliostat name and calibration data.
+            Data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
-            The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+            Parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+        dni : float | None
+            Direct normal irradiance in W/m^2 (default is None which leads to a ray magnitude of 1.0).
         reconstruction_method : str
-            The reconstruction method. Currently only reconstruction via ray tracing is available (default is ray_tracing).
+            Reconstruction method. Currently only reconstruction via ray tracing is available (default is ray_tracing).
         """
         rank = ddp_setup[config_dictionary.rank]  # type:ignore
         if rank == 0:
