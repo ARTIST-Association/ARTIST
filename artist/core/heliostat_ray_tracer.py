@@ -596,26 +596,21 @@ class HeliostatRayTracer:
                 device=device,
             )
             if self.blocking_active:
-                points_at_ray_origins = self.heliostat_group.active_surface_points[
-                    active_heliostats_mask_batch, None, :, :3
-                ].expand(-1, self.light_source.number_of_rays, -1, -1)
                 batch_global_indices = global_active_indices[batch_mask_indices]
                 ray_to_heliostat_mapping = batch_global_indices.repeat_interleave(
                     number_of_rays_per_heliostat
                 )
 
                 # Filter out the blocking primitives that are relevant for blocking.
-                filtered_blocking_primitive_indices = (
-                    blocking.lbvh_filter_blocking_planes(
-                        points_at_ray_origins=points_at_ray_origins,
-                        ray_directions=rays.ray_directions[..., :3],
-                        blocking_primitives_corners=blocking_primitives_corners[
-                            ..., :3
-                        ],
-                        ray_to_heliostat_mapping=ray_to_heliostat_mapping,
-                        intersection_distances_target=intersection_distances_target,
-                        device=device,
-                    )
+                filtered_blocking_primitive_indices = blocking.lbvh_filter_blocking_planes(
+                    points_at_ray_origins=self.heliostat_group.active_surface_points[
+                        active_heliostats_mask_batch
+                    ],
+                    ray_directions=rays.ray_directions,
+                    blocking_primitives_corners=blocking_primitives_corners,
+                    ray_to_heliostat_mapping=ray_to_heliostat_mapping,
+                    intersection_distances_target=intersection_distances_target,
+                    device=device,
                 )
                 # Create the blocked ray mask based on the relevant blocking primitive indices.
                 if filtered_blocking_primitive_indices.numel() > 0:

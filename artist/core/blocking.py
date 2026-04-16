@@ -566,6 +566,7 @@ def build_linear_bounding_volume_hierarchies(
         }
 
     # Compute sorted Morton code representations for each blocking primitive based on the centroid of the blocking planes.
+    blocking_primitives_corners = blocking_primitives_corners[..., :3]
     primitive_mins = blocking_primitives_corners.min(dim=1).values
     primitive_maxs = blocking_primitives_corners.max(dim=1).values
     centroids = blocking_primitives_corners.mean(dim=1)
@@ -845,13 +846,13 @@ def lbvh_filter_blocking_planes(
     ----------
     points_at_ray_origins : torch.Tensor
         Origin points of the rays, i.e., the surface points, expanded in the ray dimension.
-        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 3].
+        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
     ray_directions : torch.Tensor
         Ray directions.
-        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 3].
+        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
     blocking_primitives_corners : torch.Tensor
         Blocking primitives corner points.
-        Tensor of shape [number_of_blocking_planes, 4, 3].
+        Tensor of shape [number_of_blocking_planes, 4, 4].
     ray_to_heliostat_mapping : torch.Tensor
         Mapping indicating which ray is reflected by which heliostat.
         Tensor of shape [total_number_of_rays].
@@ -882,9 +883,14 @@ def lbvh_filter_blocking_planes(
     is_leaf = lbvh[config_dictionary.is_leaf]
     primitive_index = lbvh[config_dictionary.primitive_index]
 
-    ray_origins = points_at_ray_origins.reshape(-1, 3)
-    ray_directions = ray_directions.reshape(-1, 3)
+    ray_origins = (
+        points_at_ray_origins[:, None, :, :3]
+        .expand(-1, ray_directions.shape[1], -1, -1)
+        .reshape(-1, 3)
+    )
+    ray_directions = ray_directions[..., :3].reshape(-1, 3)
     intersection_distances_target = intersection_distances_target.reshape(-1)
+    blocking_primitives_corners = blocking_primitives_corners[..., :3]
 
     total_number_of_rays = ray_origins.shape[0]
     number_of_primitives = blocking_primitives_corners.shape[0]
