@@ -18,7 +18,7 @@ from artist.util.environment_setup import get_device
 
 # Specify the path to your scenario.h5 file.
 scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/single_heliostat_scenario.h5"
+    "please/insert/the/path/to/the/scenario/here/scenarios/single_heliostat_scenario.h5"
 )
 
 # Set up logger.
@@ -79,7 +79,6 @@ incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
 
 # Save the original surface points of the one active heliostat.
 original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_points
-
 
 # Align the heliostat(s).
 scenario.heliostat_field.heliostat_groups[
