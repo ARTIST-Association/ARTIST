@@ -111,7 +111,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         Parameters
         ----------
         config_file : h5py.File
-            The HDF5 file containing the configuration to be loaded.
+            HDF5 file containing the configuration to be loaded.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -120,7 +120,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         Returns
         -------
         TowerTargetAreasCylindrical
-            The target areas loaded from the HDF5 file.
+            Target areas loaded from the HDF5 file.
         """
         device = get_device(device=device)
 
