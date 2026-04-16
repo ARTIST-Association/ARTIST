@@ -19,25 +19,24 @@ class SolarTower:
     """
     The solar tower with its associated target areas.
 
-    A solar tower holds one or more types of target areas (planar receiver panels and/or
+    A solar tower holds two types of target areas (planar and
     cylindrical tower surfaces) onto which heliostats focus the reflected sunlight.
-    Target areas are grouped by geometry type; within each type they are indexed
+    Target areas are grouped by geometry type. Within each type they are indexed
     consecutively, with planar areas assigned lower global indices than cylindrical ones.
 
     Attributes
     ----------
     target_areas : Sequence[TowerTargetAreas]
-        A list containing all target area groups, ordered as planar first, cylindrical second.
+        List containing all target area groups, ordered as planar first, cylindrical second.
     number_of_target_area_types : int
-        The number of distinct target area geometry types (e.g., planar and cylindrical).
+        Number of distinct target area geometry types (e.g., planar and cylindrical).
     number_of_target_areas_per_type : torch.Tensor
-        The number of individual target areas in each geometry type group.
+        Number of individual target areas in each geometry type group.
         Tensor of shape [number_of_target_area_types].
     target_name_to_index : dict[str, int]
         Mapping from a target area name to its global integer index.
     index_to_target_area : list[tuple[TowerTargetAreas, int]]
-        Mapping from a global target area index to the corresponding
-        ``TowerTargetAreas`` group object and the local index within that group.
+        Mapping from a global target area index to the corresponding target area object.
 
     Methods
     -------
@@ -152,7 +151,7 @@ class SolarTower:
         Returns
         -------
         torch.Tensor
-            The center coordinates of the requested target areas in homogeneous coordinates.
+            Center coordinates of the requested target areas in homogeneous coordinates.
             Tensor of shape [number_of_active_heliostats, 4].
         """
         device = get_device(device=device)
