@@ -409,13 +409,13 @@ if __name__ == "__main__":
         if case == "surface":
             heliostat_properties_list: list[tuple[str, pathlib.Path]] = [
                 (
-                    item["name"],
-                    pathlib.Path(item["properties"]),
+                    str(item["name"]),
+                    pathlib.Path(str(item["properties"])),
                 )
                 for item in serializable_data
             ]
 
-            power_plant_config, _ = (
+            power_plant_config, _planar_config, _cyl_config = (
                 paint_scenario_parser.extract_paint_tower_measurements(
                     tower_measurements_path=tower_file, device=device
                 )
