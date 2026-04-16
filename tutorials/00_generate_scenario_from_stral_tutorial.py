@@ -55,7 +55,7 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
-# Include a single planar tower target area (receiver).
+# Include a single planar tower target area.
 target_area_list_planar_config = TargetAreaPlanarConfig(
     target_area_key="planar",
     center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
@@ -67,7 +67,7 @@ target_area_planar_list_config = TargetAreaPlanarListConfig(
     [target_area_list_planar_config]
 )
 
-# Include a single cylindrical tower target area (cylinder).
+# Include a single cylindrical tower target area.
 target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
     target_area_key="cylinder",
     radius=4.14,
