@@ -22,7 +22,7 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the hyperparameter search."""
@@ -60,18 +60,18 @@ def surface_reconstructor_for_hpo(
     device = get_device(device)
 
     # Set up ARTIST to run in single device mode.
-    ddp_setup = {
-        config_dictionary.device: device,
-        config_dictionary.is_distributed: False,
-        config_dictionary.is_nested: False,
-        config_dictionary.rank: 0,
-        config_dictionary.world_size: 1,
-        config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: {0: [0]},
-        config_dictionary.heliostat_group_rank: 0,
-        config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0]},
-    }
+    ddp_setup = DdpSetup(
+        device=device,
+        is_distributed=False,
+        is_nested=False,
+        rank=0,
+        world_size=1,
+        process_subgroup=None,
+        groups_to_ranks_mapping={0: [0]},
+        heliostat_group_rank=0,
+        heliostat_group_world_size=1,
+        ranks_to_groups_mapping={0: [0]},
+    )
 
     # For parameter combinations with too many rays directly return a default loss,
     # to avoid running such combination as they cause "out of memory" errors.
@@ -132,12 +132,12 @@ def surface_reconstructor_for_hpo(
     optimizer_dict = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 150,
+        config_dictionary.max_epoch: 10,
         config_dictionary.batch_size: params["sample_limit"],
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
-        config_dictionary.early_stopping_window: 10,
+        config_dictionary.early_stopping_patience: 400,
+        config_dictionary.early_stopping_window: 400,
     }
     scheduler_dict = {
         config_dictionary.scheduler_type: params["scheduler"],
@@ -158,7 +158,7 @@ def surface_reconstructor_for_hpo(
     ]
     constraint_dict = {
         config_dictionary.regularizers: regularizers,
-        config_dictionary.rho_energy: params["rho_energy"],
+        config_dictionary.rho_flux_integral: params["rho_flux_integral"],
         config_dictionary.energy_tolerance: 0.01,
         config_dictionary.weight_smoothness: params["weight_smoothness"],
         config_dictionary.weight_ideal_surface: params["weight_ideal_surface"],
@@ -183,7 +183,7 @@ def surface_reconstructor_for_hpo(
     loss_definition = loss_functions.KLDivergenceLoss()
 
     # Reconstruct surfaces.
-    loss = surface_reconstructor.reconstruct_surfaces(
+    loss, _ = surface_reconstructor.reconstruct_surfaces(
         loss_definition=loss_definition,
         device=device,
     )
@@ -247,7 +247,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
     scenarios_dir_default = config.get(
         "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"
@@ -278,7 +278,7 @@ if __name__ == "__main__":
             "gamma": [0.85, 0.999],
             "weight_smoothness": [0.0, 1.0],
             "weight_ideal_surface": [0.0, 1.0],
-            "rho_energy": [0.1, 1.0],
+            "rho_flux_integral": [0.1, 1.0],
         },
     )
 
@@ -328,7 +328,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_surface.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_hpo.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
@@ -351,7 +351,7 @@ if __name__ == "__main__":
     rng = random.Random(seed + comm.rank)
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_surface.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
@@ -369,19 +369,6 @@ if __name__ == "__main__":
             [pathlib.Path(p) for p in item["surface_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
-        if item["name"]
-        in [
-            "AC38",
-            "BD38",
-            "AE34",
-            "BG65",
-            "AK26",
-            "AK17",
-            "BA43",
-            "AZ28",
-            "AP51",
-            "AP35",
-        ]
     ]
 
     reconstruction_parameter_ranges: dict[
@@ -404,7 +391,7 @@ if __name__ == "__main__":
             reconstruction_parameter_ranges[key] = str_tuple
 
     # Set up evolutionary operator.
-    num_generations = 100
+    num_generations = 3
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,

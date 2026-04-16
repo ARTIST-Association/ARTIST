@@ -10,13 +10,18 @@ import yaml
 
 from artist.core import loss_functions
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
+from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config, utils
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util.environment_setup import (
+    DdpSetup,
+    get_device,
+    setup_distributed_environment,
+)
 
 set_logger_config()
 torch.manual_seed(7)
@@ -86,7 +91,7 @@ def merge_data(
 
 def data_for_flux_plots(
     scenario: Scenario,
-    ddp_setup: dict[str, Any],
+    ddp_setup: DdpSetup,
     heliostat_data: dict[
         str,
         CalibrationDataParser
@@ -119,9 +124,9 @@ def data_for_flux_plots(
 
     bitmaps_for_plots = {}
 
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
-    ]:
+    for heliostat_group_index in ddp_setup[
+        config_dictionary.groups_to_ranks_mapping  # type: ignore
+    ][ddp_setup[config_dictionary.rank]]:  # type: ignore
         heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
         ]
@@ -152,7 +157,9 @@ def data_for_flux_plots(
         )
 
         heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_indices],
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices=target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -164,10 +171,10 @@ def data_for_flux_plots(
             scenario=scenario,
             heliostat_group=heliostat_group,
             blocking_active=False,
-            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-            rank=ddp_setup[config_dictionary.heliostat_group_rank],
+            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type: ignore
+            rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
             batch_size=heliostat_group.number_of_active_heliostats,
-            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
         )
 
         bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
@@ -289,7 +296,7 @@ def generate_reconstruction_results(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 350,
+            config_dictionary.max_epoch: 10,
             config_dictionary.batch_size: 12,
             config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
@@ -307,10 +314,16 @@ def generate_reconstruction_results(
             config_dictionary.threshold: hyperparameters["threshold"],
             config_dictionary.cooldown: hyperparameters["cooldown"],
         }
+        ideal_surface_regularizer = IdealSurfaceRegularizer(reduction_dimensions=(1,))
+        smoothness_regularizer = SmoothnessRegularizer(reduction_dimensions=(1,))
+        regularizers = [
+            ideal_surface_regularizer,
+            smoothness_regularizer,
+        ]
         constraint_dict = {
-            config_dictionary.rho_energy: hyperparameters["rho_energy"],
-            config_dictionary.energy_tolerance: 0.001,
-            config_dictionary.initial_lambda_energy: 0.1,
+            config_dictionary.regularizers: regularizers,
+            config_dictionary.rho_flux_integral: hyperparameters["rho_flux_integral"],
+            config_dictionary.energy_tolerance: 0.01,
             config_dictionary.weight_smoothness: hyperparameters["weight_smoothness"],
             config_dictionary.weight_ideal_surface: hyperparameters[
                 "weight_ideal_surface"
@@ -372,7 +385,7 @@ def generate_reconstruction_results(
             device=device,
         )
 
-        per_heliostat_losses = surface_reconstructor.reconstruct_surfaces(
+        per_heliostat_losses, _ = surface_reconstructor.reconstruct_surfaces(
             loss_definition=loss_definition, device=device
         )
 
@@ -450,7 +463,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
     scenarios_dir_default = config.get(
         "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"
@@ -491,14 +504,14 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematics.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_hpo.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_kinematics.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(

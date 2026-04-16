@@ -307,7 +307,7 @@ if __name__ == "__main__":
     rng = random.Random(seed + comm.rank)
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_kinematics.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
