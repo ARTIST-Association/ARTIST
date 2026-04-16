@@ -24,6 +24,7 @@ target_area_cylinder_height = "cylinder_height"
 target_area_cylinder_axis = "cylinder_axis"
 """Key to access the cylinder axis of a cylindrical target area."""
 target_area_cylinder_normal = "cylinder_normal"
+"""Key to access the cylinder normal of a cylindrical target area."""
 target_area_cylinder_opening_angle = "cylinder_opening_angle"
 """Key to access the opening angle of a cylindrical target area."""
 
