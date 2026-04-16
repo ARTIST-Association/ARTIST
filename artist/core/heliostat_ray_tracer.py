@@ -2,7 +2,6 @@ import logging
 from typing import TYPE_CHECKING, Iterator
 
 import torch
-from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Sampler
 
 import artist.util.index_mapping
@@ -379,7 +378,7 @@ class HeliostatRayTracer:
         ray_extinction_factor: float = 0.0,
         mirror_reflectivity: float = 0.935,
         device: torch.device | None = None,
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform heliostat ray tracing.
 
