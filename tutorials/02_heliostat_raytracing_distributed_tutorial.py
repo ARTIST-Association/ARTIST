@@ -31,7 +31,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type:ignore
 
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
@@ -107,9 +107,15 @@ with setup_distributed_environment(
             device=device,
         )
 
-    # Ray tracing happens only on one device for each group.
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
+    # The ray tracing process is distributed on multiple devices. Each heliostat is assigned to one process group. Within
+    # these process groups nested subprocess groups are created to distribute further within each heliostat groups, if the
+    # total number of processes allows this.
+    for heliostat_group_index in ddp_setup[
+        config_dictionary.groups_to_ranks_mapping  # type:ignore
+    ][
+        ddp_setup[
+            config_dictionary.rank  # type:ignore
+        ]
     ]:
         heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
@@ -130,10 +136,10 @@ with setup_distributed_environment(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type:ignore
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type:ignore
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type:ignore
                 bitmap_resolution=bitmap_resolution,
             )
 
@@ -175,11 +181,11 @@ with setup_distributed_environment(
 
     # This nested reduction step could be skipped, since the reduction within the outer process group would handle it.
     # However, performing it here allows us to inspect the intermediate reduction results of the nested process group.
-    if ddp_setup[config_dictionary.is_nested]:
+    if ddp_setup[config_dictionary.is_nested]:  # type:ignore
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
-            group=ddp_setup[config_dictionary.process_subgroup],
+            group=ddp_setup[config_dictionary.process_subgroup],  # type:ignore
         )
 
         # Plot the combined bitmaps of heliostats on the same target reduced within each group.
@@ -196,7 +202,7 @@ with setup_distributed_environment(
                 f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
             )
 
-    if ddp_setup[config_dictionary.is_distributed]:
+    if ddp_setup[config_dictionary.is_distributed]:  # type:ignore
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
