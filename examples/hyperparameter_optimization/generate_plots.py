@@ -1,3 +1,26 @@
+"""
+Generate plots based on the hyperparameter optimization results.
+
+This script loads the results from the ``ARTIST`` reconstruction and generates plots comparing
+the loss when using different kinematics, surface reconstruction, and motor position optimization
+results.
+
+Command-Line-Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+results_dir : str
+    Path to directory where the results are saved.
+plots_dir : str
+    Path to the directory where the plots are saved.
+number_of_points_to_plot : int
+    Number of data points to plot in the distance error plot.
+random_seed : int
+    Random seed for the selection of points to plot.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -238,7 +261,7 @@ def plot_motor_pos_fluxes(
 
     Parameters
     ----------
-    reconstruction_results : dict[str, dict[str, Any]]
+    reconstruction_results : dict[str, Any]
         The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
@@ -331,7 +354,7 @@ def plot_surface_reconstruction(
 
     Parameters
     ----------
-    results : dict[str, Any]
+    reconstruction_results : dict[str, Any]
         Results of the surface reconstruction.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
@@ -493,28 +516,6 @@ def plot_surface_reconstruction(
 
 
 if __name__ == "__main__":
-    """
-    Generate plots based on the kinematics reconstruction results.
-
-    This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
-    using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to directory where the results are saved.
-    plots_dir : str
-        Path to the directory where the plots are saved.
-    number_of_points_to_plot : int
-        Number of data points to plot in the distance error plot.
-    random_seed : int
-        Random seed for the selection of points to plot.
-    """
-
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"

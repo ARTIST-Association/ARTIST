@@ -1,3 +1,22 @@
+"""
+Generate kinematics reconstruction results with optimized hyperparameters.
+
+Command-Line-Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+heliostat_for_reconstruction : dict[str, list[int]]
+    The heliostat and its calibration numbers.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -225,7 +244,7 @@ def generate_reconstruction_results(
     """
     device = get_device(device=device)
 
-    loss_dict: dict = {}
+    loss_dict: dict[str, Any] = {}
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -363,24 +382,6 @@ def generate_reconstruction_results(
 
 
 if __name__ == "__main__":
-    """
-    Generate results with the optimized parameters.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    heliostat_for_reconstruction : dict[str, list[int]]
-        The heliostat and its calibration numbers.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
