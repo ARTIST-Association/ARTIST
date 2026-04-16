@@ -8,7 +8,6 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
-from scipy.stats import gaussian_kde
 
 from artist.util import utils
 from artist.util.environment_setup import get_device
@@ -128,86 +127,6 @@ def plot_kinematics_reconstruction_fluxes(
     plt.close(fig)
 
     print(f"Saved reconstruction flux plot at: {filename}.")
-
-
-def plot_error_distribution(
-    reconstruction_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
-) -> None:
-    """
-    Plot the distribution of reconstruction errors.
-
-    This function plots histograms and kernel density estimations of the pointing errors in reconstruction when comparing
-    HeliOS and UTIS as methods for focal spot centroid extraction.
-
-    Parameters
-    ----------
-    reconstruction_results : dict[str, dict[str, Any]]
-        The reconstruction results.
-    save_dir : pathlib.Path
-        Directory used for saving the plot.
-    """
-    # Set plot style.
-    plt.rcParams["text.usetex"] = True
-    plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
-    plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
-
-    # Convert losses to list.
-    errors_in_meters = [
-        data["loss"] for data in reconstruction_results["loss"].values()
-    ]
-
-    # Convert to angular error in mrad.
-    positions = np.array(
-        [data["position"] for data in reconstruction_results["loss"].values()],
-        dtype=float,
-    )
-    distances = np.linalg.norm(positions[:, :2], axis=1)
-    errors_in_mrad = (errors_in_meters / distances) * 1000
-
-    for errors, name, color in zip(
-        [errors_in_meters, errors_in_mrad], ["meters", "mrad"], ["lightblue", "darkred"]
-    ):
-        x_max = max(errors)
-        x_vals = np.linspace(0, x_max, 100)
-        kde = gaussian_kde(errors, bw_method="scott")
-        kde_values = kde(x_vals)
-        mean = np.mean(errors)
-
-        fig, ax = plt.subplots(figsize=(6, 4))
-
-        ax.hist(
-            errors,
-            bins=25,
-            range=(0, x_max),
-            density=True,
-            alpha=0.3,
-            label="Loss Histogram",
-            color=plot_colors[color],
-        )
-        ax.plot(
-            x_vals,
-            kde_values,
-            label="KDE",
-            color=plot_colors[color],
-        )
-        ax.axvline(
-            mean,
-            color=plot_colors[color],
-            linestyle="--",
-            label=f"Mean: {mean:.2f} {name}",
-        )
-
-        ax.set_xlabel(f"\\textbf{{Pointing Error}} \n{{\\small {name}}}")
-        ax.set_ylabel("\\textbf{Density}")
-        ax.legend(fontsize=8)
-        ax.grid(True)
-
-        if not save_dir.is_dir():
-            save_dir.mkdir(parents=True, exist_ok=True)
-        filename = save_dir / f"error_distribution_{name}.pdf"
-        fig.savefig(filename, dpi=300, bbox_inches="tight")
-
-        print(f"Saved reconstruction error distribution plot at: {filename}.")
 
 
 def plot_linear_and_angular_error_against_distance(
@@ -571,70 +490,6 @@ def plot_surface_reconstruction(
         bbox_inches="tight",
         pad_inches=1,
     )
-
-
-def plot_heliostat_positions(
-    surface_scenario: dict[str, Any],
-    kinematics_scenario: dict[str, Any],
-    save_dir: pathlib.Path,
-) -> None:
-    """
-    Plot heliostat positions.
-
-    Parameters
-    ----------
-    surface_scenario : dict[str, Any]
-        Results of surface reconstruction.
-    kinematics_scenario : dict[str, Any]
-        Results of kinematics reconstruction.
-    save_dir : pathlib.Path
-        Directory to save the plots.
-    """
-    plt.rcParams["text.usetex"] = True
-    plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
-    plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
-
-    for scenario in [surface_scenario, kinematics_scenario]:
-        positions_list = [data["position"] for data in scenario["loss"].values()]
-
-        index = [i for i, d in enumerate(scenario["loss"].keys()) if "BD32" in d]
-
-        fig, ax = plt.subplots(figsize=(6, 4))
-
-        x = [row[0] for row in positions_list]
-        y = [row[1] for row in positions_list]
-
-        ax.scatter(
-            x=x,
-            y=y,
-            c=plot_colors["lightblue"],
-            s=2,
-        )
-
-        ax.scatter(
-            [x[index[0]]],
-            [y[index[0]]],
-            facecolors="none",
-            edgecolors="red",
-            s=2,
-            linewidths=2,
-            label="BD32",
-        )
-
-        ax.plot([-2 / 2, 2 / 2], [0, 0], color="red", linewidth=2)
-        ax.grid(True)
-
-        ax.set_xlabel("\\textbf{East-West distance to tower [m]}")
-        ax.set_ylabel("\\textbf{North-South distance to tower [m]}")
-        ax.legend(fontsize=8)
-        ax.grid(True)
-
-        if not save_dir.is_dir():
-            save_dir.mkdir(parents=True, exist_ok=True)
-        filename = save_dir / f"heliostat_positions_{len(positions_list)}.pdf"
-        fig.savefig(filename, dpi=300, bbox_inches="tight")
-
-        print(f"Saved position plot at: {filename}.")
 
 
 if __name__ == "__main__":
