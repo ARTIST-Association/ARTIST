@@ -110,7 +110,7 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, dict[str, list]]:
         """
         Reconstruct the kinematic parameters.
 
@@ -128,6 +128,8 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
+        dict[str, list]
+            Loss history over epochs, with keys "total_loss". Each value is a list of per-epoch scalar floats.
         """
         device = get_device(device=device)
 
@@ -135,18 +137,20 @@ class KinematicsReconstructor:
             self.reconstruction_method
             == config_dictionary.kinematics_reconstruction_raytracing
         ):
-            loss = self._reconstruct_kinematics_parameters_with_raytracing(
-                loss_definition=loss_definition,
-                device=device,
+            loss, loss_history = (
+                self._reconstruct_kinematics_parameters_with_raytracing(
+                    loss_definition=loss_definition,
+                    device=device,
+                )
             )
 
-        return loss
+        return loss, loss_history
 
     def _reconstruct_kinematics_parameters_with_raytracing(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, dict[str, list]]:
         """
         Reconstruct the kinematics parameters using ray tracing.
 
@@ -156,7 +160,7 @@ class KinematicsReconstructor:
         Parameters
         ----------
         loss_definition : Loss
-            The definition of the loss function and pre-processing of the prediction.
+            Definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -167,6 +171,8 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
+        dict[str, list]
+            Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
         """
         device = get_device(device=device)
 
