@@ -234,11 +234,11 @@ with setup_distributed_environment(
     )
 
     # Optimize the motor positions.
-    final_loss_per_heliostat, _, _, _, _ = motor_positions_optimizer.optimize(
+    final_loss, _, _, _, _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
-print(f"rank {ddp_setup['rank']}, final loss {final_loss_per_heliostat}")
+print(f"rank {ddp_setup['rank']}, final loss {final_loss}")
 
 create_flux_plot(id="after")
