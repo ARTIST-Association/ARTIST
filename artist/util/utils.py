@@ -535,7 +535,7 @@ def get_center_of_mass(
     Parameters
     ----------
     bitmaps : torch.Tensor
-        The flux densities in form of bitmaps.
+        Flux densities in form of bitmaps.
         Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -584,7 +584,7 @@ def bitmap_coordinates_to_target_coordinates(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Convert bitmap pixel coordinates to 3D world coordinates on the target surface.
+    Convert bitmap pixel coordinates to 4D homogeneous world coordinates on the target surface.
 
     For planar target areas the pixel coordinates are mapped linearly to target plane coordinates.
     For cylindrical target areas the pixel coordinates are mapped to cylindrical surface coordinates
@@ -596,10 +596,10 @@ def bitmap_coordinates_to_target_coordinates(
         Pixel coordinates in the bitmap for each heliostat, as (x, y) pairs.
         Tensor of shape [number_of_active_heliostats, 2].
     bitmap_resolution : torch.Tensor
-        The resolution of the bitmap (width, height) in pixels.
+        Resolution of the bitmap (width, height) in pixels.
         Tensor of shape [2].
     solar_tower : SolarTower
-        The solar tower containing all target area definitions (planar and cylindrical).
+        Solar tower containing all target area definitions (planar and cylindrical).
     target_area_indices : torch.Tensor
         Global target area index for each heliostat (planar indices first, cylindrical second).
         Tensor of shape [number_of_active_heliostats].
@@ -960,7 +960,7 @@ def crop_flux_distributions_around_center(
         Flux density bitmaps, one per heliostat.
         Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
     solar_tower : SolarTower
-        The solar tower containing the physical target area dimensions.
+        Solar tower containing the physical target area dimensions.
     target_area_indices : torch.Tensor
         Global target area index for each bitmap (planar indices first, cylindrical second).
         Tensor of shape [number_of_bitmaps].
@@ -976,7 +976,7 @@ def crop_flux_distributions_around_center(
     Returns
     -------
     torch.Tensor
-        The cropped image regions.
+        Cropped and centered image regions.
         Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
     """
     device = get_device(device=device)
