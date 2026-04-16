@@ -730,76 +730,68 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # results_path = (
-    #     pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
-    # )
-    # if not results_path.exists():
-    #     raise FileNotFoundError(
-    #         f"Results file not found: {results_path}. Please run ``reconstruction_generate_results.py``"
-    #         f"or adjust the location of the results file and try again!"
-    #     )
-
-    # reconstruction_results = torch.load(
-    #     results_path,
-    #     weights_only=False,
-    #     map_location=device,
-    # )
-
-    results_path_motor_pos = (
-        pathlib.Path(args.results_dir) / "motor_position_optimization_results.pt"
+    kinematics_results_path = (
+        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
-    if not results_path_motor_pos.exists():
+    if not kinematics_results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path_motor_pos}. Please run ``reconstruction_generate_results.py``"
+            f"Results file not found: {kinematics_results_path}. Please run ``reconstruction_generate_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 
-    results_motor_pos = torch.load(
-        results_path_motor_pos,
+    kinematics_reconstruction_results = torch.load(
+        kinematics_results_path,
         weights_only=False,
         map_location=device,
     )
 
-    results_path_surface = (
-        pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
+    motor_pos_results_path = (
+        pathlib.Path(args.results_dir) / "motor_position_optimization_results.pt"
     )
-    if not results_path_surface.exists():
+    if not motor_pos_results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path_surface}. Please run ``reconstruction_generate_results.py``"
+            f"Results file not found: {motor_pos_results_path}. Please run ``reconstruction_generate_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 
-    results_surface = torch.load(
-        results_path_surface,
+    motor_pos_optimization_results = torch.load(
+        motor_pos_results_path,
+        weights_only=False,
+        map_location=device,
+    )
+
+    surface_results_path = (
+        pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
+    )
+    if not surface_results_path.exists():
+        raise FileNotFoundError(
+            f"Results file not found: {surface_results_path}. Please run ``reconstruction_generate_results.py``"
+            f"or adjust the location of the results file and try again!"
+        )
+
+    surface_reconstruction_results = torch.load(
+        surface_results_path,
         weights_only=False,
         map_location=device,
     )
 
     plots_path = pathlib.Path(args.plots_dir)
 
-    # plot_error_distribution(
-    #     reconstruction_results=reconstruction_results, save_dir=plots_path
-    # )
-
-    # plot_linear_and_angular_error_against_distance(
-    #     reconstruction_results=reconstruction_results,
-    #     number_of_points_to_plot=args.number_of_points_to_plot,
-    #     save_dir=plots_path,
-    #     random_seed=args.random_seed,
-    # )
-
-    # plot_kinematics_reconstruction_fluxes(
-    #     reconstruction_results=reconstruction_results, save_dir=plots_path
-    # )
-
-    plot_surface_reconstruction(
-        reconstruction_results=results_surface, save_dir=plots_path
+    plot_linear_and_angular_error_against_distance(
+        reconstruction_results=kinematics_reconstruction_results,
+        number_of_points_to_plot=args.number_of_points_to_plot,
+        save_dir=plots_path,
+        random_seed=args.random_seed,
     )
 
-    plot_motor_pos_fluxes(reconstruction_results=results_motor_pos, save_dir=plots_path)
+    plot_kinematics_reconstruction_fluxes(
+        reconstruction_results=kinematics_reconstruction_results, save_dir=plots_path
+    )
 
-    # plot_heliostat_positions(
-    #     surface_scenario=results_surface,
-    #     kinematics_scenario=reconstruction_results,
-    #     save_dir=plots_path,
-    # )
+    plot_surface_reconstruction(
+        reconstruction_results=surface_reconstruction_results, save_dir=plots_path
+    )
+
+    plot_motor_pos_fluxes(
+        reconstruction_results=motor_pos_optimization_results, save_dir=plots_path
+    )
