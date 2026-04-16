@@ -128,33 +128,33 @@ class TargetAreaPlanarListConfig:
     Attributes
     ----------
     target_area_list : list[TargetAreaPlanarConfig]
-        A list of target area configurations to be included in the scenario.
+        A list of planar target area configurations to be included in the scenario.
 
     Methods
     -------
     create_target_area_list_dict()
-       Create a dictionary containing the configuration parameters for the list of target areas.
+       Create a dictionary containing the configuration parameters for the list of planar target areas.
     """
 
     def __init__(self, target_area_list: list[TargetAreaPlanarConfig]) -> None:
         """
-        Initialize the target area list configuration.
+        Initialize the planar target area list configuration.
 
         Parameters
         ----------
         target_area_list : list[TargetAreaConfig]
-            The list of target area configurations included in the scenario.
+            The list of planar target area configurations included in the scenario.
         """
         self.target_area_list = target_area_list
 
     def create_target_area_list_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the list of target areas.
+        Create a dictionary containing the configuration parameters for the list of planar target areas.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the list of target areas.
+            A dictionary containing the configuration parameters for the list of planar target areas.
         """
         return {
             target_area.target_area_key: target_area.create_target_area_dict()
@@ -176,6 +176,8 @@ class TargetAreaCylindricalConfig:
         Position of the center of the cylindrical target area.
     height : torch.Tensor
         Height of the cylindrical target area.
+    axis : torch.Tensor
+        Axis of the cylindrical target area.
     normal : torch.Tensor
         Normal vector of the cylindrical target area.
     opening_angle : torch.Tensor
@@ -210,6 +212,8 @@ class TargetAreaCylindricalConfig:
             Position of the center of the cylindrical target area.
         height : torch.Tensor
             Height of the cylindrical target area.
+        axis : torch.Tensor
+            Axis of the cylindrical target area.
         normal : torch.Tensor
             Normal vector of the cylindrical target area.
         opening_angle : torch.Tensor
@@ -251,33 +255,33 @@ class TargetAreaCylindricalListConfig:
     Attributes
     ----------
     target_area_list : list[TargetAreaPlanarConfig]
-        A list of target area configurations to be included in the scenario.
+        A list of cylindrical target area configurations to be included in the scenario.
 
     Methods
     -------
     create_target_area_list_dict()
-       Create a dictionary containing the configuration parameters for the list of target areas.
+       Create a dictionary containing the configuration parameters for the list of cylindrical target areas.
     """
 
     def __init__(self, target_area_list: list[TargetAreaCylindricalConfig]) -> None:
         """
-        Initialize the target area list configuration.
+        Initialize the cylindrical target area list configuration.
 
         Parameters
         ----------
         target_area_list : list[TargetAreaConfig]
-            The list of target area configurations included in the scenario.
+            The list of cylindrical target area configurations included in the scenario.
         """
         self.target_area_list = target_area_list
 
     def create_target_area_list_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the list of target areas.
+        Create a dictionary containing the configuration parameters for the list of cylindrical target areas.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the list of target areas.
+            A dictionary containing the configuration parameters for the list of cylindrical target areas.
         """
         return {
             target_area.target_area_key: target_area.create_target_area_dict()
