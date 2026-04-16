@@ -196,7 +196,7 @@ class HeliostatRayTracer:
         The distortion sampler.
     distortions_loader : DataLoader
         The dataloader that loads the distortions.
-    bitmap_resolution : int
+    bitmap_resolution : torch.Tensor
         The resolution of the bitmap in both directions.
         Tensor of shape [2].
     ray_magnitude : float
@@ -216,10 +216,10 @@ class HeliostatRayTracer:
         Perform heliostat ray tracing.
     scatter_rays()
         Scatter the reflected rays around the preferred ray directions for each heliostat.
-    sample_bitmaps()
-        Sample bitmaps (flux density distributions) of the reflected rays on the target areas.
     get_bitmaps_per_target()
         Transform bitmaps per heliostat to bitmaps per target area.
+    bilinear_splatting()
+        Distribute ray intensities onto bitmap pixels using bilinear splatting.
     """
 
     def __init__(
