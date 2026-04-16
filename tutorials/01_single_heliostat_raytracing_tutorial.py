@@ -1,6 +1,7 @@
+"""Single heliostat ray tracing tutorial."""
+
 import math
 import pathlib
-from typing import Optional, Union
 
 import h5py
 import matplotlib.pyplot as plt
@@ -17,9 +18,7 @@ from artist.util.environment_setup import get_device
 # scenarios folder or create your own scenario that only contains a single heliostat.
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/single_heliostat_scenario.h5"
-)
+scenario_path = pathlib.Path("insert/path/to/scenario/here")
 
 # Set up logger.
 set_logger_config()
@@ -230,7 +229,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_indices: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: torch.device | str = "cuda",
 ) -> torch.Tensor:
     """
     Align the heliostat and perform heliostat ray tracing.
@@ -243,13 +242,13 @@ def align_and_trace_rays(
         A mask for the active heliostats.
     target_area_indices : torch.Tensor
         Indices of the target areas for each active heliostat.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+    device : torch.device | str
+        The device on which to initialize tensors (default is "cuda").
 
     Returns
     -------
     torch.Tensor
-        Distribution strengths used to generate the image on the receiver.
+        Flux density distribution bitmaps per heliostat on the receiver.
     """
     # Activate heliostats.
     scenario.heliostat_field.heliostat_groups[
@@ -287,7 +286,7 @@ def align_and_trace_rays(
 
 
 def plot_multiple_images(
-    *image_tensors: torch.Tensor, names: Optional[list[str]] = None
+    *image_tensors: torch.Tensor, names: list[str] | None = None
 ) -> None:
     """
     Plot multiple receiver ray tracing images in a grid.
@@ -298,10 +297,10 @@ def plot_multiple_images(
 
     Parameters
     ----------
-    image_tensors : torch.Tensor
+    *image_tensors : torch.Tensor
         An arbitrary number of image tensors to be plotted.
-    names : list[str], optional
-        Names of the images to be plotted.
+    names : list[str] | None, optional
+        Names of the images to be plotted (default is None).
     """
     # Calculate the number of images and determine the size of the grid based on the number of images.
     n = len(image_tensors)

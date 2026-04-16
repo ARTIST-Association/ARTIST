@@ -1,3 +1,5 @@
+"""Kinematic reconstruction tutorial."""
+
 import logging
 import pathlib
 
@@ -120,11 +122,11 @@ def create_plots(
 
     Parameters
     ----------
-    flux_before : torch.Tensor
+    fluxes_before : torch.Tensor
         Fluxes before the kinematics reconstruction.
-    flux_after : torch.Tensor
+    fluxes_after : torch.Tensor
         Fluxes after the kinematics reconstruction.
-    flux_measured : torch.Tensor
+    fluxes_measured : torch.Tensor
         Measured flux references.
     """
     for group_index, (flux_before, flux_after, flux_measured) in enumerate(

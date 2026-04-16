@@ -1,3 +1,5 @@
+"""Distributed heliostat ray tracing tutorial."""
+
 import pathlib
 
 import h5py

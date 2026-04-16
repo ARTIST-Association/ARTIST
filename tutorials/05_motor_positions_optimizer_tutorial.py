@@ -1,3 +1,5 @@
+"""Motor positions optimizer tutorial."""
+
 import pathlib
 
 import h5py
@@ -167,7 +169,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type: ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
