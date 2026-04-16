@@ -98,16 +98,18 @@ def generate_ideal_scenario(
     """
     device = get_device(device=device)
 
-    # Generate power plant configuration and target area list.
-    power_plant_config, target_area_list_config = (
-        paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file_path, device=device
-        )
+    # Include the power plant configuration and target area configurations.
+    (
+        power_plant_config,
+        target_area_list_planar_config,
+        target_area_list_cylindrical_config,
+    ) = paint_scenario_parser.extract_paint_tower_measurements(
+        tower_measurements_path=tower_file_path, device=device
     )
 
     # Set up light source configuration.
     light_source_config = LightSourceConfig(
-        light_source_key="sun_1",
+        light_source_key="sun",
         light_source_type=config_dictionary.sun_key,
         number_of_rays=10,
         distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -132,7 +134,8 @@ def generate_ideal_scenario(
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,
@@ -167,17 +170,18 @@ def generate_fitted_scenario(
     """
     device = get_device(device=device)
 
-    # Include the power plant configuration.
-    power_plant_config, target_area_list_config = (
-        paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file_path,
-            device=device,
-        )
+    # Include the power plant configuration and target area configurations.
+    (
+        power_plant_config,
+        target_area_list_planar_config,
+        target_area_list_cylindrical_config,
+    ) = paint_scenario_parser.extract_paint_tower_measurements(
+        tower_measurements_path=tower_file_path, device=device
     )
 
     # Include the light source configuration.
     light_source_config = LightSourceConfig(
-        light_source_key="sun_1",
+        light_source_key="sun",
         light_source_type=config_dictionary.sun_key,
         number_of_rays=10,
         distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -195,14 +199,18 @@ def generate_fitted_scenario(
 
     heliostat_files_list = [
         (
-            name,
+            str(name),
             pathlib.Path(
                 f"{data_directory}/{name}/{paint_mappings.SAVE_PROPERTIES}/{name}-{paint_mappings.HELIOSTAT_PROPERTIES_KEY}.json"
             ),
             deflectometry_file,
         )
         for name in selected_heliostats_list
-        if (deflectometry_file := find_latest_deflectometry_file(name, data_directory))
+        if (
+            deflectometry_file := find_latest_deflectometry_file(
+                str(name), data_directory
+            )
+        )
         is not None
     ]
 
@@ -239,7 +247,8 @@ def generate_fitted_scenario(
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,
@@ -277,7 +286,7 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
@@ -364,9 +373,9 @@ if __name__ == "__main__":
                 device=device,
             )
 
-        if case == "surface":
+        if case in ["hpo"]:
             scenario_path = (
-                pathlib.Path(args.scenarios_dir) / "deflectometry_scenario.h5"
+                pathlib.Path(args.scenarios_dir) / f"deflectometry_scenario1_{case}.h5"
             )
             if not scenario_path.parent.exists():
                 scenario_path.parent.mkdir(parents=True, exist_ok=True)
