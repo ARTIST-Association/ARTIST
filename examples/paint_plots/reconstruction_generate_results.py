@@ -16,7 +16,11 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util.environment_setup import (
+    DdpSetup,
+    get_device,
+    setup_distributed_environment,
+)
 
 set_logger_config()
 torch.manual_seed(7)
@@ -122,7 +126,7 @@ def generate_reconstruction_results(
             }
 
             kinematics_reconstructor = KinematicsReconstructor(
-                ddp_setup=cast(dict[str, Any], ddp_setup),
+                ddp_setup=cast(DdpSetup, ddp_setup),
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
