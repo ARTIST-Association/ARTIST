@@ -1,8 +1,8 @@
 """
 Generate results with the optimized parameters.
 
-Parameters
-----------
+Command-Line-Arguments
+----------------------
 config : str
     Path to the configuration file.
 device : str
@@ -47,7 +47,7 @@ def data_for_flux_plots(
     label: str,
     batch_size: int,
     device: torch.device | None = None,
-) -> dict[str, dict[str, torch.Tensor]]:
+) -> torch.Tensor:
     """
     Extract heliostat kinematics information.
 
@@ -64,6 +64,8 @@ def data_for_flux_plots(
         Direct normal irradiance in W/m^2.
     label : str
         Identifier fluxes.
+    batch_size : int
+        Number of heliostats to process per ray-tracing batch.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -80,8 +82,8 @@ def data_for_flux_plots(
 
     total_flux = torch.zeros(
         (
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            int(bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+            int(bitmap_resolution[index_mapping.unbatched_bitmap_u]),
         ),
         device=device,
     )
@@ -190,6 +192,8 @@ def generate_optimization_results(
         Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     dni : float
         Direct normal irradiance in W/m^2.
+    max_flux_density : float
+        Maximum allowed flux density on the target in W/m^2.
     hyperparameters : dict[str, Any]
         Optimized hyperparameters.
     device : torch.device | None

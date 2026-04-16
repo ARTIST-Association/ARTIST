@@ -1,3 +1,27 @@
+"""
+Perform the hyperparameter search for the surface reconstruction and save the results.
+
+This script executes the hyperparameter search with ``propulate`` and saves the result for
+further inspection.
+
+Command-Line-Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+propulate_logs_dir : str
+    Path to the directory where propulate will write log messages.
+parameter_ranges_surface : dict[str, int | float]
+    The reconstruction parameters.
+"""
+
 import argparse
 import json
 import logging
@@ -192,29 +216,6 @@ def surface_reconstructor_for_hpo(
 
 
 if __name__ == "__main__":
-    """
-    Perform the hyperparameter search for the surface reconstruction and save the results.
-
-    This script executes the hyperparameter search with ``propulate`` and saves the result for
-    further inspection.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    propulate_logs_dir : str
-        Path to the directory where propulate will write log messages.
-    parameter_ranges_surface : dict[str, int | float]
-        The reconstruction parameters.
-    """
     comm = MPI.COMM_WORLD
 
     rank = comm.Get_rank()
