@@ -12,22 +12,22 @@ class TowerTargetAreas:
     """
     The tower target areas.
 
-    Individual target areas are not saved as separate entities, instead separate tensors for each
-    target area property exist. Each property tensor or list contains information about this property
-    for all target areas.
+    Implementation of the abstract tower target areas. Individual target areas are not saved as separate
+    entities, instead separate tensors for each target area property exist. Each property tensor or list
+    contains information about this property for all target areas.
 
     Attributes
     ----------
     names : list[str]
-        The name of each target area.
+        Name of each target area.
     centers : torch.Tensor
-        The center point coordinate of each target area.
+        Center point coordinate of each target area.
         Tensor of shape [number_of_target_areas, 4].
-    normal_vectors : torch.Tensor
-        The normal vector of each planar target area.
+    normals : torch.Tensor
+        Normal vector of each target area.
         Tensor of shape [number_of_target_areas, 4].
     number_of_target_areas : int
-        The total number of planar target areas on all towers in the scenario.
+        The total number of target areas of this type on all towers in the scenario.
 
     Methods
     -------
@@ -49,14 +49,11 @@ class TowerTargetAreas:
         names : list[str]
             The name of each target area.
         centers : torch.Tensor
-            The center point coordinate of each target area.
+            Center point coordinate of each target area.
             Tensor of shape [number_of_target_areas, 4].
-        normal_vectors : torch.Tensor
-            The normal vector of each target area.
+        normals : torch.Tensor
+            Normal vector of each target area.
             Tensor of shape [number_of_target_areas, 4].
-        dimensions : torch.Tensor
-            The dimensions of each target area (width, then height).
-            Tensor of shape [number_of_target_areas, 2].
         """
         self.names = names
         self.centers = centers
@@ -69,7 +66,7 @@ class TowerTargetAreas:
         cls, config_file: h5py.File, device: torch.device | None = None
     ) -> Self:
         """
-        Load all planar target areas from an HDF5 file.
+        Load all target areas from an HDF5 file.
 
         Parameters
         ----------

@@ -23,18 +23,18 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
     Attributes
     ----------
     names : list[str]
-        The name of each planar target area.
+        Name of each planar target area.
     centers : torch.Tensor
-        The center point coordinate of each planar target area.
+        Center point coordinate of each planar target area.
         Tensor of shape [number_of_target_areas, 4].
     normals : torch.Tensor
-        The normal vector of each planar target area.
+        Normal vector of each planar target area.
         Tensor of shape [number_of_target_areas, 4].
     dimensions : torch.Tensor
-        The dimensions of each planar target area (width, then height).
+        Dimensions of each planar target area (width, then height).
         Tensor of shape [number_of_target_areas, 2].
     number_of_target_areas : int
-        The total number of planar target areas on all towers in the scenario.
+        Total number of planar target areas on all towers in the scenario.
 
     Methods
     -------
@@ -55,15 +55,15 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         Parameters
         ----------
         names : list[str]
-            The name of each target area.
+            Name of each planar target area.
         centers : torch.Tensor
-            The center point coordinate of each target area.
+            Center point coordinate of each planar target area.
             Tensor of shape [number_of_target_areas, 4].
         normals : torch.Tensor
-            The normal vector of each target area.
+            Normal vector of each planar target area.
             Tensor of shape [number_of_target_areas, 4].
         dimensions : torch.Tensor
-            The dimensions of each target area (width, then height).
+            Dimensions of each planar target area (width, then height).
             Tensor of shape [number_of_target_areas, 2].
         """
         super().__init__(
@@ -83,7 +83,7 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         Parameters
         ----------
         config_file : h5py.File
-            The HDF5 file containing the configuration to be loaded.
+            HDF5 file containing the configuration to be loaded.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -92,7 +92,7 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         Returns
         -------
         TowerTargetAreasPlanar
-            The target areas loaded from the HDF5 file.
+            Target areas loaded from the HDF5 file.
         """
         device = get_device(device=device)
 

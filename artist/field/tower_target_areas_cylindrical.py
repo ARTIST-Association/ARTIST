@@ -17,32 +17,35 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
     The cylindrical tower target areas.
 
     Individual cylindrical target areas are not saved as separate entities, instead separate tensors for each
-    cylindrical planar target area property exist. Each property tensor or list contains information about this property
-    for all cylindrical planar target areas.
+    cylindrical target area property exist. Each property tensor or list contains information about this property
+    for all cylindrical target areas.
 
     Attributes
     ----------
     names : list[str]
-        The name of each cylindrical target area.
-    radii : torch.Tensor
-        The radius of each cylindrical target area.
-        Tensor of shape [number_of_target_areas].
+        Name of each cylindrical target area.
     centers : torch.Tensor
-        The center coordinate of each cylindrical target area.
-        The center is defined at the halfway between top and bottom of the cylinder on the cylinder axis.
+        Center coordinate of each cylindrical target area.
+        The center is defined at the halfway point between top and bottom of the cylinder on the cylinder axis.
         Tensor of shape [number_of_target_areas, 4].
-    heights : torch.Tensor
-        The height of each cylindrical target area.
-        Tensor of shape [number_of_target_areas].
     normals : torch.Tensor
-        The normal vector of each cylindrical target area in radians.
+        Normal vector of each cylindrical target area in radians.
         Tensor of shape [number_of_target_areas, 4].
+    axes : torch.Tensor
+        Cylinder axes of all cylinder target areas.
+        Tensor of shape [number_of_target_areas, 4].
+    radii : torch.Tensor
+        Radius of each cylindrical target area.
+        Tensor of shape [number_of_target_areas].
+    heights : torch.Tensor
+        Height of each cylindrical target area.
+        Tensor of shape [number_of_target_areas].
     opening_angles : torch.Tensor
-        The opening angle of each cylindrical target area in radians.
+        Opening angle of each cylindrical target area in radians.
         For full cylinders this is two pi or 360°.
         Tensor of shape [number_of_target_areas].
     number_of_target_areas : int
-        The total number of cylindrical target areas on all towers in the scenario.
+        Total number of cylindrical target areas on all towers in the scenario.
 
     Methods
     -------
@@ -53,11 +56,11 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
     def __init__(
         self,
         names: list[str],
-        radii: torch.Tensor,
         centers: torch.Tensor,
-        heights: torch.Tensor,
-        axes: torch.Tensor,
         normals: torch.Tensor,
+        axes: torch.Tensor,
+        radii: torch.Tensor,
+        heights: torch.Tensor,
         opening_angles: torch.Tensor,
     ) -> None:
         """
@@ -66,22 +69,25 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         Parameters
         ----------
         names : list[str]
-            The name of each cylindrical target area.
-        radii : torch.Tensor
-            The radius of each cylindrical target area.
-            Tensor of shape [number_of_target_areas].
+            Name of each cylindrical target area.
         centers : torch.Tensor
-            The center coordinate of each cylindrical target area.
-            The center is defined at the halfway between top and bottom of the cylinder on the cylinder axis.
+            Center coordinate of each cylindrical target area.
+            The center is defined at the halfway point between top and bottom of the cylinder on the cylinder axis.
             Tensor of shape [number_of_target_areas, 4].
-        heights : torch.Tensor
-            The height of each cylindrical target area.
-            Tensor of shape [number_of_target_areas].
         normals : torch.Tensor
-            The normal vector of each cylindrical target area in radians.
+            Normal vector of each cylindrical target area in radians.
             Tensor of shape [number_of_target_areas, 4].
+        axes : torch.Tensor
+            Cylinder axes of all cylinder target areas.
+            Tensor of shape [number_of_target_areas, 4].
+        radii : torch.Tensor
+            Radius of each cylindrical target area.
+            Tensor of shape [number_of_target_areas].
+        heights : torch.Tensor
+            Height of each cylindrical target area.
+            Tensor of shape [number_of_target_areas].
         opening_angles : torch.Tensor
-            The opening angle of each cylindrical target area in radians.
+            Opening angle of each cylindrical target area in radians.
             For full cylinders this is two pi or 360°.
             Tensor of shape [number_of_target_areas].
         """
