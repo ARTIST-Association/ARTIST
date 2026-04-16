@@ -6,6 +6,8 @@ from collections.abc import Generator
 import numpy as np
 import pytest
 
+from artist.util.environment_setup import DdpSetup
+
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 import torch
@@ -48,15 +50,7 @@ def device(request: pytest.FixtureRequest) -> torch.device:
 
 
 @pytest.fixture
-def ddp_setup_for_testing() -> dict[
-    str,
-    torch.device
-    | bool
-    | int
-    | torch.distributed.ProcessGroup
-    | dict[int, list[int]]
-    | None,
-]:
+def ddp_setup_for_testing() -> DdpSetup:
     """
     Return a single device distributed setup used in tests.
 
@@ -64,21 +58,24 @@ def ddp_setup_for_testing() -> dict[
 
     Returns
     -------
-    dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None],
-        The single device distributed setup used in tests.
+    DdpSetup
+        A minimal distributed environment configuration suitable for single-device testing.
     """
-    return {
-        config_dictionary.device: None,
-        config_dictionary.is_distributed: False,
-        config_dictionary.is_nested: False,
-        config_dictionary.rank: 0,
-        config_dictionary.world_size: 1,
-        config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: None,
-        config_dictionary.heliostat_group_rank: 0,
-        config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: None,
-    }
+    return DdpSetup(
+        device=None,
+        is_distributed=False,
+        is_nested=False,
+        rank=0,
+        world_size=1,
+        process_subgroup=None,
+        groups_to_ranks_mapping={0: [0, 1]},
+        heliostat_group_rank=0,
+        heliostat_group_world_size=1,
+        ranks_to_groups_mapping={
+            0: [0],
+            1: [0],
+        },
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)

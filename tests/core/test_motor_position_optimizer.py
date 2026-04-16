@@ -1,5 +1,4 @@
 import pathlib
-from typing import Any
 
 import h5py
 import pytest
@@ -10,6 +9,7 @@ from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
+from artist.util.environment_setup import DdpSetup
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ def test_motor_positions_optimizer(
     early_stopping_window: int,
     scheduler: str,
     request: pytest.FixtureRequest,
-    ddp_setup_for_testing: dict[str, Any],
+    ddp_setup_for_testing: DdpSetup,
     device: torch.device,
 ) -> None:
     """
@@ -88,7 +88,7 @@ def test_motor_positions_optimizer(
         The scheduler to be used.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    ddp_setup_for_testing : dict[str, Any]
+    ddp_setup_for_testing : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
@@ -143,8 +143,7 @@ def test_motor_positions_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    ddp_setup_for_testing[config_dictionary.device] = device
-    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+    ddp_setup_for_testing["device"] = device
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
