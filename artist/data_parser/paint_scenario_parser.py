@@ -56,9 +56,11 @@ def extract_paint_tower_measurements(
     Returns
     -------
     PowerPlantConfig
-        The configuration of the power plant.
-    TargetAreaListConfig
-        The configuration of the tower target areas.
+        Configuration of the power plant.
+    TargetAreaPlanarListConfig
+        Configurations of the planar tower target areas.
+    TargetAreaCylindricalListConfig
+        Configurations of the cylindrical tower target areas.
     """
     device = get_device(device=device)
 

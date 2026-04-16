@@ -61,9 +61,9 @@ class TargetAreaPlanarConfig:
         Position of the target area's center.
     normal_vector : torch.Tensor
         Normal vector to the target plane.
-    plane_e : float
+    plane_e : torch.Tensor
         Size of the target area in the east direction.
-    plane_u : float
+    plane_u : torch.Tensor
         Size of the target area in the up direction.
 
     Methods
@@ -77,8 +77,8 @@ class TargetAreaPlanarConfig:
         target_area_key: str,
         center: torch.Tensor,
         normal_vector: torch.Tensor,
-        plane_e: float,
-        plane_u: float,
+        plane_e: torch.Tensor,
+        plane_u: torch.Tensor,
     ) -> None:
         """
         Initialize the target area configuration for planar target areas.
@@ -91,9 +91,9 @@ class TargetAreaPlanarConfig:
             Position of the target area's center.
         normal_vector : torch.Tensor
             Normal vector to the target plane.
-        plane_e : float
+        plane_e : torch.Tensor
             Size of the target area in the east direction.
-        plane_u : float
+        plane_u : torch.Tensor
             Size of the target area in the up direction.
         """
         self.target_area_key = target_area_key
@@ -170,7 +170,7 @@ class TargetAreaCylindricalConfig:
     ----------
     target_area_key : str
         ID used to identify the target area in the HDF5 file.
-    radius : float
+    radius : torch.Tensor
         Radius of the cylindrical target area.
     center : torch.Tensor
         Position of the center of the cylindrical target area.
@@ -204,7 +204,7 @@ class TargetAreaCylindricalConfig:
         ----------
         target_area_key : str
             ID used to identify the target area in the HDF5 file.
-        radius : float
+        radius : torch.Tensor
             Radius of the cylindrical target area.
         center : torch.Tensor
             Position of the center of the cylindrical target area.

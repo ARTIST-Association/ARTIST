@@ -60,8 +60,8 @@ target_area_list_planar_config = TargetAreaPlanarConfig(
     target_area_key="planar",
     center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
     normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-    plane_e=8.629666667,
-    plane_u=7.0,
+    plane_e=torch.tensor([8.629666667], device=device),
+    plane_u=torch.tensor([7.0], device=device),
 )
 target_area_planar_list_config = TargetAreaPlanarListConfig(
     [target_area_list_planar_config]
@@ -70,12 +70,12 @@ target_area_planar_list_config = TargetAreaPlanarListConfig(
 # Include a single cylindrical tower target area.
 target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
     target_area_key="cylinder",
-    radius=4.14,
+    radius=torch.tensor([4.14], device=device),
     center=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
-    height=6.0,
+    height=torch.tensor([6.0], device=device),
     axis=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
     normal=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-    opening_angle=60,
+    opening_angle=torch.tensor([60], device=device),
 )
 target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
     [target_area_list_cylindrical_config]

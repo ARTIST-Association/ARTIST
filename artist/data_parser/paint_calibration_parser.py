@@ -109,7 +109,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
         Returns
         -------
-        The measured flux density distributions.
+        torch.Tensor
+            The measured flux density distributions.
             Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
         torch.Tensor
             The calibration focal spots.
