@@ -105,14 +105,16 @@ def data_for_flux_plots(
         )
 
         # Align heliostats.
-        if id == "before":
+        if label == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_indices],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices, device=device
+                ),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
-        elif id == "after":
+        elif label == "after":
             heliostat_group.align_surfaces_with_motor_positions(
                 motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
@@ -196,7 +198,7 @@ def generate_optimization_results(
     Returns
     -------
     dict[str, dict[str, Any]]
-        Mapping from heliostat name to per-centroid loss arrays and, later, positions.
+        Optimization results.
     """
     device = get_device(device=device)
 
@@ -222,12 +224,12 @@ def generate_optimization_results(
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 900,
+            config_dictionary.max_epoch: 500,
             config_dictionary.batch_size: batch_size,
             config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
-            config_dictionary.early_stopping_patience: 20,
-            config_dictionary.early_stopping_window: 50,
+            config_dictionary.early_stopping_patience: 500,
+            config_dictionary.early_stopping_window: 500,
         }
         scheduler_dict = {
             config_dictionary.scheduler_type: hyperparameters["scheduler"],
@@ -241,8 +243,9 @@ def generate_optimization_results(
             config_dictionary.cooldown: hyperparameters["cooldown"],
         }
         constraint_dict = {
-            config_dictionary.rho_energy: hyperparameters["rho_energy"],
-            config_dictionary.rho_pixel: hyperparameters["rho_pixel"],
+            config_dictionary.rho_flux_integral: hyperparameters["rho_flux_integral"],
+            config_dictionary.rho_local_flux: hyperparameters["rho_local_flux"],
+            config_dictionary.rho_intercept: hyperparameters["rho_intercept"],
             config_dictionary.max_flux_density: max_flux_density,
         }
         optimization_configuration = {
@@ -326,7 +329,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./PAINT_data")
+    data_dir_default = config.get("data_dir", "./paint_data")
     device_default = config.get("device", "cuda")
     scenarios_dir_default = config.get(
         "scenarios_dir", "./examples/hyperparameter_optimization/scenarios"
@@ -367,7 +370,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_surface.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "deflectometry_scenario.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The optimization scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -375,7 +378,7 @@ if __name__ == "__main__":
 
     # DNI in W/m^2 and maximum allowed flux density in ?.
     dni = 850
-    max_flux_density = 2700
+    max_flux_density = 1000000
     # Incident ray direction.
     incident_ray_direction = torch.nn.functional.normalize(
         torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
@@ -383,7 +386,7 @@ if __name__ == "__main__":
         dim=0,
     )
     # Receiver.
-    target_area_index = 1
+    target_area_index = 3
     # Target distribution.
     e_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=120, device=device
