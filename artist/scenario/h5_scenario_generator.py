@@ -74,17 +74,19 @@ class H5ScenarioGenerator:
         file_path : pathlib.Path
             File path to the HDF5 to be saved.
         power_plant_config : PowerPlantConfig
-            The power plant configuration object.
-        target_area_list_config : TargetAreaListConfig
-            The target area list configuration object.
+            Power plant configuration object.
+        target_area_list_planar_config : TargetAreaPlanarListConfig
+            Planar target area list configuration object.
+        target_area_list_cylindrical_config : TargetAreaCylindricalListConfig
+            Cylindrical target area list configuration object.
         light_source_list_config : LightSourceListConfig
-            The light source list configuration object.
+            Light source list configuration object.
         heliostat_list_config : HeliostatListConfig
-            The heliostat_list configuration object.
+            Heliostat_list configuration object.
         prototype_config : PrototypeConfig
-            The prototype configuration object.
+            Prototype configuration object.
         version : float
-            The version of the scenario generator being used (default is 1.0).
+            Version of the scenario generator being used (default is 1.0).
         """
         self.file_path = file_path
         if not self.file_path.parent.is_dir():
@@ -254,7 +256,7 @@ class H5ScenarioGenerator:
                     self.target_area_list_planar_config.create_target_area_list_dict()
                 ),
             )
-            # Include parameters for the tower cylindrical target areas.
+            # Include parameters for the cylindrical tower target areas.
             log.info("Including parameters for the cylindrical target areas.")
             self._include_parameters(
                 file=f,
