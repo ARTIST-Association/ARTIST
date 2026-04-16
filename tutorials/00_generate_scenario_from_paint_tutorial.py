@@ -57,7 +57,7 @@ if not pathlib.Path(scenario_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
-# Include the power plant and target area configuration.
+# Include the power plant and target area configurations.
 (
     power_plant_config,
     target_area_list_planar_config,
@@ -67,8 +67,8 @@ if not pathlib.Path(scenario_path).parent.is_dir():
 )
 
 # Include the light source configuration.
-light_source1_config = LightSourceConfig(
-    light_source_key="sun_1",
+light_source_config = LightSourceConfig(
+    light_source_key="sun",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=10,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -77,11 +77,12 @@ light_source1_config = LightSourceConfig(
 )
 
 # Create a list of light source configs - in this case only one.
-light_source_list = [light_source1_config]
+light_source_list = [light_source_config]
 
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
+# Create heliostat surfaces.
 number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
 nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
 nurbs_deflectometry_step_size = 100

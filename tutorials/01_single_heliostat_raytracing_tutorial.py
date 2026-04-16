@@ -49,7 +49,9 @@ print(
 )
 
 # We only consider one heliostat for the beginning.
-# Choose the first heliostat with index 0.
+# There is only one heliostat in the scenario. That is why the active_heliostat_mask has only one element.
+# To activate a heliostat once, you write a 1 at the index of the heliostat you want to activate.
+# In our case we write a 1 at index 0. To activate this heliostat twice (this would duplicate the heliostat) you would write a 2 at index 0.
 active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 
 # Activate the heliostat. Only activated heliostats will be aligned or ray-traced.
@@ -236,18 +238,18 @@ def align_and_trace_rays(
     Parameters
     ----------
     light_direction : torch.Tensor
-        The direction of the incoming light on the heliostat.
+        Direction of the incoming light on the heliostat.
     active_heliostats_mask : torch.Tensor
         A mask for the active heliostats.
     target_area_indices : torch.Tensor
-        The indices of the target areas for each active heliostat.
+        Indices of the target areas for each active heliostat.
     device : Union[torch.device, str]
         The device on which to initialize tensors (default is cuda).
 
     Returns
     -------
     torch.Tensor
-        The distribution strengths used to generate the image on the receiver.
+        Distribution strengths used to generate the image on the receiver.
     """
     # Activate heliostats.
     scenario.heliostat_field.heliostat_groups[
@@ -299,7 +301,7 @@ def plot_multiple_images(
     image_tensors : torch.Tensor
         An arbitrary number of image tensors to be plotted.
     names : list[str], optional
-        The names of the images to be plotted.
+        Names of the images to be plotted.
     """
     # Calculate the number of images and determine the size of the grid based on the number of images.
     n = len(image_tensors)

@@ -55,7 +55,7 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
-# Include a single planar tower area (receiver).
+# Include a single planar tower target area (receiver).
 target_area_list_planar_config = TargetAreaPlanarConfig(
     target_area_key="receiver",
     center=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
@@ -63,12 +63,11 @@ target_area_list_planar_config = TargetAreaPlanarConfig(
     plane_e=8.629666667,
     plane_u=7.0,
 )
-
-# Include the planar tower area configurations.
 target_area_planar_list_config = TargetAreaPlanarListConfig(
     [target_area_list_planar_config]
 )
 
+# Include a single cylindrical tower target area (cylinder).
 target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
     target_area_key="cylinder",
     radius=4.14,
@@ -83,8 +82,8 @@ target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
 )
 
 # Include the light source configuration.
-light_source1_config = LightSourceConfig(
-    light_source_key="sun_1",
+light_source_config = LightSourceConfig(
+    light_source_key="sun",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=10,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -93,11 +92,12 @@ light_source1_config = LightSourceConfig(
 )
 
 # Create a list of light source configs - in this case only one.
-light_source_list = [light_source1_config]
+light_source_list = [light_source_config]
 
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
+# Create heliostat surfaces.
 (
     facet_translation_vectors,
     canting,
@@ -183,14 +183,14 @@ prototype_config = PrototypeConfig(
 )
 
 # Include the configuration for a heliostat.
-heliostat1 = HeliostatConfig(
+heliostat = HeliostatConfig(
     name="heliostat_1",
     heliostat_id=1,
     position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
 )
 
 # Create a list of all the heliostats - in this case, only one.
-heliostat_list = [heliostat1]
+heliostat_list = [heliostat]
 
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
