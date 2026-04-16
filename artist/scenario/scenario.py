@@ -25,14 +25,14 @@ class Scenario:
     Attributes
     ----------
     power_plant_position : torch.Tensor
-        The position of the power plant as latitude, longitude, altitude.
+        Position of the power plant as latitude, longitude, altitude.
         Tensor of shape [3].
-    target_areas : TowerTargetAreas
-        All target areas on all towers of the power plant.
+    solar_tower : SolarTower
+        Solar tower with all target areas.
     light_sources : LightSourceArray
-        A list of light sources included in the scenario.
+        Light sources included in the scenario.
     heliostat_field : HeliostatField
-        The heliostat field for the scenario.
+        Heliostat field for the scenario.
 
     Methods
     -------
@@ -57,22 +57,22 @@ class Scenario:
         Initialize the scenario.
 
         A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
-        least one target area that is a receiver, at least one light source and at least one heliostat in a heliostat field.
+        least one solar tower with at least one target area, at least one light source and at least one heliostat in a heliostat field.
         ``ARTIST`` also supports scenarios that contain multiple target areas, multiple light sources, and multiple heliostats.
         (Note: Currently only a single light source can be provided.)
 
         Parameters
         ----------
         power_plant_position : torch.Tensor,
-            The position of the power plant as latitude, longitude and altitude.
+            Position of the power plant as latitude, longitude and altitude.
             Tensor of shape [3].
-        target_areas : TargetAreaArray
-            A list of tower target areas included in the scenario.
+        solar_tower : SolarTower
+            Solar tower with all target areas.
         light_sources : LightSourceArray
-            A list of light sources included in the scenario.
+            Light sources included in the scenario.
             Currently only a single light source can be provided.
         heliostat_field : HeliostatField
-            A field of heliostats included in the scenario.
+            Field of heliostats included in the scenario.
         """
         self.power_plant_position = power_plant_position
         self.solar_tower = solar_tower
@@ -276,14 +276,14 @@ class Scenario:
         Parameters
         ----------
         heliostat_group : HeliostatGroup
-            The current heliostat group.
+            Current heliostat group.
         string_mapping : list[tuple[str, str, torch.Tensor]] | None
-            Strings that map heliostats to target areas and incident ray direction tensors (default is None).
+            Map from heliostats to target areas and incident ray directions (default is None).
         single_incident_ray_direction : torch.Tensor
-            The default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
+            Default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
             Tensor of shape [4].
         single_target_area_index : int
-            The default target area index (default is 0).
+            Default target area index (default is 0).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -292,13 +292,13 @@ class Scenario:
         Returns
         -------
         torch.Tensor
-            The mask specifying which heliostat is selected and how many times.
+            Mask specifying which heliostat is selected and how many times.
             Tensor of shape [number_of_heliostats_in_group].
         torch.Tensor
-            The indices of target areas for all selected heliostats in order.
+            Indices of target areas for all selected heliostats in order.
             Tensor of shape [number_of_active_heliostats_in_group].
         torch.Tensor
-            The incident ray directions for the selected heliostats in order.
+            Incident ray directions for the selected heliostats in order.
             Tensor of shape [number_of_active_heliostats_in_group, 4].
         """
         device = get_device(device=device)
