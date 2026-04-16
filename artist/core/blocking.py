@@ -215,7 +215,7 @@ def soft_ray_blocking_mask(
     epsilon: float = 1e-12,
     softness: float = 1000.0,
     alpha: float = 100.0,
-    ray_origin_offset=0.05,
+    ray_origin_offset: float = 0.05,
 ) -> torch.Tensor:
     r"""
     Compute a mask indicating which rays are blocked, using a soft differentiable approach.
@@ -397,7 +397,7 @@ def morton_codes(coordinates: torch.Tensor, epsilon: float = 1e-6) -> torch.Tens
     derived from heliostat field layouts, where heliostats commonly share a similar up component and
     blocking is determined by the east and north component.
 
-    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30 bit Morton codes using torch.int32.
+    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton codes using torch.int32.
 
     Reference: Morton, G.M. (1966) A Computer Oriented Geodetic Data Base and a New Technique in File
     Sequencing. IBM Ltd., Ottawa.
@@ -408,7 +408,7 @@ def morton_codes(coordinates: torch.Tensor, epsilon: float = 1e-6) -> torch.Tens
         The coordinates to transform into Morton codes.
         Tensor of shape [number_of_blocking_planes, 3].
     epsilon : float
-        A small epsilon value (default is 1e-6).
+        A small epsilon value to avoid division by zero (default is 1e-6).
 
     Returns
     -------
@@ -453,7 +453,7 @@ def longest_common_prefix(
     indicates how close (spatially) two blocking objects are. The LCP is the number of highest-order
     bits that are identical in two Morton codes.
 
-    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30 bit Morton codes using torch.int32.
+    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton codes using torch.int32.
 
     Parameters
     ----------
