@@ -30,7 +30,7 @@ class KinematicsReconstructor:
     Attributes
     ----------
     ddp_setup : DdpSetup
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     scenario : Scenario
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
@@ -73,7 +73,7 @@ class KinematicsReconstructor:
         Parameters
         ----------
         ddp_setup : DdpSetup
-            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+            Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
         scenario : Scenario
             The scenario.
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
