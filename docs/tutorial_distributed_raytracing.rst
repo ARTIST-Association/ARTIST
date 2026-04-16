@@ -151,7 +151,9 @@ and align the surfaces for all activated heliostats with the incident ray direct
 .. code-block:: python
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_indices],
+        aim_points=scenario.solar_tower.get_centers_of_target_areas(
+            target_area_indices, device=device
+        ),
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -182,7 +184,7 @@ We can now perform ray tracing per heliostat with ``trace_rays()``:
 
 .. code-block:: python
 
-    bitmaps_per_heliostat = ray_tracer.trace_rays(
+    bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,

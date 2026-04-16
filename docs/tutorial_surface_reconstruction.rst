@@ -160,11 +160,11 @@ through the weights specified in the constraints dict. Setting a weight to zero 
 
 .. code-block:: python
 
+    # Configure the regularizers and constraints.
     constraint_dict = {
         config_dictionary.weight_smoothness: 0.005,
         config_dictionary.weight_ideal_surface: 0.005,
-        config_dictionary.initial_lambda_energy: 0.1,
-        config_dictionary.rho_energy: 1.0,
+        config_dictionary.rho_flux_integral: 1.0,
         config_dictionary.energy_tolerance: 0.01,
     }
 
@@ -172,15 +172,16 @@ In addition to the regularizers, ``ARTIST`` applies an *energy conservation cons
 reconstruction. This constraint ensures that the total flux integral of the simulated flux images does not change
 significantly during optimization.
 
-The parameters ``initial_lambda_energy`` and ``rho_energy`` are coefficients of an *Augmented Lagrangian formulation*
-used to enforce this constraint.
+The parameter ``rho_flux_integral`` is a coefficient of an *Augmented Lagrangian formulation*
+used to enforce this constraint. To understand the *Augmented Lagrangian formulation*, consider the parameter
+``lambda_flux_integral`` which is set automatically inside the ``MotorPositionsOptimizer``. This is the Lagrange
+multiplier associated with the flux integral constraint. It linearly penalizes deviations from the reference flux integral
+and is updated iteratively during the optimization based on the current constraint violation. If the
+simulated energy deviates more strongly from the reference energy, ``lambda_energy`` increases, thereby strengthening
+the enforcement of the constraint in the next iteration.
+For the ``constraint_dict`` we need to define:
 
-``lambda_energy``
-  The Lagrange multiplier associated with the energy integral constraint. It linearly penalizes deviations from the
-  reference energy and is updated iteratively during the optimization based on the current constraint violation. If the
-  simulated energy deviates more strongly from the reference energy, ``lambda_energy``  increases, thereby strengthening
-  the enforcement of the constraint in the next iteration.
-``rho_energy``
+``rho_flux_integral``
   The quadratic penalty weight controlling the strength of the squared constraint term.
 ``energy_tolerance``
   Specifies how much the flux integral may deviate relative to the initial surface.
@@ -233,7 +234,7 @@ With these parameters defined, we can instantiate a ``SurfaceReconstructor`` and
     )
 
     # Reconstruct surfaces.
-    _ = surface_reconstructor.reconstruct_surfaces(
+    final_loss_per_heliostat, _ = surface_reconstructor.reconstruct_surfaces(
         loss_definition=loss_definition, device=device
     )
 

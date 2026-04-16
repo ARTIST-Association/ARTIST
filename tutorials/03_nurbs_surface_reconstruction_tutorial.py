@@ -499,7 +499,7 @@ with setup_distributed_environment(
     )
 
     # Reconstruct surfaces.
-    final_loss_per_heliostat = surface_reconstructor.reconstruct_surfaces(
+    final_loss_per_heliostat, _ = surface_reconstructor.reconstruct_surfaces(
         loss_definition=loss_definition, device=device
     )
 
