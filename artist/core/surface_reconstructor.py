@@ -32,7 +32,7 @@ class SurfaceReconstructor:
     distributions. The optimizable parameters for this optimization process are the
     NURBS control points.
     The reconstruction loss is defined by the loss between the flux density predictions and measurements.
-    Further, the reconstruction is constrained by energy constraints to preserve energy in the reconstructed
+    Further, the reconstruction is constrained by a flux integral constraints to preserve energy in the reconstructed
     surfaces. There are also optional regularizers to keep the NURBS control points close to the ideal
     surface and smooth.
 
@@ -50,12 +50,12 @@ class SurfaceReconstructor:
         The parameters for the scheduler.
     constraint_dict : dict[str, Any]
         The parameters for the constraints.
-    dni : float | None
-        Direct normal irradiance in W/m² used to scale the ray-traced flux. If None, the
-        ``HeliostatRayTracer`` uses its own default.
     number_of_surface_points : torch.Tensor
         The number of surface points of the reconstructed surfaces.
         Tensor of shape [2].
+    dni : float | None
+        Direct normal irradiance in W/m² used to scale the ray-traced flux. If None, the
+        ``HeliostatRayTracer`` uses its own default.
     bitmap_resolution : torch.Tensor
         The resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
