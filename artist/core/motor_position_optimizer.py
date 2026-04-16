@@ -21,8 +21,9 @@ class MotorPositionsOptimizer:
     An optimizer used to find optimal motor positions for the heliostats.
 
     The optimization loss is defined as the loss between the combined predicted and target
-    flux densities. Additionally, there is one constraint that maximizes the flux integral and
-    one that constrains the maximum pixel intensity (maximum allowed flux density).
+    flux densities. Additionally, there is one constraint that maximizes the flux integral,
+    one that maximizes the intercept factor and that constrains the local maximum intensity
+    (maximum allowed flux density).
 
     Attributes
     ----------
@@ -31,26 +32,26 @@ class MotorPositionsOptimizer:
     scenario : Scenario
         The scenario.
     optimizer_dict : dict[str, Any]
-        The parameters for the optimization.
+        Parameters for the optimization.
     scheduler_dict : dict[str, Any]
-        The parameters for the scheduler.
+        Parameters for the scheduler.
     constraint_dict : dict[str, Any]
-        The parameters for the constraints.
+        Parameters for the constraints.
     incident_ray_direction : torch.Tensor
-        The incident ray direction during the optimization.
+        Incident ray direction during the optimization.
         Tensor of shape [4].
     target_area_index : int
-        The index of the target used for the optimization.
+        Index of the target used for the optimization.
     ground_truth : torch.Tensor
-        The desired focal spot or distribution.
+        Desired focal spot or distribution.
         Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     dni : float
         Direct normal irradiance in W/m^2.
     bitmap_resolution : torch.Tensor
-        The resolution of all bitmaps during reconstruction.
+        Resolution of all bitmaps during reconstruction.
         Tensor of shape [2].
     epsilon : float
-        A small value.
+        A small value to avoid division by zero.
 
     Methods
     -------
@@ -81,22 +82,22 @@ class MotorPositionsOptimizer:
         scenario : Scenario
             The scenario.
         optimization_configuration : dict[str, Any]
-            The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+            Parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
         incident_ray_direction : torch.Tensor
-            The incident ray direction during the optimization.
+            Incident ray direction during the optimization.
             Tensor of shape [4].
         target_area_index : int
-            The index of the target used for the optimization.
+            Index of the target used for the optimization.
         ground_truth : torch.Tensor
-            The desired focal spot or distribution.
+            Desired focal spot or distribution.
             Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
         dni : float
             Direct normal irradiance in W/m^2.
         bitmap_resolution : torch.Tensor
-            The resolution of all bitmaps during optimization (default is torch.tensor([256,256])).
+            Resolution of all bitmaps during optimization (default is torch.tensor([256,256])).
             Tensor of shape [2].
         epsilon : float | None
-            A small value (default is 1e-12).
+            A small value to avoid division by zero. (default is 1e-12).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -125,7 +126,7 @@ class MotorPositionsOptimizer:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, dict[str, list], torch.Tensor, torch.Tensor, torch.Tensor]:
         r"""
         Optimize the motor positions.
 
@@ -172,7 +173,17 @@ class MotorPositionsOptimizer:
         Returns
         -------
         torch.Tensor
-            The final loss of the motor position optimization.
+            Final loss of the motor position optimization.
+        dict[str, list]
+            Loss history over epochs, with keys ``"total_loss"``, ``"flux_loss"``,
+            ``"local_flux_constraint"``, ``"intercept_constraint"``, ``"flux_integral_constraint"``,
+            and ``"flux_integral"``. Each value is a list of per-epoch scalar floats.
+        torch.Tensor
+            Final intercept factors for each heliostat.
+        torch.Tensor
+            Final fraction of rays hitting the target, neglecting blocking effects, for each heliostat.
+        torch.Tensor
+            Final fraction of rays not being blocked, for each heliostat.
         """
         device = get_device(device)
 

@@ -129,7 +129,7 @@ class KinematicsReconstructor:
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
         dict[str, list]
-            Loss history over epochs, with keys "total_loss". Each value is a list of per-epoch scalar floats.
+            Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
         """
         device = get_device(device=device)
 
