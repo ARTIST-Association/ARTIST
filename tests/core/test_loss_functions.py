@@ -245,7 +245,7 @@ def test_focal_spot_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The focal spot loss expects ['reduction_dimensions', 'device', 'target_area_indices'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_indices as keyword argument."
+            "The focal spot loss expects ['device', 'target_area_indices'] as keyword arguments. Please add device as keyword argument. Please add target_area_indices as keyword argument."
             in str(exc_info.value)
         )
     else:

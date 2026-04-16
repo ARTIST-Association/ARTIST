@@ -168,7 +168,7 @@ class FocalSpotLoss(Loss):
             Tensor of shape [number_of_samples, 4].
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_indices`` and ``device`` are expected keyword arguments for the focal spot loss.
+            The ``target_area_indices`` and ``device`` are expected keyword arguments for the focal spot loss.
 
         Raises
         ------
@@ -181,7 +181,7 @@ class FocalSpotLoss(Loss):
             The focal spot loss.
             Tensor of shape [number_of_samples].
         """
-        expected_kwargs = ["reduction_dimensions", "device", "target_area_indices"]
+        expected_kwargs = ["device", "target_area_indices"]
         errors = []
         for key in expected_kwargs:
             if key not in kwargs:
