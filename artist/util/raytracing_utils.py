@@ -28,7 +28,6 @@ def reflect(
     torch.Tensor
         The reflected rays.
         Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]
-
     """
     return (
         incident_ray_directions
@@ -232,14 +231,17 @@ def line_cylinder_intersections(
     and Lambert-weighted intensities.
 
     Pipeline:
+
     1. Select target area per heliostat (or default to index 0).
     2. Build local cylinder frame and transform ray origins/directions into that frame.
     3. Solve quadratic for intersections with the infinite cylinder (x^2 + y^2 = r^2).
     4. Select the smallest strictly positive intersection distance per ray.
     5. Compute local intersection points, surface normals, and cosine-based intensity factor.
     6. Filter to finite cylinder patch bounds:
+
        - height range [0, h]
        - angle range [0, opening_angle]
+
     7. Convert valid local coordinates to continuous bitmap coordinates.
 
     Parameters
