@@ -27,7 +27,7 @@ torch.cuda.manual_seed(7)
 
 def create_fluxes(
     data_parser: CalibrationDataParser,
-    heliostat_data_mapping,
+    heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -35,7 +35,9 @@ def create_fluxes(
     Parameters
     ----------
     data_parser : CalibrationDataParser
-        The data parser used to load calibration data from files.
+        Data parser used to load calibration data from files.
+    heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+        Mapping from heliostats to calibration data files.
 
     Returns
     -------
@@ -114,16 +116,16 @@ def create_plots(
     fluxes_measured: torch.Tensor,
 ) -> None:
     """
-    Create the plots with the reconstruction results.
+    Create the flux plots using the reconstruction results.
 
     Parameters
     ----------
     flux_before : torch.Tensor
-        Flux before kinematics reconstruction.
+        Fluxes before the kinematics reconstruction.
     flux_after : torch.Tensor
-        Flux after kinematics reconstruction.
+        Fluxes after the kinematics reconstruction.
     flux_measured : torch.Tensor
-        Measured flux reference.
+        Measured flux references.
     """
     for group_index, (flux_before, flux_after, flux_measured) in enumerate(
         zip(fluxes_before, fluxes_after, fluxes_measured)
@@ -279,7 +281,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type:ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
