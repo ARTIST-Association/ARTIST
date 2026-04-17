@@ -35,6 +35,8 @@ def find_viable_heliostats(
         The type of calibration image to use for the kinematic reconstruction, i.e., ''flux'', or ''flux-centered''.
     surface_reconstruction_image_type : str
         The type of calibration image to use for the surface reconstruction, i.e., ''flux'', or ''flux-centered''.
+    excluded_heliostats : set[str]
+        Heliostat names to exclude from the reconstruction process.
     heliostat_list : list[str] | None
         An optional list of heliostat names, if included only these heliostats will be collected (default is None).
 
@@ -169,6 +171,8 @@ if __name__ == "__main__":
         Type of calibration image to use for the kinematic reconstruction, i.e., flux or flux-centered.
     surface_reconstruction_image_type : str
         Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
+    excluded_heliostats_for_reconstruction : list[str]
+        Heliostat names to exclude from the reconstruction process.
     heliostat_list_baseline : list[str]
         List of all heliostat names included in the baseline measurement.
     """
@@ -258,17 +262,17 @@ if __name__ == "__main__":
         default=surface_reconstruction_image_type_default,
     )
     parser.add_argument(
-        "--heliostat_list_baseline",
-        type=list[str],
-        help="List of all heliostat names included in the baseline measurement.",
-        default=heliostat_list_baseline_default,
-    )
-    parser.add_argument(
         "--excluded_heliostats_for_reconstruction",
         type=str,
         help="Heliostat names to exclude.",
         nargs="+",
         default=excluded_heliostats_default,
+    )
+    parser.add_argument(
+        "--heliostat_list_baseline",
+        type=list[str],
+        help="List of all heliostat names included in the baseline measurement.",
+        default=heliostat_list_baseline_default,
     )
 
     # Re-parse the full set of arguments.

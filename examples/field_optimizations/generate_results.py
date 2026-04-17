@@ -149,11 +149,11 @@ def create_deflectometry_surface_for_comparison(
     results_path: pathlib.Path,
     measured_data_dir: pathlib.Path,
     heliostats_for_plots: list[str],
-    number_of_surface_points: dict[str, float | int],
+    number_of_surface_points: int,
     device: torch.device | None,
 ) -> None:
     """
-    Create the surface from the measured deflectometry as comparison.
+    Create the surface from the measured deflectometry as comparison in the surface reconstruction.
 
     Parameters
     ----------
@@ -164,9 +164,9 @@ def create_deflectometry_surface_for_comparison(
     measured_data_dir : pathlib.Path
         Path to the measured deflectometry data.
     heliostats_for_plots : list[str]
-        The selected heliostat names used for the evaluation plots.
-    reconstruction_parameters : dict[str, float | int]
-        Parameters for the reconstruction.
+        Selected heliostat names used for the evaluation plots.
+    number_of_surface_points : int
+        Number of surface points.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -483,11 +483,9 @@ def surface_plots(
     scenario : Scenario
         The scenario.
     ddp_setup : DdpSetup
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     heliostat_data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         Heliostat and calibration measurement data.
-    number_of_surface_points_per_facet : torch.Tensor
-        Number of surface points per facet in east and north direction.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -590,15 +588,15 @@ def aim_point_plots(
     scenario: Scenario,
     incident_ray_direction: torch.Tensor,
     target_area_index: int,
-    aim_point,
+    aim_point: torch.Tensor,
     dni: float,
     label: str,
     batch_size: int = 96,
-    number_of_rays=25,
+    number_of_rays: int = 25,
     device: torch.device | None = None,
 ) -> dict[str, dict[str, torch.Tensor]]:
     """
-    Extract heliostat kinematics information.
+    Plot the flux distribution with the current heliostat configuration.
 
     Parameters
     ----------
@@ -609,10 +607,16 @@ def aim_point_plots(
         Tensor of shape [4].
     target_area_index : int
         The index of the target used for the optimization.
+    aim_point : torch.Tensor
+        The aim point.
     dni : float
         Direct normal irradiance in W/m^2.
     label : str
         Identifier fluxes.
+    batch_size : int
+        Batch size for the raytracer.
+    number_of_rays : int
+        Number of rays.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -621,7 +625,7 @@ def aim_point_plots(
     Returns
     -------
     dict[str, dict[str, torch.Tensor]]
-        Kinematics data per heliostat.
+        Flux data.
     """
     with torch.no_grad():
         device = get_device(device)
@@ -704,16 +708,16 @@ def full_field_optimizations(
     scenario_path: pathlib.Path,
     results_path: pathlib.Path,
     basic_config: dict[str, Any],
-    data_mappings: dict[str, Any] | None = None,
-    surface_config: dict[str, Any] | None = None,
-    kinematics_config: dict[str, Any] | None = None,
-    aim_point_config: dict[str, Any] | None = None,
-    target_distribution: torch.Tensor | None = None,
-    data_for_stral_dir: pathlib.Path | None = None,
+    data_mappings: dict[str, Any],
+    surface_config: dict[str, Any],
+    kinematics_config: dict[str, Any],
+    aim_point_config: dict[str, Any],
+    target_distribution: torch.Tensor,
+    data_for_stral_dir: pathlib.Path,
     device: torch.device | None = None,
 ) -> None:
     """
-    Optimize the heliostat field with a combination of surface reconstruction, kinematics reconstruction and aim point optimization as part of an ablation study.
+    Optimize the heliostat field with a combination of surface reconstruction, kinematics reconstruction and aim point optimization.
 
     Parameters
     ----------
@@ -721,22 +725,20 @@ def full_field_optimizations(
         Path to the scenario being used.
     results_path : pathlib.Path
         Path to where the results are saved.
-    ablation_study_case : int
-        Case number of the ablation study.
     basic_config : dict[str, Any]
         Configuration for number of surface points, number of rays and baseline data.
-    data_mappings : dict[str, list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]] | None
+    data_mappings : dict[str, Any]
         Data mappings including heliostat names and their calibration files, for surface reconstruction, kinematics reconstruction
         and the evaluation plots.
-    surface_config : dict[str, int | float | str | dict[str, float | int]] | None
-        Configuration parameters for the surface reconstruction, if None no surfaces are reconstructed (default is None).
-    kinematics_config : dict[str, int | float | str | dict[str, float | int]] | None
-        Configuration parameters for the kinematics reconstruction, if None no kinematics is reconstructed (default is None).
-    aim_point_config : dict[str, int | float | str | dict[str, float | int]] | None
-        Configuration parameters for the aim point optimization, if None no aim points are optimized (default is None).
-    target_distribution : torch.Tensor | None
-        Target distribution to aim for during aim point optimization (default is None).
-    data_for_stral_dir : pathlib.Path | None
+    surface_config : dict[str, Any]
+        Configuration parameters for the surface reconstruction.
+    kinematics_config : dict[str, Any]
+        Configuration parameters for the kinematics reconstruction.
+    aim_point_config : dict[str, Any]
+        Configuration parameters for the aim point optimization.
+    target_distribution : torch.Tensor
+        Target distribution to aim for during aim point optimization.
+    data_for_stral_dir : pathlib.Path
         Path to the directory where the data for the ``STRAL`` comparison is saved.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -1264,6 +1266,10 @@ def create_heliostat_data_mappings(
         Path to the viable heliostats list.
     heliostats_for_plots : list[str]
         List of all heliostats considered in the plots.
+    sample_limit_surfaces : int
+        Sample limit for the surface reconstruction.
+    sample_limit_kinematics : int
+        Sample limit for the kinematics reconstruction.
 
     Returns
     -------
@@ -1550,8 +1556,7 @@ def main() -> None:
     args = parser.parse_args(args=unknown)
     device = get_device(torch.device(args.device))
 
-    # for case in ["baseline", "full_field"]:
-    for case in ["baseline"]:
+    for case in ["baseline", "full_field"]:
         # Set directory paths.
         results_dir = pathlib.Path(args.results_dir) / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)
@@ -1680,6 +1685,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     runtime_log.info("-----------------")
-    torch.autograd.set_detect_anomaly(True)
     main()
     runtime_log.info("\n\n")

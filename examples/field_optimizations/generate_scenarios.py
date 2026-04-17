@@ -28,7 +28,7 @@ def find_latest_deflectometry_file(
     Parameters
     ----------
     heliostat_name : str
-        Heliostat name being considered.
+        Heliostat names being considered.
     data_directory : Path
         Data directory containing ``PAINT`` data.
 
@@ -62,7 +62,7 @@ def generate_ideal_scenario(
     ----------
     scenario_path : pathlib.Path
         Path to save the generated HDF5 scenario.
-    tower_file_path : pathlib.Path
+    tower_file : pathlib.Path
         Path to the tower measurements file.
     heliostat_files_list : list[tuple[str, pathlib.Path]]
         List of heliostat names and their property files to include in the scenario.

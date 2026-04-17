@@ -4,8 +4,6 @@ import warnings
 from typing import Any
 
 import numpy as np
-import pandas as pd
-import seaborn as sns
 import torch
 import yaml
 from matplotlib import pyplot as plt
@@ -41,10 +39,10 @@ def plot_heliostat_positions(
 
     Parameters
     ----------
-    surface_scenario : dict[str, Any]
-        Results of surface reconstruction.
-    kinematics_scenario : dict[str, Any]
-        Results of kinematics reconstruction.
+    results : dict[str, Any]
+        Results of the baseline study.
+    results_ftp : dict[str, Any]
+        Results of the full field study.
     save_dir : pathlib.Path
         Directory to save the plots.
     """
@@ -95,7 +93,7 @@ def plot_surface_reconstruction_flux(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -242,7 +240,7 @@ def plot_surface_reconstruction_flux(
     save_dir.mkdir(parents=True, exist_ok=True)
     filename = save_dir / "surface_reconstruction_flux.png"
     fig.tight_layout()
-    fig.savefig(filename)  # , dpi=300, bbox_inches="tight")
+    fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
     print(f"Saved surface reconstruction error distribution plot at: {filename}.")
@@ -258,7 +256,7 @@ def plot_surface_error_analysis(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -353,7 +351,7 @@ def plot_surface_loss_history(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -439,7 +437,7 @@ def plot_kinematics_reconstruction_flux(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -554,7 +552,7 @@ def plot_kinematics_error_analysis(
     Parameters
     ----------
     results : dict[str, Any]
-        Results dictionary containing the reconstruction losses and heliostat positions.
+        Results of the study.
     save_dir : pathlib.Path
         Path to save the plots.
     split_left : bool, default=True
@@ -727,7 +725,7 @@ def plot_kinematics_loss_history(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -778,7 +776,7 @@ def plot_model_reconstruction(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -1011,7 +1009,7 @@ def plot_aim_point_flux(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -1129,7 +1127,7 @@ def plot_aim_point_loss_history(
     Parameters
     ----------
     results : dict[str, Any]
-        Results of the ablation study.
+        Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
     """
@@ -1200,235 +1198,9 @@ def plot_aim_point_loss_history(
     print(f"Saved aim point optimization loss history plot at: {filename}.")
 
 
-def plot_tradeoffs(df: pd.DataFrame, save_path: pathlib.Path) -> None:
-    """
-    Plot runtime tradeoffs and task-wise losses across runs.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame containing run data with columns including ``run_id``, ``task``,
-        ``ablation_case``, ``runtime``, ``loss``, and ``hardware``.
-    save_path : pathlib.Path
-        Path where the resulting plot PDF will be saved.
-    """
-    fig, axes = plt.subplots(1, 2, figsize=(18, 10))
-
-    alpha = 0.5
-    run_ids = df["run_id"].drop_duplicates().tolist()
-    x_pos = np.arange(len(run_ids))
-    task_order = ["surface", "kinematics", "aim_points"]
-    ablation_case_map = {"surface": 5, "kinematics": 7, "aim_points": 8}
-
-    stacked_data = pd.DataFrame(index=run_ids, columns=task_order, dtype=float)
-
-    for task in task_order:
-        case = ablation_case_map[task]
-        df_task = df[(df["task"] == task) & (df["ablation_case"] == case)]
-        for run_id in run_ids:
-            val = df_task[df_task["run_id"] == run_id]["runtime"]
-            stacked_data.loc[run_id, task] = val.values[0] if not val.empty else 0.0
-
-    bottom = np.zeros(len(run_ids))
-
-    for task, color in zip(
-        task_order,
-        [plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]],
-    ):
-        heights = stacked_data[task].values
-
-        axes[0].bar(
-            x=x_pos,
-            height=heights,
-            bottom=bottom,
-            color=color,
-            alpha=alpha,
-            label=task.capitalize(),
-        )
-
-        for i, run_id in enumerate(run_ids):
-            runtime_val = heights[i]
-            if runtime_val > 0:
-                param_col = f"parameters_{task}"
-                if param_col in df.columns:
-                    param_dict = df[
-                        (df["run_id"] == run_id)
-                        & (df["task"] == task)
-                        & (df["ablation_case"] == ablation_case_map[task])
-                    ][param_col].iloc[0]
-
-                    max_epoch = param_dict.get("max_epoch", "")
-                    number_of_rays = param_dict.get("number_of_rays", "")
-
-                    if task == "surface":
-                        batch_outer = param_dict.get("batch_size_outer", "")
-                        batch_inner = param_dict.get("batch_size", "")
-                        batch_str = f"({batch_outer},{batch_inner})"
-                    else:
-                        batch_str = str(param_dict.get("batch_size", ""))
-
-                    annotation = (
-                        f"{runtime_val:.1f}s\n"
-                        f"epochs: {max_epoch}\n"
-                        f"rays: {number_of_rays}\n"
-                        f"batch: {batch_str}"
-                    )
-                else:
-                    annotation = f"{runtime_val:.1f}s"
-
-                if task == "aim_points":
-                    total_height = stacked_data.loc[run_id].sum()
-                    axes[0].text(
-                        x=x_pos[i],
-                        y=total_height + 0.02 * stacked_data.values.max(),
-                        s=annotation,
-                        ha="center",
-                        va="bottom",
-                        fontsize=8,
-                        color="black",
-                    )
-                else:
-                    axes[0].text(
-                        x=x_pos[i],
-                        y=bottom[i] + runtime_val / 2,
-                        s=annotation,
-                        ha="center",
-                        va="center",
-                        fontsize=8,
-                        color="black",
-                    )
-
-        bottom += heights
-
-    for i, run_id in enumerate(run_ids):
-        hardware = df[df["run_id"] == run_id]["hardware"].iloc[0]
-        axes[0].text(
-            x=x_pos[i],
-            y=-0.05 * stacked_data.values.max(),
-            s=str(hardware),
-            ha="center",
-            va="top",
-            fontsize=10,
-            rotation=45,
-            color="black",
-        )
-
-    axes[0].set_xticks(x_pos)
-    axes[0].set_xticklabels(run_ids)
-
-    sns.barplot(
-        data=df,
-        x="run_id",
-        y="loss",
-        hue="task",
-        ci=None,
-        ax=axes[1],
-        palette=[plot_colors["blue_1"], plot_colors["blue_2"], plot_colors["blue_3"]],
-        alpha=alpha,
-        order=run_ids,
-    )
-    axes[1].set_title("Task-wise Loss per Run")
-    axes[1].set_xlabel("Run ID")
-    axes[1].set_ylabel("Loss")
-    axes[1].legend(title="Task", bbox_to_anchor=(1.02, 1), loc="upper left")
-    axes[1].set_xticklabels(run_ids, rotation=0, ha="center")
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
-    plt.close(fig)
-
-
-def plot_run_analysis(
-    save_dir: pathlib.Path, results_paths: list[pathlib.Path]
-) -> None:
-    """
-    Generate analysis plots.
-
-    CURRENTLY NOT WORKING!
-    """
-    counter = 1
-    results_list = []
-    for results_path, hardware in zip(
-        results_paths, ["NVIDIA RTX A6000", "NVIDIA Grace-Hopper"]
-    ):
-        if not results_path.exists():
-            raise FileNotFoundError(
-                f"Results directory not found: {results_path}. Please run ``reconstruction_generate_results.py``"
-                f"or adjust the location of the results file and try again!"
-            )
-
-        for file in results_path.iterdir():
-            if file.name.startswith("results_"):
-                data = torch.load(
-                    file,
-                    weights_only=False,
-                    map_location=device,
-                )
-                data["run_info"]["hardware"] = hardware
-                data["run_info"]["run_id"] = counter
-                counter += 1
-                results_list.append(data)
-
-    rows = []
-    tasks = {
-        "surface": "surface_reconstruction_loss_per_heliostat",
-        "kinematics": "kinematics_reconstruction_loss_per_heliostat",
-        "aim_points": "aimpoint_optimization_loss_per_heliostat",
-    }
-    parameters = {
-        "surface": ["max_epoch", "batch_size", "batch_size_outer", "number_of_rays"],
-        "kinematics": ["max_epoch", "batch_size", "number_of_rays"],
-        "aim_points": ["max_epoch", "batch_size", "number_of_rays"],
-    }
-
-    for run in results:
-        hw = run["run_info"]["hardware"]
-        run_id = run["run_info"]["run_id"]
-        total_runtime = np.sum(run["run_info"]["runtimes"])
-        for i in range(1, 9):
-            study_case = run[f"losses{i}"]
-            if i == 5:
-                study_case["surface_reconstruction_loss_per_heliostat"] = torch.min(
-                    torch.stack(
-                        study_case["surface_reconstruction_loss_per_heliostat"], dim=0
-                    ),
-                    dim=0,
-                ).values
-            for key, value in zip(tasks.keys(), tasks.values()):
-                row = {
-                    "hardware": hw,
-                    "run_id": run_id,
-                    "ablation_case": i,
-                    "task": key,
-                    "optimized": True if study_case[value] is not None else False,
-                    "runtime": run["run_info"]["runtimes"][i - 1],
-                    "loss": np.mean(list(study_case[value].cpu().detach()))
-                    if study_case[value] is not None
-                    else np.nan,
-                    "total_runtime": total_runtime,
-                }
-                for parameter in parameters:
-                    row[f"parameters_{parameter}"] = run["run_info"]["parameters"][
-                        parameter
-                    ]
-                rows.append(row)
-    df = pd.DataFrame(rows)
-    hardware_order = ["NVIDIA RTX A6000", "NVIDIA Grace-Hopper"]
-    df["hardware"] = pd.Categorical(
-        df["hardware"], categories=hardware_order, ordered=True
-    )
-    df.sort_values(by=["hardware", "total_runtime"], inplace=True)
-    df.reset_index(drop=True, inplace=True)
-
-    plot_tradeoffs(df, save_dir)
-
-
 if __name__ == "__main__":
     """
-    Generate plots based on the kinematic reconstruction results.
-
-    This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
-    using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
+    Generate plots based on the field optimization study.
 
     Parameters
     ----------
@@ -1440,12 +1212,7 @@ if __name__ == "__main__":
         Path to directory where the results are saved.
     plots_dir : str
         Path to the directory where the plots are saved.
-    number_of_points_to_plot : int
-        Number of data points to plot in the distance error plot.
-    random_seed : int
-        Random seed for the selection of points to plot.
     """
-
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
@@ -1502,8 +1269,7 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # for case in ["baseline", "full_field"]:
-    for case in ["baseline"]:
+    for case in ["baseline", "full_field"]:
         results_number = 15
         results_path = (
             pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
@@ -1548,5 +1314,3 @@ if __name__ == "__main__":
 
         plot_aim_point_flux(results=results, save_dir=plots_path)
         plot_aim_point_loss_history(results=results, save_dir=plots_path)
-
-        # plot_run_analysis(save_dir=pathlib.Path(args.plots_dir) / "runtimes.pdf", results_paths=[pathlib.Path(args.results_dir) / case, pathlib.Path(args.results_dir) / "ftp" / case])
