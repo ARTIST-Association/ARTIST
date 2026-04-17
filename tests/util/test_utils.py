@@ -563,6 +563,8 @@ def test_trapezoid_distribution(
         The width of the slope of the trapezoid.
     plateau_width : int
         The width of the plateau.
+    expected : torch.Tensor
+        The expected distribution.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -714,6 +716,8 @@ def test_crop_flux_distributions_around_center_centering(
         Desired crop width in meters.
     crop_height : float
         Desired crop height in meters.
+    target_area_indices : torch.Tensor
+        Indices of the target areas for each active heliostat.
     expected_cropped : torch.Tensor
         The expected output image tensor after cropping.
         Tensor of shape [number_of_bitmaps, bitmap_resolution_e, bitmap_resolution_u].
@@ -936,8 +940,28 @@ def test_rotation_angle_and_axis(
     expected_axis: torch.Tensor,
     expected_angle: torch.Tensor,
     device: torch.device,
-):
-    """Test that ``rotation_angle_and_axis`` returns the correct axis and angle between two orientations."""
+) -> None:
+    """
+    Test the get rotation axis and angle method.
+
+    Parameters
+    ----------
+    from_orientation : torch.Tensor
+        The initial orientation (e.g., a 3D vector or rotation representation).
+    to_orientation : torch.Tensor
+        The target orientation to rotate into.
+    expected_axis : torch.Tensor
+        The expected unit vector representing the rotation axis.
+    expected_angle : torch.Tensor
+        The expected rotation angle in radians.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
     axis, angle = utils.rotation_angle_and_axis(
         from_orientation=from_orientation.to(device),
         to_orientation=to_orientation.to(device),
@@ -982,7 +1006,27 @@ def test_bitmap_coordinates_to_target_coordinates(
     expected_coordinates: torch.Tensor,
     device: torch.device,
 ):
-    """Test that ``bitmap_coordinates_to_target_coordinates`` maps pixel coordinates to 3D target coordinates."""
+    """
+    Test the conversion from bitmap coordinates to target coordinates.
+
+    Parameters
+    ----------
+    bitmap_coordinates : torch.Tensor
+        The 2D pixel coordinates in the bitmap/image space.
+    bitmap_resolution : torch.Tensor
+        The resolution of the bitmap (e.g., width and height).
+    target_area_indices : torch.Tensor
+        Indices indicating which target area each bitmap coordinate maps to.
+    expected_coordinates : torch.Tensor
+        The expected 3D coordinates corresponding to the input bitmap coordinates.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
     mock_solar_tower = MagicMock(spec=SolarTower)
     mock_target_areas_planar = MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["planar1", "planar2"]
