@@ -156,7 +156,7 @@ class SolarTower:
         """
         device = get_device(device=device)
 
-        aim_points = torch.zeros((target_area_indices.shape[0], 4), device=device)
+        centers = torch.zeros((target_area_indices.shape[0], 4), device=device)
 
         planar_mask = (
             target_area_indices
@@ -166,7 +166,7 @@ class SolarTower:
             planar: TowerTargetAreasPlanar = self.target_areas[
                 index_mapping.planar_target_areas
             ]  # type: ignore[assignment]
-            aim_points[planar_mask] = planar.centers[target_area_indices[planar_mask]]
+            centers[planar_mask] = planar.centers[target_area_indices[planar_mask]]
         cylinder_indices = (
             target_area_indices[~planar_mask]
             - self.number_of_target_areas_per_type[index_mapping.planar_target_areas]
@@ -175,10 +175,10 @@ class SolarTower:
             cylindrical: TowerTargetAreasCylindrical = self.target_areas[
                 index_mapping.cylindrical_target_areas
             ]  # type: ignore[assignment]
-            aim_points[~planar_mask] = (
+            centers[~planar_mask] = (
                 cylindrical.centers[cylinder_indices]
                 + cylindrical.radii[cylinder_indices][:, None]
                 * cylindrical.normals[cylinder_indices]
             )
-            aim_points[:, 3] = 1.0
-        return aim_points
+            centers[:, 3] = 1.0
+        return centers
