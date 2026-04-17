@@ -18,17 +18,17 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 111 for the tutorial code.
+# Skip to line 115 for the tutorial code.
 #############################################################################################################
 
 
-def create_flux_plot(id: str) -> None:
+def create_flux_plot(label: str) -> None:
     """
     Create flux plots.
 
     Parameters
     ----------
-    id : str
+    label : str
         Identifier of flux.
     """
     total_flux = torch.zeros((256, 256), device=device)
@@ -52,7 +52,7 @@ def create_flux_plot(id: str) -> None:
         )
 
         # Align heliostats.
-        if id == "before":
+        if label == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
                 aim_points=scenario.solar_tower.get_centers_of_target_areas(
                     target_area_indices=target_area_indices, device=device
@@ -61,7 +61,7 @@ def create_flux_plot(id: str) -> None:
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
-        elif id == "after":
+        elif label == "after":
             heliostat_group.align_surfaces_with_motor_positions(
                 motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
@@ -219,7 +219,7 @@ with setup_distributed_environment(
 
     loss_definition = KLDivergenceLoss()
 
-    create_flux_plot(id="before")
+    create_flux_plot(label="before")
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
@@ -241,4 +241,4 @@ with setup_distributed_environment(
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss {final_loss}")
 
-create_flux_plot(id="after")
+create_flux_plot(label="after")
