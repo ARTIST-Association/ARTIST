@@ -83,7 +83,9 @@ def test_extract_paint_tower_measurements(
         The expected extracted data types.
     expected_power_plant_position : torch.Tensor
         The expected power plant position.
-    expected_receiver_properties : torch.Tensor
+    expected_multi_focus_properties : list[Any]
+        The expected multi focus tower properties.
+    expected_receiver_properties : list[Any]
         The expected receiver properties.
     device : torch.device
         The device on which to initialize tensors.

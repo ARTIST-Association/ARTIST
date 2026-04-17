@@ -150,6 +150,8 @@ def test_extract_paint_calibration_data(
         The mapping of heliostats and their calibration data files.
     power_plant_position : torch.Tensor
         The power plant position.
+    sample_limit : int
+        Number of samples to be loaded.
     centroid_extraction_method : str
         The centroid extraction method to use.
     expected_list : list[torch.Tensor]
