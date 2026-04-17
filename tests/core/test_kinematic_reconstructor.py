@@ -85,7 +85,7 @@ def test_kinematics_reconstructor(
     scheduler : str
         The scheduler to be used.
     ddp_setup_for_testing : DdpSetup
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 

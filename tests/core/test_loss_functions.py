@@ -184,6 +184,9 @@ def test_focal_spot_loss(
     prediction : torch.Tensor
         The predicted values.
         Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+    target_area_center : torch.Tensor
+        Coordinates of the target plane center.
+        Tensor of shape [number_of_target_areas, 4].
     ground_truth : torch.Tensor
         The ground truth.
         Tensor of shape [number_of_samples, 4].
