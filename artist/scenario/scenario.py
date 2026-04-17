@@ -9,7 +9,7 @@ from typing_extensions import Self
 from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.solar_tower import SolarTower
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device
@@ -25,14 +25,14 @@ class Scenario:
     Attributes
     ----------
     power_plant_position : torch.Tensor
-        The position of the power plant as latitude, longitude, altitude.
+        Position of the power plant as latitude, longitude, altitude.
         Tensor of shape [3].
-    target_areas : TowerTargetAreas
-        All target areas on all towers of the power plant.
+    solar_tower : SolarTower
+        Solar tower with all target areas.
     light_sources : LightSourceArray
-        A list of light sources included in the scenario.
+        Light sources included in the scenario.
     heliostat_field : HeliostatField
-        The heliostat field for the scenario.
+        Heliostat field for the scenario.
 
     Methods
     -------
@@ -49,7 +49,7 @@ class Scenario:
     def __init__(
         self,
         power_plant_position: torch.Tensor,
-        target_areas: TowerTargetAreas,
+        solar_tower: SolarTower,
         light_sources: LightSourceArray,
         heliostat_field: HeliostatField,
     ) -> None:
@@ -57,25 +57,25 @@ class Scenario:
         Initialize the scenario.
 
         A scenario defines the physical objects and scene to be used by ``ARTIST``. Therefore, a scenario contains at
-        least one target area that is a receiver, at least one light source and at least one heliostat in a heliostat field.
+        least one solar tower with at least one target area, at least one light source and at least one heliostat in a heliostat field.
         ``ARTIST`` also supports scenarios that contain multiple target areas, multiple light sources, and multiple heliostats.
         (Note: Currently only a single light source can be provided.)
 
         Parameters
         ----------
         power_plant_position : torch.Tensor,
-            The position of the power plant as latitude, longitude and altitude.
+            Position of the power plant as latitude, longitude and altitude.
             Tensor of shape [3].
-        target_areas : TargetAreaArray
-            A list of tower target areas included in the scenario.
+        solar_tower : SolarTower
+            Solar tower with all target areas.
         light_sources : LightSourceArray
-            A list of light sources included in the scenario.
+            Light sources included in the scenario.
             Currently only a single light source can be provided.
         heliostat_field : HeliostatField
-            A field of heliostats included in the scenario.
+            Field of heliostats included in the scenario.
         """
         self.power_plant_position = power_plant_position
-        self.target_areas = target_areas
+        self.solar_tower = solar_tower
         self.light_sources = light_sources
         self.heliostat_field = heliostat_field
 
@@ -151,9 +151,9 @@ class Scenario:
                 config_dictionary.power_plant_position
             ][()]
         )
-        target_areas = TowerTargetAreas.from_hdf5(
-            config_file=scenario_file, device=device
-        )
+
+        solar_tower = SolarTower.from_hdf5(config_file=scenario_file, device=device)
+
         light_sources = LightSourceArray.from_hdf5(
             config_file=scenario_file, device=device
         )
@@ -249,7 +249,7 @@ class Scenario:
 
         return cls(
             power_plant_position=power_plant_position,
-            target_areas=target_areas,
+            solar_tower=solar_tower,
             light_sources=light_sources,
             heliostat_field=heliostat_field,
         )
@@ -276,14 +276,14 @@ class Scenario:
         Parameters
         ----------
         heliostat_group : HeliostatGroup
-            The current heliostat group.
+            Current heliostat group.
         string_mapping : list[tuple[str, str, torch.Tensor]] | None
-            Strings that map heliostats to target areas and incident ray direction tensors (default is None).
+            Map from heliostats to target areas and incident ray directions (default is None).
         single_incident_ray_direction : torch.Tensor
-            The default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
+            Default incident ray direction (default is torch.tensor([0.0, 1.0, 0.0, 0.0])).
             Tensor of shape [4].
         single_target_area_index : int
-            The default target area index (default is 0).
+            Default target area index (default is 0).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -292,18 +292,19 @@ class Scenario:
         Returns
         -------
         torch.Tensor
-            The mask specifying which heliostat is selected and how many times.
+            Mask specifying which heliostat is selected and how many times.
             Tensor of shape [number_of_heliostats_in_group].
         torch.Tensor
-            The indices of target areas for all selected heliostats in order.
+            Indices of target areas for all selected heliostats in order.
             Tensor of shape [number_of_active_heliostats_in_group].
         torch.Tensor
-            The incident ray directions for the selected heliostats in order.
+            Incident ray directions for the selected heliostats in order.
             Tensor of shape [number_of_active_heliostats_in_group, 4].
         """
         device = get_device(device=device)
 
         data_per_heliostat = defaultdict(list)
+        total_number_of_target_areas = len(self.solar_tower.target_name_to_index)
 
         if string_mapping is None:
             if (
@@ -314,9 +315,9 @@ class Scenario:
                 raise ValueError(
                     "The specified single incident ray direction is invalid. Please provide a normalized 4D tensor with last element 0.0."
                 )
-            if single_target_area_index >= self.target_areas.number_of_target_areas:
+            if single_target_area_index >= total_number_of_target_areas:
                 raise ValueError(
-                    f"The specified single target area index is invalid. Only {self.target_areas.number_of_target_areas} target areas exist in this scenario."
+                    f"The specified single target area index is invalid. Only {total_number_of_target_areas} target areas exist in this scenario."
                 )
             active_heliostats_mask = torch.ones(
                 heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
@@ -337,7 +338,7 @@ class Scenario:
             for i, (heliostat_name, target_name, light_direction) in enumerate(
                 filtered_mapping
             ):
-                if target_name not in self.target_areas.names:
+                if target_name not in self.solar_tower.target_name_to_index:
                     errors.append(
                         f"Invalid target '{target_name}' (Found at index {i} of provided mapping) not found in this scenario."
                     )
@@ -375,31 +376,16 @@ class Scenario:
             incident_ray_directions = torch.empty(
                 (len(filtered_mapping), 4), device=device
             )
-            heliostat_name_to_index = {
-                heliostat_name: index
-                for index, heliostat_name in enumerate(heliostat_group.names)
-            }
-            active_heliostats_mask = torch.zeros(
-                heliostat_group.number_of_heliostats, dtype=torch.int32, device=device
-            )
-            target_area_indices = torch.empty(
-                len(filtered_mapping), dtype=torch.int32, device=device
-            )
-            incident_ray_directions = torch.empty(
-                (len(filtered_mapping), 4), device=device
-            )
-
             for i, (heliostat_name, target_name, incident_ray_direction) in enumerate(
                 filtered_mapping
             ):
-                if heliostat_name in heliostat_group.names:
-                    active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1
-                    data_per_heliostat[heliostat_name].append(
-                        [
-                            self.target_areas.names.index(target_name),
-                            incident_ray_direction,
-                        ]
-                    )
+                active_heliostats_mask[heliostat_name_to_index[heliostat_name]] += 1
+                data_per_heliostat[heliostat_name].append(
+                    [
+                        self.solar_tower.target_name_to_index[target_name],
+                        incident_ray_direction,
+                    ]
+                )
             index = 0
             for name in heliostat_group.names:
                 for target_area_index, incident_ray_direction in data_per_heliostat.get(
@@ -430,7 +416,7 @@ class Scenario:
         """Return a string representation of the scenario."""
         return (
             f"ARTIST Scenario containing:\n\tA Power Plant located at: {self.power_plant_position.tolist()}"
-            f" with {len(self.target_areas.names)} Target Area(s),"
+            f" with {len(self.solar_tower.target_name_to_index)} Target Area(s),"
             f" {len(self.light_sources.light_source_list)} Light Source(s),"
             f" and {sum(len(group.names) for group in self.heliostat_field.heliostat_groups)} Heliostat(s)."
         )

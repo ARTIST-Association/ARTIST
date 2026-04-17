@@ -3,7 +3,7 @@ import json
 import pathlib
 import warnings
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
@@ -16,7 +16,11 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util.environment_setup import (
+    DdpSetup,
+    get_device,
+    setup_distributed_environment,
+)
 
 set_logger_config()
 torch.manual_seed(7)
@@ -42,7 +46,7 @@ def generate_reconstruction_results(
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Data mapping for each heliostat, containing a list of tuples with the heliostat name, the path to the calibration
         properties file, and the path to the flux images.
-    device : torch.device | None
+    device : torch.device
         Device used for optimization and tensor allocations.
 
     Returns
@@ -52,7 +56,7 @@ def generate_reconstruction_results(
     """
     device = get_device(device=device)
 
-    results_dict: dict = {}
+    results_dict: dict[str, dict[str, Any]] = {}
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -76,7 +80,9 @@ def generate_reconstruction_results(
 
         # Configure the optimization.
         optimizer_dict = {
-            config_dictionary.initial_learning_rate: 1e-3,
+            config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+            config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+            config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
             config_dictionary.tolerance: 0,
             config_dictionary.max_epoch: 1000,
             config_dictionary.batch_size: 500,
@@ -120,14 +126,14 @@ def generate_reconstruction_results(
             }
 
             kinematics_reconstructor = KinematicsReconstructor(
-                ddp_setup=ddp_setup,
+                ddp_setup=cast(DdpSetup, ddp_setup),
                 scenario=current_scenario,
                 data=data,
                 optimization_configuration=optimization_configuration,
                 reconstruction_method=kinematics_reconstruction_method,
             )
 
-            per_heliostat_losses = kinematics_reconstructor.reconstruct_kinematics(
+            per_heliostat_losses, _ = kinematics_reconstructor.reconstruct_kinematics(
                 loss_definition=loss_definition, device=device
             )
 

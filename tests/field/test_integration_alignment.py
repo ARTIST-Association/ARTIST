@@ -99,7 +99,7 @@ def test_integration_alignment(
     bitmap_resolution = torch.tensor([256, 256], device=device)
     flux_distributions = torch.zeros(
         (
-            scenario.target_areas.number_of_target_areas,
+            scenario.solar_tower.number_of_target_areas_per_type.sum(),
             bitmap_resolution[0],
             bitmap_resolution[1],
         ),
@@ -123,7 +123,9 @@ def test_integration_alignment(
 
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_indices],
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices=target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -139,7 +141,7 @@ def test_integration_alignment(
         )
 
         # Perform heliostat-based ray tracing.
-        group_bitmaps_per_heliostat = ray_tracer.trace_rays(
+        group_bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,

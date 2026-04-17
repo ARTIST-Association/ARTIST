@@ -121,7 +121,10 @@ def test_smoothness_regularizer(
     )
 
 
-def test_ideal_surface_regularizer(control_points, device):
+def test_ideal_surface_regularizer(
+    control_points: tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+    device: torch.device,
+) -> None:
     """
     Test the ideal surface regularizer.
 

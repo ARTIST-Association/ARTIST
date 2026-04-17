@@ -45,7 +45,7 @@ def test_track_runtime_with_fixture(runtime_logger: logging.Logger) -> None:
     """
 
     @track_runtime(runtime_logger)
-    def _dummy_function(x, y):
+    def _dummy_function(x: int, y: int) -> int:
         time.sleep(0.05)
         return x + y
 

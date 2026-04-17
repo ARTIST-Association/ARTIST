@@ -1,3 +1,5 @@
+"""Kinematic reconstruction tutorial."""
+
 import logging
 import pathlib
 
@@ -11,8 +13,9 @@ from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
+from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
+from artist.util import config_dictionary, set_logger_config, utils
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -20,12 +23,13 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 145 for the tutorial code.
+# Skip to line 170 for the tutorial code.
 #############################################################################################################
 
 
 def create_fluxes(
     data_parser: CalibrationDataParser,
+    heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -33,7 +37,9 @@ def create_fluxes(
     Parameters
     ----------
     data_parser : CalibrationDataParser
-        The data parser used to load calibration data from files.
+        Data parser used to load calibration data from files.
+    heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+        Mapping from heliostats to calibration data files.
 
     Returns
     -------
@@ -45,7 +51,10 @@ def create_fluxes(
     bitmaps = []
     measured_bitmaps = []
     scenario.set_number_of_rays(number_of_rays=500)
-    for heliostat_group in scenario.heliostat_field.heliostat_groups:
+    for heliostat_group_index in range(len(scenario.heliostat_field.heliostat_groups)):
+        heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
+            heliostat_group_index
+        ]
         (
             measured_flux,
             _,
@@ -72,7 +81,9 @@ def create_fluxes(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_indices],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices, device=device
+                ),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
@@ -88,7 +99,7 @@ def create_fluxes(
             )
 
             # Perform heliostat-based ray tracing.
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 target_area_indices=target_area_indices,
@@ -107,29 +118,43 @@ def create_plots(
     fluxes_measured: torch.Tensor,
 ) -> None:
     """
-    Create the plots with the reconstruction results.
+    Create the flux plots using the reconstruction results.
 
     Parameters
     ----------
-    flux_before : torch.Tensor
-        Flux before kinematics reconstruction.
-    flux_after : torch.Tensor
-        Flux after kinematics reconstruction.
-    flux_measured : torch.Tensor
-        Measured flux reference.
+    fluxes_before : torch.Tensor
+        Fluxes before the kinematics reconstruction.
+    fluxes_after : torch.Tensor
+        Fluxes after the kinematics reconstruction.
+    fluxes_measured : torch.Tensor
+        Measured flux references.
     """
     for group_index, (flux_before, flux_after, flux_measured) in enumerate(
         zip(fluxes_before, fluxes_after, fluxes_measured)
     ):
+        center_measured = (
+            utils.get_center_of_mass(flux_measured, device=device).cpu().detach()
+        )
+        center_before = (
+            utils.get_center_of_mass(flux_before, device=device).cpu().detach()
+        )
+        center_after = (
+            utils.get_center_of_mass(flux_after, device=device).cpu().detach()
+        )
+
         for i in range(len(flux_before)):
             _, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
 
             axes[0].imshow(flux_before[i].cpu().detach(), cmap="gray")
             axes[0].set_title("Before reconstruction", fontsize=16)
+            axes[0].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="r")
+            axes[0].scatter(x=center_before[i, 0], y=center_before[i, 1], c="g")
             axes[0].axis("off")
 
             axes[1].imshow(flux_after[i].cpu().detach(), cmap="gray")
             axes[1].set_title("After reconstruction", fontsize=16)
+            axes[1].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="r")
+            axes[1].scatter(x=center_after[i, 0], y=center_after[i, 1], c="g")
             axes[1].axis("off")
 
             axes[2].imshow(flux_measured[i].cpu().detach(), cmap="gray")
@@ -197,14 +222,16 @@ heliostat_data_mapping = [
 
 # Configure the optimization.
 optimizer_dict = {
-    config_dictionary.initial_learning_rate: 0.0005,
-    config_dictionary.tolerance: 0.0005,
-    config_dictionary.max_epoch: 100,
+    config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+    config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+    config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
+    config_dictionary.tolerance: 0.0000,
+    config_dictionary.max_epoch: 200,
     config_dictionary.batch_size: 50,
-    config_dictionary.log_step: 3,
-    config_dictionary.early_stopping_delta: 1e-4,
-    config_dictionary.early_stopping_patience: 10,
-    config_dictionary.early_stopping_window: 20,
+    config_dictionary.log_step: 1,
+    config_dictionary.early_stopping_delta: 1e-8,
+    config_dictionary.early_stopping_patience: 1000,
+    config_dictionary.early_stopping_window: 2000,
 }
 # Configure the learning rate scheduler.
 scheduler_dict = {
@@ -225,7 +252,7 @@ optimization_configuration = {
 }
 
 data_parser = PaintCalibrationDataParser(
-    sample_limit=50, centroid_extraction_method=paint_mappings.UTIS_KEY
+    sample_limit=10, centroid_extraction_method=paint_mappings.UTIS_KEY
 )
 data_parser_plots = PaintCalibrationDataParser(
     sample_limit=1, centroid_extraction_method=paint_mappings.UTIS_KEY
@@ -240,6 +267,14 @@ data: dict[
     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
 
+data_plots: dict[
+    str,
+    CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+] = {
+    config_dictionary.data_parser: data_parser_plots,
+    config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+}
+
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
     scenario_path=scenario_path
 )
@@ -248,7 +283,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type:ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -258,18 +293,23 @@ with setup_distributed_environment(
 
     bitmaps_before, _ = create_fluxes(
         data_parser=data_parser_plots,
+        heliostat_data_mapping=[
+            (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
+            for heliostat in heliostat_data_mapping
+        ],
     )
+
+    loss_definition = FocalSpotLoss(scenario=scenario)
 
     # Create the kinematics reconstructor.
     kinematics_reconstructor = KinematicsReconstructor(
         ddp_setup=ddp_setup,
         scenario=scenario,
         data=data,
+        dni=500,
         optimization_configuration=optimization_configuration,
         reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
     )
-
-    loss_definition = FocalSpotLoss(scenario=scenario)
 
     # Reconstruct the kinematics.
     final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
@@ -281,6 +321,10 @@ print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_helio
 
 bitmaps_after, bitmaps_measured = create_fluxes(
     data_parser=data_parser_plots,
+    heliostat_data_mapping=[
+        (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
+        for heliostat in heliostat_data_mapping
+    ],
 )
 create_plots(
     fluxes_before=bitmaps_before,

@@ -1,8 +1,8 @@
 """
 Generate results with the optimized parameters.
 
-Parameters
-----------
+Command-Line-Arguments
+----------------------
 config : str
     Path to the configuration file.
 device : str
@@ -44,9 +44,10 @@ def data_for_flux_plots(
     incident_ray_direction: torch.Tensor,
     target_area_index: int,
     dni: float,
-    id: str,
+    label: str,
+    batch_size: int,
     device: torch.device | None = None,
-) -> dict[str, dict[str, torch.Tensor]]:
+) -> torch.Tensor:
     """
     Extract heliostat kinematics information.
 
@@ -61,8 +62,10 @@ def data_for_flux_plots(
         The index of the target used for the optimization.
     dni : float
         Direct normal irradiance in W/m^2.
-    id : str
+    label : str
         Identifier fluxes.
+    batch_size : int
+        Number of heliostats to process per ray-tracing batch.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -79,8 +82,8 @@ def data_for_flux_plots(
 
     total_flux = torch.zeros(
         (
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            int(bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+            int(bitmap_resolution[index_mapping.unbatched_bitmap_u]),
         ),
         device=device,
     )
@@ -104,14 +107,16 @@ def data_for_flux_plots(
         )
 
         # Align heliostats.
-        if id == "before":
+        if label == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_indices],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices, device=device
+                ),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
-        elif id == "after":
+        elif label == "after":
             heliostat_group.align_surfaces_with_motor_positions(
                 motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
@@ -135,13 +140,13 @@ def data_for_flux_plots(
             scenario=scenario,
             heliostat_group=heliostat_group,
             blocking_active=True,
-            batch_size=100,
+            batch_size=batch_size,
             bitmap_resolution=bitmap_resolution,
             dni=dni,
         )
 
         # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
+        bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,
@@ -155,25 +160,23 @@ def data_for_flux_plots(
         )[target_area_index]
 
         total_flux += flux_distribution_on_target
+        print(total_flux.sum())
 
     return total_flux
 
 
-def generate_reconstruction_results(
+def generate_optimization_results(
     scenario_path: pathlib.Path,
     incident_ray_direction: torch.Tensor,
     target_area_index: int,
     target_distribution: torch.Tensor,
     dni: float,
+    max_flux_density: float,
     hyperparameters: dict[str, Any],
     device: torch.device,
 ) -> dict[str, dict[str, Any]]:
     """
-    Perform kinematics reconstruction in ``ARTIST`` and save results.
-
-    This function performs the kinematics reconstruction in ``ARTIST`` and saves the results. Reconstruction is compared when using the
-    focal spot centroids extracted from HELIOS and the focal spot centroids extracted from UTIS. The results are saved
-    for plotting later.
+    Perform aim point optimization in ``ARTIST`` and save results.
 
     Parameters
     ----------
@@ -189,6 +192,8 @@ def generate_reconstruction_results(
         Tensor of shape [4] or tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     dni : float
         Direct normal irradiance in W/m^2.
+    max_flux_density : float
+        Maximum allowed flux density on the target in W/m^2.
     hyperparameters : dict[str, Any]
         Optimized hyperparameters.
     device : torch.device | None
@@ -197,7 +202,7 @@ def generate_reconstruction_results(
     Returns
     -------
     dict[str, dict[str, Any]]
-        Mapping from heliostat name to per-centroid loss arrays and, later, positions.
+        Optimization results.
     """
     device = get_device(device=device)
 
@@ -215,18 +220,20 @@ def generate_reconstruction_results(
                 device=device,
             )
 
-        scenario.set_number_of_rays(number_of_rays=3)
+        batch_size = 500
+
+        scenario.set_number_of_rays(number_of_rays=4)
         optimizer_dict = {
             config_dictionary.initial_learning_rate: hyperparameters[
                 "initial_learning_rate"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 3,
-            config_dictionary.batch_size: 100,
+            config_dictionary.max_epoch: 500,
+            config_dictionary.batch_size: batch_size,
             config_dictionary.log_step: 1,
             config_dictionary.early_stopping_delta: 1e-4,
-            config_dictionary.early_stopping_patience: 150,
-            config_dictionary.early_stopping_window: 150,
+            config_dictionary.early_stopping_patience: 500,
+            config_dictionary.early_stopping_window: 500,
         }
         scheduler_dict = {
             config_dictionary.scheduler_type: hyperparameters["scheduler"],
@@ -240,10 +247,10 @@ def generate_reconstruction_results(
             config_dictionary.cooldown: hyperparameters["cooldown"],
         }
         constraint_dict = {
-            config_dictionary.rho_energy: 1.0,
-            config_dictionary.max_flux_density: 300,
-            config_dictionary.rho_pixel: 1.0,
-            config_dictionary.lambda_lr: 0.1,
+            config_dictionary.rho_flux_integral: hyperparameters["rho_flux_integral"],
+            config_dictionary.rho_local_flux: hyperparameters["rho_local_flux"],
+            config_dictionary.rho_intercept: hyperparameters["rho_intercept"],
+            config_dictionary.max_flux_density: max_flux_density,
         }
         optimization_configuration = {
             config_dictionary.optimization: optimizer_dict,
@@ -268,11 +275,12 @@ def generate_reconstruction_results(
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             dni=dni,
-            id="before",
+            label="before",
+            batch_size=batch_size,
             device=device,
         )
 
-        loss = motor_positions_optimizer.optimize(
+        loss, _, _, _, _ = motor_positions_optimizer.optimize(
             loss_definition=loss_functions.KLDivergenceLoss(), device=device
         )
 
@@ -281,7 +289,8 @@ def generate_reconstruction_results(
             incident_ray_direction=incident_ray_direction,
             target_area_index=target_area_index,
             dni=dni,
-            id="after",
+            label="after",
+            batch_size=batch_size,
             device=device,
         )
 
@@ -365,16 +374,15 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_surface.h5"
-    )
+    scenario_file = pathlib.Path(args.scenarios_dir) / "deflectometry_scenario.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The optimization scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
         )
 
-    # DNI W/m^2.
+    # DNI in W/m^2 and maximum allowed flux density in ?.
     dni = 850
+    max_flux_density = 1000000
     # Incident ray direction.
     incident_ray_direction = torch.nn.functional.normalize(
         torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
@@ -382,7 +390,7 @@ if __name__ == "__main__":
         dim=0,
     )
     # Receiver.
-    target_area_index = 1
+    target_area_index = 3
     # Target distribution.
     e_trapezoid = utils.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=120, device=device
@@ -392,17 +400,18 @@ if __name__ == "__main__":
     )
     eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
-    target_distribution = (eu_trapezoid / eu_trapezoid.sum()) * 2810000.00
+    target_distribution = eu_trapezoid / eu_trapezoid.sum()
 
     with open(results_dir / "hpo_results_motor_positions.json", "r") as file:
         hyperparameters = json.load(file)
 
-    optimization_results = generate_reconstruction_results(
+    optimization_results = generate_optimization_results(
         scenario_path=scenario_file,
         incident_ray_direction=incident_ray_direction,
         target_area_index=target_area_index,
         target_distribution=target_distribution,
         dni=dni,
+        max_flux_density=max_flux_density,
         hyperparameters=hyperparameters,
         device=device,
     )

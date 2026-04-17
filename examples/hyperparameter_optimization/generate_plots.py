@@ -1,3 +1,26 @@
+"""
+Generate plots based on the hyperparameter optimization results.
+
+This script loads the results from the ``ARTIST`` reconstruction and generates plots comparing
+the loss when using different kinematics, surface reconstruction, and motor position optimization
+results.
+
+Command-Line-Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+results_dir : str
+    Path to directory where the results are saved.
+plots_dir : str
+    Path to the directory where the plots are saved.
+number_of_points_to_plot : int
+    Number of data points to plot in the distance error plot.
+random_seed : int
+    Random seed for the selection of points to plot.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -8,7 +31,6 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
-from scipy.stats import gaussian_kde
 
 from artist.util import utils
 from artist.util.environment_setup import get_device
@@ -130,86 +152,6 @@ def plot_kinematics_reconstruction_fluxes(
     print(f"Saved reconstruction flux plot at: {filename}.")
 
 
-def plot_error_distribution(
-    reconstruction_results: dict[str, dict[str, Any]], save_dir: pathlib.Path
-) -> None:
-    """
-    Plot the distribution of reconstruction errors.
-
-    This function plots histograms and kernel density estimations of the pointing errors in reconstruction when comparing
-    HeliOS and UTIS as methods for focal spot centroid extraction.
-
-    Parameters
-    ----------
-    reconstruction_results : dict[str, dict[str, Any]]
-        The reconstruction results.
-    save_dir : pathlib.Path
-        Directory used for saving the plot.
-    """
-    # Set plot style.
-    plt.rcParams["text.usetex"] = True
-    plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
-    plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
-
-    # Convert losses to list.
-    errors_in_meters = [
-        data["loss"] for data in reconstruction_results["loss"].values()
-    ]
-
-    # Convert to angular error in mrad.
-    positions = np.array(
-        [data["position"] for data in reconstruction_results["loss"].values()],
-        dtype=float,
-    )
-    distances = np.linalg.norm(positions[:, :2], axis=1)
-    errors_in_mrad = (errors_in_meters / distances) * 1000
-
-    for errors, name, color in zip(
-        [errors_in_meters, errors_in_mrad], ["meters", "mrad"], ["lightblue", "darkred"]
-    ):
-        x_max = max(errors)
-        x_vals = np.linspace(0, x_max, 100)
-        kde = gaussian_kde(errors, bw_method="scott")
-        kde_values = kde(x_vals)
-        mean = np.mean(errors)
-
-        fig, ax = plt.subplots(figsize=(6, 4))
-
-        ax.hist(
-            errors,
-            bins=25,
-            range=(0, x_max),
-            density=True,
-            alpha=0.3,
-            label="Loss Histogram",
-            color=plot_colors[color],
-        )
-        ax.plot(
-            x_vals,
-            kde_values,
-            label="KDE",
-            color=plot_colors[color],
-        )
-        ax.axvline(
-            mean,
-            color=plot_colors[color],
-            linestyle="--",
-            label=f"Mean: {mean:.2f} {name}",
-        )
-
-        ax.set_xlabel(f"\\textbf{{Pointing Error}} \n{{\\small {name}}}")
-        ax.set_ylabel("\\textbf{Density}")
-        ax.legend(fontsize=8)
-        ax.grid(True)
-
-        if not save_dir.is_dir():
-            save_dir.mkdir(parents=True, exist_ok=True)
-        filename = save_dir / f"error_distribution_{name}.pdf"
-        fig.savefig(filename, dpi=300, bbox_inches="tight")
-
-        print(f"Saved reconstruction error distribution plot at: {filename}.")
-
-
 def plot_linear_and_angular_error_against_distance(
     reconstruction_results: dict[str, dict[str, Any]],
     number_of_points_to_plot: int,
@@ -319,7 +261,7 @@ def plot_motor_pos_fluxes(
 
     Parameters
     ----------
-    reconstruction_results : dict[str, dict[str, Any]]
+    reconstruction_results : dict[str, Any]
         The reconstruction results.
     save_dir : pathlib.Path
         Directory used for saving the plot.
@@ -348,34 +290,50 @@ def plot_motor_pos_fluxes(
     # Compute global min and max for shared color scale.
     all_flux_data = [
         reconstruction_results[key].cpu().detach()
-        for key in ["flux_before", "flux_after", "target_distribution"]
+        for key in ["flux_before", "flux_after"]
     ]
     vmin = min([data.min() for data in all_flux_data])
     vmax = max([data.max() for data in all_flux_data])
 
+    flux_reference = 0
     for i, key in enumerate(["flux_before", "flux_after", "target_distribution"]):
         ax = fig.add_subplot(gs[0, i])
         ax.axis("off")
         flux_data = reconstruction_results[key].cpu().detach()
-        im = ax.imshow(flux_data, cmap=cmap, vmin=vmin, vmax=vmax)  # Shared color scale
+        if key in ["flux_before", "flux_after"]:
+            im = ax.imshow(flux_data, cmap=cmap, vmin=vmin, vmax=vmax)
+        else:
+            im = ax.imshow(flux_data, cmap=cmap)
         axes.append(ax)
 
         pos = ax.get_position()
-        fig.text(
-            x=pos.x0 + pos.width / 2,
-            y=pos.y0 - 0.03,
-            s=str(flux_data.sum()),
-            ha="center",
-            va="top",
-            fontsize=18,
-        )
+        if key == "flux_before":
+            flux_reference = flux_data.sum().item()
+            fig.text(
+                x=pos.x0 + pos.width / 2,
+                y=pos.y0 - 0.03,
+                s=f"Flux integral: {str(flux_reference)}",
+                ha="center",
+                va="top",
+                fontsize=18,
+            )
+        if key == "flux_after":
+            flux_integral = flux_data.sum().item()
+            fig.text(
+                x=pos.x0 + pos.width / 2,
+                y=pos.y0 - 0.03,
+                s=f"Flux integral: {str(flux_integral)}\n~ {((100 / flux_reference) * flux_integral):.3f}\%",
+                ha="center",
+                va="top",
+                fontsize=18,
+            )
 
     axes[0].set_title(r"\textbf{Aim Points Centered}", fontsize=18, ha="center")
     axes[1].set_title(r"\textbf{Aim Points Optimized}", fontsize=18, ha="center")
     axes[2].set_title(r"\textbf{Target Distribution}", fontsize=18, ha="center")
 
     # Add a single horizontal colorbar beneath all subplots.
-    cbar_ax = fig.add_subplot(gs[1, :])  # Spans all columns
+    cbar_ax = fig.add_subplot(gs[1, :2])  # Spans all columns
     cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
     cbar.ax.tick_params(labelsize=14)
 
@@ -396,7 +354,7 @@ def plot_surface_reconstruction(
 
     Parameters
     ----------
-    results : dict[str, Any]
+    reconstruction_results : dict[str, Any]
         Results of the surface reconstruction.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
@@ -413,13 +371,17 @@ def plot_surface_reconstruction(
         axes[index, 1].imshow(
             heliostat_data["fluxes"][1].cpu().detach(), cmap="inferno"
         )
-        axes[index, 1].set_title("Surface not reconstructed")
+        axes[index, 1].set_title(
+            f"Surface not reconstructed {heliostat_data['fluxes'][1].cpu().detach().sum()}"
+        )
         axes[index, 1].axis("off")
 
         axes[index, 2].imshow(
             heliostat_data["fluxes"][2].cpu().detach(), cmap="inferno"
         )
-        axes[index, 2].set_title("Surface reconstructed")
+        axes[index, 2].set_title(
+            f"Surface reconstructed {heliostat_data['fluxes'][2].cpu().detach().sum()}"
+        )
         axes[index, 2].axis("off")
 
         reference_direction = torch.tensor([0.0, 0.0, 1.0], device=torch.device("cpu"))
@@ -553,93 +515,7 @@ def plot_surface_reconstruction(
     )
 
 
-def plot_heliostat_positions(
-    surface_scenario: dict[str, Any],
-    kinematics_scenario: dict[str, Any],
-    save_dir: pathlib.Path,
-) -> None:
-    """
-    Plot heliostat positions.
-
-    Parameters
-    ----------
-    surface_scenario : dict[str, Any]
-        Results of surface reconstruction.
-    kinematics_scenario : dict[str, Any]
-        Results of kinematics reconstruction.
-    save_dir : pathlib.Path
-        Directory to save the plots.
-    """
-    plt.rcParams["text.usetex"] = True
-    plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
-    plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
-
-    for scenario in [surface_scenario, kinematics_scenario]:
-        positions_list = [data["position"] for data in scenario["loss"].values()]
-
-        index = [i for i, d in enumerate(scenario["loss"].keys()) if "BD32" in d]
-
-        fig, ax = plt.subplots(figsize=(6, 4))
-
-        x = [row[0] for row in positions_list]
-        y = [row[1] for row in positions_list]
-
-        ax.scatter(
-            x=x,
-            y=y,
-            c=plot_colors["lightblue"],
-            s=2,
-        )
-
-        ax.scatter(
-            [x[index[0]]],
-            [y[index[0]]],
-            facecolors="none",
-            edgecolors="red",
-            s=2,
-            linewidths=2,
-            label="BD32",
-        )
-
-        ax.plot([-2 / 2, 2 / 2], [0, 0], color="red", linewidth=2)
-        ax.grid(True)
-
-        ax.set_xlabel("\\textbf{East-West distance to tower [m]}")
-        ax.set_ylabel("\\textbf{North-South distance to tower [m]}")
-        ax.legend(fontsize=8)
-        ax.grid(True)
-
-        if not save_dir.is_dir():
-            save_dir.mkdir(parents=True, exist_ok=True)
-        filename = save_dir / f"heliostat_positions_{len(positions_list)}.pdf"
-        fig.savefig(filename, dpi=300, bbox_inches="tight")
-
-        print(f"Saved position plot at: {filename}.")
-
-
 if __name__ == "__main__":
-    """
-    Generate plots based on the kinematics reconstruction results.
-
-    This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
-    using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to directory where the results are saved.
-    plots_dir : str
-        Path to the directory where the plots are saved.
-    number_of_points_to_plot : int
-        Number of data points to plot in the distance error plot.
-    random_seed : int
-        Random seed for the selection of points to plot.
-    """
-
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
@@ -710,76 +586,68 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    results_path = (
+    kinematics_results_path = (
         pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
-    if not results_path.exists():
+    if not kinematics_results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path}. Please run ``reconstruction_generate_results.py``"
+            f"Results file not found: {kinematics_results_path}. Please run ``reconstruction_generate_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 
-    reconstruction_results = torch.load(
-        results_path,
+    kinematics_reconstruction_results = torch.load(
+        kinematics_results_path,
         weights_only=False,
         map_location=device,
     )
 
-    results_path_motor_pos = (
+    motor_pos_results_path = (
         pathlib.Path(args.results_dir) / "motor_position_optimization_results.pt"
     )
-    if not results_path_motor_pos.exists():
+    if not motor_pos_results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path_motor_pos}. Please run ``reconstruction_generate_results.py``"
+            f"Results file not found: {motor_pos_results_path}. Please run ``reconstruction_generate_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 
-    results_motor_pos = torch.load(
-        results_path_motor_pos,
+    motor_pos_optimization_results = torch.load(
+        motor_pos_results_path,
         weights_only=False,
         map_location=device,
     )
 
-    results_path_surface = (
+    surface_results_path = (
         pathlib.Path(args.results_dir) / "surface_reconstruction_results.pt"
     )
-    if not results_path_surface.exists():
+    if not surface_results_path.exists():
         raise FileNotFoundError(
-            f"Results file not found: {results_path_surface}. Please run ``reconstruction_generate_results.py``"
+            f"Results file not found: {surface_results_path}. Please run ``reconstruction_generate_results.py``"
             f"or adjust the location of the results file and try again!"
         )
 
-    results_surface = torch.load(
-        results_path_surface,
+    surface_reconstruction_results = torch.load(
+        surface_results_path,
         weights_only=False,
         map_location=device,
     )
 
     plots_path = pathlib.Path(args.plots_dir)
 
-    plot_error_distribution(
-        reconstruction_results=reconstruction_results, save_dir=plots_path
-    )
-
     plot_linear_and_angular_error_against_distance(
-        reconstruction_results=reconstruction_results,
+        reconstruction_results=kinematics_reconstruction_results,
         number_of_points_to_plot=args.number_of_points_to_plot,
         save_dir=plots_path,
         random_seed=args.random_seed,
     )
 
     plot_kinematics_reconstruction_fluxes(
-        reconstruction_results=reconstruction_results, save_dir=plots_path
+        reconstruction_results=kinematics_reconstruction_results, save_dir=plots_path
     )
 
     plot_surface_reconstruction(
-        reconstruction_results=results_surface, save_dir=plots_path
+        reconstruction_results=surface_reconstruction_results, save_dir=plots_path
     )
 
-    plot_motor_pos_fluxes(reconstruction_results=results_motor_pos, save_dir=plots_path)
-
-    plot_heliostat_positions(
-        surface_scenario=results_surface,
-        kinematics_scenario=reconstruction_results,
-        save_dir=plots_path,
+    plot_motor_pos_fluxes(
+        reconstruction_results=motor_pos_optimization_results, save_dir=plots_path
     )

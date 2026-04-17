@@ -1,7 +1,7 @@
 import logging
 import pathlib
-from collections.abc import MutableMapping
-from typing import Any, Generator
+from collections.abc import Generator, MutableMapping
+from typing import Any
 
 import h5py
 import torch
@@ -14,7 +14,8 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.util import config_dictionary
 
@@ -53,7 +54,8 @@ class H5ScenarioGenerator:
         self,
         file_path: pathlib.Path,
         power_plant_config: PowerPlantConfig,
-        target_area_list_config: TargetAreaListConfig,
+        target_area_list_planar_config: TargetAreaPlanarListConfig,
+        target_area_list_cylindrical_config: TargetAreaCylindricalListConfig,
         light_source_list_config: LightSourceListConfig,
         heliostat_list_config: HeliostatListConfig,
         prototype_config: PrototypeConfig,
@@ -72,17 +74,19 @@ class H5ScenarioGenerator:
         file_path : pathlib.Path
             File path to the HDF5 to be saved.
         power_plant_config : PowerPlantConfig
-            The power plant configuration object.
-        target_area_list_config : TargetAreaListConfig
-            The target area list configuration object.
+            Power plant configuration object.
+        target_area_list_planar_config : TargetAreaPlanarListConfig
+            Planar target area list configuration object.
+        target_area_list_cylindrical_config : TargetAreaCylindricalListConfig
+            Cylindrical target area list configuration object.
         light_source_list_config : LightSourceListConfig
-            The light source list configuration object.
+            Light source list configuration object.
         heliostat_list_config : HeliostatListConfig
-            The heliostat_list configuration object.
+            Heliostat_list configuration object.
         prototype_config : PrototypeConfig
-            The prototype configuration object.
+            Prototype configuration object.
         version : float
-            The version of the scenario generator being used (default is 1.0).
+            Version of the scenario generator being used (default is 1.0).
         """
         self.file_path = file_path
         if not self.file_path.parent.is_dir():
@@ -91,7 +95,8 @@ class H5ScenarioGenerator:
                 "Please create the folder or adjust the file path before running again!"
             )
         self.power_plant_config = power_plant_config
-        self.target_area_list_config = target_area_list_config
+        self.target_area_list_planar_config = target_area_list_planar_config
+        self.target_area_list_cylindrical_config = target_area_list_cylindrical_config
         self.light_source_list_config = light_source_list_config
         self.heliostat_list_config = heliostat_list_config
         self.prototype_config = prototype_config
@@ -110,15 +115,15 @@ class H5ScenarioGenerator:
         unique_groups = set()
         for heliostat_config in self.heliostat_list_config.heliostat_list:
             if isinstance(heliostat_config.kinematics, KinematicsConfig):
-                selected_kinematics_type = heliostat_config.kinematics.type
+                selected_kinematics_type = heliostat_config.kinematics.kinematics_type
             else:
                 selected_kinematics_type = (
-                    self.prototype_config.kinematics_prototype.type
+                    self.prototype_config.kinematics_prototype.kinematics_type
                 )
             if isinstance(heliostat_config.actuators, ActuatorListConfig):
                 for actuator_config in heliostat_config.actuators.actuator_list:
                     assert isinstance(actuator_config, ActuatorConfig)
-                    selected_actuator_type = actuator_config.type
+                    selected_actuator_type = actuator_config.actuator_type
                     unique_groups.add(
                         (selected_kinematics_type, selected_actuator_type)
                     )
@@ -127,13 +132,13 @@ class H5ScenarioGenerator:
                     actuator_config
                 ) in self.prototype_config.actuators_prototype.actuator_list:
                     assert isinstance(actuator_config, ActuatorConfig)
-                    selected_actuator_type = actuator_config.type
+                    selected_actuator_type = actuator_config.actuator_type
                     unique_groups.add(
                         (selected_kinematics_type, selected_actuator_type)
                     )
         return len(unique_groups)
 
-    def _check_equal_facet_numbers(self):
+    def _check_equal_facet_numbers(self) -> None:
         """
         Check that each heliostat has the same number of facets.
 
@@ -179,7 +184,7 @@ class H5ScenarioGenerator:
 
     def _flatten_dict_gen(
         self, d: MutableMapping, parent_key: str, sep: str
-    ) -> Generator:
+    ) -> Generator[tuple[str, Any], None, None]:
         # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
         # separated by a defined separator.
         for k, v in d.items():
@@ -190,7 +195,9 @@ class H5ScenarioGenerator:
                 yield new_key, v
 
     @staticmethod
-    def _include_parameters(file: h5py.File, prefix: str, parameters: dict) -> None:
+    def _include_parameters(
+        file: h5py.File, prefix: str, parameters: dict[str, Any]
+    ) -> None:
         """
         Include the parameters from a parameter dictionary.
 
@@ -200,7 +207,7 @@ class H5ScenarioGenerator:
             The HDF5 file to write to.
         prefix : str
             The prefix used for naming the parameters.
-        parameters : dict
+        parameters : dict[str, Any]
             The parameters to be included into the HFD5 file.
         """
         for key, value in parameters.items():
@@ -240,13 +247,22 @@ class H5ScenarioGenerator:
                 ),
             )
 
-            # Include parameters for the tower target areas.
-            log.info("Including parameters for the target areas.")
+            # Include parameters for the planar tower target areas.
+            log.info("Including parameters for the planar target areas.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.target_area_key,
+                prefix=config_dictionary.target_area_planar_key,
                 parameters=self._flatten_dict(
-                    self.target_area_list_config.create_target_area_list_dict()
+                    self.target_area_list_planar_config.create_target_area_list_dict()
+                ),
+            )
+            # Include parameters for the cylindrical tower target areas.
+            log.info("Including parameters for the cylindrical target areas.")
+            self._include_parameters(
+                file=f,
+                prefix=config_dictionary.target_area_cylindrical_key,
+                parameters=self._flatten_dict(
+                    self.target_area_list_cylindrical_config.create_target_area_list_dict()
                 ),
             )
 

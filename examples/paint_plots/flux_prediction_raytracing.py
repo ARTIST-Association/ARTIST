@@ -1,7 +1,7 @@
 import argparse
 import pathlib
 import warnings
-from typing import Dict, cast
+from typing import cast
 
 import h5py
 import numpy as np
@@ -262,12 +262,13 @@ def align_and_trace_rays(
     )
 
     # Perform heliostat-based ray tracing.
-    return ray_tracer.trace_rays(
+    bitmaps, _, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
         device=device,
     )
+    return bitmaps
 
 
 def generate_flux_images(
@@ -292,7 +293,7 @@ def generate_flux_images(
         Mapping containing the heliostats present in the scenario and the calibration measurement to be used.
     data_directory : pathlib.Path
         Path to the data directory.
-    result_file : pathlib.Path
+    results_file : pathlib.Path
         Path to the unified results file, saved as a torch checkpoint.
     result_key : str
         Key under which to store the result.
@@ -303,11 +304,11 @@ def generate_flux_images(
     """
     device = get_device(device)
 
-    results_dict: Dict[str, Dict[str, np.ndarray | torch.Tensor]] = {}
+    results_dict: dict[str, dict[str, np.ndarray | torch.Tensor]] = {}
 
     try:
         loaded = torch.load(results_file, weights_only=False)
-        results_dict = cast(Dict[str, Dict[str, np.ndarray | torch.Tensor]], loaded)
+        results_dict = cast(dict[str, dict[str, np.ndarray | torch.Tensor]], loaded)
     except FileNotFoundError:
         print(f"File not found: {results_file}. Initializing with an empty dictionary.")
     except Exception as e:
@@ -370,7 +371,7 @@ def generate_flux_images(
             if heliostat_name in scenario.heliostat_field.heliostat_groups[0].names
         ],
         heliostat_names=scenario.heliostat_field.heliostat_groups[0].names,
-        target_area_names=scenario.target_areas.names,
+        target_name_to_index=scenario.solar_tower.target_name_to_index,
         power_plant_position=scenario.power_plant_position,
         device=device,
     )

@@ -63,7 +63,7 @@ class HeliostatField:
         ----------
         heliostat_groups : Sequence[HeliostatGroup]
             A list containing all heliostat groups.
-        device : device: torch.device | None
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
@@ -111,7 +111,7 @@ class HeliostatField:
             this parameter should be None, otherwise the deflectometry surface will be overwritten and become ideal.
             For ideal surfaces this parameter can be used to change the number of control points specified in the .h5 scenario.
             Tensor of shape [2].
-        device : device: torch.device | None
+        device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
@@ -448,7 +448,7 @@ class HeliostatField:
             )
             if rank == 0:
                 log.info(
-                    f"Added a heliostat group with kinematics type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][0]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][1]}, to the heliostat field."
+                    f"Added a heliostat group with kinematics type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][index_mapping.kinematics_type_index]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][index_mapping.actuator_type_index]}, to the heliostat field."
                 )
 
         return cls(heliostat_groups=heliostat_groups, device=device)

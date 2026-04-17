@@ -1,3 +1,5 @@
+"""Distributed heliostat ray tracing tutorial."""
+
 import pathlib
 
 import h5py
@@ -31,7 +33,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type:ignore
 
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
@@ -62,7 +64,7 @@ with setup_distributed_environment(
 
     combined_bitmaps_per_target = torch.zeros(
         (
-            scenario.target_areas.number_of_target_areas,
+            scenario.solar_tower.number_of_target_areas_per_type.sum(),
             bitmap_resolution[index_mapping.unbatched_bitmap_e],
             bitmap_resolution[index_mapping.unbatched_bitmap_u],
         ),
@@ -99,15 +101,23 @@ with setup_distributed_environment(
 
         # Align heliostats.
         heliostat_group_alignment.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_indices],
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
         )
 
-    # Ray tracing happens only on one device for each group.
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
+    # The ray tracing process is distributed on multiple devices. Each heliostat is assigned to one process group. Within
+    # these process groups nested subprocess groups are created to distribute further within each heliostat groups, if the
+    # total number of processes allows this.
+    for heliostat_group_index in ddp_setup[
+        config_dictionary.groups_to_ranks_mapping  # type:ignore
+    ][
+        ddp_setup[
+            config_dictionary.rank  # type:ignore
+        ]
     ]:
         heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
@@ -128,15 +138,15 @@ with setup_distributed_environment(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],
+                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type:ignore
+                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type:ignore
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type:ignore
                 bitmap_resolution=bitmap_resolution,
             )
 
             # Perform heliostat-based ray tracing.
-            bitmaps_per_heliostat = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 target_area_indices=target_area_indices,
@@ -154,7 +164,7 @@ with setup_distributed_environment(
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
-                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.target_areas.names[target_area_indices[i]]}"
+                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.solar_tower.index_to_target_area[target_area_indices[i]]}"
                 )
                 plt.savefig(
                     f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
@@ -173,42 +183,42 @@ with setup_distributed_environment(
 
     # This nested reduction step could be skipped, since the reduction within the outer process group would handle it.
     # However, performing it here allows us to inspect the intermediate reduction results of the nested process group.
-    if ddp_setup[config_dictionary.is_nested]:
+    if ddp_setup[config_dictionary.is_nested]:  # type:ignore
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
-            group=ddp_setup[config_dictionary.process_subgroup],
+            group=ddp_setup[config_dictionary.process_subgroup],  # type:ignore
         )
 
         # Plot the combined bitmaps of heliostats on the same target reduced within each group.
-        for target_area_index in range(scenario.target_areas.number_of_target_areas):
+        for target_area_index in range(combined_bitmaps_per_target.shape[0]):
             plt.imshow(
                 combined_bitmaps_per_target[target_area_index].cpu().detach(),
                 cmap="gray",
             )
             plt.axis("off")
             plt.title(
-                f"Reduced within group, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+                f"Reduced within group, Target area: {scenario.solar_tower.index_to_target_area[target_area_index]}, Rank: {ddp_setup['rank']}"
             )
             plt.savefig(
-                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.target_areas.names[target_area_index]}.png"
+                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
             )
 
-    if ddp_setup[config_dictionary.is_distributed]:
+    if ddp_setup[config_dictionary.is_distributed]:  # type:ignore
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
 
     # Plot the final combined bitmaps of heliostats on the same target fully reduced.
-    for target_area_index in range(scenario.target_areas.number_of_target_areas):
+    for target_area_index in range(combined_bitmaps_per_target.shape[0]):
         plt.imshow(
             combined_bitmaps_per_target[target_area_index].cpu().detach(),
             cmap="gray",
         )
         plt.axis("off")
         plt.title(
-            f"Final bitmap, Target area: {scenario.target_areas.names[target_area_index]}, Rank: {ddp_setup['rank']}"
+            f"Final bitmap, Target area: {scenario.solar_tower.index_to_target_area[target_area_index]}, Rank: {ddp_setup['rank']}"
         )
         plt.savefig(
-            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.target_areas.names[target_area_index]}.png"
+            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
         )

@@ -8,7 +8,11 @@ import torch
 from artist import ARTIST_ROOT
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import (
+    TowerTargetAreasPlanar,
+)
 from artist.scenario.scenario import Scenario
 
 
@@ -99,7 +103,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
             None,
             (
                 torch.tensor([1, 0, 0, 1], dtype=torch.int32),
-                torch.tensor([3, 1], dtype=torch.int32),
+                torch.tensor([2, 3], dtype=torch.int32),
                 torch.tensor([[0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]]),
             ),
         ),
@@ -126,7 +130,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
             None,
             (
                 torch.tensor([1, 0, 3, 0], dtype=torch.int32),
-                torch.tensor([0, 1, 3, 3], dtype=torch.int32),
+                torch.tensor([0, 3, 2, 2], dtype=torch.int32),
                 torch.tensor(
                     [
                         [1.0, 0.0, 0.0, 0.0],
@@ -238,15 +242,38 @@ def test_index_mapping(
     """
     # Mock the Scenario.
     mock_scenario = MagicMock(spec=Scenario)
-    mock_target_areas = MagicMock(spec=TowerTargetAreas)
-    mock_target_areas.names = [
+    mock_solar_tower = MagicMock(spec=SolarTower)
+    mock_target_areas_planar = MagicMock(spec=TowerTargetAreasPlanar)
+    mock_target_areas_planar.names = [
         "multi_focus_tower",
-        "receiver",
         "solar_tower_juelich_lower",
         "solar_tower_juelich_upper",
     ]
-    mock_target_areas.number_of_target_areas = 4
-    mock_scenario.target_areas = mock_target_areas
+    mock_target_areas_cylindrical = MagicMock(spec=TowerTargetAreasCylindrical)
+    mock_target_areas_cylindrical.names = ["receiver"]
+
+    mock_solar_tower.target_areas = [
+        mock_target_areas_planar,
+        mock_target_areas_cylindrical,
+    ]
+    mock_solar_tower.number_of_target_area_types = 2
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor(
+        [3, 1], device=device
+    )
+    mock_solar_tower.target_name_to_index = {
+        "multi_focus_tower": 0,
+        "solar_tower_juelich_lower": 1,
+        "solar_tower_juelich_upper": 2,
+        "receiver": 3,
+    }
+    mock_solar_tower.index_to_target_area = {
+        0: "multi_focus_tower",
+        1: "solar_tower_juelich_lower",
+        2: "solar_tower_juelich_upper",
+        3: "receiver",
+    }
+
+    mock_scenario.solar_tower = mock_solar_tower
 
     mock_heliostat_field = MagicMock(spec=HeliostatField)
     mock_heliostat_group = MagicMock(spec=HeliostatGroupRigidBody)

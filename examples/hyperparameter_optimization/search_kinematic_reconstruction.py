@@ -47,7 +47,7 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the hyperparameter search."""
@@ -85,18 +85,18 @@ def kinematics_reconstructor_for_hpo(
     device = get_device(device)
 
     # Set up ARTIST to run in single device mode.
-    ddp_setup = {
-        config_dictionary.device: device,
-        config_dictionary.is_distributed: False,
-        config_dictionary.is_nested: False,
-        config_dictionary.rank: 0,
-        config_dictionary.world_size: 1,
-        config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: {0: [0]},
-        config_dictionary.heliostat_group_rank: 0,
-        config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0]},
-    }
+    ddp_setup = DdpSetup(
+        device=device,
+        is_distributed=False,
+        is_nested=False,
+        rank=0,
+        world_size=1,
+        process_subgroup=None,
+        groups_to_ranks_mapping={0: [0]},
+        heliostat_group_rank=0,
+        heliostat_group_world_size=1,
+        ranks_to_groups_mapping={0: [0]},
+    )
 
     # Load a scenario from an .h5 file.
     # The scenario .h5 file should contain a setup with at least one heliostat (with the same name(s)
@@ -109,10 +109,10 @@ def kinematics_reconstructor_for_hpo(
         )
 
     # Set number of rays.
-    scenario.set_number_of_rays(number_of_rays=4)
+    scenario.set_number_of_rays(number_of_rays=8)
 
     data_parser = PaintCalibrationDataParser(
-        sample_limit=2,
+        sample_limit=5,
         centroid_extraction_method="UTIS",
     )
     data: dict[
@@ -124,14 +124,22 @@ def kinematics_reconstructor_for_hpo(
         config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
     }
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: params["initial_learning_rate"],
+        config_dictionary.initial_learning_rate_rotation_deviation: params[
+            "initial_learning_rate_rotation_deviation"
+        ],
+        config_dictionary.initial_learning_rate_initial_angles: params[
+            "initial_learning_rate_initial_angles"
+        ],
+        config_dictionary.initial_learning_rate_initial_stroke_length: params[
+            "initial_learning_rate_initial_stroke_length"
+        ],
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 60,
-        config_dictionary.batch_size: 945,
+        config_dictionary.max_epoch: 200,
+        config_dictionary.batch_size: 400,
         config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
-        config_dictionary.early_stopping_window: 10,
+        config_dictionary.early_stopping_delta: 1e-5,
+        config_dictionary.early_stopping_patience: 400,
+        config_dictionary.early_stopping_window: 400,
     }
     scheduler_dict = {
         config_dictionary.scheduler_type: params["scheduler"],
@@ -161,7 +169,7 @@ def kinematics_reconstructor_for_hpo(
     loss_definition = loss_functions.FocalSpotLoss(scenario=scenario)
 
     # Reconstruct the kinematics.
-    final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
+    final_loss_per_heliostat, _ = kinematics_reconstructor.reconstruct_kinematics(
         loss_definition=loss_definition, device=device
     )
 
@@ -172,7 +180,6 @@ def kinematics_reconstructor_for_hpo(
 
 if __name__ == "__main__":
     comm = MPI.COMM_WORLD
-
     rank = comm.Get_rank()
 
     # Set default location for configuration file.
@@ -217,7 +224,9 @@ if __name__ == "__main__":
     parameter_ranges_default = config.get(
         "parameter_ranges_kinematics",
         {
-            "initial_learning_rate": [1e-9, 1e-2],
+            "initial_learning_rate_rotation_deviation": [1e-7, 1e-3],
+            "initial_learning_rate_initial_angles": [1e-6, 1e-2],
+            "initial_learning_rate_initial_stroke_length": [1e-5, 1e-1],
             "scheduler": ["exponential", "reduce_on_plateau", "cyclic"],
             "min_learning_rate": [1e-12, 1e-6],
             "max_learning_rate": [1e-4, 1e-2],
@@ -276,7 +285,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematics.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_hpo.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -298,7 +307,7 @@ if __name__ == "__main__":
     rng = random.Random(seed + comm.rank)
 
     viable_heliostats_data = (
-        pathlib.Path(args.results_dir) / "viable_heliostats_kinematics.json"
+        pathlib.Path(args.results_dir) / "viable_heliostats_hpo.json"
     )
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
@@ -338,7 +347,7 @@ if __name__ == "__main__":
             reconstruction_parameter_ranges[key] = str_tuple
 
     # Set up evolutionary operator.
-    num_generations = 200
+    num_generations = 400
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,

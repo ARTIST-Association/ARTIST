@@ -1,5 +1,4 @@
 import pathlib
-from typing import Any
 
 import h5py
 import pytest
@@ -10,6 +9,7 @@ from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
+from artist.util.environment_setup import DdpSetup
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def focal_spot() -> torch.Tensor:
         The desired focal spot.
         Tensor of shape [4].
     """
-    ground_truth = torch.tensor([1.0, -0.5030, 56.0, 1.0000])
+    ground_truth = torch.tensor([1.5, -3.2357, 37.0, 1.0])
 
     return ground_truth
 
@@ -70,7 +70,7 @@ def test_motor_positions_optimizer(
     early_stopping_window: int,
     scheduler: str,
     request: pytest.FixtureRequest,
-    ddp_setup_for_testing: dict[str, Any],
+    ddp_setup_for_testing: DdpSetup,
     device: torch.device,
 ) -> None:
     """
@@ -88,8 +88,8 @@ def test_motor_positions_optimizer(
         The scheduler to be used.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    ddp_setup_for_testing : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+    ddp_setup_for_testing : DdpSetup
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -122,10 +122,10 @@ def test_motor_positions_optimizer(
         config_dictionary.early_stopping_window: early_stopping_window,
     }
     constraint_dict = {
-        config_dictionary.rho_energy: 1.0,
-        config_dictionary.max_flux_density: 3,
-        config_dictionary.rho_pixel: 1.0,
-        config_dictionary.lambda_lr: 0.1,
+        config_dictionary.rho_flux_integral: 1.0,
+        config_dictionary.rho_local_flux: 1.0,
+        config_dictionary.rho_intercept: 1.0,
+        config_dictionary.max_flux_density: 1000000,
     }
     # Combine configurations.
     optimization_configuration = {
@@ -143,8 +143,7 @@ def test_motor_positions_optimizer(
             scenario_file=scenario_file, device=device
         )
 
-    ddp_setup_for_testing[config_dictionary.device] = device
-    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
+    ddp_setup_for_testing["device"] = device
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
@@ -166,7 +165,7 @@ def test_motor_positions_optimizer(
     )
 
     # Optimize the motor positions.
-    _ = motor_positions_optimizer.optimize(
+    _, _, _, _, _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 

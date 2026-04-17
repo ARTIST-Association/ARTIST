@@ -1,5 +1,4 @@
 import pathlib
-from typing import Any
 
 import h5py
 import pytest
@@ -12,6 +11,7 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
+from artist.util.environment_setup import DdpSetup
 
 
 @pytest.mark.parametrize(
@@ -32,7 +32,7 @@ def test_surface_reconstructor(
     early_stopping_window: int,
     data_parser: CalibrationDataParser | PaintCalibrationDataParser,
     scheduler: str,
-    ddp_setup_for_testing: dict[str, Any],
+    ddp_setup_for_testing: DdpSetup,
     device: torch.device,
 ) -> None:
     """
@@ -48,8 +48,8 @@ def test_surface_reconstructor(
         The data parser used to load calibration data from files.
     scheduler : str
         Scheduler name.
-    ddp_setup_for_testing : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+    ddp_setup_for_testing : DdpSetup
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -82,8 +82,7 @@ def test_surface_reconstructor(
         config_dictionary.cooldown: 5,
     }
     constraint_dict = {
-        config_dictionary.initial_lambda_energy: 0.1,
-        config_dictionary.rho_energy: 1.0,
+        config_dictionary.rho_flux_integral: 1.0,
         config_dictionary.energy_tolerance: 0.01,
         config_dictionary.weight_smoothness: 0.005,
         config_dictionary.weight_ideal_surface: 0.005,
@@ -150,12 +149,7 @@ def test_surface_reconstructor(
             device=device,
         )
 
-    ddp_setup_for_testing[config_dictionary.device] = device
-    ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
-    ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {
-        0: [0],
-        1: [0],
-    }
+    ddp_setup_for_testing["device"] = device
 
     # Create the surface reconstructor.
     surface_reconstructor = SurfaceReconstructor(

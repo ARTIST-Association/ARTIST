@@ -1,3 +1,5 @@
+"""Motor positions optimizer tutorial."""
+
 import pathlib
 
 import h5py
@@ -16,17 +18,17 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 111 for the tutorial code.
+# Skip to line 115 for the tutorial code.
 #############################################################################################################
 
 
-def create_flux_plot(id: str) -> None:
+def create_flux_plot(label: str) -> None:
     """
     Create flux plots.
 
     Parameters
     ----------
-    id : str
+    label : str
         Identifier of flux.
     """
     total_flux = torch.zeros((256, 256), device=device)
@@ -50,14 +52,16 @@ def create_flux_plot(id: str) -> None:
         )
 
         # Align heliostats.
-        if id == "before":
+        if label == "before":
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[target_area_indices],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=target_area_indices, device=device
+                ),
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
-        elif id == "after":
+        elif label == "after":
             heliostat_group.align_surfaces_with_motor_positions(
                 motor_positions=heliostat_group.kinematics.active_motor_positions,
                 active_heliostats_mask=active_heliostats_mask,
@@ -85,7 +89,7 @@ def create_flux_plot(id: str) -> None:
         )
 
         # Perform heliostat-based ray tracing.
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
+        bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,
@@ -124,7 +128,7 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenar
 optimizer_dict = {
     config_dictionary.initial_learning_rate: 3e-4,
     config_dictionary.tolerance: 0.0005,
-    config_dictionary.max_epoch: 30,
+    config_dictionary.max_epoch: 100,
     config_dictionary.batch_size: 50,
     config_dictionary.log_step: 3,
     config_dictionary.early_stopping_delta: 1e-4,
@@ -145,10 +149,10 @@ scheduler_dict = {
 }
 # Configure the regularizers and constraints.
 constraint_dict = {
-    config_dictionary.rho_energy: 1.0,
-    config_dictionary.max_flux_density: 1e10,
-    config_dictionary.rho_pixel: 1.0,
-    config_dictionary.lambda_lr: 0.1,
+    config_dictionary.rho_flux_integral: 1.0,
+    config_dictionary.rho_local_flux: 1.0,
+    config_dictionary.rho_intercept: 1.0,
+    config_dictionary.max_flux_density: 1000000,
 }
 # Combine configurations.
 optimization_configuration = {
@@ -165,7 +169,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type: ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -180,9 +184,20 @@ with setup_distributed_environment(
     # Set incident ray direction.
     incident_ray_direction = torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)
     # Set target area.
-    target_area_index = 1
+    target_area_index = 3  # (receiver)
     # Set target flux integral.
-    target_flux_integral = 10000
+    canting_norm = (
+        torch.norm(scenario.heliostat_field.heliostat_groups[0].canting[0], dim=1)[0]
+    )[:2]
+    dimensions = (canting_norm * 4) + 0.02
+    heliostat_surface_area = dimensions[0] * dimensions[1]
+    total_heliostat_area = (
+        heliostat_surface_area
+        * scenario.heliostat_field.number_of_heliostats_per_group.sum()
+    )
+    target_flux_integral = (
+        dni * total_heliostat_area * 0.75
+    )  # account for mirror and angle based losses.
 
     # Set loss function and define the ground truth.
     # For an optimization using a focal spot as ground truth use this loss definition:
@@ -204,7 +219,7 @@ with setup_distributed_environment(
 
     loss_definition = KLDivergenceLoss()
 
-    create_flux_plot(id="before")
+    create_flux_plot(label="before")
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
@@ -219,11 +234,11 @@ with setup_distributed_environment(
     )
 
     # Optimize the motor positions.
-    final_loss_per_heliostat = motor_positions_optimizer.optimize(
+    final_loss, _, _, _, _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
-print(f"rank {ddp_setup['rank']}, final loss {final_loss_per_heliostat}")
+print(f"rank {ddp_setup['rank']}, final loss {final_loss}")
 
-create_flux_plot(id="after")
+create_flux_plot(label="after")

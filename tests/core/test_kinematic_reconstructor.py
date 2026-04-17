@@ -1,5 +1,4 @@
 import pathlib
-from typing import Any
 
 import h5py
 import paint.util.paint_mappings as paint_mappings
@@ -13,6 +12,7 @@ from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
+from artist.util.environment_setup import DdpSetup
 
 
 @pytest.mark.parametrize(
@@ -66,7 +66,7 @@ def test_kinematics_reconstructor(
     centroid_extraction_method: str,
     early_stopping_window: int,
     scheduler: str,
-    ddp_setup_for_testing: dict[str, Any],
+    ddp_setup_for_testing: DdpSetup,
     device: torch.device,
 ) -> None:
     """
@@ -84,8 +84,8 @@ def test_kinematics_reconstructor(
         Early stopping window size.
     scheduler : str
         The scheduler to be used.
-    ddp_setup_for_testing : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+    ddp_setup_for_testing : DdpSetup
+        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -107,9 +107,11 @@ def test_kinematics_reconstructor(
         config_dictionary.cooldown: 20,
     }
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 1e-3,
+        config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+        config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+        config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 50,
+        config_dictionary.max_epoch: 250,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 1,
         config_dictionary.early_stopping_delta: 1.0,
@@ -183,12 +185,7 @@ def test_kinematics_reconstructor(
                 scenario_file=scenario_file, device=device
             )
 
-        ddp_setup_for_testing[config_dictionary.device] = device
-        ddp_setup_for_testing[config_dictionary.groups_to_ranks_mapping] = {0: [0, 1]}
-        ddp_setup_for_testing[config_dictionary.ranks_to_groups_mapping] = {
-            0: [0],
-            1: [0],
-        }
+        ddp_setup_for_testing["device"] = device
 
         if reconstruction_method == "invalid":
             with pytest.raises(ValueError) as exc_info:
@@ -240,15 +237,24 @@ def test_kinematics_reconstructor(
                         expected_path, map_location=device, weights_only=True
                     )
 
-                    torch.testing.assert_close(
-                        heliostat_group.kinematics.rotation_deviation_parameters,
-                        expected["rotation_deviations"],
-                        atol=5e-4,
-                        rtol=5e-4,
+                    tol = 1e-6 + 5e-3 * torch.maximum(
+                        heliostat_group.kinematics.rotation_deviation_parameters.abs(),
+                        expected["rotation_deviations"].abs(),
                     )
-                    torch.testing.assert_close(
-                        heliostat_group.kinematics.actuators.optimizable_parameters,
-                        expected["optimizable_parameters"],
-                        atol=6e-2,
-                        rtol=7e-1,
+                    diff = (
+                        heliostat_group.kinematics.rotation_deviation_parameters
+                        - expected["rotation_deviations"]
+                    ).abs()
+
+                    assert torch.all(diff <= tol)
+
+                    tol = 1e-6 + 5e-3 * torch.maximum(
+                        heliostat_group.kinematics.actuators.optimizable_parameters.abs(),
+                        expected["optimizable_parameters"].abs(),
                     )
+                    diff = (
+                        heliostat_group.kinematics.actuators.optimizable_parameters
+                        - expected["optimizable_parameters"]
+                    ).abs()
+
+                    assert torch.all(diff <= tol)

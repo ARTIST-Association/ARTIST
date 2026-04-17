@@ -194,9 +194,9 @@ class RigidBody(Kinematics):
 
         # Account for positions.
         initial_orientations = initial_orientations @ utils.translate_enu(
-            e=self.active_heliostat_positions[:, index_mapping.heliostat_position_e],
-            n=self.active_heliostat_positions[:, index_mapping.heliostat_position_n],
-            u=self.active_heliostat_positions[:, index_mapping.heliostat_position_u],
+            e=self.active_heliostat_positions[:, index_mapping.e],
+            n=self.active_heliostat_positions[:, index_mapping.n],
+            u=self.active_heliostat_positions[:, index_mapping.u],
             device=device,
         )
 

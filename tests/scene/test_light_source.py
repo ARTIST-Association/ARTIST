@@ -1,7 +1,8 @@
+from unittest import mock
+
 import h5py
 import pytest
 import torch
-from pytest_mock import MockerFixture
 
 from artist.scene.light_source import LightSource
 
@@ -10,7 +11,6 @@ torch.cuda.manual_seed(7)
 
 
 def test_load_light_source_from_hdf5(
-    mocker: MockerFixture,
     device: torch.device,
 ) -> None:
     """
@@ -18,8 +18,6 @@ def test_load_light_source_from_hdf5(
 
     Parameters
     ----------
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -28,7 +26,7 @@ def test_load_light_source_from_hdf5(
     AssertionError
         If test does not complete as expected.
     """
-    mock_h5_file = mocker.MagicMock(spec=h5py.File)
+    mock_h5_file = mock.MagicMock(spec=h5py.File)
     with pytest.raises(NotImplementedError) as exc_info:
         LightSource.from_hdf5(
             config_file=mock_h5_file,

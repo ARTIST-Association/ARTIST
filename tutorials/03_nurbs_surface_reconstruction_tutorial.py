@@ -1,3 +1,5 @@
+"""NURBS surface reconstruction tutorial."""
+
 import logging
 import pathlib
 
@@ -22,7 +24,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 343 for the tutorial code.
+# Skip to line 348 for the tutorial code.
 #############################################################################################################
 
 
@@ -306,9 +308,9 @@ def create_flux_plots(
 
             # Align heliostats.
             heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.target_areas.centers[
-                    validation_target_area_indices
-                ],
+                aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                    target_area_indices=validation_target_area_indices, device=device
+                ),
                 incident_ray_directions=validation_incident_ray_directions,
                 active_heliostats_mask=validation_active_heliostats_mask,
                 device=device,
@@ -325,11 +327,13 @@ def create_flux_plots(
             )
 
             # Perform heliostat-based ray tracing.
-            validation_bitmaps_per_heliostat = validation_ray_tracer.trace_rays(
-                incident_ray_directions=validation_incident_ray_directions,
-                active_heliostats_mask=validation_active_heliostats_mask,
-                target_area_indices=validation_target_area_indices,
-                device=device,
+            validation_bitmaps_per_heliostat, _, _, _ = (
+                validation_ray_tracer.trace_rays(
+                    incident_ray_directions=validation_incident_ray_directions,
+                    active_heliostats_mask=validation_active_heliostats_mask,
+                    target_area_indices=validation_target_area_indices,
+                    device=device,
+                )
             )
 
             # Create the plots.
@@ -402,7 +406,7 @@ heliostat_data_mapping = [
 optimizer_dict = {
     config_dictionary.initial_learning_rate: 1e-4,
     config_dictionary.tolerance: 1e-5,
-    config_dictionary.max_epoch: 30,
+    config_dictionary.max_epoch: 100,
     config_dictionary.batch_size: 30,
     config_dictionary.log_step: 1,
     config_dictionary.early_stopping_delta: 1e-4,
@@ -425,8 +429,7 @@ scheduler_dict = {
 constraint_dict = {
     config_dictionary.weight_smoothness: 0.005,
     config_dictionary.weight_ideal_surface: 0.005,
-    config_dictionary.initial_lambda_energy: 0.1,
-    config_dictionary.rho_energy: 1.0,
+    config_dictionary.rho_flux_integral: 1.0,
     config_dictionary.energy_tolerance: 0.01,
 }
 # Combine configurations.
@@ -453,7 +456,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]
+    device = ddp_setup[config_dictionary.device]  # type: ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -496,7 +499,7 @@ with setup_distributed_environment(
     )
 
     # Reconstruct surfaces.
-    final_loss_per_heliostat = surface_reconstructor.reconstruct_surfaces(
+    final_loss_per_heliostat, _ = surface_reconstructor.reconstruct_surfaces(
         loss_definition=loss_definition, device=device
     )
 

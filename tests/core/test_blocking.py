@@ -96,7 +96,7 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
                     ]
                 ),
                 torch.tensor([[[0.0, 1.0, 0.0, 0.0], [2.0, 0.0, 0.0, 0.0]]]),
-                torch.tensor([[0.0, 0.0, -1.0]]),
+                torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             ],
         ),
         (
@@ -121,14 +121,14 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
                         ]
                     ]
                 ),
-                torch.tensor([[-0.1987, -0.4699, -0.8601]]),
+                torch.tensor([[-0.1987, -0.4699, -0.8601, 0.0]]),
             ],
         ),
     ],
 )
 def test_create_blocking_primitives_rectangle(
-    surface: torch.Tensor,
-    transformed_surface: torch.Tensor,
+    surface: str,
+    transformed_surface: str,
     expected: list[torch.Tensor],
     request: pytest.FixtureRequest,
     device: torch.device,
@@ -136,13 +136,13 @@ def test_create_blocking_primitives_rectangle(
     """
     Test that the creation of blocking primitives works as desired.
 
-    Parameter
-    ---------
-    surface : torch.Tensor
-        Surface at the origin.
-    transformed_surface : torch.Tensor
-        Surface that has been transformed.
-    expected : torch.Tensor
+    Parameters
+    ----------
+    surface : str
+        Name of the fixture providing the blocking surface.
+    transformed_surface : str
+        Name of the fixture providing the active (transformed) surface.
+    expected : list[torch.Tensor]
         The expected tensors.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
@@ -268,7 +268,7 @@ def surface_for_index_test_rotated_and_translated(
                     ]
                 ),
                 torch.tensor([[[-2.0, 1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]]]),
-                torch.tensor([[0.0, 0.0, -1.0]]),
+                torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
             ],
         ),
         (
@@ -292,13 +292,13 @@ def surface_for_index_test_rotated_and_translated(
                         ]
                     ]
                 ),
-                torch.tensor([[-0.1987, -0.4699, -0.8601]]),
+                torch.tensor([[-0.1987, -0.4699, -0.8601, 0.0]]),
             ],
         ),
     ],
 )
 def test_create_blocking_primitives_rectangles_by_index(
-    surface: torch.Tensor,
+    surface: str,
     expected: list[torch.Tensor],
     request: pytest.FixtureRequest,
     device: torch.device,
@@ -306,11 +306,11 @@ def test_create_blocking_primitives_rectangles_by_index(
     """
     Test that the creation of blocking primitives works as desired.
 
-    Parameter
-    ---------
-    surface : torch.Tensor
-        Surface randomly transformed.
-    expected : torch.Tensor
+    Parameters
+    ----------
+    surface : str
+        Name of the fixture providing the active surface.
+    expected : list[torch.Tensor]
         The expected tensors.
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
@@ -390,7 +390,9 @@ def test_blocking_integration(device: torch.device) -> None:
     )
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_indices],
+        aim_points=scenario.solar_tower.get_centers_of_target_areas(
+            target_area_indices=target_area_indices, device=device
+        ),
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -405,7 +407,7 @@ def test_blocking_integration(device: torch.device) -> None:
         batch_size=10,
     )
 
-    bitmaps_per_heliostat = ray_tracer.trace_rays(
+    bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
@@ -446,8 +448,7 @@ def test_ray_extinction(device: torch.device) -> None:
     torch.cuda.manual_seed(7)
 
     with h5py.File(
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/scenarios/test_scenario_paint_single_heliostat.h5",
+        pathlib.Path(ARTIST_ROOT) / "tests/data/scenarios/test_blocking.h5",
         "r",
     ) as scenario_file:
         scenario = Scenario.load_scenario_from_hdf5(
@@ -457,12 +458,16 @@ def test_ray_extinction(device: torch.device) -> None:
 
     heliostat_group = scenario.heliostat_field.heliostat_groups[0]
 
+    heliostat_target_light_source_mapping = [
+        ("heliostat_2", "target_0", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+    ]
     (
         active_heliostats_mask,
         target_area_indices,
         incident_ray_directions,
     ) = scenario.index_mapping(
         heliostat_group=heliostat_group,
+        string_mapping=heliostat_target_light_source_mapping,
         device=device,
     )
 
@@ -471,7 +476,9 @@ def test_ray_extinction(device: torch.device) -> None:
     )
 
     heliostat_group.align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_indices],
+        aim_points=scenario.solar_tower.get_centers_of_target_areas(
+            target_area_indices=target_area_indices, device=device
+        ),
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
@@ -488,7 +495,7 @@ def test_ray_extinction(device: torch.device) -> None:
 
     ray_extinction_factor = 0.9
 
-    bitmaps_per_heliostat_no_extinction = ray_tracer.trace_rays(
+    bitmaps_per_heliostat_no_extinction, _, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
@@ -496,7 +503,7 @@ def test_ray_extinction(device: torch.device) -> None:
         device=device,
     )
 
-    bitmaps_per_heliostat_extinction = ray_tracer.trace_rays(
+    bitmaps_per_heliostat_extinction, _, _, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,

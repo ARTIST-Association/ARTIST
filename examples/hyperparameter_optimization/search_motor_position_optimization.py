@@ -43,7 +43,7 @@ from artist.core import loss_functions
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, utils
-from artist.util.environment_setup import get_device
+from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the hyperparameter search."""
@@ -78,18 +78,18 @@ def motor_position_optimizer_for_hpo(
     device = get_device(device)
 
     # Set up ARTIST to run in single device mode.
-    ddp_setup = {
-        config_dictionary.device: device,
-        config_dictionary.is_distributed: False,
-        config_dictionary.is_nested: False,
-        config_dictionary.rank: 0,
-        config_dictionary.world_size: 1,
-        config_dictionary.process_subgroup: None,
-        config_dictionary.groups_to_ranks_mapping: {0: [0]},
-        config_dictionary.heliostat_group_rank: 0,
-        config_dictionary.heliostat_group_world_size: 1,
-        config_dictionary.ranks_to_groups_mapping: {0: [0]},
-    }
+    ddp_setup = DdpSetup(
+        device=device,
+        is_distributed=False,
+        is_nested=False,
+        rank=0,
+        world_size=1,
+        process_subgroup=None,
+        groups_to_ranks_mapping={0: [0]},
+        heliostat_group_rank=0,
+        heliostat_group_world_size=1,
+        ranks_to_groups_mapping={0: [0]},
+    )
 
     # Load a scenario from an .h5 file.
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -101,18 +101,15 @@ def motor_position_optimizer_for_hpo(
             device=device,
         )
 
-    # Set number of rays.
-    scenario.set_number_of_rays(number_of_rays=5)
-
     optimizer_dict = {
         config_dictionary.initial_learning_rate: params["initial_learning_rate"],
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
+        config_dictionary.max_epoch: 400,
         config_dictionary.batch_size: 250,
         config_dictionary.log_step: 0,
         config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 15,
-        config_dictionary.early_stopping_window: 10,
+        config_dictionary.early_stopping_patience: 400,
+        config_dictionary.early_stopping_window: 400,
     }
     scheduler_dict = {
         config_dictionary.scheduler_type: params["scheduler"],
@@ -126,10 +123,10 @@ def motor_position_optimizer_for_hpo(
         config_dictionary.gamma: params["gamma"],
     }
     constraint_dict = {
-        config_dictionary.rho_energy: 1.0,
-        config_dictionary.max_flux_density: 3,
-        config_dictionary.rho_pixel: 1.0,
-        config_dictionary.lambda_lr: 0.1,
+        config_dictionary.rho_flux_integral: params["rho_flux_integral"],
+        config_dictionary.rho_local_flux: params["rho_local_flux"],
+        config_dictionary.rho_intercept: params["rho_intercept"],
+        config_dictionary.max_flux_density: 1000000,
     }
     optimization_configuration = {
         config_dictionary.optimization: optimizer_dict,
@@ -145,7 +142,26 @@ def motor_position_optimizer_for_hpo(
     )
 
     # Receiver.
-    target_area_index = 1
+    target_area_index = 3
+
+    # Set DNI W/m^2.
+    dni = 800
+
+    # Set number of rays.
+    scenario.set_number_of_rays(number_of_rays=5)
+
+    canting_norm = (
+        torch.norm(scenario.heliostat_field.heliostat_groups[0].canting[0], dim=1)[0]
+    )[:2]
+    dimensions = (canting_norm * 4) + 0.02
+    heliostat_surface_area = dimensions[0] * dimensions[1]
+    total_heliostat_area = (
+        heliostat_surface_area
+        * scenario.heliostat_field.number_of_heliostats_per_group.sum()
+    )
+    target_flux_integral = (
+        dni * total_heliostat_area * 0.75
+    )  # account for mirror and angle based losses.
 
     # Target distribution.
     e_trapezoid = utils.trapezoid_distribution(
@@ -156,7 +172,7 @@ def motor_position_optimizer_for_hpo(
     )
     eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
-    target_distribution = (eu_trapezoid / eu_trapezoid.sum()) * 10000000
+    target_distribution = (eu_trapezoid / eu_trapezoid.sum()) * target_flux_integral
 
     # Create the surface reconstructor.
     motor_positions_optimizer = MotorPositionsOptimizer(
@@ -166,10 +182,16 @@ def motor_position_optimizer_for_hpo(
         incident_ray_direction=baseline_incident_ray_direction,
         target_area_index=target_area_index,
         ground_truth=target_distribution,
-        dni=500,
+        dni=dni,
         device=device,
     )
-    loss = motor_positions_optimizer.optimize(
+    (
+        loss,
+        _,
+        _,
+        _,
+        _,
+    ) = motor_positions_optimizer.optimize(
         loss_definition=loss_functions.KLDivergenceLoss(), device=device
     )
 
@@ -233,6 +255,9 @@ if __name__ == "__main__":
             "threshold": [1e-6, 1e-3],
             "cooldown": [2, 20],
             "gamma": [0.85, 0.999],
+            "rho_flux_integral": [0.1, 1.0],
+            "rho_local_flux": [0.1, 1.0],
+            "rho_intercept": [0.1, 1.0],
         },
     )
 
@@ -282,9 +307,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_surface.h5"
-    )
+    scenario_file = pathlib.Path(args.scenarios_dir) / "deflectometry_scenario.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
@@ -326,7 +349,7 @@ if __name__ == "__main__":
             reconstruction_parameter_ranges[key] = str_tuple
 
     # Set up evolutionary operator.
-    num_generations = 400
+    num_generations = 162
     pop_size = 2 * comm.size
     propagator = get_default_propagator(
         pop_size=pop_size,

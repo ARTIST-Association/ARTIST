@@ -1,3 +1,22 @@
+"""
+Generate kinematics reconstruction results with optimized hyperparameters.
+
+Command-Line-Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+heliostat_for_reconstruction : dict[str, list[int]]
+    The heliostat and its calibration numbers.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -16,7 +35,11 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util.environment_setup import (
+    DdpSetup,
+    get_device,
+    setup_distributed_environment,
+)
 
 set_logger_config()
 torch.manual_seed(7)
@@ -86,7 +109,7 @@ def merge_data(
 
 def data_for_flux_plots(
     scenario: Scenario,
-    ddp_setup: dict[str, Any],
+    ddp_setup: DdpSetup,
     heliostat_data: dict[
         str,
         CalibrationDataParser
@@ -101,7 +124,7 @@ def data_for_flux_plots(
     ----------
     scenario : Scenario
         The scenario.
-    ddp_setup : dict[str, Any]
+    ddp_setup : DdpSetup
         Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
     heliostat_data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
         Heliostat and calibration measurement data.
@@ -119,9 +142,9 @@ def data_for_flux_plots(
 
     bitmaps_for_plots = {}
 
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
-    ]:
+    for heliostat_group_index in ddp_setup[
+        config_dictionary.groups_to_ranks_mapping  # type: ignore
+    ][ddp_setup[config_dictionary.rank]]:  # type: ignore
         heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
         ]
@@ -152,25 +175,27 @@ def data_for_flux_plots(
         )
 
         heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_indices],
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices=target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
         )
 
-        scenario.set_number_of_rays(number_of_rays=300)
+        scenario.set_number_of_rays(number_of_rays=150)
 
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
             blocking_active=False,
-            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-            rank=ddp_setup[config_dictionary.heliostat_group_rank],
+            world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type: ignore
+            rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
             batch_size=heliostat_group.number_of_active_heliostats,
-            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+            random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
         )
 
-        bitmaps_per_heliostat = ray_tracer.trace_rays(
+        bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,
@@ -219,7 +244,7 @@ def generate_reconstruction_results(
     """
     device = get_device(device=device)
 
-    loss_dict: dict = {}
+    loss_dict: dict[str, Any] = {}
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -251,16 +276,22 @@ def generate_reconstruction_results(
         )
 
         optimizer_dict = {
-            config_dictionary.initial_learning_rate: hyperparameters[
-                "initial_learning_rate"
+            config_dictionary.initial_learning_rate_rotation_deviation: hyperparameters[
+                "initial_learning_rate_rotation_deviation"
+            ],
+            config_dictionary.initial_learning_rate_initial_angles: hyperparameters[
+                "initial_learning_rate_initial_angles"
+            ],
+            config_dictionary.initial_learning_rate_initial_stroke_length: hyperparameters[
+                "initial_learning_rate_initial_stroke_length"
             ],
             config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 10,
-            config_dictionary.batch_size: 500,
-            config_dictionary.log_step: 1,
+            config_dictionary.max_epoch: 1000,
+            config_dictionary.batch_size: 6000,
+            config_dictionary.log_step: 10,
             config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.early_stopping_window: 1000,
+            config_dictionary.early_stopping_patience: 10000,
+            config_dictionary.early_stopping_window: 10000,
         }
         scheduler_dict = {
             config_dictionary.scheduler_type: hyperparameters["scheduler"],
@@ -284,9 +315,12 @@ def generate_reconstruction_results(
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ] = {
             config_dictionary.data_parser: PaintCalibrationDataParser(
-                sample_limit=2, centroid_extraction_method="UTIS"
+                sample_limit=4,
+                centroid_extraction_method="UTIS",
             ),
-            config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+            config_dictionary.heliostat_data_mapping: [
+                mapping for mapping in heliostat_data_mapping if mapping[0] != "AG21"
+            ],
         }
 
         data_plot: dict[
@@ -319,7 +353,7 @@ def generate_reconstruction_results(
             device=device,
         )
 
-        per_heliostat_losses = kinematics_reconstructor.reconstruct_kinematics(
+        per_heliostat_losses, _ = kinematics_reconstructor.reconstruct_kinematics(
             loss_definition=loss_definition, device=device
         )
 
@@ -348,24 +382,6 @@ def generate_reconstruction_results(
 
 
 if __name__ == "__main__":
-    """
-    Generate results with the optimized parameters.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    heliostat_for_reconstruction : dict[str, list[int]]
-        The heliostat and its calibration numbers.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
@@ -435,7 +451,7 @@ if __name__ == "__main__":
     results_dir = pathlib.Path(args.results_dir)
 
     # Define scenario path.
-    scenario_file = pathlib.Path(args.scenarios_dir) / "ideal_scenario_kinematics.h5"
+    scenario_file = pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_hpo.h5"
     if not scenario_file.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_file} could not be found! Please run the ``generate_scenario.py`` to generate this scenario, or adjust the file path and try again."
