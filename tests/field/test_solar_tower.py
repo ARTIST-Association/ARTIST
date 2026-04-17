@@ -22,11 +22,27 @@ from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
     ],
 )
 def test_get_centers_of_target_areas(
-    target_area_indices,
-    expected,
-    device,
-):
-    """Test that ``SolarTower.get_centers_of_target_areas`` returns the correct center coordinates."""
+    target_area_indices: torch.Tensor,
+    expected: torch.Tensor,
+    device: torch.device,
+) -> None:
+    """
+    Test the abstract methods of the kinematics.
+
+    Parameters
+    ----------
+    target_area_indices : torch.Tensor
+        Indices of targets for each heliostat.
+    expected : torch.Tensor
+        Expected results.
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
     mock_target_areas_planar = mock.MagicMock(spec=TowerTargetAreasPlanar)
     mock_target_areas_planar.names = ["plane_1", "plane_2"]
     mock_target_areas_planar.number_of_target_areas = 2
