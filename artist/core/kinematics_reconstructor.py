@@ -23,14 +23,15 @@ class KinematicsReconstructor:
     An optimizer used to reconstruct real-world kinematics deviation parameters.
 
     The kinematics reconstructor learns kinematics parameters. These parameters are
-    specific to a certain kinematics type and can for example include the four
-    kinematics rotation deviation parameters as well as the two initial actuator parameters
-    for each actuator of a rigid body kinematics.
+    specific to a certain kinematics type and can for example include the four kinematics
+    rotation deviation parameters as well as the two initial actuator parameters
+    for each actuator of a rigid-body kinematics.
 
     Attributes
     ----------
     ddp_setup : DdpSetup
-        Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
+        Information about the distributed environment, process groups, devices, ranks, world size, and
+        heliostat-group-to-ranks mapping.
     scenario : Scenario
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
@@ -46,7 +47,7 @@ class KinematicsReconstructor:
 
     Note
     ----
-    Each heliostat selected for reconstruction needs to have the same amount of samples as all others.
+    Each heliostat selected for reconstruction needs to have the same number of samples as all others.
 
     Methods
     -------
@@ -73,11 +74,12 @@ class KinematicsReconstructor:
         Parameters
         ----------
         ddp_setup : DdpSetup
-            Information about the distributed environment, process_groups, devices, ranks, world_size, heliostat group to ranks mapping.
+            Information about the distributed environment, process groups, devices, ranks, world size, and
+            heliostat-group-to-ranks mapping.
         scenario : Scenario
             The scenario.
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
-            Data parser and the mapping of heliostat name and calibration data.
+            The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
             Parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
         dni : float | None
@@ -102,7 +104,8 @@ class KinematicsReconstructor:
             self.reconstruction_method = reconstruction_method
         else:
             raise ValueError(
-                f"The kinematics reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                f"The kinematics reconstruction method {reconstruction_method} is not recognized. "
+                f"Please select another reconstruction method and try again!"
             )
 
     def reconstruct_kinematics(
@@ -126,7 +129,7 @@ class KinematicsReconstructor:
         -------
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
+            Tensor of shape ``[total_number_of_heliostats_in_scenario]``.
         dict[str, list]
             Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
         """
@@ -141,6 +144,12 @@ class KinematicsReconstructor:
                     loss_definition=loss_definition,
                     device=device,
                 )
+            )
+
+        else:
+            raise ValueError(
+                f"The kinematics reconstruction method {self.reconstruction_method} is not recognized. "
+                f"Please select another reconstruction method and try again!"
             )
 
         return loss, loss_history
@@ -169,7 +178,7 @@ class KinematicsReconstructor:
         -------
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
+            Tensor of shape ``[total_number_of_heliostats_in_scenario]``.
         dict[str, list]
             Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
         """
