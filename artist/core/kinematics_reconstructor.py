@@ -98,7 +98,6 @@ class KinematicsReconstructor:
 
         if reconstruction_method in [
             config_dictionary.kinematics_reconstruction_raytracing,
-            config_dictionary.kinematics_reconstruction_motor_positions,
         ]:
             self.reconstruction_method = reconstruction_method
         else:
