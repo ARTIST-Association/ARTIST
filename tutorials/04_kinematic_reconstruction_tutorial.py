@@ -237,8 +237,8 @@ optimizer_dict = {
 scheduler_dict = {
     config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
     config_dictionary.gamma: 0.9,
-    config_dictionary.min: 1e-6,
-    config_dictionary.max: 1e-3,
+    config_dictionary.lr_min: 1e-6,
+    config_dictionary.lr_max: 1e-3,
     config_dictionary.step_size_up: 500,
     config_dictionary.reduce_factor: 0.0001,
     config_dictionary.patience: 50,

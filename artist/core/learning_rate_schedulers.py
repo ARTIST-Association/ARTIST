@@ -55,8 +55,8 @@ def cyclic(
     """
     scheduler = torch.optim.lr_scheduler.CyclicLR(
         optimizer,
-        base_lr=float(parameters[config_dictionary.min]),
-        max_lr=float(parameters[config_dictionary.max]),
+        base_lr=float(parameters[config_dictionary.lr_min]),
+        max_lr=float(parameters[config_dictionary.lr_max]),
         step_size_up=parameters[config_dictionary.step_size_up],
     )
 
@@ -88,7 +88,7 @@ def reduce_on_plateau(
         patience=parameters[config_dictionary.patience],
         threshold=float(parameters[config_dictionary.threshold]),
         cooldown=parameters[config_dictionary.cooldown],
-        min_lr=float(parameters[config_dictionary.min]),
+        min_lr=float(parameters[config_dictionary.lr_min]),
     )
 
     return scheduler

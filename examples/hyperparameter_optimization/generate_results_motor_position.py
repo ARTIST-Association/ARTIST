@@ -238,8 +238,8 @@ def generate_optimization_results(
         scheduler_dict = {
             config_dictionary.scheduler_type: hyperparameters["scheduler"],
             config_dictionary.gamma: hyperparameters["gamma"],
-            config_dictionary.min: hyperparameters["min_learning_rate"],
-            config_dictionary.max: hyperparameters["max_learning_rate"],
+            config_dictionary.lr_min: hyperparameters["min_learning_rate"],
+            config_dictionary.lr_max: hyperparameters["max_learning_rate"],
             config_dictionary.step_size_up: hyperparameters["step_size_up"],
             config_dictionary.reduce_factor: hyperparameters["reduce_factor"],
             config_dictionary.patience: hyperparameters["patience"],

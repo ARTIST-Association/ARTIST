@@ -417,8 +417,8 @@ optimizer_dict = {
 scheduler_dict = {
     config_dictionary.scheduler_type: config_dictionary.exponential,
     config_dictionary.gamma: 0.99,
-    config_dictionary.min: 1e-6,
-    config_dictionary.max: 1e-2,
+    config_dictionary.lr_min: 1e-6,
+    config_dictionary.lr_max: 1e-2,
     config_dictionary.step_size_up: 100,
     config_dictionary.reduce_factor: 0.5,
     config_dictionary.patience: 10,

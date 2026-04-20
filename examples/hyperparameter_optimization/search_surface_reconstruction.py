@@ -165,8 +165,8 @@ def surface_reconstructor_for_hpo(
     }
     scheduler_dict = {
         config_dictionary.scheduler_type: params["scheduler"],
-        config_dictionary.min: params["min_learning_rate"],
-        config_dictionary.max: params["max_learning_rate"],
+        config_dictionary.lr_min: params["min_learning_rate"],
+        config_dictionary.lr_max: params["max_learning_rate"],
         config_dictionary.step_size_up: params["step_size_up"],
         config_dictionary.reduce_factor: params["reduce_factor"],
         config_dictionary.patience: params["patience"],

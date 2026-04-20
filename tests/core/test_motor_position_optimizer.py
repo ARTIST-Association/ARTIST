@@ -103,8 +103,8 @@ def test_motor_positions_optimizer(
 
     scheduler_dict = {
         config_dictionary.scheduler_type: scheduler,
-        config_dictionary.min: 1e-3,
-        config_dictionary.max: 2e-3,
+        config_dictionary.lr_min: 1e-3,
+        config_dictionary.lr_max: 2e-3,
         config_dictionary.step_size_up: 100,
         config_dictionary.reduce_factor: 0.9,
         config_dictionary.patience: 100,

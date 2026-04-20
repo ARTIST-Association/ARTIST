@@ -862,8 +862,8 @@ def full_field_optimizations(
             config_dictionary.scheduler: {
                 config_dictionary.scheduler_type: kinematics_config["scheduler"],
                 config_dictionary.gamma: kinematics_config["gamma"],
-                config_dictionary.min: kinematics_config["min_learning_rate"],
-                config_dictionary.max: kinematics_config["max_learning_rate"],
+                config_dictionary.lr_min: kinematics_config["min_learning_rate"],
+                config_dictionary.lr_max: kinematics_config["max_learning_rate"],
                 config_dictionary.step_size_up: kinematics_config["step_size_up"],
                 config_dictionary.reduce_factor: kinematics_config["reduce_factor"],
                 config_dictionary.patience: kinematics_config["patience"],
@@ -972,8 +972,8 @@ def full_field_optimizations(
             config_dictionary.scheduler: {
                 config_dictionary.scheduler_type: surface_config["scheduler"],
                 config_dictionary.gamma: surface_config["gamma"],
-                config_dictionary.min: surface_config["min_learning_rate"],
-                config_dictionary.max: surface_config["max_learning_rate"],
+                config_dictionary.lr_min: surface_config["min_learning_rate"],
+                config_dictionary.lr_max: surface_config["max_learning_rate"],
                 config_dictionary.step_size_up: surface_config["step_size_up"],
                 config_dictionary.reduce_factor: surface_config["reduce_factor"],
                 config_dictionary.patience: surface_config["patience"],
@@ -1180,8 +1180,8 @@ def full_field_optimizations(
             config_dictionary.scheduler: {
                 config_dictionary.scheduler_type: aim_point_config["scheduler"],
                 config_dictionary.gamma: aim_point_config["gamma"],
-                config_dictionary.min: aim_point_config["min_learning_rate"],
-                config_dictionary.max: aim_point_config["max_learning_rate"],
+                config_dictionary.lr_min: aim_point_config["min_learning_rate"],
+                config_dictionary.lr_max: aim_point_config["max_learning_rate"],
                 config_dictionary.step_size_up: aim_point_config["step_size_up"],
                 config_dictionary.reduce_factor: aim_point_config["reduce_factor"],
                 config_dictionary.patience: aim_point_config["patience"],

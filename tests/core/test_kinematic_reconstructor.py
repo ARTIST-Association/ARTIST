@@ -100,7 +100,7 @@ def test_kinematics_reconstructor(
     scheduler_dict = {
         config_dictionary.scheduler_type: scheduler,
         config_dictionary.gamma: 0.99,
-        config_dictionary.min: 1e-4,
+        config_dictionary.lr_min: 1e-4,
         config_dictionary.reduce_factor: 0.9,
         config_dictionary.patience: 100,
         config_dictionary.threshold: 1e-3,

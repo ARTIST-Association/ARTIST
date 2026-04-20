@@ -73,8 +73,8 @@ def test_surface_reconstructor(
     }
     scheduler_dict = {
         config_dictionary.scheduler_type: scheduler,
-        config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
+        config_dictionary.lr_min: 1e-6,
+        config_dictionary.lr_max: 1e-3,
         config_dictionary.step_size_up: 500,
         config_dictionary.reduce_factor: 0.8,
         config_dictionary.patience: 10,
