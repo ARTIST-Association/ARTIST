@@ -42,7 +42,7 @@ class KinematicsReconstructor:
     dni : float
         Direct normal irradiance in W/m^2.
     reconstruction_method : str
-        The reconstruction method. Currently only reconstruction via ray tracing is available.
+        The reconstruction method. Currently, reconstruction via ray tracing or via motor positions is available.
 
     Note
     ----
