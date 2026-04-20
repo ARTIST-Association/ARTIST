@@ -188,12 +188,13 @@ class KinematicsReconstructor:
             In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
-
         rank = self.ddp_setup[config_dictionary.rank]  # type: ignore
 
         if rank == 0:
             log.info("Beginning kinematics reconstruction with ray tracing.")
 
+        # Initialize final loss per heliostat, group offset table into global heliostat index space, and
+        # per-group loss curves for this rank.
         final_loss_per_heliostat = torch.full(
             (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
             torch.inf,
@@ -209,9 +210,12 @@ class KinematicsReconstructor:
         )
         loss_history: list[dict[str, list[float]]] = []
 
+        # Iterate heliostat groups assigned to this rank.
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping  # type: ignore
         ][rank]:
+            # Parse calibration inputs for current group to obtain measured flux, incident ray directions, mask of
+            # active heliostats, and target area indices.
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
@@ -294,6 +298,7 @@ class KinematicsReconstructor:
                     stroke_length_normalized, requires_grad=True
                 )
 
+                # Set up optimizer, scheduler, and early stopping.
                 optimizer = torch.optim.Adam(
                     [
                         {
@@ -416,6 +421,7 @@ class KinematicsReconstructor:
 
                     sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
 
+                    # Compute loss from prediction vs. measured focal spots.
                     loss_per_sample = loss_definition(
                         prediction=flux_distributions,
                         ground_truth=focal_spots_measured[
@@ -476,7 +482,7 @@ class KinematicsReconstructor:
                     loss_history_list.append(loss.detach().cpu().item())
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
-                    stop = early_stopper.step(loss)
+                    stop = early_stopper.step(loss.item())
 
                     if stop:
                         log.info(f"Early stopping at epoch {epoch}.")
