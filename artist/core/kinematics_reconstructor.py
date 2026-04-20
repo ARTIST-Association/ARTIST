@@ -109,7 +109,7 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, dict[str, list]]:
+    ) -> tuple[torch.Tensor, list[Any]]:
         """
         Reconstruct the kinematic parameters.
 
@@ -127,7 +127,7 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
-        dict[str, list]
+        list[Any]
             Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
         """
         device = get_device(device=device)
@@ -149,7 +149,7 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, dict[str, list]]:
+    ) -> tuple[torch.Tensor, list[Any]]:
         """
         Reconstruct the kinematics parameters using ray tracing.
 
@@ -170,7 +170,7 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Tensor of shape [total_number_of_heliostats_in_scenario].
-        dict[str, list]
+        list[Any]
             Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
         """
         device = get_device(device=device)
@@ -193,6 +193,7 @@ class KinematicsReconstructor:
                 ),
             ]
         )
+        loss_history = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping  # type: ignore
@@ -469,9 +470,11 @@ class KinematicsReconstructor:
 
                     epoch += 1
 
-                loss_history = {
-                    "total_loss": loss_history_list,
-                }
+                loss_history.append(
+                    {
+                        "total_loss": loss_history_list,
+                    }
+                )
 
                 local_indices = (
                     sample_indices_for_local_rank[::number_of_samples_per_heliostat]
@@ -512,6 +515,17 @@ class KinematicsReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
+            final_loss_history_all_groups = [
+                None
+                for _ in range(self.ddp_setup[config_dictionary.world_size])  # type: ignore
+            ]
+            torch.distributed.all_gather_object(
+                final_loss_history_all_groups, loss_history
+            )
+
             log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
-        return final_loss_per_heliostat.detach().cpu(), loss_history
+        else:
+            final_loss_history_all_groups = loss_history  # type: ignore[assignment]
+
+        return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
