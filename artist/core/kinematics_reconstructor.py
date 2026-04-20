@@ -158,7 +158,7 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[Any]]:
+    ) -> tuple[torch.Tensor, list[list[dict[str, list[float]]]]]:
         """
         Reconstruct the kinematics parameters using ray tracing.
 
@@ -178,9 +178,14 @@ class KinematicsReconstructor:
         -------
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
-        list[Any]
-            Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
+            Shape is ``[total_number_of_heliostats_in_scenario]``.
+        list[list[dict[str, list[float]]]]
+            Loss histories over epochs grouped by rank.
+            Outer list: one entry per rank.
+            Inner list: one entry per heliostat group processed on that rank.
+            Each group entry is a dict with key ``"total_loss"`` mapping to a list
+            of per-epoch scalar loss values.
+            In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
 
@@ -202,7 +207,7 @@ class KinematicsReconstructor:
                 ),
             ]
         )
-        loss_history = []
+        loss_history: list[dict[str, list[float]]] = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping  # type: ignore
@@ -524,8 +529,8 @@ class KinematicsReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
-            final_loss_history_all_groups = [
-                None
+            final_loss_history_all_groups: list[list[dict[str, list[float]]]] = [
+                []
                 for _ in range(self.ddp_setup[config_dictionary.world_size])  # type: ignore
             ]
             torch.distributed.all_gather_object(
@@ -535,6 +540,6 @@ class KinematicsReconstructor:
             log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
         else:
-            final_loss_history_all_groups = loss_history  # type: ignore[assignment]
+            final_loss_history_all_groups = [loss_history]
 
         return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
