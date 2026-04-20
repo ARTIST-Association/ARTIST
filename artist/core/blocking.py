@@ -514,7 +514,7 @@ def build_linear_bounding_volume_hierarchies(
     """
     Build linear bounding volume hierarchies (LBVHs).
 
-    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30 bit Morton codes using torch.int32.
+    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton codes using torch.int32.
 
     Reference: Tero Karras. Maximizing Parallelism in the Construction of BVHs, Octrees, and k‑d Trees.
     In Proceedings of the Fourth ACM SIGGRAPH / Eurographics Symposium on High‑Performance Graphics (HPG 2012)
@@ -659,7 +659,7 @@ def build_linear_bounding_volume_hierarchies(
 
     # LBVH:
     # left, right: Indices of the left and right child of each node (-1 if not set).
-    # aabb_min, aabb_max: axis aligned bounding box of the node.
+    # aabb_min, aabb_max: axis-aligned bounding box of the node.
     # is_leaf: boolean, indicating whether a node is a leaf node.
     # primitive_index: indicates which primitive is contained, -1 for internal nodes.
     total_nodes = 2 * number_of_blocking_primitives - 1
@@ -704,7 +704,7 @@ def build_linear_bounding_volume_hierarchies(
     right[internal_nodes_indices] = right_internal.to(dtype=torch.int32, device=device)
     is_leaf[internal_nodes_indices] = False
 
-    # Compute axis aligned bounding boxes (AABB) for internal nodes by combining child boxes.
+    # Compute axis-aligned bounding boxes (AABB) for internal nodes by combining child boxes.
     # The Karras mapping ensures internal nodes form a DAG that can be evaluated in ascending order.
     nodes_with_complete_aabb = torch.zeros(
         internal_count, dtype=torch.bool, device=device
@@ -734,7 +734,7 @@ def build_linear_bounding_volume_hierarchies(
         nodes_with_complete_aabb[index] = True
         rounds += 1
 
-    # Warning, if some axis aligned bounding boxes have not been computed.
+    # Warning, if some axis-aligned bounding boxes have not been computed.
     if not nodes_with_complete_aabb.all():
         log.warning(
             "Some internal nodes did not receive AABBs via DAG propagation. This means the tree was built incorrectly.",
@@ -758,7 +758,7 @@ def ray_aabb_intersect(
     aabb_max: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute intersection distances between rays and axis aligned bounding boxes (AABBs).
+    Compute intersection distances between rays and axis-aligned bounding boxes (AABBs).
 
     This method uses the slab method and the inverse ray direction for more efficient computation.
 
