@@ -184,6 +184,7 @@ class SurfaceReconstructor:
                 ),
             ]
         )
+        loss_history = []
 
         for heliostat_group_index in self.ddp_setup[
             config_dictionary.groups_to_ranks_mapping  # type: ignore
@@ -581,14 +582,16 @@ class SurfaceReconstructor:
 
                     epoch += 1
 
-                loss_history = {
-                    "total_loss": total_loss_history,
-                    "flux_loss": flux_loss_history,
-                    "smoothness_regularizer": smoothness_history,
-                    "ideal_regularizer": ideal_history,
-                    "flux_integral": flux_integral,
-                    "flux_integral_constraint": flux_integral_history,
-                }
+                loss_history.append(
+                    {
+                        "total_loss": total_loss_history,
+                        "flux_loss": flux_loss_history,
+                        "smoothness_regularizer": smoothness_history,
+                        "ideal_regularizer": ideal_history,
+                        "flux_integral": flux_integral,
+                        "flux_integral_constraint": flux_integral_history,
+                    }
+                )
 
                 global_active_indices = torch.nonzero(
                     active_heliostats_mask != 0, as_tuple=True
@@ -620,11 +623,22 @@ class SurfaceReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
+            final_loss_history_all_groups = [
+                None
+                for _ in range(self.ddp_setup[config_dictionary.world_size])  # type: ignore
+            ]
+            torch.distributed.all_gather_object(
+                final_loss_history_all_groups, loss_history
+            )
+
             log.info(f"Rank: {rank}, synchronized after surface reconstruction.")
+
+        else:
+            final_loss_history_all_groups = loss_history  # type: ignore[assignment]
 
         self.scenario.heliostat_field.update_surfaces(device=device)
 
-        return final_loss_per_heliostat.detach().cpu(), loss_history
+        return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
 
     @staticmethod
     def lock_control_points_on_outer_edges(
