@@ -42,7 +42,7 @@ class KinematicsReconstructor:
     dni : float
         Direct normal irradiance in W/m^2.
     reconstruction_method : str
-        The reconstruction method. Currently, reconstruction via ray tracing or via motor positions is available.
+        The reconstruction method. Currently, only reconstruction via ray tracing is available.
 
     Note
     ----
@@ -83,7 +83,7 @@ class KinematicsReconstructor:
         dni : float | None
             Direct normal irradiance in W/m^2 (default is None which leads to a ray magnitude of 1.0).
         reconstruction_method : str
-            The reconstruction method. Currently, reconstruction via ray tracing or via motor positions is available.
+            The reconstruction method. Currently, only reconstruction via ray tracing is available.
         """
         rank = ddp_setup[config_dictionary.rank]  # type:ignore
         if rank == 0:
