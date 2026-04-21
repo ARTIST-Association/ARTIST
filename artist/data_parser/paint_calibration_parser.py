@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class PaintCalibrationDataParser(CalibrationDataParser):
     """
-    A calibration data parser for the data source ``PAINT``.
+    A calibration data parser for the data source PAINT.
 
     Attributes
     ----------
@@ -62,7 +62,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             paint_mappings.HELIOS_KEY,
         ]:
             raise ValueError(
-                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
+                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. "
+                f"Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
             )
         self.centroid_extraction_method = centroid_extraction_method
 
@@ -100,8 +101,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         scenario : Scenario
             The scenario.
         bitmap_resolution : torch.Tensor
-            The resolution of all bitmaps during reconstruction (default is torch.tensor([256,256])).
-            Tensor of shape [2].
+            The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256,256])``).
+            Shape is ``[2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -111,22 +112,22 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         -------
         torch.Tensor
             The measured flux density distributions.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         torch.Tensor
             The calibration focal spots.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The incident ray directions.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_calibration_data_points, 2].
+            Shape is ``[number_of_calibration_data_points, 2]``.
         torch.Tensor
             A mask with active heliostats and their replications.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         torch.Tensor
             The target area mapping for the heliostats.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
 
@@ -177,7 +178,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Extract calibration data from ``PAINT`` calibration files.
+        Extract calibration data from PAINT calibration files.
 
         Parameters
         ----------
@@ -185,7 +186,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             The mapping of heliostats and their calibration data files.
         power_plant_position : torch.Tensor
             The power plant position.
-            Tensor of shape [3].
+            Shape is ``[3]``.
         heliostat_names : list[str]
             All possible heliostat names.
         target_area_names : list[str]
@@ -199,19 +200,19 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         -------
         torch.Tensor
             The calibration focal spots.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The incident ray directions.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_calibration_data_points, 2].
+            Shape is ``[number_of_calibration_data_points, 2]``.
         torch.Tensor
             A mask with active heliostats and their replications.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         torch.Tensor
             The target area mapping for the heliostats.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
 
