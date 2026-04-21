@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Sequence
+from typing import cast
 
 import h5py
 import torch
@@ -19,9 +20,9 @@ class SolarTower:
     """
     The solar tower with its associated target areas.
 
-    A solar tower holds two types of target areas (planar and
-    cylindrical tower surfaces) onto which heliostats focus the reflected sunlight.
-    Target areas are grouped by geometry type. Within each type they are indexed
+    A solar tower holds two types of target areas (planar and cylindrical tower surfaces)
+    onto which heliostats focus the reflected sunlight.
+    Target areas are grouped by geometry type. Within each type, they are indexed
     consecutively, with planar areas assigned lower global indices than cylindrical ones.
 
     Attributes
@@ -29,10 +30,10 @@ class SolarTower:
     target_areas : Sequence[TowerTargetAreas]
         List containing all target area groups, ordered as planar first, cylindrical second.
     number_of_target_area_types : int
-        Number of distinct target area geometry types (e.g., planar and cylindrical).
+        Number of distinct target area geometry types (e.g., 2 for planar and cylindrical).
     number_of_target_areas_per_type : torch.Tensor
         Number of individual target areas in each geometry type group.
-        Tensor of shape [number_of_target_area_types].
+        Shape is ``[number_of_target_area_types]``.
     target_name_to_index : dict[str, int]
         Mapping from a target area name to its global integer index.
     index_to_target_area : list[tuple[TowerTargetAreas, int]]
@@ -85,7 +86,7 @@ class SolarTower:
 
         self.index_to_target_area = []
         for target_area_type in self.target_areas:
-            for local_idx, name in enumerate(target_area_type.names):
+            for local_idx, _ in enumerate(target_area_type.names):
                 self.index_to_target_area.append((target_area_type, local_idx))
 
     @classmethod
@@ -133,7 +134,7 @@ class SolarTower:
         """
         Get the center coordinates of the specified target areas.
 
-        For planar target areas the center is returned directly. For cylindrical target areas
+        For planar target areas, the center is returned directly. For cylindrical target areas,
         the center is offset outward along the surface normal by the cylinder radius, giving
         the point on the curved surface facing the heliostats.
 
@@ -142,7 +143,7 @@ class SolarTower:
         target_area_indices : torch.Tensor
             Global target area indices (planar first, cylindrical second) for which
             to retrieve the center coordinates.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -163,22 +164,27 @@ class SolarTower:
             < self.number_of_target_areas_per_type[index_mapping.planar_target_areas]
         )
         if target_area_indices[planar_mask].numel() > 0:
-            planar: TowerTargetAreasPlanar = self.target_areas[
-                index_mapping.planar_target_areas
-            ]  # type: ignore[assignment]
+            planar = cast(
+                TowerTargetAreasPlanar,
+                self.target_areas[index_mapping.planar_target_areas],
+            )
             centers[planar_mask] = planar.centers[target_area_indices[planar_mask]]
-        cylinder_indices = (
-            target_area_indices[~planar_mask]
-            - self.number_of_target_areas_per_type[index_mapping.planar_target_areas]
-        )
+
         if target_area_indices[~planar_mask].numel() > 0:
-            cylindrical: TowerTargetAreasCylindrical = self.target_areas[
-                index_mapping.cylindrical_target_areas
-            ]  # type: ignore[assignment]
+            cylinder_indices = (
+                target_area_indices[~planar_mask]
+                - self.number_of_target_areas_per_type[
+                    index_mapping.planar_target_areas
+                ]
+            )
+            cylindrical = cast(
+                TowerTargetAreasCylindrical,
+                self.target_areas[index_mapping.cylindrical_target_areas],
+            )
             centers[~planar_mask] = (
                 cylindrical.centers[cylinder_indices]
                 + cylindrical.radii[cylinder_indices][:, None]
                 * cylindrical.normals[cylinder_indices]
             )
-            centers[:, 3] = 1.0
+        centers[:, 3] = 1.0
         return centers
