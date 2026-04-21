@@ -19,7 +19,7 @@ class Loss:
 
     def __init__(self, loss_function: torch.nn.Module) -> None:
         """
-        Initialize the the base loss.
+        Initialize the base loss.
 
         Parameters
         ----------
@@ -41,10 +41,10 @@ class Loss:
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of variable shape.
+            Shape is variable.
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of variable shape.
+            Shape is variable.
         \*\*kwargs : Any
             Keyword arguments.
 
@@ -87,13 +87,13 @@ class VectorLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, ...].
+            Shape is ``[number_of_samples, ...]``.
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, ...].
+            Shape is ``[number_of_samples, ...]``.
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the vector loss.
+            ``reduction_dimensions`` is an expected keyword argument for the vector loss.
 
         Raises
         ------
@@ -104,7 +104,7 @@ class VectorLoss(Loss):
         -------
         torch.Tensor
             The summed MSE vector loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            Shape is ``[number_of_samples]``.
         """
         expected_kwargs = ["reduction_dimensions"]
         for key in expected_kwargs:
@@ -162,13 +162,13 @@ class FocalSpotLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_samples, bitmap_resolution_e, bitmap_resolution_u]``.
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, 4].
+            Shape is ``[number_of_samples, 4]``.
         \*\*kwargs : Any
             Keyword arguments.
-            The ``target_area_indices`` and ``device`` are expected keyword arguments for the focal spot loss.
+            ``target_area_indices`` and ``device`` are expected keyword arguments for the focal spot loss.
 
         Raises
         ------
@@ -179,7 +179,7 @@ class FocalSpotLoss(Loss):
         -------
         torch.Tensor
             The focal spot loss.
-            Tensor of shape [number_of_samples].
+            Shape is ``[number_of_samples]``.
         """
         expected_kwargs = ["device", "target_area_indices"]
         errors = []
@@ -203,15 +203,13 @@ class FocalSpotLoss(Loss):
 
         focal_spot_coordinates = utils.bitmap_coordinates_to_target_coordinates(
             bitmap_coordinates=focal_spots_bitmap,
-            bitmap_resolution=prediction.shape[1:],
+            bitmap_resolution=torch.tensor(prediction.shape[1:]),
             solar_tower=self.scenario.solar_tower,
             target_area_indices=target_area_indices,
             device=device,
         )
 
-        loss = torch.norm(focal_spot_coordinates[:, :3] - ground_truth[:, :3], dim=1)
-
-        return loss
+        return torch.norm(focal_spot_coordinates[:, :3] - ground_truth[:, :3], dim=1)
 
 
 class PixelLoss(Loss):
@@ -258,13 +256,13 @@ class PixelLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_samples, bitmap_resolution_e, bitmap_resolution_u]``.
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_samples, bitmap_resolution_e, bitmap_resolution_u]``.
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions``, ``target_area_indices`` and optionally ``device`` are expected keyword arguments for the pixel loss.
+            ``reduction_dimensions``, ``target_area_indices``, and ``device`` are expected keyword arguments for the pixel loss.
 
         Raises
         ------
@@ -335,13 +333,13 @@ class KLDivergenceLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_samples, bitmap_resolution_e, bitmap_resolution_u]``.
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_samples, bitmap_resolution_e, bitmap_resolution_u]``.
         \*\*kwargs : Any
             Keyword arguments.
-            The ``reduction_dimensions`` is an expected keyword argument for the KL-divergence loss.
+            ``reduction_dimensions`` is an expected keyword argument for the KL-divergence loss.
 
         Raises
         ------
@@ -352,7 +350,7 @@ class KLDivergenceLoss(Loss):
         -------
         torch.Tensor
             The summed KL-divergence loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            Shape is ``[number_of_samples]``.
         """
         expected_kwargs = ["reduction_dimensions"]
         for key in expected_kwargs:
@@ -414,10 +412,10 @@ class AngleLoss(Loss):
         ----------
         prediction : torch.Tensor
             The predicted values.
-            Tensor of shape [number_of_samples, 4].
+            Shape is ``[number_of_samples, 4]``.
         ground_truth : torch.Tensor
             The ground truth.
-            Tensor of shape [number_of_samples, 4].
+            Shape is ``[number_of_samples, 4]``.
         \*\*kwargs : Any
             Keyword arguments.
 
@@ -425,10 +423,8 @@ class AngleLoss(Loss):
         -------
         torch.Tensor
             The summed loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            Shape is ``[number_of_samples]``.
         """
         cosine_similarity = self.loss_function(prediction, ground_truth)
 
-        loss = 1.0 - cosine_similarity
-
-        return loss
+        return 1.0 - cosine_similarity
