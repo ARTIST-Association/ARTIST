@@ -320,7 +320,6 @@ class RigidBody(Kinematics):
         east_angles, north_angles, up_angles = utils.decompose_rotations(
             initial_vector=sampled_surface_model_orientation,
             target_vector=self.artist_standard_orientation,
-            device=device,
         )
 
         orientations_with_initial_orientation_offsets = (

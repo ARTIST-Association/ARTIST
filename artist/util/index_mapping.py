@@ -168,8 +168,8 @@ n = 1
 """Index to access north components."""
 u = 2
 """Index to access up components."""
-transform_homogenous = 3
-"""Index to access homogenous transform for matrices."""
+transform_homogeneous = 3
+"""Index to access homogeneous transform for matrices."""
 unbatched_tensor_values = 0
 """Index to access unbatched tensor values."""
 slice_fourth_dimension = 3
