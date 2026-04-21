@@ -457,7 +457,7 @@ def actuator_parameters(
             )
         )
     else:
-        raise ValueError(f"The actuator type '{actuator_type}' is not yet implemented!")
+        raise ValueError(f"The actuator type: {actuator_type} is not yet implemented!")
 
     return actuator_parameters_non_optimizable, actuator_parameters_optimizable
 
