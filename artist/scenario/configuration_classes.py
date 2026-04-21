@@ -68,7 +68,7 @@ class TargetAreaPlanarConfig:
 
     Methods
     -------
-    create_receiver_dict()
+    create_target_area_dict()
        Create a dictionary containing the configuration parameters for the planar target area.
     """
 
@@ -142,7 +142,7 @@ class TargetAreaPlanarListConfig:
 
         Parameters
         ----------
-        target_area_list : list[TargetAreaConfig]
+        target_area_list : list[TargetAreaPlanarConfig]
             The list of planar target area configurations included in the scenario.
         """
         self.target_area_list = target_area_list
@@ -185,7 +185,7 @@ class TargetAreaCylindricalConfig:
 
     Methods
     -------
-    create_receiver_dict()
+    create_target_area_dict()
        Create a dictionary containing the configuration parameters for the cylindrical target area.
     """
 
@@ -200,7 +200,7 @@ class TargetAreaCylindricalConfig:
         opening_angle: torch.Tensor,
     ) -> None:
         """
-        Initialize the target area configuration for planar target areas.
+        Initialize the target area configuration for cylindrical target areas.
 
         Parameters
         ----------
@@ -229,12 +229,12 @@ class TargetAreaCylindricalConfig:
 
     def create_target_area_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the planar target area.
+        Create a dictionary containing the configuration parameters for the cylindrical target area.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the planar target area.
+            A dictionary containing the configuration parameters for the cylindrical target area.
         """
         target_area_dict = {
             config_dictionary.target_area_cylinder_radius: self.radius,
@@ -269,7 +269,7 @@ class TargetAreaCylindricalListConfig:
 
         Parameters
         ----------
-        target_area_list : list[TargetAreaConfig]
+        target_area_list : list[TargetAreaCylindricalConfig]
             The list of cylindrical target area configurations included in the scenario.
         """
         self.target_area_list = target_area_list
@@ -357,10 +357,7 @@ class LightSourceConfig:
         ):
             raise ValueError("Unknown light source distribution type.")
 
-        if (
-            self.distribution_type
-            == config_dictionary.light_source_distribution_is_normal
-        ):
+        else:
             self.mean = mean
             self.covariance = covariance
 
@@ -904,7 +901,7 @@ class ActuatorParameters:
         dict[str, torch.Tensor]
             A dictionary containing the configuration parameters for the actuator.
         """
-        actuator_parameters_dict = {}
+        actuator_parameters_dict: dict[str, torch.Tensor] = {}
         if self.increment is not None:
             actuator_parameters_dict.update(
                 {config_dictionary.actuator_increment: self.increment}
@@ -1018,7 +1015,7 @@ class ActuatorListConfig:
     Methods
     -------
     create_actuator_list_dict()
-        Creates a dictionary containing a list of actuator configurations.
+        Create a dictionary containing a list of actuator configurations.
     """
 
     def __init__(self, actuator_list: list[ActuatorConfig]) -> None:
@@ -1058,7 +1055,7 @@ class ActuatorPrototypeConfig(ActuatorListConfig):
 
     See Also
     --------
-    class:`ActuatorListConfig` : Reference to the parent class.
+    :class:`ActuatorListConfig` : Reference to the parent class.
     """
 
     def __init__(
