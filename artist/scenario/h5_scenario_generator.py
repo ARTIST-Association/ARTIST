@@ -33,15 +33,17 @@ class H5ScenarioGenerator:
         File path to the HDF5 to be saved.
     power_plant_config : PowerPlantConfig
         The power plant configuration object.
-    target_area_list_config : TargetAreaListConfig
-        The target area list configuration object.
+    target_area_list_planar_config : TargetAreaPlanarListConfig
+        Planar target area list configuration object.
+    target_area_list_cylindrical_config : TargetAreaCylindricalListConfig
+        Cylindrical target area list configuration object.
     light_source_list_config : LightSourceListConfig
         The light source list configuration object.
     heliostat_list_config : HeliostatListConfig
         The heliostat_list configuration object.
     prototype_config : PrototypeConfig
         The prototype configuration object,
-    version : Optional[float]
+    version : float
         The version of the scenario generator being used.
 
     Methods
@@ -161,14 +163,14 @@ class H5ScenarioGenerator:
                     )
 
     def _flatten_dict(
-        self, dictionary: MutableMapping, parent_key: str = "", sep: str = "/"
+        self, dictionary: MutableMapping[str, Any], parent_key: str = "", sep: str = "/"
     ) -> dict[str, Any]:
         """
         Flatten nested dictionaries to first-level keys.
 
         Parameters
         ----------
-        dictionary : MutableMapping
+        dictionary : MutableMapping[str, Any]
             Original nested dictionary to flatten.
         parent_key : str
             The parent key of nested dictionaries. Should be empty upon initialization.
@@ -183,14 +185,14 @@ class H5ScenarioGenerator:
         return dict(self._flatten_dict_gen(dictionary, parent_key, sep))
 
     def _flatten_dict_gen(
-        self, d: MutableMapping, parent_key: str, sep: str
+        self, d: MutableMapping[str, Any], parent_key: str, sep: str
     ) -> Generator[tuple[str, Any], None, None]:
         # Flattens the keys in a nested dictionary so that the resulting key is a concatenation of all nested keys
         # separated by a defined separator.
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k
             if isinstance(v, MutableMapping):
-                yield from self._flatten_dict(v, new_key, sep=sep).items()
+                yield from self._flatten_dict_gen(v, new_key, sep=sep)
             else:
                 yield new_key, v
 
@@ -208,7 +210,7 @@ class H5ScenarioGenerator:
         prefix : str
             The prefix used for naming the parameters.
         parameters : dict[str, Any]
-            The parameters to be included into the HFD5 file.
+            The parameters to be included into the HDF5 file.
         """
         for key, value in parameters.items():
             if torch.is_tensor(value):
@@ -224,7 +226,9 @@ class H5ScenarioGenerator:
             save_name = self.file_path.with_suffix(".h5")
         else:
             log.warning(
-                f"ARTIST only supports HDF5 files in the scenario generator, your extension {self.file_path.suffix} is unsupported! A .h5 file will be produced instead."
+                f"ARTIST only supports HDF5 files in the scenario generator, "
+                f"your extension {self.file_path.suffix} is unsupported! "
+                f"A .h5 file will be produced instead."
             )
             save_name = self.file_path.with_suffix(".h5")
         with h5py.File(save_name, "w") as f:
