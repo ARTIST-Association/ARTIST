@@ -19,7 +19,7 @@ def surface_config(
     Parameters
     ----------
     prototype : bool
-        Loading a prototype or an individual surface configuration.
+        Whether a prototype or an individual surface configuration should be loaded.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
     device : torch.device | None
@@ -76,8 +76,7 @@ def surface_config(
         )
         for facet in facet_config.keys()
     ]
-    surface_config = SurfaceConfig(facet_list=facet_list)
-    return surface_config
+    return SurfaceConfig(facet_list=facet_list)
 
 
 def kinematics_deviations(
@@ -94,7 +93,7 @@ def kinematics_deviations(
     Parameters
     ----------
     prototype : bool
-        Loading prototype or individual kinematics deviations.
+        Whether a prototype or individual kinematics deviations should be loaded.
     kinematics_type : str
         The kinematics type.
     scenario_file : h5py.File
@@ -173,10 +172,10 @@ def rigid_body_deviations(
     -------
     torch.Tensor
         Translation deviation parameters for the kinematics.
-        Tensor of shape [9].
+        Shape is ``[9]``.
     torch.Tensor
         Rotation deviation parameters for the kinematics.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     """
     device = get_device(device=device)
 
@@ -402,7 +401,7 @@ def actuator_parameters(
     Parameters
     ----------
     prototype : bool
-        Loading prototype or individual actuator parameters.
+        Whether prototype or individual actuator parameters should be loaded.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
     actuator_type : str
@@ -426,9 +425,9 @@ def actuator_parameters(
     Returns
     -------
     torch.Tensor
-        Non-optimizable actuator parameters for for each actuator in the file.
+        Non-optimizable actuator parameters for each actuator in the file.
     torch.Tensor
-        Optimizable actuator parameters for for each actuator in the file.
+        Optimizable actuator parameters for each actuator in the file.
     """
     device = get_device(device=device)
 
@@ -458,7 +457,7 @@ def actuator_parameters(
             )
         )
     else:
-        raise ValueError(f"The actuator type: {actuator_type} is not yet implemented!")
+        raise ValueError(f"The actuator type '{actuator_type}' is not yet implemented!")
 
     return actuator_parameters_non_optimizable, actuator_parameters_optimizable
 
@@ -491,14 +490,14 @@ def linear_actuators(
     Raises
     ------
     ValueError
-        If the file contains the wrong amount of actuators for a heliostat with a specific kinematics type.
+        If the file contains the wrong number of actuators for a heliostat with a specific kinematics type.
 
     Returns
     -------
     torch.Tensor
-        Non-optimizable actuator parameters for for each actuator in the file.
+        Non-optimizable actuator parameters for each actuator in the file.
     torch.Tensor
-        Optimizable actuator parameters for for each actuator in the file.
+        Optimizable actuator parameters for each actuator in the file.
     """
     device = get_device(device=device)
 
