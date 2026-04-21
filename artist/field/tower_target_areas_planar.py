@@ -16,7 +16,7 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
     """
     The planar tower target areas.
 
-    Individual planar target areas are not saved as separate entities, instead separate tensors for each
+    Individual planar target areas are not saved as separate entities; instead, separate tensors for each
     planar target area property exist. Each property tensor or list contains information about this property
     for all planar target areas.
 
@@ -26,13 +26,13 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         Name of each planar target area.
     centers : torch.Tensor
         Center point coordinate of each planar target area.
-        Tensor of shape [number_of_target_areas, 4].
+        Shape is ``[number_of_target_areas, 4]``.
     normals : torch.Tensor
         Normal vector of each planar target area.
-        Tensor of shape [number_of_target_areas, 4].
+        Shape is ``[number_of_target_areas, 4]``.
     dimensions : torch.Tensor
         Dimensions of each planar target area (width, then height).
-        Tensor of shape [number_of_target_areas, 2].
+        Shape is ``[number_of_target_areas, 2]``.
     number_of_target_areas : int
         Total number of planar target areas on all towers in the scenario.
 
@@ -58,13 +58,13 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
             Name of each planar target area.
         centers : torch.Tensor
             Center point coordinate of each planar target area.
-            Tensor of shape [number_of_target_areas, 4].
+            Shape is ``[number_of_target_areas, 4]``.
         normals : torch.Tensor
             Normal vector of each planar target area.
-            Tensor of shape [number_of_target_areas, 4].
+            Shape is ``[number_of_target_areas, 4]``.
         dimensions : torch.Tensor
             Dimensions of each planar target area (width, then height).
-            Tensor of shape [number_of_target_areas, 2].
+            Shape is ``[number_of_target_areas, 2]``.
         """
         super().__init__(
             names=names,
@@ -114,7 +114,7 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         dimensions = torch.zeros((number_of_target_areas, 2), device=device)
 
         for index, target_area_name in enumerate(
-            config_file[config_dictionary.target_area_planar_key].keys()
+            sorted(config_file[config_dictionary.target_area_planar_key].keys())
         ):
             single_target_area_config = config_file[
                 config_dictionary.target_area_planar_key
