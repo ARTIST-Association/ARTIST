@@ -193,7 +193,7 @@ class KinematicsReconstructor:
             In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
-        rank = self.ddp_setup[config_dictionary.rank]  # type: ignore
+        rank = self.ddp_setup["rank"]
 
         if rank == 0:
             log.info("Beginning kinematics reconstruction with ray tracing.")
@@ -216,9 +216,7 @@ class KinematicsReconstructor:
         loss_history: list[dict[str, list[float]]] = []
 
         # Iterate heliostat groups assigned to this rank.
-        for heliostat_group_index in self.ddp_setup[
-            config_dictionary.groups_to_ranks_mapping  # type: ignore
-        ][rank]:
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
             # Parse calibration inputs for current group to obtain measured flux, incident ray directions, mask of
             # active heliostats, and target area indices.
             heliostat_group: HeliostatGroup = (
@@ -405,14 +403,10 @@ class KinematicsReconstructor:
                         scenario=self.scenario,
                         heliostat_group=heliostat_group,
                         blocking_active=False,
-                        world_size=self.ddp_setup[
-                            config_dictionary.heliostat_group_world_size  # type: ignore
-                        ],
-                        rank=self.ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
+                        world_size=self.ddp_setup["heliostat_group_world_size"],
+                        rank=self.ddp_setup["heliostat_group_rank"],
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
-                        random_seed=self.ddp_setup[
-                            config_dictionary.heliostat_group_rank  # type: ignore
-                        ],
+                        random_seed=self.ddp_setup["heliostat_group_rank"],
                         dni=self.dni,
                     )
 
@@ -453,7 +447,7 @@ class KinematicsReconstructor:
 
                     loss.backward()
 
-                    if self.ddp_setup[config_dictionary.is_nested]:  # type: ignore
+                    if self.ddp_setup["is_nested"]:
                         # Reduce gradients within each heliostat group.
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
@@ -462,13 +456,11 @@ class KinematicsReconstructor:
                                         torch.distributed.nn.functional.all_reduce(
                                             param.grad,
                                             op=torch.distributed.ReduceOp.SUM,
-                                            group=self.ddp_setup[
-                                                config_dictionary.process_subgroup  # type: ignore
-                                            ],
+                                            group=self.ddp_setup["process_subgroup"],
                                         )
                                     )
                                     param.grad /= self.ddp_setup[
-                                        config_dictionary.heliostat_group_world_size  # type: ignore
+                                        "heliostat_group_world_size"
                                     ]
 
                     optimizer.step()
@@ -521,13 +513,11 @@ class KinematicsReconstructor:
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
-        if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
+        if self.ddp_setup["is_distributed"]:
             for index, heliostat_group in enumerate(
                 self.scenario.heliostat_field.heliostat_groups
             ):
-                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][  # type: ignore
-                    index
-                ]
+                source = self.ddp_setup["ranks_to_groups_mapping"][index]
                 torch.distributed.broadcast(
                     heliostat_group.kinematics.rotation_deviation_parameters,
                     src=source[index_mapping.first_rank_from_group],
@@ -541,8 +531,7 @@ class KinematicsReconstructor:
             )
 
             final_loss_history_all_groups: list[list[dict[str, list[float]]]] = [
-                []
-                for _ in range(self.ddp_setup[config_dictionary.world_size])  # type: ignore
+                [] for _ in range(self.ddp_setup["world_size"])
             ]
             torch.distributed.all_gather_object(
                 final_loss_history_all_groups, loss_history
