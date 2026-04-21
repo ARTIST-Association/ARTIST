@@ -74,9 +74,9 @@ class LightSourceArray:
         if rank == 0:
             log.info("Loading a light source array from an HDF5 file.")
 
-        light_source_array = []
+        light_source_array: list[LightSource] = []
         # Iterate through each light source configuration in the list of light source configurations.
-        for ls in config_file[config_dictionary.light_source_key].keys():
+        for ls in sorted(config_file[config_dictionary.light_source_key].keys()):
             mapping_key = config_file[config_dictionary.light_source_key][ls][
                 config_dictionary.light_source_type
             ][()].decode("utf-8")
@@ -91,8 +91,8 @@ class LightSourceArray:
                         device=device,
                     )
                 )
-            except KeyError:
+            except KeyError as exc:
                 raise KeyError(
                     f"Currently the selected light source: {mapping_key} is not supported."
-                )
+                ) from exc
         return cls(light_source_list=light_source_array)
