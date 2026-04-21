@@ -63,10 +63,7 @@ def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
                 ),
                 device=device,
             )
-    assert (
-        "There is an error in the prototype. When using the rigid body kinematics, all actuators for this prototype must have the same type."
-        in str(exc_info.value)
-    )
+    assert "Prototype actuators must all have the same type." in str(exc_info.value)
 
     broken_actuator_individual_path = (
         pathlib.Path(ARTIST_ROOT)
