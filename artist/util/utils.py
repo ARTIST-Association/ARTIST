@@ -493,8 +493,8 @@ def rotation_angle_and_axis(
         The angle of the rotation as a scalar tensor.
     """
     device = get_device(device=device)
-    from_orientation = torch.nn.functional.normalize(from_orientation[:3])
-    to_orientation = torch.nn.functional.normalize(to_orientation[:3])
+    from_orientation = torch.nn.functional.normalize(from_orientation[:3], dim=0)
+    to_orientation = torch.nn.functional.normalize(to_orientation[:3], dim=0)
     dot = torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
     angle = torch.acos(dot)
     axis = torch.linalg.cross(from_orientation, to_orientation)
