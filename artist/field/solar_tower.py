@@ -153,7 +153,7 @@ class SolarTower:
         -------
         torch.Tensor
             Center coordinates of the requested target areas in homogeneous coordinates.
-            Tensor of shape [number_of_active_heliostats, 4].
+            Shape is ``[number_of_active_heliostats, 4]``.
         """
         device = get_device(device=device)
 
