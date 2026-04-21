@@ -23,7 +23,7 @@ class KinematicsReconstructor:
     An optimizer used to reconstruct real-world kinematics deviation parameters.
 
     The kinematics reconstructor learns kinematics parameters. These parameters are
-    specific to a certain kinematics type and can for example include the four kinematics
+    specific to a certain kinematics type and can, for example, include the four kinematics
     rotation deviation parameters as well as the two initial actuator parameters
     for each actuator of a rigid-body kinematics.
 
@@ -43,7 +43,7 @@ class KinematicsReconstructor:
     dni : float
         Direct normal irradiance in W/m^2.
     reconstruction_method : str
-        The reconstruction method. Currently, only reconstruction via ray tracing is available.
+        The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
 
     Note
     ----
@@ -81,13 +81,13 @@ class KinematicsReconstructor:
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
-            Parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+            Parameters for the optimizer, learning rate scheduler, regularizers, and early stopping.
         dni : float | None
             Direct normal irradiance in W/m^2 (default is None which leads to a ray magnitude of 1.0).
         reconstruction_method : str
-            The reconstruction method. Currently, only reconstruction via ray tracing is available.
+            The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
         """
-        rank = ddp_setup[config_dictionary.rank]  # type:ignore
+        rank = ddp_setup["rank"]
         if rank == 0:
             log.info("Create a kinematics reconstructor.")
 
@@ -104,7 +104,7 @@ class KinematicsReconstructor:
             self.reconstruction_method = reconstruction_method
         else:
             raise ValueError(
-                f"The kinematics reconstruction method {reconstruction_method} is not recognized. "
+                f"The kinematics reconstruction method '{reconstruction_method}' is unknown. "
                 f"Please select another reconstruction method and try again!"
             )
 
@@ -129,9 +129,14 @@ class KinematicsReconstructor:
         -------
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
-        list[Any]
-            Loss history over epochs, with keys ``"total_loss"``. Each value is a list of per-epoch scalar floats.
+            Shape is ``[total_number_of_heliostats_in_scenario]``.
+        list[list[dict[str, list[float]]]]
+            Loss histories over epochs grouped by rank.
+            Outer list: one entry per rank.
+            Inner list: one entry per heliostat group processed on that rank.
+            Each group entry is a dict with key ``"total_loss"`` mapping to a list
+            of per-epoch scalar loss values.
+            In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
 
@@ -148,7 +153,7 @@ class KinematicsReconstructor:
 
         else:
             raise ValueError(
-                f"The kinematics reconstruction method {self.reconstruction_method} is not recognized. "
+                f"The kinematics reconstruction method '{self.reconstruction_method}' is unknown. "
                 f"Please select another reconstruction method and try again!"
             )
 
