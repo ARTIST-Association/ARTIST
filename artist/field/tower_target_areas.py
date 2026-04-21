@@ -13,7 +13,7 @@ class TowerTargetAreas:
     The tower target areas.
 
     Implementation of the abstract tower target areas. Individual target areas are not saved as separate
-    entities, instead separate tensors for each target area property exist. Each property tensor or list
+    entities; instead, separate tensors for each target area property exist. Each property tensor or list
     contains information about this property for all target areas.
 
     Attributes
@@ -22,10 +22,10 @@ class TowerTargetAreas:
         Name of each target area.
     centers : torch.Tensor
         Center point coordinate of each target area.
-        Tensor of shape [number_of_target_areas, 4].
+        Shape is ``[number_of_target_areas, 4]``.
     normals : torch.Tensor
         Normal vector of each target area.
-        Tensor of shape [number_of_target_areas, 4].
+        Shape is ``[number_of_target_areas, 4]``.
     number_of_target_areas : int
         The total number of target areas of this type on all towers in the scenario.
 
@@ -42,7 +42,7 @@ class TowerTargetAreas:
         normals: torch.Tensor,
     ) -> None:
         """
-        Initialize the planar target areas.
+        Initialize the target areas.
 
         Parameters
         ----------
@@ -50,10 +50,10 @@ class TowerTargetAreas:
             The name of each target area.
         centers : torch.Tensor
             Center point coordinate of each target area.
-            Tensor of shape [number_of_target_areas, 4].
+            Shape is ``[number_of_target_areas, 4]``.
         normals : torch.Tensor
             Normal vector of each target area.
-            Tensor of shape [number_of_target_areas, 4].
+            Shape is ``[number_of_target_areas, 4]``.
         """
         self.names = names
         self.centers = centers
