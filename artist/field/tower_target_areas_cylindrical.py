@@ -16,7 +16,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
     """
     The cylindrical tower target areas.
 
-    Individual cylindrical target areas are not saved as separate entities, instead separate tensors for each
+    Individual cylindrical target areas are not saved as separate entities; instead, separate tensors for each
     cylindrical target area property exist. Each property tensor or list contains information about this property
     for all cylindrical target areas.
 
@@ -27,23 +27,23 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
     centers : torch.Tensor
         Center coordinate of each cylindrical target area.
         The center is defined at the halfway point between top and bottom of the cylinder on the cylinder axis.
-        Tensor of shape [number_of_target_areas, 4].
+        Shape is ``[number_of_target_areas, 4]``.
     normals : torch.Tensor
-        Normal vector of each cylindrical target area in radians.
-        Tensor of shape [number_of_target_areas, 4].
+        Normal vector of each cylindrical target area.
+        Shape is ``[number_of_target_areas, 4]``.
     axes : torch.Tensor
         Cylinder axes of all cylinder target areas.
-        Tensor of shape [number_of_target_areas, 4].
+        Shape is ``[number_of_target_areas, 4]``.
     radii : torch.Tensor
         Radius of each cylindrical target area.
-        Tensor of shape [number_of_target_areas].
+        Shape is ``[number_of_target_areas]``.
     heights : torch.Tensor
         Height of each cylindrical target area.
-        Tensor of shape [number_of_target_areas].
+        Shape is ``[number_of_target_areas]``.
     opening_angles : torch.Tensor
         Opening angle of each cylindrical target area in radians.
-        For full cylinders this is two pi or 360°.
-        Tensor of shape [number_of_target_areas].
+        For full cylinders, this is 2*pi or 360°.
+        Shape is ``[number_of_target_areas]``.
     number_of_target_areas : int
         Total number of cylindrical target areas on all towers in the scenario.
 
@@ -73,23 +73,23 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         centers : torch.Tensor
             Center coordinate of each cylindrical target area.
             The center is defined at the halfway point between top and bottom of the cylinder on the cylinder axis.
-            Tensor of shape [number_of_target_areas, 4].
+            Shape is ``[number_of_target_areas, 4]``.
         normals : torch.Tensor
-            Normal vector of each cylindrical target area in radians.
-            Tensor of shape [number_of_target_areas, 4].
+            Normal vector of each cylindrical target area.
+            Shape is ``[number_of_target_areas, 4]``.
         axes : torch.Tensor
             Cylinder axes of all cylinder target areas.
-            Tensor of shape [number_of_target_areas, 4].
+            Shape is ``[number_of_target_areas, 4]``.
         radii : torch.Tensor
             Radius of each cylindrical target area.
-            Tensor of shape [number_of_target_areas].
+            Shape is ``[number_of_target_areas]``.
         heights : torch.Tensor
             Height of each cylindrical target area.
-            Tensor of shape [number_of_target_areas].
+            Shape is ``[number_of_target_areas]``.
         opening_angles : torch.Tensor
             Opening angle of each cylindrical target area in radians.
-            For full cylinders this is two pi or 360°.
-            Tensor of shape [number_of_target_areas].
+            For full cylinders, this is 2*pi or 360°.
+            Shape is ``[number_of_target_areas]``.
         """
         super().__init__(
             names=names,
@@ -137,15 +137,15 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         )
 
         names = []
-        radii = torch.zeros((number_of_target_areas), device=device)
+        radii = torch.zeros(number_of_target_areas, device=device)
         centers = torch.zeros((number_of_target_areas, 4), device=device)
-        heights = torch.zeros((number_of_target_areas), device=device)
+        heights = torch.zeros(number_of_target_areas, device=device)
         axes = torch.zeros((number_of_target_areas, 4), device=device)
         normals = torch.zeros((number_of_target_areas, 4), device=device)
-        opening_angles = torch.zeros((number_of_target_areas), device=device)
+        opening_angles = torch.zeros(number_of_target_areas, device=device)
 
         for index, target_area_name in enumerate(
-            config_file[config_dictionary.target_area_cylindrical_key].keys()
+            sorted(config_file[config_dictionary.target_area_cylindrical_key].keys())
         ):
             single_target_area_config = config_file[
                 config_dictionary.target_area_cylindrical_key
