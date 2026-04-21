@@ -27,11 +27,9 @@ def exponential(
     LRScheduler
         An exponential learning rate scheduler.
     """
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(
+    return torch.optim.lr_scheduler.ExponentialLR(
         optimizer, gamma=float(parameters[config_dictionary.gamma])
     )
-
-    return scheduler
 
 
 def cyclic(
@@ -53,14 +51,12 @@ def cyclic(
     LRScheduler
         A cyclic learning rate scheduler.
     """
-    scheduler = torch.optim.lr_scheduler.CyclicLR(
+    return torch.optim.lr_scheduler.CyclicLR(
         optimizer,
         base_lr=float(parameters[config_dictionary.lr_min]),
         max_lr=float(parameters[config_dictionary.lr_max]),
-        step_size_up=parameters[config_dictionary.step_size_up],
+        step_size_up=int(parameters[config_dictionary.step_size_up]),
     )
-
-    return scheduler
 
 
 def reduce_on_plateau(
@@ -82,16 +78,14 @@ def reduce_on_plateau(
     LRScheduler
         A learning rate scheduler that reduces on plateaus.
     """
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    return torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         factor=float(parameters[config_dictionary.reduce_factor]),
-        patience=parameters[config_dictionary.patience],
+        patience=int(parameters[config_dictionary.patience]),
         threshold=float(parameters[config_dictionary.threshold]),
-        cooldown=parameters[config_dictionary.cooldown],
+        cooldown=int(parameters[config_dictionary.cooldown]),
         min_lr=float(parameters[config_dictionary.lr_min]),
     )
-
-    return scheduler
 
 
 class EarlyStopping:
