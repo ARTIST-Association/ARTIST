@@ -18,16 +18,16 @@ def reflect(
     ----------
     incident_ray_directions : torch.Tensor
         Direction of the incident ray as seen from the heliostats.
-        Tensor of shape [number_of_active_heliostats, 1, 4].
+        Shape is ``[number_of_active_heliostats, 1, 4]``.
     reflection_surface_normals : torch.Tensor
         Normals of the reflective surfaces.
-        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
 
     Returns
     -------
     torch.Tensor
         Reflected rays.
-        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
     """
     return (
         incident_ray_directions
@@ -58,15 +58,15 @@ def line_plane_intersections(
         Rays with directions and magnitudes, the directions must be normalized.
     points_at_ray_origins : torch.Tensor
         Origins of the rays, which coincide with the surface points of the heliostats.
-        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     target_areas : TowerTargetAreas
         All planar tower target areas.
     target_area_indices : torch.Tensor | None
         Indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
-        Tensor of shape [number_of_active_heliostats].
+        Shape is ``[number_of_active_heliostats]``.
     bitmap_resolution : torch.Tensor | None
-        Bitmap resolution (default is torch.tensor([256,256])).
+        Bitmap resolution (default is ``torch.tensor([256,256])``).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -76,16 +76,16 @@ def line_plane_intersections(
     -------
     torch.Tensor
         East components of the bitmap intersections.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
     torch.Tensor
         Up components of the bitmap intersections.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
     torch.Tensor
         Intersection distances.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
     torch.Tensor
         Absolute intensities of the rays hitting the target planes.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
     """
     device = get_device(device=device)
     bitmap_resolution = bitmap_resolution.to(device)
@@ -250,15 +250,15 @@ def line_cylinder_intersections(
         Rays with directions and magnitudes, the directions must be normalized.
     points_at_ray_origins : torch.Tensor
         Ray origins in world space.
-        Shape is [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     target_areas : TowerTargetAreasCylindrical
         Cylindrical receiver definitions (centers, axes, normals, radii, heights, opening angles).
     target_area_indices : torch.Tensor | None
         Indices of target areas corresponding to each heliostat (default is None).
         If none are provided, the first target area of the scenario will be linked to all heliostats.
-        Tensor of shape [number_of_active_heliostats].
+        Shape is ``[number_of_active_heliostats]``.
     bitmap_resolution : torch.Tensor
-        Bitmap resolution (default is torch.tensor([256,256])).
+        Bitmap resolution (default is ``torch.tensor([256,256])``).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -268,20 +268,20 @@ def line_cylinder_intersections(
     -------
     torch.Tensor
         Continuous E (horizontal/unwrapped-angle) bitmap coordinates in pixel units.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
         Invalid rays are 0.
     torch.Tensor
         Continuous U (vertical/height) bitmap coordinates in pixel units.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
         Invalid rays are 0.
     torch.Tensor
         Ray parameter distance t to the selected cylinder intersection.
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
         Invalid rays are 0.
     torch.Tensor
         Lambert-weighted hit intensities:
         ray_magnitudes * max(0, -dot(ray_dir_local, normal_local)).
-        Shape is [number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
         Invalid rays are 0.
     """
     device = get_device(device=device)
@@ -432,7 +432,7 @@ def line_cylinder_intersections(
         * (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
     )
 
-    # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.
+    # Filter out rays that are out of bounds of the target dimensions. Previously, an infinite plane was considered.
     bitmap_intersections_e = (
         bitmap_intersections_e * intersections_on_target * valid_distances
     )
