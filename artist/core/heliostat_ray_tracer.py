@@ -182,11 +182,11 @@ class HeliostatRayTracer:
     blocking_active : bool
         Indicates whether blocking is activated.
     world_size : int
-        The world size i.e., the overall number of processes.
+        The world size, i.e., the overall number of processes.
     rank : int
         The rank, i.e., individual process ID.
     batch_size : int
-        The amount of samples (heliostats) processed in parallel within a single rank.
+        The number of samples (heliostats) processed in parallel within a single rank.
     light_source : LightSource
         The light source emitting the traced rays.
     distortions_dataset : DistortionsDataset
@@ -197,15 +197,15 @@ class HeliostatRayTracer:
         The dataloader that loads the distortions.
     bitmap_resolution : torch.Tensor
         The resolution of the bitmap in both directions.
-        Tensor of shape [2].
+        Shape is ``[2]``.
     ray_magnitude : float
         Magnitude of each single ray.
     blocking_heliostat_surfaces : torch.Tensor
         The heliostat surfaces considered during blocking calculations.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     blocking_heliostat_surfaces_active : torch.Tensor
         The aligned heliostat surfaces considered during blocking calculations.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
 
     Methods
     -------
@@ -256,16 +256,16 @@ class HeliostatRayTracer:
         blocking_active : bool
             Flag indicating whether blocking is activated (default is True).
         world_size : int
-            The world size i.e., the overall number of processes (default is 1).
+            The world size, i.e., the overall number of processes (default is 1).
         rank : int
             The rank, i.e., individual process ID (default is 0).
         batch_size : int
-            The amount of samples (heliostats) processed in parallel within a single rank (default is 100).
+            The number of samples (heliostats) processed in parallel within a single rank (default is 100).
         random_seed : int
             The random seed used for generating the distortions (default is 7).
         bitmap_resolution : torch.Tensor
             The resolution of the bitmap in both directions. (default is torch.tensor([256,256])).
-            Tensor of shape [2].
+            Shape is ``[2]``.
         dni : float | None
             Direct normal irradiance in W/m^2 (default is None -> ray magnitude = 1.0).
         """
@@ -363,7 +363,7 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             Indices of the distortions dataset that are assigned to this rank.
-            Tensor of shape [number of samples assigned to the current rank].
+            Shape is ``[number_of_samples_assigned_to_current_rank]``.
         """
         return torch.tensor(
             self.distortions_sampler.rank_indices,
@@ -392,14 +392,14 @@ class HeliostatRayTracer:
         ----------
         incident_ray_directions : torch.Tensor
             The direction of the incident rays as seen from the heliostats.
-            Tensor of shape [number_of_active_heliostats, 4].
+            Shape is ``[number_of_active_heliostats, 4]``.
         active_heliostats_mask : torch.Tensor
             A mask where 0 indicates a deactivated heliostat and 1 an activated one.
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         target_area_indices : torch.Tensor
             The indices of the target areas for each active heliostat.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         ray_extinction_factor : float
             Amount of global ray extinction, responsible for shading (default is 0.0 -> no extinction).
         mirror_reflectivity : float
@@ -418,16 +418,16 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             The resulting bitmaps per heliostat.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         torch.Tensor
             The fraction of rays hitting the target, neglecting blocking effects.
-            Shape is [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         torch.Tensor
             The fraction of rays not being blocked.
-            Shape is [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         torch.Tensor
             The fraction of rays actually hitting the target, taking into account blocking effects.
-            Shape is [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
 
@@ -674,13 +674,13 @@ class HeliostatRayTracer:
         ----------
         distortion_u : torch.Tensor
             The distortions in up direction (angles for scattering).
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
         distortion_e : torch.Tensor
             The distortions in east direction (angles for scattering).
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
         original_ray_direction : torch.Tensor
             The ray direction around which to scatter.
-            Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
+            Shape is ``[number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -726,10 +726,10 @@ class HeliostatRayTracer:
         ----------
         bitmaps_per_heliostat : torch.Tensor
             Bitmaps per heliostat.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         target_area_indices : torch.Tensor
             The mapping from heliostat to target area.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -739,7 +739,7 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             Bitmaps per target area.
-            Tensor of shape [number_of_target_areas, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_target_areas, bitmap_resolution_e, bitmap_resolution_u]``.
         """
         device = get_device(device=device)
 
@@ -780,13 +780,13 @@ class HeliostatRayTracer:
         ----------
         bitmap_intersections_e : torch.Tensor
             The east-component bitmap coordinates of ray intersections.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_surface_points].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_surface_points]``.
         bitmap_intersections_u : torch.Tensor
             The up-component bitmap coordinates of ray intersections.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_surface_points].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_surface_points]``.
         absolute_intensities : torch.Tensor
             The intensity of each ray at its intersection point.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_surface_points].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_surface_points]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models.
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -796,7 +796,7 @@ class HeliostatRayTracer:
         -------
         torch.Tensor
             The flux density bitmaps, one per active heliostat.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_u, bitmap_resolution_e].
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_u, bitmap_resolution_e]``.
         """
         bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
         bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
