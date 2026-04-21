@@ -487,28 +487,24 @@ def rotation_angle_and_axis(
     Returns
     -------
     torch.Tensor
-        The rotation axis as a scalar tensor.
+        The rotation axis.
+        Shape is ``[3]``.
     torch.Tensor
         The angle of the rotation as a scalar tensor.
     """
     device = get_device(device=device)
-
     from_orientation = torch.nn.functional.normalize(from_orientation[:3])
     to_orientation = torch.nn.functional.normalize(to_orientation[:3])
-
     dot = torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
     angle = torch.acos(dot)
-
     axis = torch.linalg.cross(from_orientation, to_orientation)
     axis_norm = torch.norm(axis)
-
     # Parallel vectors.
     epsilon = 1e-6
     if axis_norm < epsilon and dot > 0:
         return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(
             0.0, device=device
         )
-
     # Inverse vectors.
     if axis_norm < epsilon and dot < 0:
         if abs(from_orientation[index_mapping.e]) < abs(
@@ -520,9 +516,7 @@ def rotation_angle_and_axis(
         axis = torch.linalg.cross(from_orientation, orthogonal)
         axis = axis / torch.norm(axis)
         return axis, torch.tensor(torch.pi, device=device)
-
     axis = axis / axis_norm
-
     return axis, angle
 
 
