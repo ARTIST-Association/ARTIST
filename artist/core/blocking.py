@@ -38,10 +38,10 @@ def create_blocking_primitives_rectangle(
     ----------
     blocking_heliostats_surface_points : torch.Tensor
         The unaligned surface points of all heliostats that might block other heliostats.
-        Shape is [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     blocking_heliostats_active_surface_points : torch.Tensor
         The aligned surface points of all heliostats that might block other heliostats.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -51,13 +51,13 @@ def create_blocking_primitives_rectangle(
     -------
     torch.Tensor
         The blocking plane corners.
-        Tensor of shape [number_of_heliostats, 4, 4].
+        Shape is ``[number_of_heliostats, 4, 4]``.
     torch.Tensor
         The blocking plane spans in u and v direction.
-        Tensor of shape [number_of_heliostats, 2, 4].
+        Shape is ``[number_of_heliostats, 2, 4]``.
     torch.Tensor
         The blocking plane normals.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     """
     device = get_device(device=device)
 
@@ -88,7 +88,7 @@ def create_blocking_primitives_rectangle(
     )
 
     # Find points in the unaligned surface points tensor that are closest to
-    # the four expected rectangle corner point coordinates saved in min_max_values.
+    # the four expected rectangle corner point coordinates saved in ``min_max_values``.
     surface_points_2d = blocking_heliostats_surface_points[:, :, :2]
     # Compute distances between all real surface points and expected rectangle corners.
     distances_to_corner = torch.norm(
@@ -136,17 +136,18 @@ def create_blocking_primitives_rectangles_by_index(
     0 | 3
 
     Assumptions:
-    - The heliostat is rectangular in shape, each facet is also rectangular.
+    - The heliostat is rectangular, each facet is also rectangular.
     - There are four facets ordered in two columns and two rows.
-    - Each facet has an equal amount of surface points -> number_of_surface_points / 4
-    - Each facet has an equal amount of points along its width and its height -> math.sqrt(number_of_surface_points / 4)
-    - Surface points are arranged in a structured, grid-like order and indexed in row-major fashion, analogous to a 2D tensor, ensuring consistent traversal.
+    - Each facet has the same number of surface points -> ``number_of_surface_points / 4``
+    - Each facet has the same number of points along its width and height -> ``math.sqrt(number_of_surface_points / 4)``
+    - Surface points are arranged in a structured, grid-like order and indexed in row-major fashion,
+      analogous to a 2D tensor, ensuring consistent traversal.
 
     Parameters
     ----------
     blocking_heliostats_active_surface_points : torch.Tensor
         The aligned surface points of all heliostats that might block other heliostats.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -156,13 +157,13 @@ def create_blocking_primitives_rectangles_by_index(
     -------
     torch.Tensor
         The blocking plane corners.
-        Tensor of shape [number_of_heliostats, 4, 4].
+        Shape is ``[number_of_heliostats, 4, 4]``.
     torch.Tensor
         The blocking plane spans in u and v direction.
-        Tensor of shape [number_of_heliostats, 2, 4].
+        Shape is ``[number_of_heliostats, 2, 4]``.
     torch.Tensor
         The blocking plane normals.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     """
     device = get_device(device=device)
 
@@ -251,19 +252,19 @@ def soft_ray_blocking_mask(
     ----------
     ray_origins : torch.Tensor
         The origin points of the rays, i.e., the surface points.
-        Shape is [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     ray_directions : torch.Tensor
         The ray directions.
-        Shape is [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
     blocking_primitives_corners : torch.Tensor
         The blocking primitives corner points.
-        Shape is [number_of_blocking_primitives, 4, 4].
+        Shape is ``[number_of_blocking_primitives, 4, 4]``.
     blocking_primitives_spans: torch.Tensor
         The blocking primitives spans in u and v direction.
-        Shape is [number_of_blocking_primitives, 2, 4].
+        Shape is ``[number_of_blocking_primitives, 2, 4]``.
     blocking_primitives_normals : torch.Tensor
         The blocking primitives normals.
-        Shape is [number_of_blocking_primitives, 4]
+        Shape is ``[number_of_blocking_primitives, 4]``.
     epsilon : float
         A small value used to avoid division by zero in plane-ray intersection (default is 1e-12).
     softness : float
@@ -273,14 +274,14 @@ def soft_ray_blocking_mask(
         Optical depth scale factor for Beer–Lambert accumulation across blocking primitives (default is 100.0).
     ray_origin_offset : float
         Shift the ray origins a slight distance away from the heliostat planes to avoid self intersections
-        (default is 0.05). The distance is measured in metres, so the default offset pushes the ray origins
+        (default is 0.05). The distance is measured in meters, so the default offset pushes the ray origins
         5 cm along the ray direction.
 
     Returns
     -------
     torch.Tensor
         A soft blocking mask, where values near 0 indicate no blocking and values near 1 indicate full blocking.
-        Shape is [number_of_blocking_primitives, number_of_rays, number_of_combined_surface_points_all_facets].
+        Shape is ``[number_of_blocking_primitives, number_of_rays, number_of_combined_surface_points_all_facets]``.
     """
     # Dimensions [#heliostats, #rays, #surface_points, #blocking_primitives, 3D coordinates].
     ray_origins = ray_origins[:, None, :, None, :3]
@@ -361,14 +362,14 @@ def expand_bits(integers: torch.Tensor) -> torch.Tensor:
     Parameters
     ----------
     integers : torch.Tensor
-        Integer coordinates with values in [0, 1023] (10 bits).
-        Tensor of shape [number_of_blocking_planes].
+        Integer coordinates with values in ``[0, 1023]`` (10 bits).
+        Shape is ``[number_of_blocking_planes]``.
 
     Returns
     -------
     torch.Tensor
         Integer coordinates expanded from 10 bits to 30 bits.
-        Tensor of shape [number_of_blocking_planes].
+        Shape is ``[number_of_blocking_planes]``.
     """
     # Validate inputs.
     if (integers < 0).any() or (integers > 1023).any():
@@ -406,7 +407,7 @@ def morton_codes(coordinates: torch.Tensor, epsilon: float = 1e-6) -> torch.Tens
     ----------
     coordinates : torch.Tensor
         The coordinates to transform into Morton codes.
-        Tensor of shape [number_of_blocking_planes, 3].
+        Shape is ``[number_of_blocking_planes, 3]``.
     epsilon : float
         A small epsilon value to avoid division by zero (default is 1e-6).
 
@@ -414,7 +415,7 @@ def morton_codes(coordinates: torch.Tensor, epsilon: float = 1e-6) -> torch.Tens
     -------
     torch.Tensor
         The converted integers in Morton code.
-        Tensor of shape [number_of_blocking_planes].
+        Shape is ``[number_of_blocking_planes]``.
     """
     # The 10 bits per axis should not be changed. 10 bits per axis means 1024 discrete positions along
     # each dimension and 30 bits in total. This is the maximum amount of bits per axis fitting into a
@@ -459,13 +460,13 @@ def longest_common_prefix(
     ----------
     codes : torch.Tensor
         Sorted Morton codes as int64.
-        Tensor of shape [number_of_blocking_planes].
+        Shape is ``[number_of_blocking_planes]``.
     i : torch.Tensor
         Lower indices selecting the first Morton codes for the comparison.
-        Tensor of shape [number_of_blocking_planes].
+        Shape is ``[number_of_blocking_planes]``.
     j : torch.Tensor
         Upper indices selecting the second Morton codes for the comparison.
-        Tensor of shape [number_of_blocking_planes].
+        Shape is ``[number_of_blocking_planes]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -474,8 +475,8 @@ def longest_common_prefix(
     Returns
     -------
     torch.Tensor
-        The longest common prefixes in the range from 0 to total_bits.
-        Tensor of shape [number_of_blocking_planes].
+        The longest common prefixes in the range from 0 to ``total_bits``.
+        Shape is ``[number_of_blocking_planes]``.
     """
     device = get_device(device=device)
     valid = (j >= 0) & (j < codes.shape[0])
@@ -514,7 +515,8 @@ def build_linear_bounding_volume_hierarchies(
     """
     Build linear bounding volume hierarchies (LBVHs).
 
-    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by 30-bit Morton codes using torch.int32.
+    This method is safe and conceptualized for scenarios with up to 2^30 blocking planes represented by
+    30-bit Morton codes using ``torch.int32``.
 
     Reference: Tero Karras. Maximizing Parallelism in the Construction of BVHs, Octrees, and k‑d Trees.
     In Proceedings of the Fourth ACM SIGGRAPH / Eurographics Symposium on High‑Performance Graphics (HPG 2012)
@@ -523,7 +525,7 @@ def build_linear_bounding_volume_hierarchies(
     ----------
     blocking_primitives_corners : torch.Tensor
         Corner points of each blocking primitive.
-        Tensor of shape [number_of_blocking_primitives, 4, 4].
+        Shape is ``[number_of_blocking_primitives, 4, 4]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -532,10 +534,10 @@ def build_linear_bounding_volume_hierarchies(
     Returns
     -------
     dict[str, torch.Tensor]
-        - left, right: Indices of the left and right child of each LBVH node (-1 if leaf).
-        - aabb_min, aabb_max: Axis aligned bounding boxes.
-        - is_leaf: Boolean, indicating whether a node is a leaf node.
-        - primitive_index: Indicates which primitives are contained.
+        - ``left``, ``right``: Indices of the left and right child of each LBVH node (-1 if leaf).
+        - ``aabb_min``, ``aabb_max``: Axis-aligned bounding boxes.
+        - ``is_leaf``: Boolean, indicating whether a node is a leaf node.
+        - ``primitive_index``: Indicates which primitives are contained.
     """
     device = get_device(device=device)
 
@@ -766,25 +768,25 @@ def ray_aabb_intersect(
     ----------
     ray_origins : torch.Tensor
         Ray origins.
-        Tensor of shape [total_number_of_rays, 3].
+        Shape is ``[total_number_of_rays, 3]``.
     inverse_ray_directions : torch.Tensor
         Precomputed inverse ray directions.
-        Tensor of shape [total_number_of_rays, 3].
+        Shape is ``[total_number_of_rays, 3]``.
     aabb_min : torch.Tensor
         Minimum corner points of the AABBs.
-        Tensor of shape [total_number_of_rays, 3].
+        Shape is ``[total_number_of_rays, 3]``.
     aabb_max : torch.Tensor
         Maximum corner points of the AABBs.
-        Tensor of shape [total_number_of_rays, 3].
+        Shape is ``[total_number_of_rays, 3]``.
 
     Returns
     -------
     entry_distance_to_aabb : torch.Tensor
         Entry distance along each ray to the AABBs.
-        Tensor of shape [total_number_of_rays].
+        Shape is ``[total_number_of_rays]``.
     exit_distance_to_aabb : torch.Tensor
         Exit distance along each ray to the AABBs.
-        Tensor of shape [total_number_of_rays].
+        Shape is ``[total_number_of_rays]``.
     """
     min_distance = (aabb_min - ray_origins) * inverse_ray_directions
     max_distance = (aabb_max - ray_origins) * inverse_ray_directions
@@ -846,19 +848,19 @@ def lbvh_filter_blocking_planes(
     ----------
     points_at_ray_origins : torch.Tensor
         Origin points of the rays, i.e., the surface points, expanded in the ray dimension.
-        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
     ray_directions : torch.Tensor
         Ray directions.
-        Tensor of shape [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
     blocking_primitives_corners : torch.Tensor
         Blocking primitives corner points.
-        Tensor of shape [number_of_blocking_planes, 4, 4].
+        Shape is ``[number_of_blocking_planes, 4, 4]``.
     ray_to_heliostat_mapping : torch.Tensor
         Mapping indicating which ray is reflected by which heliostat.
-        Tensor of shape [total_number_of_rays].
+        Shape is ``[total_number_of_rays]``.
     intersection_distances_target : torch.Tensor
         Distances from ray origins to the target.
-        Shape is [number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -868,7 +870,7 @@ def lbvh_filter_blocking_planes(
     -------
     torch.Tensor
         Indices of the blocking primitives that are hit.
-        Tensor of shape [number_of_hit_blocking_planes].
+        Shape is ``[number_of_hit_blocking_planes]``.
     """
     device = get_device(device=device)
 
