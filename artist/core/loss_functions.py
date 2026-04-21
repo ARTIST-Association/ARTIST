@@ -425,6 +425,4 @@ class AngleLoss(Loss):
             The summed loss reduced along the specified dimensions.
             Shape is ``[number_of_samples]``.
         """
-        cosine_similarity = self.loss_function(prediction, ground_truth)
-
-        return 1.0 - cosine_similarity
+        return 1.0 - self.loss_function(prediction, ground_truth)
