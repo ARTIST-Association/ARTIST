@@ -26,10 +26,10 @@ plot_colors = {
 }
 
 plt.rcParams["text.usetex"] = True
-plt.rcParams["text.latex.preamble"] = [
-    r"\usepackage{cmbright}",
-    r"\setlength{\parindent}{0pt}",
-]
+plt.rcParams["text.latex.preamble"] = r"""
+\usepackage{cmbright}
+\setlength{\parindent}{0pt}
+"""
 cmap = "inferno"
 
 
@@ -243,7 +243,7 @@ def plot_surface_reconstruction_flux(
 
     save_dir = save_dir / f"run_{results_number}"
     save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / "surface_reconstruction_flux.png"
+    filename = save_dir / "surface_reconstruction_flux.pdf"
     fig.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -367,42 +367,42 @@ def plot_surface_loss_history(
         Identifier of the results run.
     """
     loss_history = results["surface_reconstruction"]["loss_history"]
-    epochs = np.arange(0, len(loss_history[0]["total_loss"]))
+    epochs = np.arange(0, len(loss_history[0][0][0]["total_loss"]))
 
     for batch_index, batch in enumerate(loss_history):
         fig, ax1 = plt.subplots(figsize=(8, 5))
 
         (l1,) = ax1.plot(
             epochs,
-            batch["total_loss"],
+            batch[0][0]["total_loss"],
             label=r"Total Loss",
             color=plot_colors["darkblue"],
         )
 
         (l2,) = ax1.plot(
             epochs,
-            batch["flux_loss"],
+            batch[0][0]["flux_loss"],
             label=r"KL-Divergence",
             color=plot_colors["blue_1"],
         )
 
         (l3,) = ax1.plot(
             epochs,
-            batch["ideal_regularizer"],
+            batch[0][0]["ideal_regularizer"],
             label=r"Ideal Surface Regularization",
             color=plot_colors["blue_2"],
         )
 
         (l4,) = ax1.plot(
             epochs,
-            batch["smoothness_regularizer"],
+            batch[0][0]["smoothness_regularizer"],
             label=r"Smooth Surface Regularization",
             color=plot_colors["blue_3"],
         )
 
         (l5,) = ax1.plot(
             epochs,
-            batch["flux_integral_constraint"],
+            batch[0][0]["flux_integral_constraint"],
             label=r"Flux integral Constraint",
             color=plot_colors["blue_4"],
         )
@@ -414,7 +414,7 @@ def plot_surface_loss_history(
         ax2 = ax1.twinx()
         (l6,) = ax2.plot(
             epochs,
-            batch["flux_integral"],
+            batch[0][0]["flux_integral"],
             label=r"Flux integral difference %",
             color=plot_colors["darkred"],
         )
@@ -756,13 +756,13 @@ def plot_kinematics_loss_history(
 
     for reconstruction in reconstructions:
         loss_history = results[reconstruction]["loss_history"]
-        epochs = np.arange(0, len(loss_history["total_loss"]))
+        epochs = np.arange(0, len(loss_history[0][0]["total_loss"]))
 
         fig, ax1 = plt.subplots(figsize=(6, 5))
 
         ax1.plot(
             epochs,
-            loss_history["total_loss"],
+            loss_history[0][0]["total_loss"],
             label=r"Total Loss",
             color=plot_colors["darkblue"],
         )
@@ -1302,7 +1302,7 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
 
     for case in ["baseline", "full_field"]:
-        results_number = 15
+        results_number = 10
         results_path = (
             pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
         )
@@ -1322,19 +1322,19 @@ if __name__ == "__main__":
             map_location=device,
         )
 
-        results_ftp = torch.load(
-            pathlib.Path(args.results_dir) / "ftp/full_field" / "results_0.pt",
-            weights_only=False,
-            map_location=device,
-        )
+        # results_ftp = torch.load(
+        #     pathlib.Path(args.results_dir) / "ftp/full_field" / "results_0.pt",
+        #     weights_only=False,
+        #     map_location=device,
+        # )
 
-        plot_heliostat_positions(
-            results=results, results_ftp=results_ftp, save_dir=plots_path
-        )
+        # plot_heliostat_positions(
+        #     results=results, results_ftp=results_ftp, save_dir=plots_path
+        # )
 
-        plot_surface_reconstruction_flux(
-            results=results, save_dir=plots_path, results_number=results_number
-        )
+        # plot_surface_reconstruction_flux(
+        #     results=results, save_dir=plots_path, results_number=results_number
+        # )
         plot_surface_error_analysis(
             results=results, save_dir=plots_path, results_number=results_number
         )

@@ -1554,7 +1554,8 @@ def main() -> None:
     args = parser.parse_args()
     device = get_device(torch.device(args.device))
 
-    for case in ["baseline", "full_field"]:
+    for case in ["baseline"]:
+        # for case in ["baseline", "full_field"]:
         # Set directory paths.
         results_dir = pathlib.Path(args.results_dir) / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)
