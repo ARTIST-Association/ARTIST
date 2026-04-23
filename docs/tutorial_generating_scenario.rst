@@ -462,7 +462,7 @@ and the ``TargetAreaCylindricalListConfig``:
         [target_area_list_cylindrical_config]
     )
 
-More details on the ``TargetAreaPlanarConfig`` class are provided above (see :ref:`plant_and_target`).
+More details on the ``TargetAreaPlanarConfig`` and ``TargetAreaCylindricalListConfig`` classes are provided above (see :ref:`plant_and_target`).
 
 Light Source
 ------------
