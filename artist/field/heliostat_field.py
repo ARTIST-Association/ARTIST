@@ -319,10 +319,9 @@ class HeliostatField:
                 ].translation_vector
 
             if change_number_of_control_points_per_facet is not None:
-                control_points = utils.create_ideal_canted_nurbs_control_points(
+                control_points = utils.create_planar_nurbs_control_points(
                     number_of_control_points=change_number_of_control_points_per_facet,
                     canting=canting,
-                    facet_translation_vectors=facet_translation_vectors,
                     device=device,
                 )
 
