@@ -10,7 +10,6 @@ from artist.scenario.configuration_classes import (
     HeliostatListConfig,
     KinematicsConfig,
     KinematicsDeviations,
-    KinematicsLoadConfig,
     KinematicsPrototypeConfig,
     LightSourceConfig,
     LightSourceListConfig,
@@ -18,8 +17,6 @@ from artist.scenario.configuration_classes import (
     PrototypeConfig,
     SurfaceConfig,
     SurfacePrototypeConfig,
-    TargetAreaConfig,
-    TargetAreaListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
@@ -37,7 +34,6 @@ __all__ = [
     "KinematicsDeviations",
     "KinematicsConfig",
     "KinematicsPrototypeConfig",
-    "KinematicsLoadConfig",
     "ActuatorParameters",
     "ActuatorConfig",
     "ActuatorListConfig",

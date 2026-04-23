@@ -83,7 +83,8 @@ def test_integration_alignment(
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     # Load the scenario.
     with h5py.File(
@@ -99,9 +100,9 @@ def test_integration_alignment(
     bitmap_resolution = torch.tensor([256, 256], device=device)
     flux_distributions = torch.zeros(
         (
-            scenario.target_areas.number_of_target_areas,
-            bitmap_resolution[0],
-            bitmap_resolution[1],
+            int(scenario.solar_tower.number_of_target_areas_per_type.sum()),
+            int(bitmap_resolution[0].item()),
+            int(bitmap_resolution[1].item()),
         ),
         device=device,
     )
@@ -123,7 +124,9 @@ def test_integration_alignment(
 
         # Align heliostats.
         heliostat_group.align_surfaces_with_incident_ray_directions(
-            aim_points=scenario.target_areas.centers[target_area_indices],
+            aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices=target_area_indices, device=device
+            ),
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             device=device,
@@ -139,7 +142,7 @@ def test_integration_alignment(
         )
 
         # Perform heliostat-based ray tracing.
-        group_bitmaps_per_heliostat = ray_tracer.trace_rays(
+        group_bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,
@@ -163,5 +166,8 @@ def test_integration_alignment(
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(
-        flux_distributions, expected, atol=flux_distributions.mean() * 0.01, rtol=0.01
+        flux_distributions,
+        expected,
+        atol=max(float(flux_distributions.mean().item()) * 0.01, 1e-6),
+        rtol=0.01,
     )

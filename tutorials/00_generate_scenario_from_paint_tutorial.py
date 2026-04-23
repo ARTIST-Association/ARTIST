@@ -57,16 +57,18 @@ if not pathlib.Path(scenario_path).parent.is_dir():
         "Please create the folder or adjust the file path before running again!"
     )
 
-# Include the power plant and target area configuration.
-power_plant_config, target_area_list_config = (
-    paint_scenario_parser.extract_paint_tower_measurements(
-        tower_measurements_path=tower_file, device=device
-    )
+# Include the power plant and target area configurations.
+(
+    power_plant_config,
+    target_area_list_planar_config,
+    target_area_list_cylindrical_config,
+) = paint_scenario_parser.extract_paint_tower_measurements(
+    tower_measurements_path=tower_file, device=device
 )
 
 # Include the light source configuration.
-light_source1_config = LightSourceConfig(
-    light_source_key="sun_1",
+light_source_config = LightSourceConfig(
+    light_source_key="sun",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=10,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -75,17 +77,12 @@ light_source1_config = LightSourceConfig(
 )
 
 # Create a list of light source configs - in this case only one.
-light_source_list = [light_source1_config]
+light_source_list = [light_source_config]
 
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
-target_area = [
-    target_area
-    for target_area in target_area_list_config.target_area_list
-    if target_area.target_area_key == config_dictionary.target_area_receiver
-]
-
+# Create heliostat surfaces.
 number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
 nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
 nurbs_deflectometry_step_size = 100
@@ -134,7 +131,8 @@ if __name__ == "__main__":
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_list_planar_config,
+        target_area_list_cylindrical_config=target_area_list_cylindrical_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostat_list_config,

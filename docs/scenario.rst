@@ -30,10 +30,16 @@ Target Areas
      Every scenario contains at least one target area. A target area is a defined area on the solar tower
      where reflected light is concentrated. If the target area is a receiver, the concentrated light is converted
      into thermal energy for electricity generation or industrial processes. If the target area is a calibration target,
-     this area on the tower is used exclusively for calibration tasks, for example in the alignment optimization. A
-     ``TargetArea`` object contains information such as position, type, curvature, and other geometric properties.
-     The scenario structure supports multiple target areas, which is particularly useful for calibration setups or
-     multi-receiver power plants.
+     this area on the tower is used exclusively for calibration tasks, for example in the alignment optimization.
+     There are currently two types of target areas implemented in ``ARTIST``, which differ in their geometry: planar and
+     cylindrical. Planar target areas are commonly used for calibration surfaces, while cylindrical target areas represent
+     receiver geometries. Due to these geometric differences, each target area type requires its own ray-tracing methods.
+     ``ARTIST`` handles this automatically by sorting the target areas provided in the scenario HDF5 files into the appropriate
+     classes and applying the correct methods for each type. The scenario structure supports multiple target areas,
+     which is particularly useful for calibration setups or multi-receiver power plants, where different target area types
+     may be used within a single simulation. Each target area includes basic information such as its name, position, and normal vector.
+     In addition, planar target areas store geometric dimensions, while cylindrical target areas include parameters such as
+     radius, axis, height, and opening angle.
 Light Sources
      Each scenario contains at least one light source, which models how the incoming radiation is
      generated before being reflected onto a receiver. A light source has a defined type, for example, ``Sun``, and
@@ -71,18 +77,25 @@ These five elements result in an ``ARTIST`` scenario HDF5 file with the followin
     .
     ├── power_plant [1]
     │   └── position [1,1]
-    ├── target_areas [1,*]
-    │   ├── receiver1
-    │   │   ├── geometry [1,1]
+    ├── target_areas_planar [1,*]
+    │   ├── calibration_target1
     │   │   ├── position_center [1,1]
-    │   │   ├── curvature_e [0,1]
-    │   │   ├── curvature_u [0,1]
     │   │   ├── normal_vector [1,1]
     │   │   ├── plane_e [1,1]
     │   │   └── plane_u [1,1]
-    │   ├── calibration_target1
+    │   ├── calibration_target2
     │   │   └── ...
     │   └── ...
+    ├── target_areas_cylindrical [1,*]
+    │   ├── receiver1
+    │   │   ├── cylinder_axis [1,1]
+    │   │   ├── cylinder_center [1,1]
+    │   │   ├── cylinder_height [1,1]
+    │   │   ├── cylinder_opening_angle [1,1]
+    │   │   ├── cylinder_radius [1,1]
+    │   │   └── cylinder_normal [1,1]
+    │   ├── receiver2
+    │   │   └── ...
     ├── lightsources [1,*]
     │   ├── lightsource1
     │   │   ├── type [1,1]

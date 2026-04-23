@@ -1,31 +1,12 @@
-from unittest.mock import MagicMock
+from unittest import mock
 
 import h5py
 import pytest
 import torch
-from pytest_mock import MockerFixture
 
 from artist.field.heliostat_field import HeliostatField
 from artist.scenario.configuration_classes import SurfaceConfig
 from artist.util import config_dictionary
-
-
-@pytest.fixture
-def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
-    """
-    Generate a mock prototype.
-
-    Parameters
-    ----------
-    mocker : MockerFixture
-        A pytest-mock fixture used to create mock objects.
-
-    Returns
-    -------
-    MagicMock
-        A mock prototype.
-    """
-    return mocker.MagicMock()
 
 
 @pytest.mark.parametrize(
@@ -38,13 +19,13 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
             "If the heliostat does not have individual surface parameters, a surface prototype must be provided!",
         ),
         (
-            prototype_mock_generator,
+            mock.MagicMock(),
             None,
             None,
             "If the heliostat does not have an individual kinematics, a kinematics prototype must be provided!",
         ),
         (
-            prototype_mock_generator,
+            mock.MagicMock(),
             {
                 config_dictionary.kinematics_type: config_dictionary.rigid_body_key,
                 config_dictionary.kinematics_initial_orientation: torch.rand(4, 4),
@@ -57,7 +38,6 @@ def prototype_mock_generator(mocker: MockerFixture) -> MagicMock:
     ],
 )
 def test_heliostat_field_load_from_hdf5_errors(
-    mocker: MockerFixture,
     prototype_surface: SurfaceConfig,
     prototype_kinematics: dict[str, str | torch.Tensor],
     prototype_actuators: dict[str, str | torch.Tensor],
@@ -65,12 +45,10 @@ def test_heliostat_field_load_from_hdf5_errors(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat field load from hdf5 method.
+    Test the heliostat field loaded from HDF5 method.
 
     Parameters
     ----------
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     prototype_surface : SurfaceConfig
         The mock prototype surface.
     prototype_kinematics : dict[str, str | torch.Tensor]
@@ -87,8 +65,8 @@ def test_heliostat_field_load_from_hdf5_errors(
     AssertionError
         If test does not complete as expected.
     """
-    mock_h5_file = mocker.MagicMock(spec=h5py.File)
-    mock_group_heliostats = mocker.MagicMock()
+    mock_h5_file = mock.MagicMock(spec=h5py.File)
+    mock_group_heliostats = mock.MagicMock()
     mock_group_heliostats.keys.return_value = ["heliostat_1"]
     mock_h5_file.__getitem__.return_value = mock_group_heliostats
     mock_group_heliostats.__len__.return_value = 1

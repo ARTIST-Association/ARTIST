@@ -65,8 +65,20 @@ value:
 
 .. code-block:: python
 
-    target_flux_integral = 10000
-    ground_truth = (ground_truth / ground_truth.sum()) * target_flux_integral
+    # Set target flux integral.
+    canting_norm = (
+        torch.norm(scenario.heliostat_field.heliostat_groups[0].canting[0], dim=1)[0]
+    )[:2]
+    dimensions = (canting_norm * 4) + 0.02
+    heliostat_surface_area = dimensions[0] * dimensions[1]
+    total_heliostat_area = (
+        heliostat_surface_area
+        * scenario.heliostat_field.number_of_heliostats_per_group.sum()
+    )
+    target_flux_integral = (
+        dni * total_heliostat_area * 0.75
+    )  # Account for mirror and angle based losses.
+
 
 Loss Function
 ^^^^^^^^^^^^^
@@ -103,8 +115,8 @@ settings:
     scheduler_dict = {
         config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
         config_dictionary.gamma: 0.9,
-        config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
+        config_dictionary.lr_min: 1e-6,
+        config_dictionary.lr_max: 1e-3,
         config_dictionary.step_size_up: 500,
         config_dictionary.reduce_factor: 0.3,
         config_dictionary.patience: 100,
@@ -113,10 +125,10 @@ settings:
     }
     # Configure the regularizers and constraints.
     constraint_dict = {
-        config_dictionary.rho_energy: 1.0,
-        config_dictionary.lambda_lr: 0.1,
-        config_dictionary.max_flux_density: 1e10,
-        config_dictionary.rho_pixel: 1.0,
+        config_dictionary.rho_flux_integral: 1.0,
+        config_dictionary.rho_local_flux: 1.0,
+        config_dictionary.rho_intercept: 1.0,
+        config_dictionary.max_flux_density: 1000000,
     }
     # Combine configurations.
     optimization_configuration = {
@@ -158,7 +170,7 @@ Finally, we create a ``MotorPositionsOptimizer`` object and run the optimization
     )
 
     # Optimize the motor positions.
-    _ = motor_positions_optimizer.optimize(
+    final_loss, _, _, _, _ = motor_positions_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 

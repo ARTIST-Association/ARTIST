@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class PaintCalibrationDataParser(CalibrationDataParser):
     """
-    A calibration data parser for the data source ``PAINT``.
+    A calibration data parser for the data source PAINT.
 
     Attributes
     ----------
@@ -46,7 +46,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         centroid_extraction_method: str = paint_mappings.UTIS_KEY,
     ) -> None:
         """
-        Initialize the the paint calibration data parser.
+        Initialize the PAINT calibration data parser.
 
         Parameters
         ----------
@@ -62,7 +62,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             paint_mappings.HELIOS_KEY,
         ]:
             raise ValueError(
-                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
+                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. "
+                f"Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
             )
         self.centroid_extraction_method = centroid_extraction_method
 
@@ -100,8 +101,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         scenario : Scenario
             The scenario.
         bitmap_resolution : torch.Tensor
-            The resolution of all bitmaps during reconstruction (default is torch.tensor([256,256])).
-            Tensor of shape [2].
+            The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256,256])``).
+            Shape is ``[2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -109,23 +110,24 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
         Returns
         -------
-        The measured flux density distributions.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+        torch.Tensor
+            The measured flux density distributions.
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         torch.Tensor
             The calibration focal spots.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The incident ray directions.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_calibration_data_points, 2].
+            Shape is ``[number_of_calibration_data_points, 2]``.
         torch.Tensor
             A mask with active heliostats and their replications.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         torch.Tensor
             The target area mapping for the heliostats.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
 
@@ -153,7 +155,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         ) = self._parse_calibration_data(
             heliostat_calibration_mapping=heliostat_calibration_mapping,
             heliostat_names=heliostat_group.names,
-            target_area_names=scenario.target_areas.names,
+            target_name_to_index=scenario.solar_tower.target_name_to_index,
             power_plant_position=scenario.power_plant_position,
             device=device,
         )
@@ -171,12 +173,12 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         self,
         heliostat_calibration_mapping: list[tuple[str, list[pathlib.Path]]],
         heliostat_names: list[str],
-        target_area_names: list[str],
+        target_name_to_index: dict[str, int],
         power_plant_position: torch.Tensor,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Extract calibration data from ``PAINT`` calibration files.
+        Extract calibration data from PAINT calibration files.
 
         Parameters
         ----------
@@ -184,7 +186,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             The mapping of heliostats and their calibration data files.
         power_plant_position : torch.Tensor
             The power plant position.
-            Tensor of shape [3].
+            Shape is ``[3]``.
         heliostat_names : list[str]
             All possible heliostat names.
         target_area_names : list[str]
@@ -198,25 +200,23 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         -------
         torch.Tensor
             The calibration focal spots.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The incident ray directions.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_calibration_data_points, 2].
+            Shape is ``[number_of_calibration_data_points, 2]``.
         torch.Tensor
             A mask with active heliostats and their replications.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         torch.Tensor
             The target area mapping for the heliostats.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
 
         log.info("Beginning extraction of calibration properties data from PAINT file.")
-
-        target_indices = {name: index for index, name in enumerate(target_area_names)}
 
         # Gather calibration data.
         replication_counter: Counter[str] = Counter()
@@ -231,7 +231,7 @@ class PaintCalibrationDataParser(CalibrationDataParser):
 
                 calibration_data_per_heliostat[heliostat_name].append(
                     [
-                        target_indices[
+                        target_name_to_index[
                             calibration_data_dict[paint_mappings.TARGET_NAME_KEY]
                         ],
                         calibration_data_dict[paint_mappings.FOCAL_SPOT_KEY][

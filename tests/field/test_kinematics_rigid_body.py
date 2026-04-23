@@ -6,6 +6,46 @@ from artist.field.kinematics_rigid_body import (
 )
 
 
+def _activate_all_heliostats_for_test(
+    kinematics: RigidBody, device: torch.device
+) -> None:
+    active_heliostats_mask = torch.ones(
+        kinematics.number_of_heliostats, dtype=torch.int32, device=device
+    )
+    kinematics.number_of_active_heliostats = int(active_heliostats_mask.sum().item())
+    kinematics.active_heliostat_positions = (
+        kinematics.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematics.active_initial_orientations = (
+        kinematics.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
+    )
+    kinematics.active_translation_deviation_parameters = (
+        kinematics.translation_deviation_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
+    kinematics.active_rotation_deviation_parameters = (
+        kinematics.rotation_deviation_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
+    kinematics.actuators.active_non_optimizable_parameters = (
+        kinematics.actuators.non_optimizable_parameters.repeat_interleave(
+            active_heliostats_mask, dim=0
+        )
+    )
+    if kinematics.actuators.optimizable_parameters.numel() > 0:
+        kinematics.actuators.active_optimizable_parameters = (
+            kinematics.actuators.optimizable_parameters.repeat_interleave(
+                active_heliostats_mask, dim=0
+            )
+        )
+    else:
+        kinematics.actuators.active_optimizable_parameters = torch.tensor(
+            [], requires_grad=True, device=device
+        )
+
+
 @pytest.fixture
 def kinematics_parameters(device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
     """
@@ -36,7 +76,7 @@ def kinematics_parameters(device: torch.device) -> tuple[torch.Tensor, torch.Ten
 
 @pytest.fixture
 def kinematics_model_linear(
-    kinematics_parameters: torch.Tensor,
+    kinematics_parameters: tuple[torch.Tensor, torch.Tensor],
     device: torch.device,
 ) -> RigidBody:
     """
@@ -44,7 +84,7 @@ def kinematics_model_linear(
 
     Parameters
     ----------
-    kinematics_parameters : torch.Tensor
+    kinematics_parameters : tuple[torch.Tensor, torch.Tensor]
         The kinematics deviation parameters.
     device : torch.device
         The device on which to initialize tensors.
@@ -680,43 +720,7 @@ def test_incident_ray_direction_to_orientation(
         If test does not complete as expected.
     """
     kinematics = request.getfixturevalue(kinematics_model_fixture)
-
-    active_heliostats_mask = torch.ones(
-        kinematics.number_of_heliostats, dtype=torch.int32, device=device
-    )
-
-    kinematics.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematics.active_heliostat_positions = (
-        kinematics.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-    )
-    kinematics.active_initial_orientations = (
-        kinematics.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-    )
-    kinematics.active_translation_deviation_parameters = (
-        kinematics.translation_deviation_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-    )
-    kinematics.active_rotation_deviation_parameters = (
-        kinematics.rotation_deviation_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-    )
-    kinematics.actuators.active_non_optimizable_parameters = (
-        kinematics.actuators.non_optimizable_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-    )
-    if kinematics.actuators.active_optimizable_parameters.numel() > 0:
-        kinematics.actuators.active_optimizable_parameters = (
-            kinematics.actuators.optimizable_parameters.repeat_interleave(
-                active_heliostats_mask, dim=0
-            )
-        )
-    else:
-        kinematics.actuators.active_optimizable_parameters = torch.tensor(
-            [], requires_grad=True
-        )
+    _activate_all_heliostats_for_test(kinematics, device)
 
     orientation_matrix = kinematics.incident_ray_directions_to_orientations(
         incident_ray_directions=incident_ray_directions.to(device),
@@ -1189,43 +1193,7 @@ def test_motor_positions_to_orientations(
         If test does not complete as expected.
     """
     kinematics = request.getfixturevalue(kinematics_model_fixture)
-
-    active_heliostats_mask = torch.ones(
-        kinematics.number_of_heliostats, dtype=torch.int32, device=device
-    )
-
-    kinematics.number_of_active_heliostats = active_heliostats_mask.sum().item()
-    kinematics.active_heliostat_positions = (
-        kinematics.heliostat_positions.repeat_interleave(active_heliostats_mask, dim=0)
-    )
-    kinematics.active_initial_orientations = (
-        kinematics.initial_orientations.repeat_interleave(active_heliostats_mask, dim=0)
-    )
-    kinematics.active_translation_deviation_parameters = (
-        kinematics.translation_deviation_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-    )
-    kinematics.active_rotation_deviation_parameters = (
-        kinematics.rotation_deviation_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-    )
-    kinematics.actuators.active_non_optimizable_parameters = (
-        kinematics.actuators.non_optimizable_parameters.repeat_interleave(
-            active_heliostats_mask, dim=0
-        )
-    )
-    if kinematics.actuators.active_optimizable_parameters.numel() > 0:
-        kinematics.actuators.active_optimizable_parameters = (
-            kinematics.actuators.optimizable_parameters.repeat_interleave(
-                active_heliostats_mask, dim=0
-            )
-        )
-    else:
-        kinematics.actuators.active_optimizable_parameters = torch.tensor(
-            [], requires_grad=True
-        )
+    _activate_all_heliostats_for_test(kinematics, device)
 
     orientation_matrix = kinematics.motor_positions_to_orientations(
         motor_positions=motor_positions.to(device),

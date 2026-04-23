@@ -1,7 +1,11 @@
-import torch
-import torch.nn.functional as functional
+from typing import cast
 
-from artist.util import index_mapping
+import torch
+
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -23,8 +27,10 @@ def rotate_distortions(
     ----------
     e : torch.Tensor
         East rotation angles in radians.
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_surface_points]``.
     u : torch.Tensor
         Up rotation angles in radians.
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_surface_points]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -33,12 +39,13 @@ def rotate_distortions(
     Raises
     ------
     ValueError
-        If the sizes of the input tensors do not match.
+        If the shapes of the input tensors do not match.
 
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 rotation matrices, one per distortion sample.
+        Shape is ``[number_of_heliostats, number_of_rays, number_of_surface_points, 4, 4]``.
     """
     device = get_device(device=device)
 
@@ -51,7 +58,7 @@ def rotate_distortions(
     sin_e = -torch.sin(e)  # Heliostat convention.
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    ones = torch.ones(e.shape, device=device)
+    ones = torch.ones_like(e, device=device)
 
     matrix = torch.zeros(
         e.shape[index_mapping.heliostat_dimension],
@@ -71,7 +78,11 @@ def rotate_distortions(
     matrix[:, :, :, index_mapping.u, index_mapping.n] = -sin_e * cos_u
     matrix[:, :, :, index_mapping.u, index_mapping.u] = cos_e
     matrix[
-        :, :, :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :,
+        :,
+        :,
+        index_mapping.transform_homogeneous,
+        index_mapping.transform_homogeneous,
     ] = ones
 
     return matrix
@@ -88,11 +99,11 @@ def rotate_e(
     in the mathematical direction of rotation, i.e., counter-clockwise. Points need to be multiplied as column vectors
     from the right-hand side with the resulting rotation matrix.
 
-
     Parameters
     ----------
     e : torch.Tensor
         East rotation angles in radians.
+        Shape is ``[number_of_heliostats]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -101,13 +112,14 @@ def rotate_e(
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 east-axis rotation matrices, one per heliostat.
+        Shape is ``[number_of_heliostats, 4, 4]``.
     """
     device = get_device(device=device)
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention.
-    ones = torch.ones(e.shape, device=device)
+    sin_e = torch.sin(e)
+    ones = torch.ones_like(e, device=device)
 
     matrix = torch.zeros(
         e.shape[index_mapping.heliostat_dimension], 4, 4, device=device
@@ -115,11 +127,11 @@ def rotate_e(
 
     matrix[:, index_mapping.e, index_mapping.e] = ones
     matrix[:, index_mapping.n, index_mapping.n] = cos_e
-    matrix[:, index_mapping.n, index_mapping.u] = sin_e
-    matrix[:, index_mapping.u, index_mapping.n] = -sin_e
+    matrix[:, index_mapping.n, index_mapping.u] = -sin_e
+    matrix[:, index_mapping.u, index_mapping.n] = sin_e
     matrix[:, index_mapping.u, index_mapping.u] = cos_e
     matrix[
-        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
     ] = ones
 
     return matrix
@@ -137,6 +149,7 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     ----------
     n : torch.Tensor
         North rotation angles in radians.
+        Shape is ``[number_of_heliostats]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -145,13 +158,14 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 north-axis rotation matrices, one per heliostat.
+        Shape is ``[number_of_heliostats, 4, 4]``.
     """
     device = get_device(device=device)
 
     cos_n = torch.cos(n)
     sin_n = torch.sin(n)
-    ones = torch.ones(n.shape, device=device)
+    ones = torch.ones_like(n, device=device)
 
     matrix = torch.zeros(
         n.shape[index_mapping.heliostat_dimension], 4, 4, device=device
@@ -163,7 +177,7 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     matrix[:, index_mapping.u, index_mapping.e] = sin_n
     matrix[:, index_mapping.u, index_mapping.u] = cos_n
     matrix[
-        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
     ] = ones
 
     return matrix
@@ -181,6 +195,7 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     ----------
     u : torch.Tensor
         Up rotation angles in radians.
+        Shape is ``[number_of_heliostats]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -189,13 +204,14 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 up-axis rotation matrices, one per heliostat.
+        Shape is ``[number_of_heliostats, 4, 4]``.
     """
     device = get_device(device=device)
 
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
-    ones = torch.ones(u.shape, device=device)
+    ones = torch.ones_like(u, device=device)
 
     matrix = torch.zeros(
         u.shape[index_mapping.heliostat_dimension], 4, 4, device=device
@@ -207,7 +223,7 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     matrix[:, index_mapping.n, index_mapping.n] = cos_u
     matrix[:, index_mapping.u, index_mapping.u] = ones
     matrix[
-        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
     ] = ones
 
     return matrix
@@ -228,11 +244,14 @@ def translate_enu(
     Parameters
     ----------
     e : torch.Tensor
-        East translations.
+        East translation distances in meters.
+        Shape is ``[number_of_heliostats]``.
     n : torch.Tensor
-        North translations.
+        North translation distances in meters.
+        Shape is ``[number_of_heliostats]``.
     u : torch.Tensor
-        Up translations.
+        Up translation distances in meters.
+        Shape is ``[number_of_heliostats]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -246,7 +265,8 @@ def translate_enu(
     Returns
     -------
     torch.Tensor
-        Corresponding rotation matrix.
+        Batched 4×4 translation matrices, one per heliostat.
+        Shape is ``[number_of_heliostats, 4, 4]``.
     """
     device = get_device(device=device)
 
@@ -255,20 +275,20 @@ def translate_enu(
             "The three tensors containing the east, north, and up translations must have the same shape."
         )
 
-    ones = torch.ones(e.shape, device=device)
+    ones = torch.ones_like(e, device=device)
 
     matrix = torch.zeros(
         e.shape[index_mapping.heliostat_dimension], 4, 4, device=device
     )
 
     matrix[:, index_mapping.e, index_mapping.e] = ones
-    matrix[:, index_mapping.e, index_mapping.transform_homogenous] = e
+    matrix[:, index_mapping.e, index_mapping.transform_homogeneous] = e
     matrix[:, index_mapping.n, index_mapping.n] = ones
-    matrix[:, index_mapping.n, index_mapping.transform_homogenous] = n
+    matrix[:, index_mapping.n, index_mapping.transform_homogeneous] = n
     matrix[:, index_mapping.u, index_mapping.u] = ones
-    matrix[:, index_mapping.u, index_mapping.transform_homogenous] = u
+    matrix[:, index_mapping.u, index_mapping.transform_homogeneous] = u
     matrix[
-        :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
     ] = ones
 
     return matrix
@@ -278,16 +298,16 @@ def convert_3d_points_to_4d_format(
     points: torch.Tensor, device: torch.device | None = None
 ) -> torch.Tensor:
     """
-    Append ones to the last dimension of a 3D point vectors.
+    Append ones to the last dimension of 3D point vectors.
 
-    Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    Includes the convention that points have a 1 and directions have a 0 as 4th dimension.
     This function can handle batched tensors.
 
     Parameters
     ----------
     points : torch.Tensor
         Input points in a 3D format.
-        Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
+        Shape is ``[..., 3]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -302,7 +322,7 @@ def convert_3d_points_to_4d_format(
     -------
     torch.Tensor
         Point vector with ones appended at the last dimension.
-        Tensor of shape [..., 4].
+        Shape is ``[..., 4]``.
     """
     device = get_device(device=device)
 
@@ -321,14 +341,14 @@ def convert_3d_directions_to_4d_format(
     """
     Append zeros to the last dimension of 3D direction vectors.
 
-    Includes the convention that points have a 1 and directions have 0 as 4th dimension.
+    Includes the convention that points have a 1 and directions have a 0 as 4th dimension.
     This function can handle batched tensors.
 
     Parameters
     ----------
     directions : torch.Tensor
         Input direction in a 3D format.
-        Tensor of shape [..., 3]. The tensor may have arbitrary many batch dimensions, but the last shape dimension must be 3.
+        Shape is ``[..., 3]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -342,8 +362,8 @@ def convert_3d_directions_to_4d_format(
     Returns
     -------
     torch.Tensor
-        Direction vectors with ones appended at the last dimension.
-        Tensor of shape [..., 4].
+        Direction vectors with zeros appended at the last dimension.
+        Shape is ``[..., 4]``.
     """
     device = get_device(device=device)
 
@@ -366,13 +386,13 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
     ----------
     points : torch.Tensor
         A tensor containing points to be normalized.
-        Tensor of shape [number_of_points, 2].
+        Shape is ``[number_of_points, number_of_dimensions]``.
 
     Returns
     -------
     torch.Tensor
         The normalized points.
-        Tensor of shape [number_of_points, 2].
+        Shape is ``[number_of_points, number_of_dimensions]``.
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
     min_vals = torch.min(points, dim=index_mapping.unbatched_tensor_values).values
@@ -380,44 +400,45 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
     max_vals = torch.max(
         point_range + 2e-5, dim=index_mapping.unbatched_tensor_values
     ).values
-    normalized = (point_range + 1e-5) / max_vals
-
-    return normalized
+    return (point_range + 1e-5) / max_vals
 
 
 def decompose_rotations(
     initial_vector: torch.Tensor,
     target_vector: torch.Tensor,
-    device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Get the individual angles along the east-, north- and up-axis, to rotate and initial vector into a target vector.
+    Compute ENU components of the axis-angle rotation vector that rotates initial vectors toward a target vector.
+
+    This function does **not** perform an Euler-angle decomposition. Instead, it computes:
+    1) the rotation axis via cross product, and
+    2) the rotation magnitude via arccos of the dot product,
+    then returns the Cartesian components of the rotation vector
+    (`theta * axis`) in east, north, and up coordinates.
 
     Parameters
     ----------
     initial_vector : torch.Tensor
-        The initial vector.
-        Tensor of shape [number_of_heliostats, 4].
-    rotated_vector : torch.Tensor
-        The rotated vector.
-        Tensor of shape [4].
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
+        Initial vectors in homogeneous coordinates.
+        Shape is ``[number_of_heliostats, 4]``.
+        Only the first three components (ENU) are used.
+    target_vector : torch.Tensor
+        Target vector in homogeneous coordinates.
+        Shape is ``[4]``.
+        Only the first three components (ENU) are used.
 
     Returns
     -------
     torch.Tensor
-        The angle for the east-axis rotation.
+        East component of the axis-angle rotation vector.
+        Shape is ``[number_of_heliostats]``.
     torch.Tensor
-        The angle for the north-axis rotation.
+        North component of the axis-angle rotation vector.
+        Shape is ``[number_of_heliostats]``.
     torch.Tensor
-        The angle for the up-axis rotation.
-
+        Up component of the axis-angle rotation vector.
+        Shape is ``[number_of_heliostats]``.
     """
-    device = get_device(device=device)
-
     # Normalize the input vectors.
     initial_vector = torch.nn.functional.normalize(
         initial_vector[:, : index_mapping.slice_fourth_dimension]
@@ -448,16 +469,16 @@ def rotation_angle_and_axis(
     device: torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """
-    Compute the rotation axis and angle between to orientations.
+    Compute the rotation axis and angle between two orientations.
 
     Parameters
     ----------
     from_orientation : torch.Tensor
         The original orientation.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     to_orientation : torch.Tensor
         The rotated orientation.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -467,35 +488,40 @@ def rotation_angle_and_axis(
     -------
     torch.Tensor
         The rotation axis.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     torch.Tensor
-        The angle of the rotation.
-        Tensor of shape [1].
+        The angle of the rotation as a scalar tensor.
     """
     device = get_device(device=device)
-
     from_orientation = from_orientation[:3] / torch.norm(from_orientation[:3])
     to_orientation = to_orientation[:3] / torch.norm(to_orientation[:3])
-
+    dot = torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
+    angle = torch.acos(dot)
     axis = torch.linalg.cross(from_orientation, to_orientation)
     axis_norm = torch.norm(axis)
-    if axis_norm < 1e-6:
+    # Parallel vectors.
+    epsilon = 1e-6
+    if axis_norm < epsilon and dot > 0:
         return torch.tensor([1.0, 0.0, 0.0], device=device), torch.tensor(
             0.0, device=device
         )
+    # Inverse vectors.
+    if axis_norm < epsilon and dot < 0:
+        if abs(from_orientation[index_mapping.e]) < abs(
+            from_orientation[index_mapping.n]
+        ):
+            orthogonal = torch.tensor([1.0, 0.0, 0.0], device=device)
+        else:
+            orthogonal = torch.tensor([0.0, 1.0, 0.0], device=device)
+        axis = torch.linalg.cross(from_orientation, orthogonal)
+        axis = axis / torch.norm(axis)
+        return axis, torch.tensor(torch.pi, device=device)
     axis = axis / axis_norm
-    angle = torch.acos(
-        torch.clamp(torch.dot(from_orientation, to_orientation), -1.0, 1.0)
-    )
     return axis, angle
 
 
 def get_center_of_mass(
     bitmaps: torch.Tensor,
-    target_centers: torch.Tensor,
-    target_widths: float,
-    target_heights: float,
-    threshold: float = 0.0,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -504,22 +530,13 @@ def get_center_of_mass(
     First determine the indices of the bitmap center of mass.
     Next determine the position (coordinates) of the center of mass on the target.
 
+    Returns (0.0, 0.0) for empty fluxes.
+
     Parameters
     ----------
     bitmaps : torch.Tensor
-        The flux densities in form of bitmaps.
-        Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
-    target_centers : torch.Tensor
-        The positions of the centers of the targets.
-        Tensor of shape [number_of_active_heliostats, 4].
-    target_widths : float
-        The widths of the target surfaces.
-        Tensor of shape [number_of_active_heliostats].
-    target_heights : float
-        The heights of the target surfaces.
-        Tensor of shape [number_of_active_heliostats].
-    threshold : float
-        Determines how intense a pixel in the bitmap needs to be to be registered (default is 0.0).
+        Flux densities in form of bitmaps.
+        Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -528,58 +545,161 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        The coordinates of the flux density centers of mass.
-        Tensor of shape [number_of_active_heliostats, 4].
+        Bitmap coordinates of the flux density centers of mass (x pixel, y pixel).
+        Shape is ``[number_of_active_heliostats, 2]``.
     """
     device = get_device(device=device)
 
-    _, heights, widths = bitmaps.shape
+    number_of_flux_distributions, image_height, image_width = bitmaps.shape
 
-    # Threshold the bitmap values. Any values below the threshold are set to zero.
-    flux_thresholds = torch.where(
-        bitmaps >= threshold, bitmaps, torch.zeros_like(bitmaps, device=device)
+    # Compute center of mass.
+    normalized_bitmaps = bitmaps / (
+        bitmaps.sum(
+            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            keepdim=True,
+        )
+        + 1e-8
     )
-    total_intensities = flux_thresholds.sum(
+
+    y_coordinates = torch.linspace(0, image_height - 1, image_height, device=device)
+    x_coordinates = torch.linspace(0, image_width - 1, image_width, device=device)
+    y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
+    x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
+    y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
+
+    x_center_of_mass = (x_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
     )
+    y_center_of_mass = (y_grid * normalized_bitmaps).sum(
+        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    )
+    return torch.stack([x_center_of_mass, y_center_of_mass], dim=1)
 
-    # Generate normalized east and up coordinates adjusted for pixel centers.
-    # The "+ 0.5" adjustment ensures coordinates are centered within each pixel.
-    e_indices = (
-        torch.arange(widths, dtype=torch.float32, device=device) + 0.5
-    ) / widths
-    u_indices = (
-        torch.arange(heights, dtype=torch.float32, device=device) + 0.5
-    ) / heights
 
-    # Compute the centers of intensity using weighted sums of the coordinates.
-    center_of_masses_e = (
-        flux_thresholds.sum(dim=index_mapping.batched_bitmap_e) * e_indices
-    ).sum(dim=index_mapping.bitmap_intensities) / total_intensities
-    center_of_masses_u = (
-        1
-        - (flux_thresholds.sum(dim=index_mapping.batched_bitmap_u) * u_indices).sum(
-            dim=index_mapping.bitmap_intensities
+def bitmap_coordinates_to_target_coordinates(
+    bitmap_coordinates: torch.Tensor,
+    bitmap_resolution: torch.Tensor,
+    solar_tower: SolarTower,
+    target_area_indices: torch.Tensor,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """
+    Convert bitmap pixel coordinates to 4D homogeneous world coordinates on the target surface.
+
+    For planar target areas the pixel coordinates are mapped linearly to target plane coordinates.
+    For cylindrical target areas the pixel coordinates are mapped to cylindrical surface coordinates
+    using the cylinder's radius, opening angle, height, axis, and normal.
+
+    Parameters
+    ----------
+    bitmap_coordinates : torch.Tensor
+        Pixel coordinates in the bitmap for each heliostat, as (x, y) pairs.
+        Shape is ``[number_of_active_heliostats, 2]``.
+    bitmap_resolution : torch.Tensor
+        Resolution of the bitmap (width, height) in pixels.
+        Shape is ``[2]``.
+    solar_tower : SolarTower
+        Solar tower containing all target area definitions (planar and cylindrical).
+    target_area_indices : torch.Tensor
+        Global target area index for each heliostat (planar indices first, cylindrical second).
+        Shape is ``[number_of_active_heliostats]``.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
+
+    Returns
+    -------
+    torch.Tensor
+        World coordinates on the target surface in homogeneous format.
+        Shape is ``[number_of_active_heliostats, 4]``.
+    """
+    device = get_device(device=device)
+
+    center_coordinates = torch.zeros((target_area_indices.numel(), 4), device=device)
+    center_coordinates[:, -1] = 1.0
+
+    planar_mask = (
+        target_area_indices
+        < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+    )
+    if target_area_indices[planar_mask].numel() > 0:
+        planar_indices = target_area_indices[planar_mask]
+
+        resolution = torch.tensor(
+            [
+                bitmap_resolution[index_mapping.unbatched_bitmap_e],
+                1e-8,
+                bitmap_resolution[index_mapping.unbatched_bitmap_u],
+                1e-8,
+            ],
+            device=device,
         )
-        / total_intensities
-    )
+        coordinates = torch.zeros((planar_indices.numel(), 4), device=device)
+        coordinates[:, index_mapping.e] = bitmap_coordinates[
+            planar_mask, index_mapping.unbatched_bitmap_e
+        ]
+        coordinates[:, index_mapping.u] = bitmap_coordinates[
+            planar_mask, index_mapping.unbatched_bitmap_u
+        ]
 
-    # Construct the coordinates relative to target centers.
-    de = torch.zeros(
-        (bitmaps.shape[index_mapping.heliostat_dimension], 4), device=device
-    )
-    de[:, index_mapping.e] = -target_widths
-    du = torch.zeros(
-        (bitmaps.shape[index_mapping.heliostat_dimension], 4), device=device
-    )
-    du[:, index_mapping.u] = target_heights
+        # Account for flips from bitmap to target coordinates.
+        target_dimensions = torch.zeros((int(planar_mask.sum()), 4), device=device)
+        planar = cast(
+            TowerTargetAreasPlanar,
+            solar_tower.target_areas[index_mapping.planar_target_areas],
+        )
+        target_dimensions[:, index_mapping.e] = -planar.dimensions[
+            planar_indices, index_mapping.target_dimensions_width
+        ]
+        target_dimensions[:, index_mapping.u] = -planar.dimensions[
+            planar_indices, index_mapping.target_dimensions_height
+        ]
 
-    center_coordinates = (
-        target_centers
-        - 0.5 * (de + du)
-        + center_of_masses_e.unsqueeze(index_mapping.bitmap_intensities) * de
-        + center_of_masses_u.unsqueeze(index_mapping.bitmap_intensities) * du
-    )
+        center_coordinates[planar_mask] = (
+            planar.centers[planar_indices]
+            - 0.5 * target_dimensions
+            + coordinates / (resolution - 1) * target_dimensions
+        )
+
+    if target_area_indices[~planar_mask].numel() > 0:
+        cylinder_indices = (
+            target_area_indices[~planar_mask]
+            - solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
+        )
+
+        cylindrical = cast(
+            TowerTargetAreasCylindrical,
+            solar_tower.target_areas[index_mapping.cylindrical_target_areas],
+        )
+        cylinder_normals = cylindrical.normals[cylinder_indices][:, :3]
+        cylinder_axes = cylindrical.axes[cylinder_indices][:, :3]
+        cylinder_centers = cylindrical.centers[cylinder_indices]
+        radii = cylindrical.radii[cylinder_indices].flatten()
+
+        theta = (
+            bitmap_coordinates[~planar_mask, index_mapping.unbatched_bitmap_e]
+            / (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
+            - 0.5
+        ) * cylindrical.opening_angles[cylinder_indices].flatten()
+        z = (
+            (
+                (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
+                - bitmap_coordinates[~planar_mask, index_mapping.unbatched_bitmap_u]
+            )
+            / (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
+            - 0.5
+        ) * cylindrical.heights[cylinder_indices].flatten()
+
+        v = torch.cross(cylinder_axes, cylinder_normals, dim=-1)
+
+        center_coordinates[~planar_mask, :3] = cylinder_centers[:, :3] + (
+            radii[:, None] * torch.cos(theta)[:, None] * cylinder_normals
+            + radii[:, None] * torch.sin(theta)[:, None] * v
+            + z[:, None] * cylinder_axes
+        )
 
     return center_coordinates
 
@@ -590,17 +710,17 @@ def create_nurbs_evaluation_grid(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create a grid of evaluation points for a nurbs surface.
+    Create a grid of evaluation points for a NURBS surface.
 
     Parameters
     ----------
     number_of_evaluation_points : torch.Tensor
         The number of nurbs evaluation points in east and north direction.
-        Tensor of shape [2].
+        Shape is ``[2]``.
     epsilon : float
-        Offset for the nurbs evaluation points (default is 1e-7).
-        NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints
-        therefore the evaluation points need a small offset from the endpoints.
+        Offset for the NURBS evaluation points (default is 1e-7).
+        NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints.
+        Therefore, the evaluation points need a small offset from the endpoints.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -610,47 +730,45 @@ def create_nurbs_evaluation_grid(
     -------
     torch.Tensor
         The evaluation points.
-        Tensor of shape [number_of_evaluation_points_e * number_of_evaluation_points_e, 2].
+        Shape is ``[number_of_evaluation_points_e * number_of_evaluation_points_n, 2]``.
     """
     device = get_device(device=device)
 
     evaluation_points_e = torch.linspace(
         epsilon,
         1 - epsilon,
-        number_of_evaluation_points[index_mapping.evaluation_points_e],
+        int(number_of_evaluation_points[index_mapping.evaluation_points_e].item()),
         device=device,
     )
     evaluation_points_n = torch.linspace(
         epsilon,
         1 - epsilon,
-        number_of_evaluation_points[index_mapping.evaluation_points_n],
+        int(number_of_evaluation_points[index_mapping.evaluation_points_n].item()),
         device=device,
     )
-    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
-
-    return evaluation_points
+    return torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
 
 
-def create_ideal_canted_nurbs_control_points(
+def create_planar_nurbs_control_points(
     number_of_control_points: torch.Tensor,
     canting: torch.Tensor,
-    facet_translation_vectors: torch.Tensor,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create ideal, canted and translated control points for each facet.
+    Create planar NURBS control points for each facet.
+
+    The generated control points form a flat, equidistant grid.
+    The grid extent is derived from the norm of the canting vectors, which encode the
+    dimensions of the facets.
 
     Parameters
     ----------
     number_of_control_points : torch.Tensor
         The number of NURBS control points.
-        Tensor of shape [2].
+        Shape is ``[2]``.
     canting : torch.Tensor
         The canting vector for each facet.
-        Tensor of shape [number_of_facets, 2, 4].
-    facet_translation_vectors : torch.Tensor
-        The facet translation vector for each facet.
-        Tensor of shape [number_of_facets, 4].
+        Shape is ``[number_of_facets, 2, 4]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -659,58 +777,46 @@ def create_ideal_canted_nurbs_control_points(
     Returns
     -------
     torch.Tensor
-        The canted and translated ideal NURBS control points.
-        Tensor of shape [number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        Planar control point grids for each facet.
+        Shape is ``[number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
     """
     device = get_device(device=device)
 
-    number_of_facets = facet_translation_vectors.shape[
-        index_mapping.facet_index_unbatched
-    ]
+    number_of_control_points = number_of_control_points.to(device)
+    canting = canting.to(device)
+
+    n_u = int(number_of_control_points[index_mapping.nurbs_u].item())
+    n_v = int(number_of_control_points[index_mapping.nurbs_v].item())
+
+    number_of_facets = canting.shape[index_mapping.facet_index_unbatched]
 
     control_points = torch.zeros(
         (
             number_of_facets,
-            number_of_control_points[index_mapping.nurbs_u],
-            number_of_control_points[index_mapping.nurbs_v],
+            n_u,
+            n_v,
             3,
         ),
         device=device,
+        dtype=canting.dtype,
     )
 
-    offsets_e = torch.linspace(
-        0,
-        1,
-        control_points.shape[index_mapping.control_points_u_facet_batched],
-        device=device,
+    u_lin = torch.linspace(0, 1, n_u, device=device, dtype=canting.dtype)
+    v_lin = torch.linspace(0, 1, n_v, device=device, dtype=canting.dtype)
+
+    # Per-facet extents in local in-plane directions.
+    facet_dimensions = torch.norm(canting, dim=index_mapping.canting)
+    u_coordinates = (
+        -facet_dimensions[:, index_mapping.e, None]
+        + 2 * facet_dimensions[:, index_mapping.e, None] * u_lin
     )
-    offsets_n = torch.linspace(
-        0,
-        1,
-        control_points.shape[index_mapping.control_points_v_facet_batched],
-        device=device,
-    )
-    start = -torch.norm(canting, dim=index_mapping.canting)
-    end = torch.norm(canting, dim=index_mapping.canting)
-    origin_offsets_e = (
-        start[:, index_mapping.e, None]
-        + (end - start)[:, index_mapping.e, None] * offsets_e[None, :]
-    )
-    origin_offsets_n = (
-        start[:, index_mapping.n, None]
-        + (end - start)[:, index_mapping.n, None] * offsets_n[None, :]
+    v_coordinates = (
+        -facet_dimensions[:, index_mapping.n, None]
+        + 2 * facet_dimensions[:, index_mapping.n, None] * v_lin
     )
 
-    control_points_e = origin_offsets_e[:, :, None].expand(
-        -1, -1, number_of_control_points[index_mapping.nurbs_u]
-    )
-    control_points_n = origin_offsets_n[:, None, :].expand(
-        -1, number_of_control_points[index_mapping.nurbs_v], -1
-    )
-
-    control_points[:, :, :, index_mapping.e] = control_points_e
-    control_points[:, :, :, index_mapping.n] = control_points_n
-    control_points[:, :, :, index_mapping.u] = 0
+    control_points[..., index_mapping.nurbs_u] = u_coordinates[:, :, None]
+    control_points[..., index_mapping.nurbs_v] = v_coordinates[:, None, :]
 
     return control_points
 
@@ -728,12 +834,13 @@ def perform_canting(
     ----------
     canting_angles : torch.Tensor
         Canting angles.
-        Tensor of shape [number_of_surfaces, number_of_facets, 2, 4].
+        Shape is ``[number_of_surfaces, number_of_facets, 2, 4]``.
     data : torch.Tensor
         Data to be canted.
-        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+        Shape is ``[number_of_surfaces, number_of_facets, number_of_points_per_facet, 4]``.
     inverse : bool
-        Indicates the direction of the rotation. Use inverse=False for canting and inverse=True for decanting (default is False).
+        Indicates the direction of the rotation.
+        Use ``inverse=False`` for canting and ``inverse=True`` for decanting (default is False).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -743,38 +850,51 @@ def perform_canting(
     -------
     torch.Tensor
         The (de-)canted data.
-        Tensor of shape [number_of_surfaces, number_of_facets, number_of_points_per_Facet, 4].
+        Shape is ``[number_of_surfaces, number_of_facets, number_of_points_per_facet, 4]``.
     """
+    device = get_device(device=device)
+    canting_angles = canting_angles.to(device)
+    data = data.to(device)
+
     number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
     number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
+
     rotation_matrix = torch.zeros(
-        (number_of_surfaces, number_of_facets_per_surface, 4, 4), device=device
+        (number_of_surfaces, number_of_facets_per_surface, 4, 4),
+        device=device,
+        dtype=data.dtype,
     )
 
+    # Extract ENU basis candidates from canting tensor (drop homogeneous component).
     e = canting_angles[:, :, index_mapping.e, : index_mapping.slice_fourth_dimension]
     n = canting_angles[:, :, index_mapping.n, : index_mapping.slice_fourth_dimension]
-    u = torch.linalg.cross(e, n, dim=2)
 
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = (
-        torch.nn.functional.normalize(e, dim=-1)
-    )
+    # Build a numerically stable orthonormal basis:
+    # 1) normalize e
+    e = torch.nn.functional.normalize(e, dim=-1)
+    # 2) u = normalize(e x n)
+    u = torch.linalg.cross(e, n, dim=-1)
+    u = torch.nn.functional.normalize(u, dim=-1, eps=1e-8)
+    # 3) n_ortho = normalize(u x e)
+    n_ortho = torch.linalg.cross(u, e, dim=-1)
+    n_ortho = torch.nn.functional.normalize(n_ortho, dim=-1, eps=1e-8)
+
+    # Fill rotation matrix columns with ENU basis vectors.
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = e
     rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.n] = (
-        torch.nn.functional.normalize(n, dim=-1)
+        n_ortho
     )
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
-        torch.nn.functional.normalize(u, dim=-1)
-    )
-
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = u
     rotation_matrix[
-        :, :, index_mapping.transform_homogenous, index_mapping.transform_homogenous
+        :, :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
     ] = 1.0
 
+    # Data is represented as row vectors (..., 4); therefore:
+    # - forward canting uses R^T
+    # - inverse canting uses R
     if inverse:
-        canted_data = data @ rotation_matrix
-    else:
-        canted_data = data @ rotation_matrix.mT
-
-    return canted_data
+        return data @ rotation_matrix
+    return data @ rotation_matrix.mT
 
 
 def trapezoid_distribution(
@@ -784,16 +904,16 @@ def trapezoid_distribution(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create a one dimensional trapezoid distribution.
+    Create a one-dimensional trapezoid distribution.
 
-    If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
-    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is
+    If the total width is less than ``2 * slope_width + plateau_width``, the slope is cut off.
+    If the total width is greater than ``2 * slope_width + plateau_width``, the trapezoid is
     padded with zeros on both sides.
 
     Parameters
     ----------
     total_width : int
-        The total width of the trapezoid.
+        The total width of the trapezoid. Must be > 0.
     slope_width : int
         The width of the slope of the trapezoid.
     plateau_width : int
@@ -807,26 +927,29 @@ def trapezoid_distribution(
     -------
     torch.Tensor
         The one dimensional trapezoid distribution.
-        Tensor of shape [total_width].
+        Shape is ``[total_width]``.
     """
+    device = get_device(device=device)
     indices = torch.arange(total_width, device=device)
-    center = (total_width - 1) / 2
-    half_plateau = plateau_width / 2
+    center = (total_width - 1) / 2.0
+    half_plateau = plateau_width / 2.0
 
     # Distances from the plateau edge.
     distances = torch.abs(indices - center) - half_plateau
 
-    trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
+    # Special case: no slope -> hard plateau/rectangle.
+    if slope_width == 0:
+        return (distances <= 0).to(dtype=torch.float32)
 
-    return trapezoid
+    return 1 - (distances / slope_width).clamp(min=0, max=1)
 
 
 def crop_flux_distributions_around_center(
     flux_distributions: torch.Tensor,
-    crop_width: float,
-    crop_height: float,
-    target_plane_widths: torch.Tensor,
-    target_plane_heights: torch.Tensor,
+    solar_tower: SolarTower,
+    target_area_indices: torch.Tensor,
+    crop_width: float = config_dictionary.utis_crop_width,
+    crop_height: float = config_dictionary.utis_crop_height,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -839,18 +962,17 @@ def crop_flux_distributions_around_center(
     Parameters
     ----------
     flux_distributions : torch.Tensor
-        Grayscale intensity images.
-        Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
+        Flux density bitmaps, one per heliostat.
+        Shape is ``[number_of_bitmaps, bitmap_height, bitmap_width]``.
+    solar_tower : SolarTower
+        Solar tower containing the physical target area dimensions.
+    target_area_indices : torch.Tensor
+        Global target area index for each bitmap (planar indices first, cylindrical second).
+        Shape is ``[number_of_bitmaps]``.
     crop_width : float
-        Desired width of the cropped region in meters.
+        Desired width of the cropped region in meters (default is ``config_dictionary.utis_crop_width``).
     crop_height : float
-        Desired height of the cropped region in meters.
-    target_plane_widths : torch.Tensor
-        Physical widths in meters of each image in the batch.
-        Tensor of shape [number_of_bitmaps].
-    target_plane_heights : torch.Tensor
-        Physical heights in meters of each image in the batch.
-        Tensor of shape [number_of_bitmaps].
+        Desired height of the cropped region in meters (default is ``config_dictionary.utis_crop_height``).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -859,14 +981,17 @@ def crop_flux_distributions_around_center(
     Returns
     -------
     torch.Tensor
-        The cropped image regions.
-        Tensor of shape [number_of_bitmaps, bitmap_height, bitmap_width].
+        Cropped and centered image regions.
+        Shape is ``[number_of_bitmaps, bitmap_height, bitmap_width]``.
     """
     device = get_device(device=device)
 
+    target_area_indices = target_area_indices.to(device)
+    flux_distributions = flux_distributions.to(device)
+
     number_of_flux_distributions, image_height, image_width = flux_distributions.shape
 
-    # Compute center of mass.
+    # Compute center of mass in normalized image coordinates [-1, 1].
     normalized_mass_map = flux_distributions / (
         flux_distributions.sum(
             dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
@@ -888,9 +1013,51 @@ def crop_flux_distributions_around_center(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
     )
 
+    # Gather target dimensions per bitmap (width, height) in meters.
+    target_dimensions = torch.empty((number_of_flux_distributions, 2), device=device)
+    planar_mask = (
+        target_area_indices
+        < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+    )
+    if target_area_indices[planar_mask].numel() > 0:
+        planar = cast(
+            TowerTargetAreasPlanar,
+            solar_tower.target_areas[index_mapping.planar_target_areas],
+        )
+        target_dimensions[planar_mask] = planar.dimensions[
+            target_area_indices[planar_mask]
+        ]
+    if target_area_indices[~planar_mask].numel() > 0:
+        cylinder_indices = (
+            target_area_indices[~planar_mask]
+            - solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
+        )
+        cylindrical = cast(
+            TowerTargetAreasCylindrical,
+            solar_tower.target_areas[index_mapping.cylindrical_target_areas],
+        )
+        target_dimensions[~planar_mask, index_mapping.target_dimensions_width] = (
+            cylindrical.radii[cylinder_indices]
+            * cylindrical.opening_angles[cylinder_indices]
+        )
+        target_dimensions[~planar_mask, index_mapping.target_dimensions_height] = (
+            cylindrical.heights[cylinder_indices]
+        )
+
+    # Robust division for very small dimensions.
+    epsilon = 1e-8
+    width = target_dimensions[:, index_mapping.target_dimensions_width].clamp(
+        min=epsilon
+    )
+    height = target_dimensions[:, index_mapping.target_dimensions_height].clamp(
+        min=epsilon
+    )
+
     # Compute scale to match desired crop size in meters.
-    scale_x = crop_width / target_plane_widths
-    scale_y = crop_height / target_plane_heights
+    scale_x = crop_width / width
+    scale_y = crop_height / height
 
     # Build affine transform matrices (scale and center).
     affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)
@@ -901,10 +1068,10 @@ def crop_flux_distributions_around_center(
 
     # Apply affine transform.
     images_expanded = flux_distributions[:, None, :, :]
-    sampling_grid = functional.affine_grid(
-        affine_matrices, size=images_expanded.shape, align_corners=True
+    sampling_grid = torch.nn.functional.affine_grid(
+        affine_matrices, size=list(images_expanded.shape), align_corners=True
     )
-    cropped_images = functional.grid_sample(
+    cropped_images = torch.nn.functional.grid_sample(
         images_expanded, sampling_grid, align_corners=True, padding_mode="zeros"
     )
 
@@ -919,7 +1086,7 @@ def azimuth_elevation_to_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from azimuth and elevation to east, north and up.
+    Transform coordinates from azimuth and elevation to east, north, and up.
 
     This method assumes a south-oriented azimuth-elevation coordinate system, where 0° points toward the south.
 
@@ -927,10 +1094,10 @@ def azimuth_elevation_to_enu(
     ----------
     azimuth : torch.Tensor
         Azimuth, 0° points toward the south (degrees).
-        Tensor of shape [number_of_samples].
+        Shape is ``[number_of_samples]``.
     elevation : torch.Tensor
         Elevation angle above horizon, neglecting aberrations (degrees).
-        Tensor of shape [number_of_samples].
+        Shape is ``[number_of_samples]``.
     slant_range : float
         Slant range in meters (default is 1.0).
     degree : bool
@@ -943,16 +1110,23 @@ def azimuth_elevation_to_enu(
     Returns
     -------
     torch.Tensor
-        The east, north and up (ENU) coordinates.
-        Tensor of shape [number_of_samples, 3].
+        The east, north, and up (ENU) coordinates.
+        Shape is ``[number_of_samples, 3]``.
     """
     device = get_device(device=device)
+
+    azimuth = azimuth.to(device=device, dtype=torch.float32)
+    elevation = elevation.to(device=device, dtype=torch.float32)
+
+    if azimuth.shape != elevation.shape:
+        raise ValueError("``azimuth`` and ``elevation`` must have identical shapes.")
 
     if degree:
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
 
-    azimuth[azimuth < 0] += 2 * torch.pi
+    # Normalize azimuth to [0, 2π).
+    azimuth = torch.remainder(azimuth, 2 * torch.pi)
 
     r = slant_range * torch.cos(elevation)
 
@@ -961,7 +1135,9 @@ def azimuth_elevation_to_enu(
     )
 
     enu[:, index_mapping.e] = r * torch.sin(azimuth)
-    enu[:, index_mapping.n] = -r * torch.cos(azimuth)
+    enu[:, index_mapping.n] = -r * torch.cos(
+        azimuth
+    )  # South-oriented azimuth convention
     enu[:, index_mapping.u] = slant_range * torch.sin(elevation)
 
     return enu
@@ -973,21 +1149,24 @@ def convert_wgs84_coordinates_to_local_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north and up (ENU).
+    Transform WGS84 coordinates (latitude, longitude, altitude) to local east, north, and up (ENU) offsets.
 
     This function calculates the north and east offsets in meters of a coordinate from the reference point.
     It converts the latitude and longitude to radians, calculates the radius of curvature values,
     and then computes the offsets based on the differences between the coordinate and the reference point.
     Finally, it returns a tensor containing these offsets along with the altitude difference.
 
+    Note that this implementation uses a local differential approximation (small-distance linearization),
+    not a full ECEF->ENU transform. It is most accurate for coordinates near the reference point.
+
     Parameters
     ----------
     coordinates_to_transform : torch.Tensor
         The coordinates in latitude, longitude, altitude that are to be transformed.
-        Tensor of shape [number_of_coordinates, 3].
+        Shape is ``[number_of_coordinates, 3]``.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -996,18 +1175,23 @@ def convert_wgs84_coordinates_to_local_enu(
     Returns
     -------
     torch.Tensor
-        The east offsets in meters, norths offset in meters, and the altitude differences from the reference point.
-        Tensor of shape [number_of_coordinates, 3].
+        The east offsets in meters, north offsets in meters, and the altitude differences from the reference point.
+        Shape is ``[number_of_coordinates, 3]``.
     """
     device = get_device(device=device)
+
+    # Ensure inputs are on the target device and use consistent dtype.
+    coordinates_to_transform = coordinates_to_transform.to(device=device)
+    reference_point = reference_point.to(device=device)
 
     transformed_coordinates = torch.zeros_like(
         coordinates_to_transform, dtype=torch.float32, device=device
     )
 
-    wgs84_a = 6378137.0  # Major axis in meters.
-    wgs84_b = 6356752.314245  # Minor axis in meters.
-    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared.
+    # WGS84 ellipsoid constants
+    wgs84_a = 6378137.0  # Major axis in meters
+    wgs84_b = 6356752.314245  # Minor axis in meters
+    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity^2
 
     # Convert latitude and longitude to radians.
     latitudes = torch.deg2rad(coordinates_to_transform[:, index_mapping.latitude])

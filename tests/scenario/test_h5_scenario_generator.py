@@ -9,7 +9,8 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.util import config_dictionary
@@ -17,100 +18,75 @@ from artist.util import config_dictionary
 
 @pytest.fixture
 def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
-    """
-    Create the h5 scenario generator.
-
-    Parameters
-    ----------
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
-
-    Returns
-    -------
-    H5ScenarioGenerator
-        The h5 scenario generator.
-    """
+    """Create a patched H5ScenarioGenerator with mocked config objects."""
     mock_power_plant_config = mocker.MagicMock(spec=PowerPlantConfig)
-    mock_target_area_list_config = mocker.MagicMock(spec=TargetAreaListConfig)
+    mock_target_area_list_planar_config = mocker.MagicMock(
+        spec=TargetAreaPlanarListConfig
+    )
+    mock_target_area_list_cylindrical_config = mocker.MagicMock(
+        spec=TargetAreaCylindricalListConfig
+    )
     mock_light_source_list_config = mocker.MagicMock(spec=LightSourceListConfig)
     mock_prototype_config = mocker.MagicMock(spec=PrototypeConfig)
     mock_heliostat_list_config = mocker.MagicMock(spec=HeliostatListConfig)
 
     mock_power_plant_config.create_power_plant_dict.return_value = {"param1": 123}
-    mock_target_area_list_config.create_target_area_list_dict.return_value = {
+    mock_target_area_list_planar_config.create_target_area_list_dict.return_value = {
         "param2": 456
     }
-    mock_light_source_list_config.create_light_source_list_dict.return_value = {
-        "param3": 789
+    mock_target_area_list_cylindrical_config.create_target_area_list_dict.return_value = {
+        "param3": 4567
     }
-    mock_prototype_config.create_prototype_dict.return_value = {"param4": "abc"}
+    mock_light_source_list_config.create_light_source_list_dict.return_value = {
+        "param4": 789
+    }
+    mock_prototype_config.create_prototype_dict.return_value = {"param5": "abc"}
     mock_heliostat_list_config.create_heliostat_list_dict.return_value = {
-        "param5": "xyz"
+        "param6": "xyz"
     }
 
     mocker.patch.object(
         H5ScenarioGenerator, "_check_equal_facet_numbers", return_value=None
     )
 
-    scenario_generator = H5ScenarioGenerator(
+    generator = H5ScenarioGenerator(
         file_path=pathlib.Path("scenario"),
         version=1.0,
         power_plant_config=mock_power_plant_config,
-        target_area_list_config=mock_target_area_list_config,
+        target_area_list_planar_config=mock_target_area_list_planar_config,
+        target_area_list_cylindrical_config=mock_target_area_list_cylindrical_config,
         light_source_list_config=mock_light_source_list_config,
         prototype_config=mock_prototype_config,
         heliostat_list_config=mock_heliostat_list_config,
     )
 
+    mocker.patch.object(generator, "_get_number_of_heliostat_groups", return_value=3)
+    mocker.patch.object(generator, "_flatten_dict", side_effect=lambda d, *_: d)
     mocker.patch.object(
-        scenario_generator, "_get_number_of_heliostat_groups", return_value=3
-    )
-    mocker.patch.object(
-        scenario_generator, "_flatten_dict", side_effect=lambda d, *_: d
-    )
-    mocker.patch.object(
-        scenario_generator,
+        generator,
         "_include_parameters",
         side_effect=lambda file, prefix, parameters: [
             file.create_dataset(f"{prefix}/{k}", data=v) for k, v in parameters.items()
         ],
     )
-    return scenario_generator
+    return generator
 
 
 @pytest.mark.parametrize(
     "filename",
     [
-        (pathlib.Path("scenario.h5")),
-        (pathlib.Path("scenario")),
-        (pathlib.Path("scenario.txt")),
-        ("invalid"),
+        pathlib.Path("scenario.h5"),
+        pathlib.Path("scenario"),
+        pathlib.Path("scenario.txt"),
     ],
 )
 def test_generate_scenario(
     scenario_generator: H5ScenarioGenerator,
     tmp_path: pathlib.Path,
-    filename: pathlib.Path | str,
+    filename: pathlib.Path,
 ) -> None:
-    """
-    Test the h5 scenario generator.
-
-    Parameters
-    ----------
-    scenario_generator : H5ScenarioGenerator
-        The h5 scenario generator.
-    tmp_path : pathlib.Path
-        Pytest temporary directory fixture.
-    filename : pathlib.Path | str
-        File name to test.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
+    """Test scenario generation and saved HDF5 structure for supported filename variants."""
     scenario_generator.file_path = tmp_path / filename
-
     scenario_generator.generate_scenario()
 
     save_name = (
@@ -120,28 +96,47 @@ def test_generate_scenario(
     )
     assert save_name.exists()
 
-    if filename == "invalid":
-        save_name = pathlib.Path("test_invalid")
-        with pytest.raises(FileNotFoundError) as exc_info:
-            with h5py.File(save_name, "r") as f:
-                pass
-        assert "No such file or directory" in str(exc_info.value)
+    with h5py.File(save_name, "r") as f:
+        assert f.attrs["version"] == 1.0
+        assert config_dictionary.number_of_heliostat_groups in f
+        assert f[config_dictionary.number_of_heliostat_groups][()] == 3
 
-    else:
-        with h5py.File(save_name, "r") as f:
-            assert f.attrs["version"] == 1.0
-            assert config_dictionary.number_of_heliostat_groups in f
-            assert f[config_dictionary.number_of_heliostat_groups][()] == 3
+        expected_datasets = {
+            config_dictionary.power_plant_key: ["param1"],
+            config_dictionary.target_area_planar_key: ["param2"],
+            config_dictionary.target_area_cylindrical_key: ["param3"],
+            config_dictionary.light_source_key: ["param4"],
+            config_dictionary.prototype_key: ["param5"],
+            config_dictionary.heliostat_key: ["param6"],
+        }
+        for prefix, keys in expected_datasets.items():
+            for key in keys:
+                assert f"{prefix}/{key}" in f
 
-            expected_datasets = {
-                config_dictionary.power_plant_key: ["param1"],
-                config_dictionary.target_area_key: ["param2"],
-                config_dictionary.light_source_key: ["param3"],
-                config_dictionary.prototype_key: ["param4"],
-                config_dictionary.heliostat_key: ["param5"],
-            }
 
-            for prefix, keys in expected_datasets.items():
-                for key in keys:
-                    dataset_path = f"{prefix}/{key}"
-                    assert dataset_path in f
+def test_generate_scenario_invalid_parent_path_raises(mocker: MockerFixture) -> None:
+    """Test that generator init raises if output parent directory does not exist."""
+    invalid_path = pathlib.Path("/definitely/nonexistent/path/scenario.h5")
+
+    mock_power_plant_config = mocker.MagicMock(spec=PowerPlantConfig)
+    mock_target_area_list_planar_config = mocker.MagicMock(
+        spec=TargetAreaPlanarListConfig
+    )
+    mock_target_area_list_cylindrical_config = mocker.MagicMock(
+        spec=TargetAreaCylindricalListConfig
+    )
+    mock_light_source_list_config = mocker.MagicMock(spec=LightSourceListConfig)
+    mock_prototype_config = mocker.MagicMock(spec=PrototypeConfig)
+    mock_heliostat_list_config = mocker.MagicMock(spec=HeliostatListConfig)
+
+    with pytest.raises(FileNotFoundError):
+        H5ScenarioGenerator(
+            file_path=invalid_path,
+            version=1.0,
+            power_plant_config=mock_power_plant_config,
+            target_area_list_planar_config=mock_target_area_list_planar_config,
+            target_area_list_cylindrical_config=mock_target_area_list_cylindrical_config,
+            light_source_list_config=mock_light_source_list_config,
+            prototype_config=mock_prototype_config,
+            heliostat_list_config=mock_heliostat_list_config,
+        )

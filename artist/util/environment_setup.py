@@ -1,13 +1,30 @@
 import logging
 import platform
 from collections import defaultdict
+from collections.abc import Generator
 from contextlib import contextmanager
 from itertools import cycle, islice
-from typing import Any, Generator
+from typing import TypedDict
 
 import torch
 
 from artist.util import config_dictionary
+
+
+class DdpSetup(TypedDict):
+    """Typed dictionary describing the distributed environment setup yielded by ``setup_distributed_environment``."""
+
+    device: torch.device
+    is_distributed: bool
+    is_nested: bool
+    rank: int
+    world_size: int
+    process_subgroup: "torch.distributed.ProcessGroup | None"
+    groups_to_ranks_mapping: dict[int, list[int]]
+    heliostat_group_rank: int
+    heliostat_group_world_size: int
+    ranks_to_groups_mapping: dict[int, list[int]]
+
 
 log = logging.getLogger(__name__)
 """A logger for the environment."""
@@ -142,7 +159,7 @@ def setup_distributed_environment(
     number_of_heliostat_groups: int,
     device: torch.device | None = None,
 ) -> Generator[
-    dict[str, Any],
+    DdpSetup,
     None,
     None,
 ]:
@@ -151,21 +168,20 @@ def setup_distributed_environment(
 
     Parameters
     ----------
-    device : Optional[torch.device]
+    number_of_heliostat_groups : int
+        The number of distinct heliostat groups in the scenario.
+    device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
         device (CUDA or CPU) based on availability and OS.
-    heliostat_group_assignments : Optional[dict[str, list[int]]]
-        The mapping from rank to heliostat group.
 
     Yields
     ------
-    dict[str, torch.device | bool | int | torch.distributed.ProcessGroup | dict[int, list[int]] | None]
-        The distributed setup including the torch device assigned to this rank, whether the environment
-        is running in distributed and or nested mode, the global rank of the current process, the total
-        number of processes in the global process group, the ProcessGroup object representing the subgroup,
-        the mapping from rank to heliostat group, the rank of the current process within its assigned
-        subgroup and the number of processes in the current process subgroup.
+    DdpSetup
+        A typed dictionary describing the full distributed setup, containing:
+        ``device``, ``is_distributed``, ``is_nested``, ``rank``, ``world_size``,
+        ``process_subgroup``, ``groups_to_ranks_mapping``, ``heliostat_group_rank``,
+        ``heliostat_group_world_size``, and ``ranks_to_groups_mapping``.
     """
     device, is_distributed, rank, world_size = initialize_ddp_environment(device=device)
 
@@ -191,18 +207,18 @@ def setup_distributed_environment(
                 ranks_to_groups_mapping[group].append(single_rank)
 
     try:
-        yield {
-            config_dictionary.device: device,
-            config_dictionary.is_distributed: is_distributed,
-            config_dictionary.is_nested: is_nested,
-            config_dictionary.rank: rank,
-            config_dictionary.world_size: world_size,
-            config_dictionary.process_subgroup: process_subgroup,
-            config_dictionary.groups_to_ranks_mapping: groups_to_ranks_mapping,
-            config_dictionary.heliostat_group_rank: heliostat_group_rank,
-            config_dictionary.heliostat_group_world_size: heliostat_group_world_size,
-            config_dictionary.ranks_to_groups_mapping: ranks_to_groups_mapping,
-        }
+        yield DdpSetup(
+            device=device,
+            is_distributed=is_distributed,
+            is_nested=is_nested,
+            rank=rank,
+            world_size=world_size,
+            process_subgroup=process_subgroup,
+            groups_to_ranks_mapping=groups_to_ranks_mapping,
+            heliostat_group_rank=heliostat_group_rank,
+            heliostat_group_world_size=heliostat_group_world_size,
+            ranks_to_groups_mapping=ranks_to_groups_mapping,
+        )
     finally:
         if is_distributed:
             try:

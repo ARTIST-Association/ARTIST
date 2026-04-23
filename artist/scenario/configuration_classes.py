@@ -49,139 +49,239 @@ class PowerPlantConfig:
         return power_plant_dict
 
 
-class TargetAreaConfig:
+class TargetAreaPlanarConfig:
     """
-    Store the tower target area configuration parameters.
+    Store the tower target area configuration parameters for planar target areas.
 
     Attributes
     ----------
     target_area_key : str
-        The ID string used to identify the target area in the HDF5 file.
-    geometry : str
-        The type of target area, e.g., planar.
+        ID used to identify the target area in the HDF5 file.
     center : torch.Tensor
-        The position of the target area's center.
+        Position of the target area's center.
     normal_vector : torch.Tensor
-        The normal vector to the target plane.
-    plane_e : float
-        The size of the target area in the east direction.
-    plane_u : float
-        The size of the target area in the up direction.
-    curvature_e : float | None
-        The curvature of the target area in the east direction.
-    curvature_u : float | None
-        The curvature of the target area in the up direction.
+        Normal vector to the target plane.
+    plane_e : torch.Tensor
+        Size of the target area in the east direction.
+    plane_u : torch.Tensor
+        Size of the target area in the up direction.
 
     Methods
     -------
-    create_receiver_dict()
-       Create a dictionary containing the configuration parameters for the target area.
+    create_target_area_dict()
+       Create a dictionary containing the configuration parameters for the planar target area.
     """
 
     def __init__(
         self,
         target_area_key: str,
-        geometry: str,
         center: torch.Tensor,
         normal_vector: torch.Tensor,
-        plane_e: float,
-        plane_u: float,
-        curvature_e: float | None = None,
-        curvature_u: float | None = None,
+        plane_e: torch.Tensor,
+        plane_u: torch.Tensor,
     ) -> None:
         """
-        Initialize the target area configuration.
+        Initialize the target area configuration for planar target areas.
 
         Parameters
         ----------
         target_area_key : str
-            The ID string used to identify the target area in the HDF5 file.
-        geometry : str
-            The type of target area, e.g., planar.
+            ID used to identify the target area in the HDF5 file.
         center : torch.Tensor
-            The position of the target area's center.
+            Position of the target area's center.
         normal_vector : torch.Tensor
-            The normal vector to the target plane.
-        plane_e : float
-            The size of the target area in the east direction.
-        plane_u : float
-            The size of the target area in the up direction.
-        curvature_e: float | None
-            The curvature of the target area in the east direction.
-        curvature_u: float | None
-            The curvature of the target area in the up direction.
+            Normal vector to the target plane.
+        plane_e : torch.Tensor
+            Size of the target area in the east direction.
+        plane_u : torch.Tensor
+            Size of the target area in the up direction.
         """
         self.target_area_key = target_area_key
-        self.geometry = geometry
         self.center = center
         self.normal_vector = normal_vector
         self.plane_e = plane_e
         self.plane_u = plane_u
-        self.curvature_e = curvature_e
-        self.curvature_u = curvature_u
 
     def create_target_area_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the target area.
+        Create a dictionary containing the configuration parameters for the planar target area.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the target area.
+            A dictionary containing the configuration parameters for the planar target area.
         """
         target_area_dict = {
-            config_dictionary.target_area_geometry: self.geometry,
             config_dictionary.target_area_position_center: self.center,
             config_dictionary.target_area_normal_vector: self.normal_vector,
             config_dictionary.target_area_plane_e: self.plane_e,
             config_dictionary.target_area_plane_u: self.plane_u,
         }
-        if self.curvature_e is not None:
-            target_area_dict.update(
-                {config_dictionary.target_area_curvature_e: self.curvature_e}
-            )
-        if self.curvature_u is not None:
-            target_area_dict.update(
-                {config_dictionary.target_area_curvature_u: self.curvature_u}
-            )
 
         return target_area_dict
 
 
-class TargetAreaListConfig:
+class TargetAreaPlanarListConfig:
     """
-    Store the target area list configuration parameters.
+    Store the target area list configuration parameters for planar target areas.
 
     Attributes
     ----------
-    target_area_list : list[TargetAreaConfig]
-        A list of target area configurations to be included in the scenario.
+    target_area_list : list[TargetAreaPlanarConfig]
+        A list of planar target area configurations to be included in the scenario.
 
     Methods
     -------
     create_target_area_list_dict()
-       Create a dictionary containing the configuration parameters for the list of target areas.
+       Create a dictionary containing the configuration parameters for the list of planar target areas.
     """
 
-    def __init__(self, target_area_list: list[TargetAreaConfig]) -> None:
+    def __init__(self, target_area_list: list[TargetAreaPlanarConfig]) -> None:
         """
-        Initialize the target area list configuration.
+        Initialize the planar target area list configuration.
 
         Parameters
         ----------
-        target_area_list : list[TargetAreaConfig]
-            The list of target area configurations included in the scenario.
+        target_area_list : list[TargetAreaPlanarConfig]
+            The list of planar target area configurations included in the scenario.
         """
         self.target_area_list = target_area_list
 
     def create_target_area_list_dict(self) -> dict[str, Any]:
         """
-        Create a dictionary containing the configuration parameters for the list of target areas.
+        Create a dictionary containing the configuration parameters for the list of planar target areas.
 
         Returns
         -------
         dict[str, Any]
-            A dictionary containing the configuration parameters for the list of target areas.
+            A dictionary containing the configuration parameters for the list of planar target areas.
+        """
+        return {
+            target_area.target_area_key: target_area.create_target_area_dict()
+            for target_area in self.target_area_list
+        }
+
+
+class TargetAreaCylindricalConfig:
+    """
+    Store the tower target area configuration parameters for cylindrical target areas.
+
+    Attributes
+    ----------
+    target_area_key : str
+        ID used to identify the target area in the HDF5 file.
+    radius : torch.Tensor
+        Radius of the cylindrical target area.
+    center : torch.Tensor
+        Position of the center of the cylindrical target area.
+    height : torch.Tensor
+        Height of the cylindrical target area.
+    axis : torch.Tensor
+        Axis of the cylindrical target area.
+    normal : torch.Tensor
+        Normal vector of the cylindrical target area.
+    opening_angle : torch.Tensor
+        Opening angle of the cylindrical target area.
+
+    Methods
+    -------
+    create_target_area_dict()
+       Create a dictionary containing the configuration parameters for the cylindrical target area.
+    """
+
+    def __init__(
+        self,
+        target_area_key: str,
+        radius: torch.Tensor,
+        center: torch.Tensor,
+        height: torch.Tensor,
+        axis: torch.Tensor,
+        normal: torch.Tensor,
+        opening_angle: torch.Tensor,
+    ) -> None:
+        """
+        Initialize the target area configuration for cylindrical target areas.
+
+        Parameters
+        ----------
+        target_area_key : str
+            ID used to identify the target area in the HDF5 file.
+        radius : torch.Tensor
+            Radius of the cylindrical target area.
+        center : torch.Tensor
+            Position of the center of the cylindrical target area.
+        height : torch.Tensor
+            Height of the cylindrical target area.
+        axis : torch.Tensor
+            Axis of the cylindrical target area.
+        normal : torch.Tensor
+            Normal vector of the cylindrical target area.
+        opening_angle : torch.Tensor
+            Opening angle of the cylindrical target area.
+        """
+        self.target_area_key = target_area_key
+        self.radius = radius
+        self.center = center
+        self.height = height
+        self.axis = axis
+        self.normal = normal
+        self.opening_angle = opening_angle
+
+    def create_target_area_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the cylindrical target area.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the cylindrical target area.
+        """
+        target_area_dict = {
+            config_dictionary.target_area_cylinder_radius: self.radius,
+            config_dictionary.target_area_cylinder_center: self.center,
+            config_dictionary.target_area_cylinder_height: self.height,
+            config_dictionary.target_area_cylinder_axis: self.axis,
+            config_dictionary.target_area_cylinder_normal: self.normal,
+            config_dictionary.target_area_cylinder_opening_angle: self.opening_angle,
+        }
+
+        return target_area_dict
+
+
+class TargetAreaCylindricalListConfig:
+    """
+    Store the target area list configuration parameters for cylindrical target areas.
+
+    Attributes
+    ----------
+    target_area_list : list[TargetAreaPlanarConfig]
+        A list of cylindrical target area configurations to be included in the scenario.
+
+    Methods
+    -------
+    create_target_area_list_dict()
+       Create a dictionary containing the configuration parameters for the list of cylindrical target areas.
+    """
+
+    def __init__(self, target_area_list: list[TargetAreaCylindricalConfig]) -> None:
+        """
+        Initialize the cylindrical target area list configuration.
+
+        Parameters
+        ----------
+        target_area_list : list[TargetAreaCylindricalConfig]
+            The list of cylindrical target area configurations included in the scenario.
+        """
+        self.target_area_list = target_area_list
+
+    def create_target_area_list_dict(self) -> dict[str, Any]:
+        """
+        Create a dictionary containing the configuration parameters for the list of cylindrical target areas.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary containing the configuration parameters for the list of cylindrical target areas.
         """
         return {
             target_area.target_area_key: target_area.create_target_area_dict()
@@ -257,10 +357,7 @@ class LightSourceConfig:
         ):
             raise ValueError("Unknown light source distribution type.")
 
-        if (
-            self.distribution_type
-            == config_dictionary.light_source_distribution_is_normal
-        ):
+        else:
             self.mean = mean
             self.covariance = covariance
 
@@ -273,22 +370,14 @@ class LightSourceConfig:
         dict[str, Any]
             A dictionary containing the configuration parameters for the light source.
         """
-        # Check if the distribution type is implemented.
-        if (
-            self.distribution_type
-            == config_dictionary.light_source_distribution_is_normal
-        ):
-            light_source_distribution_parameters_dict = {
-                config_dictionary.light_source_distribution_type: str(
-                    self.distribution_type
-                ),
-                config_dictionary.light_source_mean: self.mean,
-                config_dictionary.light_source_covariance: self.covariance,
-            }
-        else:
-            raise NotImplementedError("Unknown light source distribution type.")
+        light_source_distribution_parameters_dict = {
+            config_dictionary.light_source_distribution_type: str(
+                self.distribution_type
+            ),
+            config_dictionary.light_source_mean: self.mean,
+            config_dictionary.light_source_covariance: self.covariance,
+        }
 
-        # Return the desired dictionary.
         return {
             config_dictionary.light_source_type: self.light_source_type,
             config_dictionary.light_source_number_of_rays: self.number_of_rays,
@@ -659,7 +748,7 @@ class KinematicsConfig:
 
     Attributes
     ----------
-    type : str
+    kinematics_type : str
         The type of kinematics used.
     initial_orientation : torch.Tensor
         The initial orientation of the kinematics configuration.
@@ -674,7 +763,7 @@ class KinematicsConfig:
 
     def __init__(
         self,
-        type: str,
+        kinematics_type: str,
         initial_orientation: torch.Tensor,
         deviations: KinematicsDeviations | None = None,
     ) -> None:
@@ -683,14 +772,14 @@ class KinematicsConfig:
 
         Parameters
         ----------
-        type : str
+        kinematics_type : str
             The type of kinematics used.
         initial_orientation : torch.Tensor
             The initial orientation of the kinematics configuration.
         deviations : KinematicsDeviations | None
             The kinematics deviations.
         """
-        self.type = type
+        self.kinematics_type = kinematics_type
         self.initial_orientation = initial_orientation
         self.deviations = deviations
 
@@ -704,7 +793,7 @@ class KinematicsConfig:
             A dictionary containing the configuration parameters for the kinematics.
         """
         kinematics_dict: dict[str, Any] = {
-            config_dictionary.kinematics_type: self.type,
+            config_dictionary.kinematics_type: self.kinematics_type,
             config_dictionary.kinematics_initial_orientation: self.initial_orientation,
         }
         if self.deviations is not None:
@@ -727,7 +816,7 @@ class KinematicsPrototypeConfig(KinematicsConfig):
 
     def __init__(
         self,
-        type: str,
+        kinematics_type: str,
         initial_orientation: torch.Tensor,
         deviations: KinematicsDeviations | None = None,
     ) -> None:
@@ -736,7 +825,7 @@ class KinematicsPrototypeConfig(KinematicsConfig):
 
         Parameters
         ----------
-        type : str
+        kinematics_type : str
             The type of kinematics used.
         initial_orientation : torch.Tensor
             The initial orientation of the kinematics configuration.
@@ -744,47 +833,10 @@ class KinematicsPrototypeConfig(KinematicsConfig):
             The kinematics deviations.
         """
         super().__init__(
-            type=type,
+            kinematics_type=kinematics_type,
             initial_orientation=initial_orientation,
             deviations=deviations,
         )
-
-
-class KinematicsLoadConfig:
-    """
-    Store the configuration parameters for the kinematics when loaded in ``ARTIST``.
-
-    Attributes
-    ----------
-    type : str
-        The type of kinematics used.
-    initial_orientation : torch.Tensor
-        The initial orientation of the kinematics configuration.
-    deviations : KinematicsDeviations
-        The kinematics deviations.
-    """
-
-    def __init__(
-        self,
-        type: str,
-        initial_orientation: torch.Tensor,
-        deviations: KinematicsDeviations,
-    ) -> None:
-        """
-        Initialize the kinematics configuration for loading in ``ARTIST``.
-
-        Parameters
-        ----------
-        type : str
-            The type of kinematics used.
-        initial_orientation : torch.Tensor
-            The initial orientation of the kinematics configuration.
-        deviations : KinematicsDeviations
-            The kinematics deviations.
-        """
-        self.type = type
-        self.initial_orientation = initial_orientation
-        self.deviations = deviations
 
 
 class ActuatorParameters:
@@ -849,7 +901,7 @@ class ActuatorParameters:
         dict[str, torch.Tensor]
             A dictionary containing the configuration parameters for the actuator.
         """
-        actuator_parameters_dict = {}
+        actuator_parameters_dict: dict[str, torch.Tensor] = {}
         if self.increment is not None:
             actuator_parameters_dict.update(
                 {config_dictionary.actuator_increment: self.increment}
@@ -883,7 +935,7 @@ class ActuatorConfig:
     ----------
     key : str
         The name or descriptor of the actuator.
-    type : str
+    actuator_type : str
         The type of actuator to use, e.g. linear or ideal.
     clockwise_axis_movement : bool
         Boolean indicating if the actuator operates in a clockwise manner.
@@ -901,7 +953,7 @@ class ActuatorConfig:
     def __init__(
         self,
         key: str,
-        type: str,
+        actuator_type: str,
         clockwise_axis_movement: bool,
         min_max_motor_positions: list[float],
         parameters: ActuatorParameters | None = None,
@@ -913,7 +965,7 @@ class ActuatorConfig:
         ----------
         key : str
             The name or descriptor of the actuator.
-        type : str
+        actuator_type : str
             The type of actuator to use, e.g. linear or ideal.
         clockwise_axis_movement : bool
             Boolean indicating if the actuator operates in a clockwise or counterclockwise manner.
@@ -923,7 +975,7 @@ class ActuatorConfig:
             The parameters of the actuator.
         """
         self.key = key
-        self.type = type
+        self.actuator_type = actuator_type
         self.clockwise_axis_movement = clockwise_axis_movement
         self.min_max_motor_positions = min_max_motor_positions
         self.parameters = parameters
@@ -938,7 +990,7 @@ class ActuatorConfig:
             A dictionary containing the actuator configuration.
         """
         actuator_dict = {
-            config_dictionary.actuator_type_key: self.type,
+            config_dictionary.actuator_type_key: self.actuator_type,
             config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
             config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions,
         }
@@ -963,7 +1015,7 @@ class ActuatorListConfig:
     Methods
     -------
     create_actuator_list_dict()
-        Creates a dictionary containing a list of actuator configurations.
+        Create a dictionary containing a list of actuator configurations.
     """
 
     def __init__(self, actuator_list: list[ActuatorConfig]) -> None:
@@ -1003,7 +1055,7 @@ class ActuatorPrototypeConfig(ActuatorListConfig):
 
     See Also
     --------
-    class:`ActuatorListConfig` : Reference to the parent class.
+    :class:`ActuatorListConfig` : Reference to the parent class.
     """
 
     def __init__(
@@ -1086,7 +1138,7 @@ class HeliostatConfig:
     ----------
     name : str
         The name used to identify the heliostat in the HDF5 file.
-    id : int
+    heliostat_id : int
         The numerical ID of the heliostat.
     position : torch.Tensor
         The position of the heliostat.
@@ -1106,7 +1158,7 @@ class HeliostatConfig:
     def __init__(
         self,
         name: str,
-        id: int,
+        heliostat_id: int,
         position: torch.Tensor,
         surface: SurfaceConfig | None = None,
         kinematics: KinematicsConfig | None = None,
@@ -1119,7 +1171,7 @@ class HeliostatConfig:
         ----------
         name : str
             The name used to identify the heliostat in the HDF5 file.
-        id : int
+        heliostat_id : int
             The numerical ID of the heliostat.
         position : torch.Tensor
             The position of the heliostat.
@@ -1131,7 +1183,7 @@ class HeliostatConfig:
             An optional actuator list config for the heliostat.
         """
         self.name = name
-        self.id = id
+        self.heliostat_id = heliostat_id
         self.position = position
         self.surface = surface
         self.kinematics = kinematics
@@ -1147,7 +1199,7 @@ class HeliostatConfig:
             A dictionary containing the heliostat configuration parameters.
         """
         heliostat_dict = {
-            config_dictionary.heliostat_id: self.id,
+            config_dictionary.heliostat_id: self.heliostat_id,
             config_dictionary.heliostat_position: self.position,
         }
         if self.surface is not None:

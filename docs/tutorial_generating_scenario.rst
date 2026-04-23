@@ -110,36 +110,57 @@ simultaneously from the ``tower-measurement.json`` file. We can extract this inf
 ``paint_scenario_parser`` module. The function shown below will return
 
 - an instance of ``PowerPlantConfig`` and
-- an instance of ``TowerAreaListConfig``, containing a list of viable target areas.
+- an instance of ``TargetAreaPlanarListConfig``, containing a list of viable planar target areas.
+- an instance of ``TargetAreaCylindricalListConfig``, containing a list of viable cylindrical target areas.
 
 .. code-block:: python
 
-    # Include the power plant and target area configuration.
-    power_plant_config, target_area_list_config = (
-        paint_scenario_parser.extract_paint_tower_measurements(
-            tower_measurements_path=tower_file, device=device
-        )
+    # Include the power plant and target area configurations.
+    (
+        power_plant_config,
+        target_area_list_planar_config,
+        target_area_list_cylindrical_config,
+    ) = paint_scenario_parser.extract_paint_tower_measurements(
+        tower_measurements_path=tower_file, device=device
     )
 
 The ``PowerPlantConfig`` object provides the power plant's geographic location via the ``power_plant_position``
-attribute. The ``TargetAreaListConfig`` contains a list of multiple ``TargetAreaConfig`` objects. Each defines the
-following attributes:
+attribute. The ``TargetAreaPlanarListConfig`` contains a list of multiple ``TargetAreaPlanarConfig`` objects.
+Each defines the following attributes:
 
 ``target_area_key``
   An identifier used to reference the target area when loading the ``ARTIST`` scenario – in this
   case, a receiver.
-``geometry``
-  The currently modeled geometry – in this case, a planar target area.
 ``center``
   The target area's middle position. Since this is a position tensor, its final element in the 4D
   representation is a 1 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
-``normal_vector``
+``normal``
   The target area plane's normal vector. Since this is a direction tensor, its final element in the
   4D representation is a 0 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
 ``plane_e``
   The direction vector defining the target area plane's east direction.
 ``plane_u``
   The direction vector defining the target area plane's up direction.
+
+The ``TargetAreaCylindricalListConfig`` contains a list of multiple ``TargetAreaCylindricalConfig`` objects.
+Each defines the following attributes:
+
+``target_area_key``
+  An identifier used to reference the target area when loading the ``ARTIST`` scenario – in this
+  case, a receiver.
+``radius``
+  The cylinder radius.
+``height``
+  The cylinder height.
+``axis``
+  The cylinder axis. Since this is a direction tensor, its final element in the
+  4D representation is a 0 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
+``normal``
+  The target area plane's normal vector. Since this is a direction tensor, its final element in the
+  4D representation is a 0 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
+``opening_angle``
+  The cylinder opening angle. Cylindrical target areas can either be full cylinders or cylinder sectors.
+  For a full cylinder the opening angle is :math:`2\pi`.
 
 .. _light_source:
 
@@ -153,8 +174,8 @@ We define the light source by creating a ``LightSourceConfig`` object as shown b
 .. code-block:: python
 
     # Include the light source configuration.
-    light_source1_config = LightSourceConfig(
-        light_source_key="sun_1",
+    light_source_config = LightSourceConfig(
+        light_source_key="sun",
         light_source_type=config_dictionary.sun_key,
         number_of_rays=10,
         distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -183,7 +204,7 @@ Therefore, the light source configuration must be wrapped in a list and passed t
 .. code-block:: python
 
     # Create a list of light source configs - in this case only one.
-    light_source_list = [light_source1_config]
+    light_source_list = [light_source_config]
 
     # Include the configuration for the list of light sources.
     light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
@@ -362,7 +383,8 @@ scenario by running the ``main`` function shown below:
         scenario_generator = ScenarioGenerator(
             file_path=scenario_path,
             power_plant_config=power_plant_config,
-            target_area_list_config=target_area_list_config,
+            target_area_list_planar_config=target_area_list_planar_config,
+            target_area_list_cylindrical_config=target_area_list_cylindrical_config,
             light_source_list_config=light_source_list_config,
             prototype_config=prototype_config,
             heliostat_list_config=heliostats_list_config,
@@ -408,33 +430,39 @@ More details on the ``PowerPlantConfig`` class are provided above (see :ref:`pla
 
 Target Areas
 ------------
-When using STRAL data, we also need to manually define the ``TargetAreaConfig``:
+When using STRAL data, we also need to manually define the ``TargetAreaPlanarListConfig``
+and the ``TargetAreaCylindricalListConfig``:
 
 .. code-block:: python
 
     # STRAL
-    # Include a single tower area (receiver).
-    receiver_config = TargetAreaConfig(
-        target_area_key="receiver",
-        geometry=config_dictionary.target_area_type_planar,
+    # Include a single planar tower target area.
+    target_area_list_planar_config = TargetAreaPlanarConfig(
+        target_area_key="planar",
         center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
         normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
         plane_e=8.629666667,
         plane_u=7.0,
     )
+    target_area_planar_list_config = TargetAreaPlanarListConfig(
+        [target_area_list_planar_config]
+    )
 
-More details on the ``TargetAreaConfig`` class are provided above (see :ref:`plant_and_target`).
+    # Include a single cylindrical tower target area.
+    target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
+        target_area_key="cylinder",
+        radius=4.14,
+        center=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+        height=6.0,
+        axis=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+        normal=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
+        opening_angle=60,
+    )
+    target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
+        [target_area_list_cylindrical_config]
+    )
 
-Since our scenario contains only one target area (a receiver), but ``ARTIST`` scenarios are designed to support multiple
-target areas, we have to manually wrap our target area in a list and create a ``TargetAreaListConfig`` object:
-
-.. code-block:: python
-
-    # Create list of target area configs - in this case only one.
-    target_area_config_list = [receiver_config]
-
-    # Include the tower area configurations.
-    target_area_list_config = TargetAreaListConfig(target_area_config_list)
+More details on the ``TargetAreaPlanarConfig`` and ``TargetAreaCylindricalListConfig`` classes are provided above (see :ref:`plant_and_target`).
 
 Light Source
 ------------

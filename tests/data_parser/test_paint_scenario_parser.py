@@ -11,38 +11,56 @@ from artist.scenario.configuration_classes import (
     HeliostatListConfig,
     PowerPlantConfig,
     PrototypeConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarListConfig,
 )
 
 torch.manual_seed(7)
-torch.cuda.manual_seed(7)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(7)
 
 
 @pytest.mark.parametrize(
-    "file_path, expected_types, expected_power_plant_position, expected_receiver_properties",
+    "file_path, expected_types, expected_power_plant_position, expected_multi_focus_properties, expected_receiver_properties",
     [
         (
             pathlib.Path(ARTIST_ROOT) / "tests/data/field_data/tower-measurements.json",
-            [PowerPlantConfig, TargetAreaListConfig],
+            [
+                PowerPlantConfig,
+                TargetAreaPlanarListConfig,
+                TargetAreaCylindricalListConfig,
+            ],
             torch.tensor(
                 [50.913421122593, 6.387824755875, 87.000000000000], dtype=torch.float64
             ),
             [
+                "multi_focus_tower",
+                torch.tensor(
+                    [-17.604515075684, -2.744643926620, 51.979751586914, 1.000000000000]
+                ),
+                torch.tensor([[0, 1, 0, 0]]),
+                torch.tensor(5.411863327026),
+                torch.tensor(6.387498855591),
+            ],
+            [
                 "receiver",
-                "convex_cylinder",
+                4.14,
                 torch.tensor(
                     [
-                        3.860326111317e-02,
-                        -5.029551386833e-01,
-                        5.522674942017e01,
+                        -3.145754337311e-03,
+                        -3.755039930344e00,
+                        5.674332427979e01,
                         1.000000000000e00,
                     ]
                 ),
+                torch.tensor(5.229192256927),
                 torch.tensor(
-                    [[0.000000000000, 0.906307816505, -0.422618269920, 0.000000000000]]
+                    [0.000000000000, 0.422618269920, 0.906307816505, 0.000000000000]
                 ),
-                torch.tensor(4.528313636780),
-                torch.tensor(5.218500137329),
+                torch.tensor(
+                    [0.000000000000, 0.906307816505, -0.422618269920, 0.000000000000]
+                ),
+                torch.tensor(1.047197580338),
             ],
         )
     ],
@@ -51,11 +69,12 @@ def test_extract_paint_tower_measurements(
     file_path: pathlib.Path,
     expected_types: list[Any],
     expected_power_plant_position: torch.Tensor,
-    expected_receiver_properties: torch.Tensor,
+    expected_multi_focus_properties: list[Any],
+    expected_receiver_properties: list[Any],
     device: torch.device,
 ) -> None:
     """
-    Test the tower measurement loader for ``PAINT`` data.
+    Test the tower measurement loader for PAINT data.
 
     Parameters
     ----------
@@ -65,7 +84,9 @@ def test_extract_paint_tower_measurements(
         The expected extracted data types.
     expected_power_plant_position : torch.Tensor
         The expected power plant position.
-    expected_receiver_properties : torch.Tensor
+    expected_multi_focus_properties : list[Any]
+        The expected multi focus tower properties.
+    expected_receiver_properties : list[Any]
         The expected receiver properties.
     device : torch.device
         The device on which to initialize tensors.
@@ -83,33 +104,60 @@ def test_extract_paint_tower_measurements(
 
     assert isinstance(extracted_list[0], expected_types[0])
     assert isinstance(extracted_list[1], expected_types[1])
+    assert isinstance(extracted_list[2], expected_types[2])
 
     torch.testing.assert_close(
         extracted_list[0].power_plant_position, expected_power_plant_position.to(device)
     )
     assert (
-        extracted_list[1].target_area_list[3].target_area_key
-        == expected_receiver_properties[0]
-    )
-    assert (
-        extracted_list[1].target_area_list[3].geometry
-        == expected_receiver_properties[1]
+        extracted_list[1].target_area_list[2].target_area_key
+        == expected_multi_focus_properties[0]
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].center,
+        extracted_list[1].target_area_list[2].center,
+        expected_multi_focus_properties[1].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[1].target_area_list[2].normal_vector,
+        expected_multi_focus_properties[2].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[1].target_area_list[2].plane_e,
+        expected_multi_focus_properties[3].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[1].target_area_list[2].plane_u,
+        expected_multi_focus_properties[4].to(device),
+    )
+
+    # Receiver
+    assert (
+        extracted_list[2].target_area_list[0].target_area_key
+        == expected_receiver_properties[0]
+    )
+    torch.testing.assert_close(
+        extracted_list[2].target_area_list[0].radius,
+        expected_receiver_properties[1],
+    )
+    torch.testing.assert_close(
+        extracted_list[2].target_area_list[0].center,
         expected_receiver_properties[2].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].normal_vector,
+        extracted_list[2].target_area_list[0].height,
         expected_receiver_properties[3].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].plane_e,
+        extracted_list[2].target_area_list[0].axis,
         expected_receiver_properties[4].to(device),
     )
     torch.testing.assert_close(
-        extracted_list[1].target_area_list[3].plane_u,
+        extracted_list[2].target_area_list[0].normal,
         expected_receiver_properties[5].to(device),
+    )
+    torch.testing.assert_close(
+        extracted_list[2].target_area_list[0].opening_angle,
+        expected_receiver_properties[6].to(device),
     )
 
 
@@ -163,7 +211,7 @@ def test_extract_paint_heliostats_ideal_surface(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat extraction for ``PAINT`` data.
+    Test the heliostat extraction for PAINT data with ideal surfaces.
 
     Parameters
     ----------
@@ -184,7 +232,8 @@ def test_extract_paint_heliostats_ideal_surface(
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     extracted_list = list(
         paint_scenario_parser.extract_paint_heliostats_ideal_surface(
@@ -207,7 +256,7 @@ def test_extract_paint_heliostats_ideal_surface(
         == expected_heliostat[1]
     )
     assert (
-        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].type
+        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].actuator_type
         == expected_heliostat[2]
     )
     torch.testing.assert_close(
@@ -285,7 +334,7 @@ def test_extract_paint_heliostats_fitted_surface(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat extraction for ``PAINT`` data with fitted surfaces.
+    Test the heliostat extraction for PAINT data with fitted surfaces.
 
     Parameters
     ----------
@@ -308,7 +357,8 @@ def test_extract_paint_heliostats_fitted_surface(
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -347,7 +397,7 @@ def test_extract_paint_heliostats_fitted_surface(
         == expected_heliostat[1]
     )
     assert (
-        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].type
+        extracted_list[0].heliostat_list[0].actuators.actuator_list[0].actuator_type
         == expected_heliostat[2]
     )
     torch.testing.assert_close(
@@ -487,7 +537,8 @@ def test_extract_paint_heliostats_mixed_surface(
         If the test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -530,7 +581,8 @@ def test_extract_paint_heliostats_mixed_surface(
     )
     assert len(ideal_heliostat.actuators.actuator_list) == expected_heliostat_ideal[1]
     assert (
-        ideal_heliostat.actuators.actuator_list[0].type == expected_heliostat_ideal[2]
+        ideal_heliostat.actuators.actuator_list[0].actuator_type
+        == expected_heliostat_ideal[2]
     )
     torch.testing.assert_close(
         ideal_heliostat.actuators.actuator_list[0].parameters.increment,
@@ -556,7 +608,8 @@ def test_extract_paint_heliostats_mixed_surface(
     )
     assert len(fitted_heliostat.actuators.actuator_list) == expected_heliostat_fitted[1]
     assert (
-        fitted_heliostat.actuators.actuator_list[0].type == expected_heliostat_fitted[2]
+        fitted_heliostat.actuators.actuator_list[0].actuator_type
+        == expected_heliostat_fitted[2]
     )
     torch.testing.assert_close(
         fitted_heliostat.actuators.actuator_list[0].parameters.increment,
@@ -643,15 +696,17 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     `randomize_selection=False` and `randomize_selection=True`.
 
     The test:
+
     1. Creates fake calibration data for multiple heliostats.
     2. Monkeypatches relevant module variables to point to the fake data.
     3. Invokes the mapping function with the given parameters.
     4. Verifies:
-    - The return value is a list of the same length as the heliostat list.
-    - Each element is a tuple of `(heliostat_name, property_file_paths, image_file_paths)`.
-    - Types of elements and paths are correct.
-    - The number of measurements matches the expected value.
-    - Property/image file paths correspond by ID and reside in the same directory.
+
+      - The return value is a list of the same length as the heliostat list.
+      - Each element is a tuple of `(heliostat_name, property_file_paths, image_file_paths)`.
+      - Types of elements and paths are correct.
+      - The number of measurements matches the expected value.
+      - Property/image file paths correspond by ID and reside in the same directory.
 
     Parameters
     ----------
@@ -732,8 +787,8 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     """
     Test that randomized selection order or subset differs from the non-randomized version.
 
-    This test verifies that when `randomize=True`, the file selection order (or subset)
-    returned by `utils.build_heliostat_data_mapping` differs from the deterministic
+    This test verifies that when ``randomize=True``, the file selection order (or subset)
+    returned by ``utils.build_heliostat_data_mapping`` differs from the deterministic
     sorted selection for at least one heliostat, given enough available samples.
 
     Parameters
@@ -800,6 +855,6 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
 
         if randomized_identifiers != sorted_identifiers:
             different_for_any_heliostat = True
-        assert different_for_any_heliostat, (
-            "Randomized selection did not differ from sorted order."
-        )
+    assert different_for_any_heliostat, (
+        "Randomized selection did not differ from sorted order for any heliostat."
+    )

@@ -1,6 +1,7 @@
+from unittest import mock
+
 import pytest
 import torch
-from pytest_mock import MockerFixture
 
 from artist.core.loss_functions import (
     AngleLoss,
@@ -10,7 +11,12 @@ from artist.core.loss_functions import (
     PixelLoss,
     VectorLoss,
 )
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import (
+    TowerTargetAreas,
+    TowerTargetAreasPlanar,
+)
 from artist.scenario.scenario import Scenario
 from artist.scene.light_source import LightSource
 from artist.scene.light_source_array import LightSourceArray
@@ -130,23 +136,33 @@ def test_vector_loss(
 
 
 @pytest.mark.parametrize(
-    "prediction, ground_truth, expected, kwargs",
+    "prediction, target_area_center, ground_truth, expected, kwargs",
     [
         (
             torch.ones((1, 2, 2)),
-            torch.tensor([[1.0, 1.0, 1.0, 0.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
             torch.tensor([0.0]),
             True,
         ),
         (
             torch.ones((1, 2, 2)),
-            torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
+            torch.tensor([[1.5, 0.0, 0.0, 1.0]]),
+            torch.tensor([[1.5, 0.0, 0.0, 1.0]]),
+            torch.tensor([0.0]),
+            True,
+        ),
+        (
+            torch.ones((1, 2, 2)),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.tensor([[1.0, 1.0, 1.0, 0.0]]),
             torch.tensor([1.732050776482]),
             True,
         ),
         (
             torch.ones((1, 2, 2)),
-            torch.tensor([[0.0, 0.0, 0.0, 0.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
             torch.tensor([3.0]),
             False,
         ),
@@ -154,10 +170,10 @@ def test_vector_loss(
 )
 def test_focal_spot_loss(
     prediction: torch.Tensor,
+    target_area_center: torch.Tensor,
     ground_truth: torch.Tensor,
     expected: torch.Tensor,
     kwargs: bool,
-    mocker: MockerFixture,
     device: torch.device,
 ) -> None:
     """
@@ -168,6 +184,9 @@ def test_focal_spot_loss(
     prediction : torch.Tensor
         The predicted values.
         Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
+    target_area_center : torch.Tensor
+        Coordinates of the target plane center.
+        Tensor of shape [number_of_target_areas, 4].
     ground_truth : torch.Tensor
         The ground truth.
         Tensor of shape [number_of_samples, 4].
@@ -176,8 +195,6 @@ def test_focal_spot_loss(
         Tensor of shape [number_of_flux_distributions].
     kwargs : bool
         Specifies if keyword arguments are passed.
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -186,11 +203,39 @@ def test_focal_spot_loss(
     AssertionError
         If test does not complete as expected.
     """
-    mock_scenario = mocker.MagicMock(spec=Scenario)
-    target_areas = mocker.MagicMock(spec=TowerTargetAreas)
-    target_areas.centers = (torch.tensor([[1.0, 1.0, 1.0, 0.0]], device=device),)
-    target_areas.dimensions = (torch.tensor([[2, 2]], device=device),)
-    mock_scenario.target_areas = target_areas
+    mock_scenario = mock.MagicMock(spec=Scenario)
+    mock_solar_tower = mock.MagicMock(spec=SolarTower)
+    mock_target_areas_planar = mock.MagicMock(spec=TowerTargetAreasPlanar)
+    mock_target_areas_planar.names = ["multi_focus_tower"]
+
+    mock_target_areas_planar.centers = target_area_center.to(device)
+    mock_target_areas_planar.dimensions = torch.tensor([[2, 2]], device=device)
+
+    mock_target_areas_cylindrical = mock.MagicMock(spec=TowerTargetAreasCylindrical)
+    mock_target_areas_cylindrical.names = ["receiver"]
+
+    mock_solar_tower.target_areas = [
+        mock_target_areas_planar,
+        mock_target_areas_cylindrical,
+    ]
+    mock_solar_tower.number_of_target_area_types = 2
+    mock_solar_tower.number_of_target_areas_per_type = torch.tensor(
+        [3, 1], device=device
+    )
+    mock_solar_tower.target_name_to_index = {
+        "multi_focus_tower": 0,
+        "solar_tower_juelich_lower": 1,
+        "solar_tower_juelich_upper": 2,
+        "receiver": 3,
+    }
+    mock_solar_tower.index_to_target_area = {
+        0: "multi_focus_tower",
+        1: "solar_tower_juelich_lower",
+        2: "solar_tower_juelich_upper",
+        3: "receiver",
+    }
+
+    mock_scenario.solar_tower = mock_solar_tower
 
     target_area_indices = torch.tensor([0], device=device)
 
@@ -203,7 +248,7 @@ def test_focal_spot_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The focal spot loss expects ['reduction_dimensions', 'device', 'target_area_indices'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_indices as keyword argument."
+            "The focal spot loss expects ['device', 'target_area_indices'] as keyword arguments. Please add device as keyword argument. Please add target_area_indices as keyword argument."
             in str(exc_info.value)
         )
     else:
@@ -254,7 +299,6 @@ def test_pixel_loss(
     number_of_rays: int,
     expected: torch.Tensor,
     kwargs: bool,
-    mocker: MockerFixture,
     device: torch.device,
 ) -> None:
     """
@@ -278,8 +322,6 @@ def test_pixel_loss(
         Tensor of shape [number_of_samples].
     kwargs : bool
         Specifies if keyword arguments are passed.
-    mocker : MockerFixture
-        A pytest-mocker fixture used to create mock objects.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -288,14 +330,14 @@ def test_pixel_loss(
     AssertionError
         If test does not complete as expected.
     """
-    mock_scenario = mocker.MagicMock(spec=Scenario)
+    mock_scenario = mock.MagicMock(spec=Scenario)
 
-    target_areas = mocker.MagicMock(spec=TowerTargetAreas)
+    target_areas = mock.MagicMock(spec=TowerTargetAreas)
     target_areas.dimensions = target_area_dimensions.to(device)
     mock_scenario.target_areas = target_areas
 
-    light_sources = mocker.MagicMock(spec=LightSourceArray)
-    light_source = mocker.MagicMock(spec=LightSource)
+    light_sources = mock.MagicMock(spec=LightSourceArray)
+    light_source = mock.MagicMock(spec=LightSource)
     light_source.number_of_rays = number_of_rays
     light_sources.light_source_list = [light_source]
     mock_scenario.light_sources = light_sources
@@ -462,7 +504,7 @@ def test_angle_loss(
     device: torch.device,
 ) -> None:
     """
-    Test the vector loss.
+    Test the angle loss.
 
     Parameters
     ----------

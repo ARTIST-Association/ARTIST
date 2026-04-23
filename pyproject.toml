@@ -140,8 +140,3 @@ convention = "numpy"
 testpaths = [
     "tests",
 ]
-
-[tool.coverage.run]
-omit = [
-    "artist/util/configuration_classes.py"
-    ]

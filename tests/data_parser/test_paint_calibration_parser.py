@@ -150,6 +150,8 @@ def test_extract_paint_calibration_data(
         The mapping of heliostats and their calibration data files.
     power_plant_position : torch.Tensor
         The power plant position.
+    sample_limit : int
+        Number of samples to be loaded.
     centroid_extraction_method : str
         The centroid extraction method to use.
     expected_list : list[torch.Tensor]
@@ -164,35 +166,34 @@ def test_extract_paint_calibration_data(
     """
     if centroid_extraction_method == "invalid":
         with pytest.raises(ValueError) as exc_info:
-            calibration_data_parser = PaintCalibrationDataParser(
+            PaintCalibrationDataParser(
                 sample_limit=sample_limit,
                 centroid_extraction_method=centroid_extraction_method,
             )
-            assert (
-                f"The selected centroid extraction method {centroid_extraction_method} is not yet supported. Please use either {paint_mappings.UTIS_KEY} or {paint_mappings.HELIOS_KEY}!"
-                in str(exc_info.value)
-            )
-    else:
-        calibration_data_parser = PaintCalibrationDataParser(
-            sample_limit=sample_limit,
-            centroid_extraction_method=centroid_extraction_method,
+        assert "not yet supported" in str(exc_info.value)
+        assert paint_mappings.UTIS_KEY in str(exc_info.value)
+        assert paint_mappings.HELIOS_KEY in str(exc_info.value)
+        return
+    calibration_data_parser = PaintCalibrationDataParser(
+        sample_limit=sample_limit,
+        centroid_extraction_method=centroid_extraction_method,
+    )
+    extracted_list = list(
+        calibration_data_parser._parse_calibration_data(
+            heliostat_calibration_mapping=heliostat_calibration_mapping,
+            heliostat_names=["AA31", "AA39"],
+            target_name_to_index={
+                "multi_focus_tower": 0,
+                "solar_tower_juelich_lower": 1,
+                "solar_tower_juelich_upper": 2,
+                "receiver": 3,
+            },
+            power_plant_position=power_plant_position.to(device),
+            device=device,
         )
-        extracted_list = list(
-            calibration_data_parser._parse_calibration_data(
-                heliostat_calibration_mapping=heliostat_calibration_mapping,
-                power_plant_position=power_plant_position.to(device),
-                heliostat_names=["AA31", "AA39"],
-                target_area_names=[
-                    "multi_focus_tower",
-                    "receiver",
-                    "solar_tower_juelich_upper",
-                    "solar_tower_juelich_lower",
-                ],
-                device=device,
-            )
-        )
+    )
 
-        for actual, expected in zip(extracted_list, expected_list):
-            torch.testing.assert_close(
-                actual, expected.to(device), atol=5e-4, rtol=5e-4
-            )
+    assert len(expected_list) == len(extracted_list)
+
+    for actual, expected in zip(extracted_list, expected_list):
+        torch.testing.assert_close(actual, expected.to(device), atol=5e-4, rtol=5e-4)

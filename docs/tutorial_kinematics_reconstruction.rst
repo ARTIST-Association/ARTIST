@@ -99,35 +99,42 @@ Configuring Optimizer and Scheduler
 
 As in the :ref:`surface reconstruction<tutorial_surface_reconstruction>` tutorial, the kinematics reconstructor uses
 the ``torch.optim.Adam`` optimizer. Again, we must define the optimizer parameters and configure a learning
-rate scheduler:
+rate scheduler. In the kinematics reconstruction, the optimizable parameters are learned using three different learning rates.
+Since each parameter has its own scale and magnitude, they must be treated separately:
 
 .. code-block:: python
 
+    # Configure the optimization.
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 0.0005,
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 100,
+        config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
+        config_dictionary.initial_learning_rate_initial_angles: 1e-3,
+        config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
+        config_dictionary.tolerance: 0.0000,
+        config_dictionary.max_epoch: 200,
         config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 3,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 300,
-        config_dictionary.early_stopping_window: 300,
+        config_dictionary.log_step: 1,
+        config_dictionary.early_stopping_delta: 1e-8,
+        config_dictionary.early_stopping_patience: 1000,
+        config_dictionary.early_stopping_window: 2000,
     }
+    # Configure the learning rate scheduler.
     scheduler_dict = {
         config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
         config_dictionary.gamma: 0.9,
-        config_dictionary.min: 1e-6,
-        config_dictionary.max: 1e-3,
+        config_dictionary.lr_min: 1e-6,
+        config_dictionary.lr_max: 1e-3,
         config_dictionary.step_size_up: 500,
         config_dictionary.reduce_factor: 0.0001,
         config_dictionary.patience: 50,
         config_dictionary.threshold: 1e-3,
         config_dictionary.cooldown: 10,
     }
+    # Combine configurations.
     optimization_configuration = {
         config_dictionary.optimization: optimizer_dict,
         config_dictionary.scheduler: scheduler_dict,
     }
+
 
 With these parameters defined, we are ready to set up the kinematics reconstructor.
 

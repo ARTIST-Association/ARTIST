@@ -11,8 +11,8 @@ from artist.core.loss_functions import Loss
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import config_dictionary, index_mapping, utils
+from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
@@ -23,14 +23,15 @@ class KinematicsReconstructor:
     An optimizer used to reconstruct real-world kinematics deviation parameters.
 
     The kinematics reconstructor learns kinematics parameters. These parameters are
-    specific to a certain kinematics type and can for example include the four
-    kinematics rotation deviation parameters as well as the two initial actuator parameters
-    for each actuator of a rigid body kinematics.
+    specific to a certain kinematics type and can, for example, include the four kinematics
+    rotation deviation parameters as well as the two initial actuator parameters
+    for each actuator of a rigid-body kinematics.
 
     Attributes
     ----------
-    ddp_setup : dict[str, Any]
-        Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+    ddp_setup : DdpSetup
+        Information about the distributed environment, process groups, devices, ranks, world size, and
+        heliostat-group-to-ranks mapping.
     scenario : Scenario
         The scenario.
     data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
@@ -39,12 +40,14 @@ class KinematicsReconstructor:
         The parameters for the optimization.
     scheduler_dict : dict[str, Any]
         The parameters for the scheduler.
+    dni : float
+        Direct normal irradiance in W/m^2.
     reconstruction_method : str
-        The reconstruction method. Currently only reconstruction via ray tracing is available.
+        The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
 
     Note
     ----
-    Each heliostat selected for reconstruction needs to have the same amount of samples as all others.
+    Each heliostat selected for reconstruction needs to have the same number of samples as all others.
 
     Methods
     -------
@@ -54,7 +57,7 @@ class KinematicsReconstructor:
 
     def __init__(
         self,
-        ddp_setup: dict[str, Any],
+        ddp_setup: DdpSetup,
         scenario: Scenario,
         data: dict[
             str,
@@ -62,6 +65,7 @@ class KinematicsReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
+        dni: float | None = None,
         reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
     ) -> None:
         """
@@ -69,18 +73,21 @@ class KinematicsReconstructor:
 
         Parameters
         ----------
-        ddp_setup : dict[str, Any]
-            Information about the distributed environment, process_groups, devices, ranks, world_Size, heliostat group to ranks mapping.
+        ddp_setup : DdpSetup
+            Information about the distributed environment, process groups, devices, ranks, world size, and
+            heliostat-group-to-ranks mapping.
         scenario : Scenario
             The scenario.
         data : dict[str, CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]]
             The data parser and the mapping of heliostat name and calibration data.
         optimization_configuration : dict[str, Any]
-            The parameters for the optimizer, learning rate scheduler, regularizers and early stopping.
+            Parameters for the optimizer, learning rate scheduler, regularizers, and early stopping.
+        dni : float | None
+            Direct normal irradiance in W/m^2 (default is None which leads to a ray magnitude of 1.0).
         reconstruction_method : str
-            The reconstruction method. Currently only reconstruction via ray tracing is available (default is ray_tracing).
+            The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
         """
-        rank = ddp_setup[config_dictionary.rank]
+        rank = ddp_setup["rank"]
         if rank == 0:
             log.info("Create a kinematics reconstructor.")
 
@@ -89,22 +96,23 @@ class KinematicsReconstructor:
         self.data = data
         self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
         self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
+        self.dni = dni
 
-        if (
-            reconstruction_method
-            == config_dictionary.kinematics_reconstruction_raytracing
-        ):
+        if reconstruction_method in [
+            config_dictionary.kinematics_reconstruction_raytracing,
+        ]:
             self.reconstruction_method = reconstruction_method
         else:
             raise ValueError(
-                f"ARTIST currently only supports the {config_dictionary.kinematics_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                f"The kinematics reconstruction method '{reconstruction_method}' is unknown. "
+                f"Please select another reconstruction method and try again!"
             )
 
     def reconstruct_kinematics(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, list[Any]]:
         """
         Reconstruct the kinematic parameters.
 
@@ -121,7 +129,14 @@ class KinematicsReconstructor:
         -------
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
+            Shape is ``[total_number_of_heliostats_in_scenario]``.
+        list[list[dict[str, list[float]]]]
+            Loss histories over epochs grouped by rank.
+            Outer list: one entry per rank.
+            Inner list: one entry per heliostat group processed on that rank.
+            Each group entry is a dict with key ``"total_loss"`` mapping to a list
+            of per-epoch scalar loss values.
+            In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
 
@@ -129,18 +144,26 @@ class KinematicsReconstructor:
             self.reconstruction_method
             == config_dictionary.kinematics_reconstruction_raytracing
         ):
-            loss = self._reconstruct_kinematics_parameters_with_raytracing(
-                loss_definition=loss_definition,
-                device=device,
+            loss, loss_history = (
+                self._reconstruct_kinematics_parameters_with_raytracing(
+                    loss_definition=loss_definition,
+                    device=device,
+                )
             )
 
-        return loss
+        else:
+            raise ValueError(
+                f"The kinematics reconstruction method '{self.reconstruction_method}' is unknown. "
+                f"Please select another reconstruction method and try again!"
+            )
+
+        return loss, loss_history
 
     def _reconstruct_kinematics_parameters_with_raytracing(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, list[list[dict[str, list[float]]]]]:
         """
         Reconstruct the kinematics parameters using ray tracing.
 
@@ -150,7 +173,7 @@ class KinematicsReconstructor:
         Parameters
         ----------
         loss_definition : Loss
-            The definition of the loss function and pre-processing of the prediction.
+            Definition of the loss function and pre-processing of the prediction.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
@@ -160,15 +183,23 @@ class KinematicsReconstructor:
         -------
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
-            Tensor of shape [total_number_of_heliostats_in_scenario].
+            Shape is ``[total_number_of_heliostats_in_scenario]``.
+        list[list[dict[str, list[float]]]]
+            Loss histories over epochs grouped by rank.
+            Outer list: one entry per rank.
+            Inner list: one entry per heliostat group processed on that rank.
+            Each group entry is a dict with key ``"total_loss"`` mapping to a list
+            of per-epoch scalar loss values.
+            In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
-
-        rank = self.ddp_setup[config_dictionary.rank]
+        rank = self.ddp_setup["rank"]
 
         if rank == 0:
             log.info("Beginning kinematics reconstruction with ray tracing.")
 
+        # Initialize final loss per heliostat, group offset table into global heliostat index space, and
+        # per-group loss curves for this rank.
         final_loss_per_heliostat = torch.full(
             (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
             torch.inf,
@@ -182,10 +213,12 @@ class KinematicsReconstructor:
                 ),
             ]
         )
+        loss_history: list[dict[str, list[float]]] = []
 
-        for heliostat_group_index in self.ddp_setup[
-            config_dictionary.groups_to_ranks_mapping
-        ][rank]:
+        # Iterate heliostat groups assigned to this rank.
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+            # Parse calibration inputs for current group to obtain measured flux, incident ray directions, mask of
+            # active heliostats, and target area indices.
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
@@ -197,8 +230,8 @@ class KinematicsReconstructor:
                 self.data[config_dictionary.heliostat_data_mapping],
             )
             (
+                flux_measured,
                 _,
-                focal_spots_measured,
                 incident_ray_directions,
                 _,
                 active_heliostats_mask,
@@ -211,15 +244,85 @@ class KinematicsReconstructor:
             )
 
             if active_heliostats_mask.sum() > 0:
-                # Create the optimizer.
+                # Calculate focal spot from measured flux.
+                focal_spots_bitmap_coordinates = utils.get_center_of_mass(
+                    bitmaps=flux_measured, device=device
+                )
+                focal_spots_measured = utils.bitmap_coordinates_to_target_coordinates(
+                    bitmap_coordinates=focal_spots_bitmap_coordinates,
+                    bitmap_resolution=torch.tensor([256, 256], device=device),
+                    solar_tower=self.scenario.solar_tower,
+                    target_area_indices=target_area_indices,
+                    device=device,
+                )
+
+                # Reparametrize optimizable actuator parameters.
+                initial_actuator_params = (
+                    heliostat_group.kinematics.actuators.optimizable_parameters.detach()
+                )
+
+                angle_mean = initial_actuator_params[
+                    :, index_mapping.actuator_params_initial_angle
+                ].mean()
+                angle_std = (
+                    initial_actuator_params[
+                        :, index_mapping.actuator_params_initial_angle
+                    ]
+                    .std()
+                    .clamp(min=1e-3)
+                )
+
+                stroke_mean = initial_actuator_params[
+                    :, index_mapping.actuator_params_initial_stroke_length
+                ].mean()
+                stroke_std = (
+                    initial_actuator_params[
+                        :, index_mapping.actuator_params_initial_stroke_length
+                    ]
+                    .std()
+                    .clamp(min=1e-3)
+                )
+
+                angle_normalized = (
+                    initial_actuator_params[
+                        :, index_mapping.actuator_params_initial_angle
+                    ]
+                    - angle_mean
+                ) / angle_std
+                stroke_length_normalized = (
+                    initial_actuator_params[
+                        :, index_mapping.actuator_params_initial_stroke_length
+                    ]
+                    - stroke_mean
+                ) / stroke_std
+
+                delta_angle = torch.zeros_like(angle_normalized, requires_grad=True)
+                delta_stroke = torch.zeros_like(
+                    stroke_length_normalized, requires_grad=True
+                )
+
+                # Set up optimizer, scheduler, and early stopping.
                 optimizer = torch.optim.Adam(
                     [
-                        heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-                        heliostat_group.kinematics.actuators.optimizable_parameters.requires_grad_(),
-                    ],
-                    lr=float(
-                        self.optimizer_dict[config_dictionary.initial_learning_rate]
-                    ),
+                        {
+                            "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+                            "lr": self.optimizer_dict[
+                                config_dictionary.initial_learning_rate_rotation_deviation
+                            ],
+                        },
+                        {
+                            "params": delta_angle,
+                            "lr": self.optimizer_dict[
+                                config_dictionary.initial_learning_rate_initial_angles
+                            ],
+                        },
+                        {
+                            "params": delta_stroke,
+                            "lr": self.optimizer_dict[
+                                config_dictionary.initial_learning_rate_initial_stroke_length
+                            ],
+                        },
+                    ]
                 )
 
                 # Create a learning rate scheduler.
@@ -245,6 +348,8 @@ class KinematicsReconstructor:
                     relative=True,
                 )
 
+                loss_history_list = []
+
                 # Start the optimization.
                 loss = torch.inf
                 epoch = 0
@@ -259,6 +364,25 @@ class KinematicsReconstructor:
                 ):
                     optimizer.zero_grad()
 
+                    # Get actuator parameters from reparametrized version.
+                    actuator_params = torch.cat(
+                        [
+                            ((angle_normalized + delta_angle) * angle_std + angle_mean)[
+                                :, None, :
+                            ],
+                            (
+                                (stroke_length_normalized + delta_stroke) * stroke_std
+                                + stroke_mean
+                            )[:, None, :],
+                        ],
+                        dim=-1,
+                    ).view_as(
+                        heliostat_group.kinematics.actuators.optimizable_parameters
+                    )
+                    heliostat_group.kinematics.actuators.optimizable_parameters = (
+                        actuator_params
+                    )
+
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
                         active_heliostats_mask=active_heliostats_mask, device=device
@@ -266,9 +390,9 @@ class KinematicsReconstructor:
 
                     # Align heliostats.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
-                        aim_points=self.scenario.target_areas.centers[
-                            target_area_indices
-                        ],
+                        aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
+                            target_area_indices=target_area_indices, device=device
+                        ),
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         device=device,
@@ -279,18 +403,15 @@ class KinematicsReconstructor:
                         scenario=self.scenario,
                         heliostat_group=heliostat_group,
                         blocking_active=False,
-                        world_size=self.ddp_setup[
-                            config_dictionary.heliostat_group_world_size
-                        ],
-                        rank=self.ddp_setup[config_dictionary.heliostat_group_rank],
+                        world_size=self.ddp_setup["heliostat_group_world_size"],
+                        rank=self.ddp_setup["heliostat_group_rank"],
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
-                        random_seed=self.ddp_setup[
-                            config_dictionary.heliostat_group_rank
-                        ],
+                        random_seed=self.ddp_setup["heliostat_group_rank"],
+                        dni=self.dni,
                     )
 
                     # Perform heliostat-based ray tracing.
-                    flux_distributions = ray_tracer.trace_rays(
+                    flux_distributions, _, _, _ = ray_tracer.trace_rays(
                         incident_ray_directions=incident_ray_directions,
                         active_heliostats_mask=active_heliostats_mask,
                         target_area_indices=target_area_indices,
@@ -299,6 +420,7 @@ class KinematicsReconstructor:
 
                     sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
 
+                    # Compute loss from prediction vs. measured focal spots.
                     loss_per_sample = loss_definition(
                         prediction=flux_distributions,
                         ground_truth=focal_spots_measured[
@@ -325,7 +447,7 @@ class KinematicsReconstructor:
 
                     loss.backward()
 
-                    if self.ddp_setup[config_dictionary.is_nested]:
+                    if self.ddp_setup["is_nested"]:
                         # Reduce gradients within each heliostat group.
                         for param_group in optimizer.param_groups:
                             for param in param_group["params"]:
@@ -334,24 +456,12 @@ class KinematicsReconstructor:
                                         torch.distributed.nn.functional.all_reduce(
                                             param.grad,
                                             op=torch.distributed.ReduceOp.SUM,
-                                            group=self.ddp_setup[
-                                                config_dictionary.process_subgroup
-                                            ],
+                                            group=self.ddp_setup["process_subgroup"],
                                         )
                                     )
                                     param.grad /= self.ddp_setup[
-                                        config_dictionary.heliostat_group_world_size
+                                        "heliostat_group_world_size"
                                     ]
-
-                    torch.nn.utils.clip_grad_norm_(
-                        [heliostat_group.kinematics.rotation_deviation_parameters],
-                        max_norm=1.0,
-                    )
-
-                    torch.nn.utils.clip_grad_norm_(
-                        [heliostat_group.kinematics.actuators.optimizable_parameters],
-                        max_norm=1.0,
-                    )
 
                     optimizer.step()
                     if isinstance(
@@ -363,17 +473,25 @@ class KinematicsReconstructor:
 
                     if epoch % log_step == 0:
                         log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss},",
                         )
 
+                    loss_history_list.append(loss.detach().cpu().item())
+
                     # Early stopping when loss did not improve for a predefined number of epochs.
-                    stop = early_stopper.step(loss)
+                    stop = early_stopper.step(loss.item())
 
                     if stop:
                         log.info(f"Early stopping at epoch {epoch}.")
                         break
 
                     epoch += 1
+
+                loss_history.append(
+                    {
+                        "total_loss": loss_history_list,
+                    }
+                )
 
                 local_indices = (
                     sample_indices_for_local_rank[::number_of_samples_per_heliostat]
@@ -395,13 +513,11 @@ class KinematicsReconstructor:
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
-        if self.ddp_setup[config_dictionary.is_distributed]:
+        if self.ddp_setup["is_distributed"]:
             for index, heliostat_group in enumerate(
                 self.scenario.heliostat_field.heliostat_groups
             ):
-                source = self.ddp_setup[config_dictionary.ranks_to_groups_mapping][
-                    index
-                ]
+                source = self.ddp_setup["ranks_to_groups_mapping"][index]
                 torch.distributed.broadcast(
                     heliostat_group.kinematics.rotation_deviation_parameters,
                     src=source[index_mapping.first_rank_from_group],
@@ -414,6 +530,16 @@ class KinematicsReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
+            final_loss_history_all_groups: list[list[dict[str, list[float]]]] = [
+                [] for _ in range(self.ddp_setup["world_size"])
+            ]
+            torch.distributed.all_gather_object(
+                final_loss_history_all_groups, loss_history
+            )
+
             log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
-        return final_loss_per_heliostat
+        else:
+            final_loss_history_all_groups = [loss_history]
+
+        return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups

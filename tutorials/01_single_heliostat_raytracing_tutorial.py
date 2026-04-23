@@ -1,6 +1,7 @@
+"""Single heliostat ray tracing tutorial."""
+
 import math
 import pathlib
-from typing import Optional, Union
 
 import h5py
 import matplotlib.pyplot as plt
@@ -39,7 +40,7 @@ print(
     f"The light source is a {scenario.light_sources.light_source_list[index_mapping.first_light_source].__class__.__name__}."
 )
 print(
-    f"The first target area is a {scenario.target_areas.names[index_mapping.first_target_area]}."
+    f"The target areas have the following index mapping: {scenario.solar_tower.target_name_to_index}."
 )
 print(
     f"The first heliostat in the first group in the field is {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].names[index_mapping.first_heliostat]}."
@@ -49,7 +50,9 @@ print(
 )
 
 # We only consider one heliostat for the beginning.
-# Choose the first heliostat with index 0.
+# There is only one heliostat in the scenario. That is why the active_heliostat_mask has only one element.
+# To activate a heliostat once, you write a 1 at the index of the heliostat you want to activate.
+# In our case we write a 1 at index 0. To activate this heliostat twice (this would duplicate the heliostat) you would write a 2 at index 0.
 active_heliostats_mask = torch.tensor([1], dtype=torch.int32, device=device)
 
 # Activate the heliostat. Only activated heliostats will be aligned or ray-traced.
@@ -65,7 +68,9 @@ scenario.heliostat_field.heliostat_groups[
 target_area_indices = torch.tensor([0], device=device)
 
 # Use the center of the selected target area as the aim point.
-aim_point = scenario.target_areas.centers[target_area_indices]
+aim_point = scenario.solar_tower.get_centers_of_target_areas(
+    target_area_indices=target_area_indices, device=device
+)
 print(f"The initial aim point used for this raytracing is {aim_point.tolist()}.")
 
 # Since we only have one heliostat we need to define a single incident ray direction.
@@ -75,7 +80,6 @@ incident_ray_directions = torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device)
 
 # Save the original surface points of the one active heliostat.
 original_surface_points = scenario.heliostat_field.heliostat_groups[0].surface_points
-
 
 # Align the heliostat(s).
 scenario.heliostat_field.heliostat_groups[
@@ -202,7 +206,12 @@ ray_tracer = HeliostatRayTracer(
 )
 
 # Perform heliostat-based ray tracing.
-image_south = ray_tracer.trace_rays(
+(
+    image_south,
+    _,
+    _,
+    _,
+) = ray_tracer.trace_rays(
     incident_ray_directions=incident_ray_directions,
     active_heliostats_mask=active_heliostats_mask,
     target_area_indices=target_area_indices,
@@ -221,7 +230,7 @@ def align_and_trace_rays(
     light_direction: torch.Tensor,
     active_heliostats_mask: torch.Tensor,
     target_area_indices: torch.Tensor,
-    device: Union[torch.device, str] = "cuda",
+    device: torch.device | str = "cuda",
 ) -> torch.Tensor:
     """
     Align the heliostat and perform heliostat ray tracing.
@@ -229,18 +238,18 @@ def align_and_trace_rays(
     Parameters
     ----------
     light_direction : torch.Tensor
-        The direction of the incoming light on the heliostat.
+        Direction of the incoming light on the heliostat.
     active_heliostats_mask : torch.Tensor
         A mask for the active heliostats.
     target_area_indices : torch.Tensor
-        The indices of the target areas for each active heliostat.
-    device : Union[torch.device, str]
-        The device on which to initialize tensors (default is cuda).
+        Indices of the target areas for each active heliostat.
+    device : torch.device | str
+        The device on which to initialize tensors (default is "cuda").
 
     Returns
     -------
     torch.Tensor
-        The distribution strengths used to generate the image on the receiver.
+        Flux density distribution bitmaps per heliostat on the receiver.
     """
     # Activate heliostats.
     scenario.heliostat_field.heliostat_groups[
@@ -254,23 +263,31 @@ def align_and_trace_rays(
     scenario.heliostat_field.heliostat_groups[
         index_mapping.first_heliostat_group
     ].align_surfaces_with_incident_ray_directions(
-        aim_points=scenario.target_areas.centers[target_area_indices],
+        aim_points=scenario.solar_tower.get_centers_of_target_areas(
+            target_area_indices=target_area_indices, device=device
+        ),
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         device=device,
     )
 
     # Perform heliostat-based ray tracing.
-    return ray_tracer.trace_rays(
+    (
+        bitmaps,
+        _,
+        _,
+        _,
+    ) = ray_tracer.trace_rays(
         incident_ray_directions=light_direction,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
         device=device,
     )
+    return bitmaps
 
 
 def plot_multiple_images(
-    *image_tensors: torch.Tensor, names: Optional[list[str]] = None
+    *image_tensors: torch.Tensor, names: list[str] | None = None
 ) -> None:
     """
     Plot multiple receiver ray tracing images in a grid.
@@ -281,10 +298,10 @@ def plot_multiple_images(
 
     Parameters
     ----------
-    image_tensors : torch.Tensor
+    *image_tensors : torch.Tensor
         An arbitrary number of image tensors to be plotted.
-    names : list[str], optional
-        The names of the images to be plotted.
+    names : list[str] | None, optional
+        Names of the images to be plotted (default is None).
     """
     # Calculate the number of images and determine the size of the grid based on the number of images.
     n = len(image_tensors)

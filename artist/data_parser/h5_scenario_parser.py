@@ -19,7 +19,7 @@ def surface_config(
     Parameters
     ----------
     prototype : bool
-        Loading a prototype or an individual surface configuration.
+        Whether a prototype or an individual surface configuration should be loaded.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
     device : torch.device | None
@@ -53,8 +53,12 @@ def surface_config(
             ),
             degrees=torch.tensor(
                 [
-                    facet_config[facet][config_dictionary.facet_degrees][()][0],
-                    facet_config[facet][config_dictionary.facet_degrees][()][1],
+                    facet_config[facet][config_dictionary.facet_degrees][()][
+                        index_mapping.nurbs_u
+                    ],
+                    facet_config[facet][config_dictionary.facet_degrees][()][
+                        index_mapping.nurbs_v
+                    ],
                 ],
                 dtype=torch.int32,
                 device=device,
@@ -72,8 +76,7 @@ def surface_config(
         )
         for facet in facet_config.keys()
     ]
-    surface_config = SurfaceConfig(facet_list=facet_list)
-    return surface_config
+    return SurfaceConfig(facet_list=facet_list)
 
 
 def kinematics_deviations(
@@ -90,7 +93,7 @@ def kinematics_deviations(
     Parameters
     ----------
     prototype : bool
-        Loading prototype or individual kinematics deviations.
+        Whether a prototype or individual kinematics deviations should be loaded.
     kinematics_type : str
         The kinematics type.
     scenario_file : h5py.File
@@ -169,10 +172,10 @@ def rigid_body_deviations(
     -------
     torch.Tensor
         Translation deviation parameters for the kinematics.
-        Tensor of shape [9].
+        Shape is ``[9]``.
     torch.Tensor
         Rotation deviation parameters for the kinematics.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     """
     device = get_device(device=device)
 
@@ -398,7 +401,7 @@ def actuator_parameters(
     Parameters
     ----------
     prototype : bool
-        Loading prototype or individual actuator parameters.
+        Whether prototype or individual actuator parameters should be loaded.
     scenario_file : h5py.File
         The opened scenario HDF5 file containing the information.
     actuator_type : str
@@ -422,9 +425,9 @@ def actuator_parameters(
     Returns
     -------
     torch.Tensor
-        Non-optimizable actuator parameters for for each actuator in the file.
+        Non-optimizable actuator parameters for each actuator in the file.
     torch.Tensor
-        Optimizable actuator parameters for for each actuator in the file.
+        Optimizable actuator parameters for each actuator in the file.
     """
     device = get_device(device=device)
 
@@ -487,14 +490,14 @@ def linear_actuators(
     Raises
     ------
     ValueError
-        If the file contains the wrong amount of actuators for a heliostat with a specific kinematics type.
+        If the file contains the wrong number of actuators for a heliostat with a specific kinematics type.
 
     Returns
     -------
     torch.Tensor
-        Non-optimizable actuator parameters for for each actuator in the file.
+        Non-optimizable actuator parameters for each actuator in the file.
     torch.Tensor
-        Optimizable actuator parameters for for each actuator in the file.
+        Optimizable actuator parameters for each actuator in the file.
     """
     device = get_device(device=device)
 
@@ -652,7 +655,7 @@ def linear_actuators(
         to_orientation=surface_orientation,
         device=device,
     )
-    delta_angle = axis[0] * angle
+    delta_angle = axis[index_mapping.e] * angle
 
     actuator_parameters_optimizable[
         index_mapping.actuator_initial_angle, index_mapping.actuator_one_index

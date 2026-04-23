@@ -22,8 +22,10 @@ from artist.scenario.configuration_classes import (
     PrototypeConfig,
     SurfaceConfig,
     SurfacePrototypeConfig,
-    TargetAreaConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import config_dictionary, index_mapping, utils
@@ -36,7 +38,9 @@ log = logging.getLogger(__name__)
 def extract_paint_tower_measurements(
     tower_measurements_path: pathlib.Path,
     device: torch.device | None = None,
-) -> tuple[PowerPlantConfig, TargetAreaListConfig]:
+) -> tuple[
+    PowerPlantConfig, TargetAreaPlanarListConfig, TargetAreaCylindricalListConfig
+]:
     """
     Extract tower data from a ``PAINT`` tower measurements file for scenario generation.
 
@@ -52,9 +56,11 @@ def extract_paint_tower_measurements(
     Returns
     -------
     PowerPlantConfig
-        The configuration of the power plant.
-    TargetAreaListConfig
-        The configuration of the tower target areas.
+        Configuration of the power plant.
+    TargetAreaPlanarListConfig
+        Configurations of the planar tower target areas.
+    TargetAreaCylindricalListConfig
+        Configurations of the cylindrical tower target areas.
     """
     device = get_device(device=device)
 
@@ -71,82 +77,166 @@ def extract_paint_tower_measurements(
         device=device,
     )
 
-    target_area_config_list = []
+    target_area_planar_configs: list[TargetAreaPlanarConfig] = []
+    target_area_cylindrical_configs: list[TargetAreaCylindricalConfig] = []
 
     for target_area in list(tower_dict.keys())[1:]:
-        prefix = (
-            "receiver_outer_"
-            if target_area == config_dictionary.target_area_receiver
-            else ""
-        )
+        if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "planar":
+            target_area_corners = [
+                paint_mappings.UPPER_LEFT,
+                paint_mappings.LOWER_LEFT,
+                paint_mappings.UPPER_RIGHT,
+                paint_mappings.LOWER_RIGHT,
+            ]
 
-        target_area_corners = [
-            f"{prefix}{paint_mappings.UPPER_LEFT}",
-            f"{prefix}{paint_mappings.LOWER_LEFT}",
-            f"{prefix}{paint_mappings.UPPER_RIGHT}",
-            f"{prefix}{paint_mappings.LOWER_RIGHT}",
-        ]
-
-        target_area_corner_points_wgs84 = torch.tensor(
-            [
-                tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][corner]
-                for corner in target_area_corners
-            ],
-            dtype=torch.float64,
-            device=device,
-        )
-
-        corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
-            target_area_corner_points_wgs84, power_plant_position, device=device
-        )
-
-        upper_left, lower_left, upper_right, lower_right = corner_points_enu
-        plane_e, plane_u = corner_points_to_plane(
-            upper_left, upper_right, lower_left, lower_right
-        )
-
-        center_lat_lon = torch.tensor(
-            [
-                tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
-                    paint_mappings.CENTER
-                ]
-            ],
-            dtype=torch.float64,
-            device=device,
-        )
-        center_enu = utils.convert_wgs84_coordinates_to_local_enu(
-            center_lat_lon, power_plant_position, device=device
-        )
-        center = utils.convert_3d_points_to_4d_format(center_enu[0], device=device)
-
-        normal_vector = utils.convert_3d_directions_to_4d_format(
-            torch.tensor(
-                [tower_dict[target_area][paint_mappings.TOWER_NORMAL_VECTOR_KEY]],
+            target_area_corner_points_wgs84 = torch.tensor(
+                [
+                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
+                        corner
+                    ]
+                    for corner in target_area_corners
+                ],
+                dtype=torch.float64,
                 device=device,
-            ),
-            device=device,
-        )
+            )
 
-        tower_area_config = TargetAreaConfig(
-            target_area_key=target_area,
-            geometry=tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY],
-            center=center,
-            normal_vector=normal_vector,
-            plane_e=plane_e,
-            plane_u=plane_u,
-        )
+            corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
+                target_area_corner_points_wgs84, power_plant_position, device=device
+            )
 
-        target_area_config_list.append(tower_area_config)
+            upper_left, lower_left, upper_right, lower_right = corner_points_enu
+            plane_e, plane_u = corner_points_to_plane(
+                upper_left, upper_right, lower_left, lower_right
+            )
+
+            center_lat_lon = torch.tensor(
+                [
+                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
+                        paint_mappings.CENTER
+                    ]
+                ],
+                dtype=torch.float64,
+                device=device,
+            )
+            center_enu = utils.convert_wgs84_coordinates_to_local_enu(
+                center_lat_lon, power_plant_position, device=device
+            )
+            center = utils.convert_3d_points_to_4d_format(center_enu[0], device=device)
+
+            normal_vector = utils.convert_3d_directions_to_4d_format(
+                torch.tensor(
+                    [tower_dict[target_area][paint_mappings.TOWER_NORMAL_VECTOR_KEY]],
+                    device=device,
+                ),
+                device=device,
+            )
+
+            tower_area_config = TargetAreaPlanarConfig(
+                target_area_key=target_area,
+                center=center,
+                normal_vector=normal_vector,
+                plane_e=plane_e,
+                plane_u=plane_u,
+            )
+
+            target_area_planar_configs.append(tower_area_config)
+
+        if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "convex_cylinder":
+            prefix = (
+                "receiver_inner_"
+                if target_area == config_dictionary.target_area_receiver
+                else ""
+            )
+
+            target_area_corners = [
+                f"{prefix}{paint_mappings.UPPER_LEFT}",
+                f"{prefix}{paint_mappings.LOWER_LEFT}",
+                f"{prefix}{paint_mappings.UPPER_RIGHT}",
+                f"{prefix}{paint_mappings.LOWER_RIGHT}",
+            ]
+
+            target_area_corner_points_wgs84 = torch.tensor(
+                [
+                    tower_dict[target_area][paint_mappings.TOWER_COORDINATES_KEY][
+                        corner
+                    ]
+                    for corner in target_area_corners
+                ],
+                dtype=torch.float64,
+                device=device,
+            )
+
+            corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
+                target_area_corner_points_wgs84, power_plant_position, device=device
+            )
+
+            upper_left, lower_left, upper_right, lower_right = corner_points_enu
+
+            radius = tower_dict[target_area]["radius"]
+
+            opening_angle = torch.deg2rad(
+                torch.tensor(tower_dict[target_area]["opening_angle"], device=device)
+            )
+            normal = torch.tensor(
+                tower_dict[target_area]["normal_vector"], device=device
+            )
+            ortho_radius = torch.cross(
+                normal, torch.tensor([0.0, 0.0, 1.0], device=device), dim=-1
+            )
+            axis = torch.nn.functional.normalize(
+                torch.cross(ortho_radius, normal, dim=-1), dim=-1
+            )
+
+            # Calculate center and height from points on cylinder arch.
+            midpoint_lower = (lower_left + lower_right) / 2
+            midpoint_upper = (upper_left + upper_right) / 2
+
+            chord_lower = lower_right - lower_left
+            chord_upper = upper_right - upper_left
+
+            distance_to_center_lower = torch.sqrt(
+                radius**2 - (torch.norm(chord_lower) / 2) ** 2
+            )
+            distance_to_center_upper = torch.sqrt(
+                radius**2 - (torch.norm(chord_upper) / 2) ** 2
+            )
+
+            center_lower = midpoint_lower - normal * distance_to_center_lower
+            center_upper = midpoint_upper - normal * distance_to_center_upper
+
+            center = (center_lower + center_upper) / 2
+            height = torch.norm(center_lower - center_upper)
+
+            tower_area_cylindrical_config = TargetAreaCylindricalConfig(
+                target_area_key=target_area,
+                radius=radius,
+                center=utils.convert_3d_points_to_4d_format(center, device=device),
+                height=height,
+                axis=utils.convert_3d_directions_to_4d_format(axis, device=device),
+                normal=utils.convert_3d_directions_to_4d_format(normal, device=device),
+                opening_angle=opening_angle,
+            )
+
+            target_area_cylindrical_configs.append(tower_area_cylindrical_config)
 
     # Create the power plant configuration.
     power_plant_config = PowerPlantConfig(power_plant_position=power_plant_position)
 
     # Create the tower area configurations.
-    target_area_list_config = TargetAreaListConfig(target_area_config_list)
+    target_area_planar_list_config = TargetAreaPlanarListConfig(
+        target_area_planar_configs
+    )
+    target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
+        target_area_cylindrical_configs
+    )
 
     log.info("Loading tower data complete.")
 
-    return power_plant_config, target_area_list_config
+    return (
+        power_plant_config,
+        target_area_planar_list_config,
+        target_area_cylindrical_list_config,
+    )
 
 
 def extract_paint_heliostat_properties(
@@ -641,7 +731,7 @@ def _process_heliostats_from_paths(
         prototype_surface = surface_config
 
         kinematics_config = KinematicsConfig(
-            type=config_dictionary.rigid_body_key,
+            kinematics_type=config_dictionary.rigid_body_key,
             initial_orientation=initial_orientation,
             deviations=kinematics_deviations,
         )
@@ -653,7 +743,9 @@ def _process_heliostats_from_paths(
         ):
             actuator = ActuatorConfig(
                 key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
-                type=str(actuator_parameters_tuple[index_mapping.paint_actuator_type]),
+                actuator_type=str(
+                    actuator_parameters_tuple[index_mapping.paint_actuator_type]
+                ),
                 clockwise_axis_movement=bool(
                     actuator_parameters_tuple[
                         index_mapping.paint_actuator_clockwise_axis_movement
@@ -677,7 +769,7 @@ def _process_heliostats_from_paths(
         # Create the heliostat configuration with the generated surface config.
         heliostat_config = HeliostatConfig(
             name=str(file_tuple[0]),
-            id=heliostat_index,
+            heliostat_id=heliostat_index,
             position=heliostat_position,
             surface=surface_config,
             kinematics=kinematics_config,
@@ -690,7 +782,7 @@ def _process_heliostats_from_paths(
             facet_list=prototype_surface.facet_list
         )
         kinematics_prototype_config = KinematicsPrototypeConfig(
-            type=prototype_kinematics.type,
+            kinematics_type=prototype_kinematics.kinematics_type,
             initial_orientation=prototype_kinematics.initial_orientation,
             deviations=prototype_kinematics.deviations,
         )
@@ -950,12 +1042,12 @@ def corner_points_to_plane(
         The plane measurement in up direction.
     """
     plane_e = (
-        torch.abs(upper_right[0] - upper_left[0])
-        + torch.abs(lower_right[0] - lower_left[0])
+        torch.abs(upper_right[index_mapping.e] - upper_left[index_mapping.e])
+        + torch.abs(lower_right[index_mapping.e] - lower_left[index_mapping.e])
     ) / 2
     plane_u = (
-        torch.abs(upper_left[2] - lower_left[2])
-        + torch.abs(upper_right[2] - lower_right[2])
+        torch.abs(upper_left[index_mapping.u] - lower_left[index_mapping.u])
+        + torch.abs(upper_right[index_mapping.u] - lower_right[index_mapping.u])
     ) / 2
     return plane_e, plane_u
 

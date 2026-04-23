@@ -16,8 +16,10 @@ from artist.scenario.configuration_classes import (
     PowerPlantConfig,
     PrototypeConfig,
     SurfacePrototypeConfig,
-    TargetAreaConfig,
-    TargetAreaListConfig,
+    TargetAreaCylindricalConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.surface_generator import SurfaceGenerator
@@ -53,25 +55,35 @@ power_plant_config = PowerPlantConfig(
     power_plant_position=torch.tensor([0.0, 0.0, 0.0], device=device)
 )
 
-# Include a single tower area (receiver).
-receiver_config = TargetAreaConfig(
-    target_area_key="receiver",
-    geometry=config_dictionary.target_area_type_planar,
+# Include a single planar tower target area.
+target_area_list_planar_config = TargetAreaPlanarConfig(
+    target_area_key="planar",
     center=torch.tensor([0.0, -50.0, 0.0, 1.0], device=device),
     normal_vector=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-    plane_e=8.629666667,
-    plane_u=7.0,
+    plane_e=torch.tensor([8.629666667], device=device),
+    plane_u=torch.tensor([7.0], device=device),
+)
+target_area_planar_list_config = TargetAreaPlanarListConfig(
+    [target_area_list_planar_config]
 )
 
-# Create list of target area configs - in this case only one.
-target_area_config_list = [receiver_config]
-
-# Include the tower area configurations.
-target_area_list_config = TargetAreaListConfig(target_area_config_list)
+# Include a single cylindrical tower target area.
+target_area_list_cylindrical_config = TargetAreaCylindricalConfig(
+    target_area_key="cylinder",
+    radius=torch.tensor([4.14], device=device),
+    center=torch.tensor([0.0, 0.0, 0.0, 1.0], device=device),
+    height=torch.tensor([6.0], device=device),
+    axis=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
+    normal=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
+    opening_angle=torch.tensor([60], device=device),
+)
+target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
+    [target_area_list_cylindrical_config]
+)
 
 # Include the light source configuration.
-light_source1_config = LightSourceConfig(
-    light_source_key="sun_1",
+light_source_config = LightSourceConfig(
+    light_source_key="sun",
     light_source_type=config_dictionary.sun_key,
     number_of_rays=10,
     distribution_type=config_dictionary.light_source_distribution_is_normal,
@@ -80,11 +92,12 @@ light_source1_config = LightSourceConfig(
 )
 
 # Create a list of light source configs - in this case only one.
-light_source_list = [light_source1_config]
+light_source_list = [light_source_config]
 
 # Include the configuration for the list of light sources.
 light_source_list_config = LightSourceListConfig(light_source_list=light_source_list)
 
+# Create heliostat surfaces.
 (
     facet_translation_vectors,
     canting,
@@ -131,7 +144,7 @@ surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.face
 
 # Include the kinematics prototype configuration.
 kinematics_prototype_config = KinematicsPrototypeConfig(
-    type=config_dictionary.rigid_body_key,
+    kinematics_type=config_dictionary.rigid_body_key,
     initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
@@ -143,13 +156,13 @@ min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 # Include two ideal actuators.
 actuator1_prototype = ActuatorConfig(
     key="actuator_1",
-    type=config_dictionary.ideal_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=False,
     min_max_motor_positions=min_max_motor_positions_actuator_1,
 )
 actuator2_prototype = ActuatorConfig(
     key="actuator_2",
-    type=config_dictionary.ideal_actuator_key,
+    actuator_type=config_dictionary.ideal_actuator_key,
     clockwise_axis_movement=True,
     min_max_motor_positions=min_max_motor_positions_actuator_2,
 )
@@ -170,14 +183,14 @@ prototype_config = PrototypeConfig(
 )
 
 # Include the configuration for a heliostat.
-heliostat1 = HeliostatConfig(
+heliostat = HeliostatConfig(
     name="heliostat_1",
-    id=1,
+    heliostat_id=1,
     position=torch.tensor([0.0, 5.0, 0.0, 1.0], device=device),
 )
 
 # Create a list of all the heliostats - in this case, only one.
-heliostat_list = [heliostat1]
+heliostat_list = [heliostat]
 
 # Create the configuration for all heliostats.
 heliostats_list_config = HeliostatListConfig(heliostat_list=heliostat_list)
@@ -187,7 +200,8 @@ if __name__ == "__main__":
     scenario_generator = H5ScenarioGenerator(
         file_path=scenario_path,
         power_plant_config=power_plant_config,
-        target_area_list_config=target_area_list_config,
+        target_area_list_planar_config=target_area_planar_list_config,
+        target_area_list_cylindrical_config=target_area_cylindrical_list_config,
         light_source_list_config=light_source_list_config,
         prototype_config=prototype_config,
         heliostat_list_config=heliostats_list_config,
