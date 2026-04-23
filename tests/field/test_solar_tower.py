@@ -12,6 +12,10 @@ from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
     "target_area_indices, expected",
     [
         (
+            torch.tensor([0, 1]),  # planar-only case
+            torch.tensor([[1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 1.0]]),
+        ),
+        (
             torch.tensor([0, 3]),
             torch.tensor([[1.0, 1.0, 1.0, 1.0], [20.0, 2.0, 0.0, 1.0]]),
         ),
@@ -27,7 +31,13 @@ def test_get_centers_of_target_areas(
     device: torch.device,
 ) -> None:
     """
-    Test the abstract methods of the kinematics.
+    Test `SolarTower.get_centers_of_target_areas` for planar and cylindrical targets.
+
+    Validates:
+
+    - planar centers are returned directly,
+    - cylindrical centers are offset by radius * normal,
+    - homogeneous coordinate is set to 1.
 
     Parameters
     ----------
@@ -84,3 +94,4 @@ def test_get_centers_of_target_areas(
     )
 
     torch.testing.assert_close(centers, expected.to(device), atol=1e-6, rtol=1e-6)
+    assert torch.allclose(centers[:, 3], torch.ones_like(centers[:, 3], device=device))
