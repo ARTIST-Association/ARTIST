@@ -413,10 +413,9 @@ class SurfaceGenerator:
         log.info("Beginning generation of the ideal surface configuration.")
         facet_config_list = []
 
-        control_points = utils.create_ideal_canted_nurbs_control_points(
+        control_points = utils.create_planar_nurbs_control_points(
             number_of_control_points=self.number_of_control_points,
             canting=canting,
-            facet_translation_vectors=facet_translation_vectors,
             device=device,
         )
 

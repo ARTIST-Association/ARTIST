@@ -751,14 +751,17 @@ def create_nurbs_evaluation_grid(
     return evaluation_points
 
 
-def create_ideal_canted_nurbs_control_points(
+def create_planar_nurbs_control_points(
     number_of_control_points: torch.Tensor,
     canting: torch.Tensor,
-    facet_translation_vectors: torch.Tensor,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create ideal, canted and translated control points for each facet.
+    Create planar NURBS control points for each facet.
+
+    The generated control points form a flat, equidistant grid.
+    The grid extent is derived from the norm of the canting vectors, which encode the
+    dimensions of the facets.
 
     Parameters
     ----------
@@ -768,9 +771,6 @@ def create_ideal_canted_nurbs_control_points(
     canting : torch.Tensor
         The canting vector for each facet.
         Shape is [number_of_facets, 2, 4].
-    facet_translation_vectors : torch.Tensor
-        The facet translation vector for each facet.
-        Shape is [number_of_facets, 4].
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -779,58 +779,39 @@ def create_ideal_canted_nurbs_control_points(
     Returns
     -------
     torch.Tensor
-        The canted and translated ideal NURBS control points.
+        Planar control point grids for each facet.
         Shape is [number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
     """
     device = get_device(device=device)
 
-    number_of_facets = facet_translation_vectors.shape[
-        index_mapping.facet_index_unbatched
-    ]
+    n_u = number_of_control_points[index_mapping.nurbs_u]
+    n_v = number_of_control_points[index_mapping.nurbs_v]
 
     control_points = torch.zeros(
         (
-            number_of_facets,
-            number_of_control_points[index_mapping.nurbs_u],
-            number_of_control_points[index_mapping.nurbs_v],
+            canting.shape[index_mapping.facet_index_unbatched],
+            n_u,
+            n_v,
             3,
         ),
         device=device,
     )
 
-    offsets_e = torch.linspace(
-        0,
-        1,
-        control_points.shape[index_mapping.control_points_u_facet_batched],
-        device=device,
+    u_lin = torch.linspace(0, 1, n_u, device=device)
+    v_lin = torch.linspace(0, 1, n_v, device=device)
+
+    facet_dimensions = torch.norm(canting, dim=index_mapping.canting)
+    u_coordinates = (
+        -facet_dimensions[:, index_mapping.e, None]
+        + 2 * facet_dimensions[:, index_mapping.e, None] * u_lin
     )
-    offsets_n = torch.linspace(
-        0,
-        1,
-        control_points.shape[index_mapping.control_points_v_facet_batched],
-        device=device,
-    )
-    start = -torch.norm(canting, dim=index_mapping.canting)
-    end = torch.norm(canting, dim=index_mapping.canting)
-    origin_offsets_e = (
-        start[:, index_mapping.e, None]
-        + (end - start)[:, index_mapping.e, None] * offsets_e[None, :]
-    )
-    origin_offsets_n = (
-        start[:, index_mapping.n, None]
-        + (end - start)[:, index_mapping.n, None] * offsets_n[None, :]
+    v_coordinates = (
+        -facet_dimensions[:, index_mapping.n, None]
+        + 2 * facet_dimensions[:, index_mapping.n, None] * v_lin
     )
 
-    control_points_e = origin_offsets_e[:, :, None].expand(
-        -1, -1, number_of_control_points[index_mapping.nurbs_u]
-    )
-    control_points_n = origin_offsets_n[:, None, :].expand(
-        -1, number_of_control_points[index_mapping.nurbs_v], -1
-    )
-
-    control_points[:, :, :, index_mapping.e] = control_points_e
-    control_points[:, :, :, index_mapping.n] = control_points_n
-    control_points[:, :, :, index_mapping.u] = 0
+    control_points[..., index_mapping.nurbs_u] = u_coordinates[:, :, None]
+    control_points[..., index_mapping.nurbs_v] = v_coordinates[:, None, :]
 
     return control_points
 
