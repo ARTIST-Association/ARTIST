@@ -12,7 +12,7 @@ def find_calibration_data(
     heliostat_names: list[str] | None,
     date: str,
     maximum_number_of_measurements: int,
-    kinematic_reconstruction_image_type: str,
+    kinematics_reconstruction_image_type: str,
     surface_reconstruction_image_type: str,
     excluded_heliostats: set[str] | None,
     data_dir: pathlib.Path,
@@ -40,8 +40,8 @@ def find_calibration_data(
         calibration entries in time (when heliostat_names is None).
     maximum_number_of_measurements : int
         Maximum number of calibration entries to select per heliostat when performing nearest-time selection.
-    kinematic_reconstruction_image_type : str
-        The type of calibration image to use for the kinematic reconstruction, i.e., ''flux'', or ''flux-centered''.
+    kinematics_reconstruction_image_type : str
+        The type of calibration image to use for the kinematics reconstruction, i.e., ''flux'', or ''flux-centered''.
     surface_reconstruction_image_type : str
         The type of calibration image to use for the surface reconstruction, i.e., ''flux'', or ''flux-centered''.
     excluded_heliostats : set[str] | None
@@ -55,7 +55,7 @@ def find_calibration_data(
         A list of tuples containing:
         - The heliostat name.
         - A list of valid calibration file paths.
-        - A list of flux image file paths for kinematic reconstruction.
+        - A list of flux image file paths for kinematics reconstruction.
         - A list of flux image file paths for surface reconstruction.
         - The associated heliostat properties path.
     """
@@ -96,11 +96,11 @@ def find_calibration_data(
                 / "Calibration"
                 / f"{id_}-calibration-properties.json"
             )
-            kinematic_flux_path = (
+            kinematics_flux_path = (
                 data_dir
                 / heliostat_id
                 / "Calibration"
-                / f"{id_}-{kinematic_reconstruction_image_type}.png"
+                / f"{id_}-{kinematics_reconstruction_image_type}.png"
             )
             surface_flux_path = (
                 data_dir
@@ -111,12 +111,12 @@ def find_calibration_data(
 
             if (
                 calibration_properties_path.exists()
-                and kinematic_flux_path.exists()
+                and kinematics_flux_path.exists()
                 and surface_flux_path.exists()
             ):
                 valid_ids.append(id_)
                 calibration_properties.append(calibration_properties_path)
-                kinematics_reconstruction_fluxes.append(kinematic_flux_path)
+                kinematics_reconstruction_fluxes.append(kinematics_flux_path)
                 surface_reconstruction_fluxes.append(surface_flux_path)
 
         if not valid_ids:
@@ -159,8 +159,8 @@ if __name__ == "__main__":
         Path to where the results will be saved.
     minimum_number_of_measurements : int
         Minimum number of calibration measurements per heliostat required.
-    kinematic_reconstruction_image_type : str
-        Type of calibration image to use for the kinematic reconstruction, i.e., flux or flux-centered.
+    kinematics_reconstruction_image_type : str
+        Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
     surface_reconstruction_image_type : str
         Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
     excluded_heliostats_for_reconstruction : list[str]
@@ -208,8 +208,8 @@ if __name__ == "__main__":
         "maximum_number_of_measurements", 4
     )
     date_of_measurement_default = config.get("date_of_measurement", "2021-09-16")
-    kinematic_reconstruction_image_type_default = config.get(
-        "kinematic_reconstruction_image_type", "flux"
+    kinematics_reconstruction_image_type_default = config.get(
+        "kinematics_reconstruction_image_type", "flux"
     )
     surface_reconstruction_image_type_default = config.get(
         "surface_reconstruction_image_type", "flux-centered"
@@ -256,11 +256,11 @@ if __name__ == "__main__":
         default=date_of_measurement_default,
     )
     parser.add_argument(
-        "--kinematic_reconstruction_image_type",
+        "--kinematics_reconstruction_image_type",
         type=str,
-        help="Type of calibration image to use for the kinematic reconstruction, i.e., flux or flux-centered.",
+        help="Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.",
         choices=["flux", "flux-centered"],
-        default=kinematic_reconstruction_image_type_default,
+        default=kinematics_reconstruction_image_type_default,
     )
     parser.add_argument(
         "--surface_reconstruction_image_type",
@@ -302,7 +302,7 @@ if __name__ == "__main__":
             heliostat_names=heliostat_list,
             date=args.date_of_measurement,
             maximum_number_of_measurements=args.maximum_number_of_measurements,
-            kinematic_reconstruction_image_type=args.kinematic_reconstruction_image_type,
+            kinematics_reconstruction_image_type=args.kinematics_reconstruction_image_type,
             surface_reconstruction_image_type=args.surface_reconstruction_image_type,
             excluded_heliostats=excluded_heliostats,
             data_dir=data_dir,
@@ -314,8 +314,8 @@ if __name__ == "__main__":
                 "calibrations": [
                     str(calibration_path) for calibration_path in calibration_paths
                 ],
-                "kinematic_reconstruction_flux_images": [
-                    str(flux_path) for flux_path in kinematic_reconstruction_flux_paths
+                "kinematics_reconstruction_flux_images": [
+                    str(flux_path) for flux_path in kinematics_reconstruction_flux_paths
                 ],
                 "surface_reconstruction_flux_images": [
                     str(flux_path)
@@ -323,7 +323,7 @@ if __name__ == "__main__":
                 ],
                 "properties": str(properties_path),
             }
-            for heliostat_name, calibration_paths, kinematic_reconstruction_flux_paths, surface_reconstruction_flux_image_path, properties_path in heliostat_data_list
+            for heliostat_name, calibration_paths, kinematics_reconstruction_flux_paths, surface_reconstruction_flux_image_path, properties_path in heliostat_data_list
         ]
 
         results_path = pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
