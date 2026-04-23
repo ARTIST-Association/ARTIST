@@ -782,8 +782,11 @@ def create_planar_nurbs_control_points(
     """
     device = get_device(device=device)
 
-    n_u = number_of_control_points[index_mapping.nurbs_u]
-    n_v = number_of_control_points[index_mapping.nurbs_v]
+    number_of_control_points = number_of_control_points.to(device)
+    canting = canting.to(device)
+
+    n_u = int(number_of_control_points[index_mapping.nurbs_u].item())
+    n_v = int(number_of_control_points[index_mapping.nurbs_v].item())
 
     control_points = torch.zeros(
         (
@@ -1145,10 +1148,8 @@ def convert_wgs84_coordinates_to_local_enu(
     device = get_device(device=device)
 
     # Ensure inputs are on the target device and use consistent dtype.
-    coordinates_to_transform = coordinates_to_transform.to(
-        device=device, dtype=torch.float32
-    )
-    reference_point = reference_point.to(device=device, dtype=torch.float32)
+    coordinates_to_transform = coordinates_to_transform.to(device=device)
+    reference_point = reference_point.to(device=device)
 
     transformed_coordinates = torch.zeros_like(
         coordinates_to_transform, dtype=torch.float32, device=device
