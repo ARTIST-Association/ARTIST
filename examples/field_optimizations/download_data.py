@@ -22,6 +22,7 @@ minimum_number_of_measurements : int
 import argparse
 import pathlib
 import warnings
+from typing import Any
 
 import paint.util.paint_mappings as paint_mappings
 import pandas as pd
@@ -47,11 +48,11 @@ if __name__ == "__main__":
     # Parse the config argument first to load the configuration.
     args, unknown = parser.parse_known_args()
     config_path = pathlib.Path(args.config)
-    config = {}
+    config: dict[str, Any] = {}
     if config_path.exists():
         try:
             with open(config_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f)
+                config = yaml.safe_load(f) or {}
         except yaml.YAMLError as exc:
             warnings.warn(f"Error parsing YAML file: {exc}")
     else:
