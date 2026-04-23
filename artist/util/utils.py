@@ -788,19 +788,23 @@ def create_planar_nurbs_control_points(
     n_u = int(number_of_control_points[index_mapping.nurbs_u].item())
     n_v = int(number_of_control_points[index_mapping.nurbs_v].item())
 
+    number_of_facets = canting.shape[index_mapping.facet_index_unbatched]
+
     control_points = torch.zeros(
         (
-            canting.shape[index_mapping.facet_index_unbatched],
+            number_of_facets,
             n_u,
             n_v,
             3,
         ),
         device=device,
+        dtype=canting.dtype,
     )
 
-    u_lin = torch.linspace(0, 1, n_u, device=device)
-    v_lin = torch.linspace(0, 1, n_v, device=device)
+    u_lin = torch.linspace(0, 1, n_u, device=device, dtype=canting.dtype)
+    v_lin = torch.linspace(0, 1, n_v, device=device, dtype=canting.dtype)
 
+    # Per-facet extents in local in-plane directions.
     facet_dimensions = torch.norm(canting, dim=index_mapping.canting)
     u_coordinates = (
         -facet_dimensions[:, index_mapping.e, None]
@@ -848,36 +852,49 @@ def perform_canting(
         The (de-)canted data.
         Shape is ``[number_of_surfaces, number_of_facets, number_of_points_per_facet, 4]``.
     """
+    device = get_device(device=device)
+    canting_angles = canting_angles.to(device)
+    data = data.to(device)
+
     number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
     number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
+
     rotation_matrix = torch.zeros(
-        (number_of_surfaces, number_of_facets_per_surface, 4, 4), device=device
+        (number_of_surfaces, number_of_facets_per_surface, 4, 4),
+        device=device,
+        dtype=data.dtype,
     )
 
+    # Extract ENU basis candidates from canting tensor (drop homogeneous component).
     e = canting_angles[:, :, index_mapping.e, : index_mapping.slice_fourth_dimension]
     n = canting_angles[:, :, index_mapping.n, : index_mapping.slice_fourth_dimension]
-    u = torch.linalg.cross(e, n, dim=2)
 
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = (
-        torch.nn.functional.normalize(e, dim=-1)
-    )
+    # Build a numerically stable orthonormal basis:
+    # 1) normalize e
+    e = torch.nn.functional.normalize(e, dim=-1)
+    # 2) u = normalize(e x n)
+    u = torch.linalg.cross(e, n, dim=-1)
+    u = torch.nn.functional.normalize(u, dim=-1, eps=1e-8)
+    # 3) n_ortho = normalize(u x e)
+    n_ortho = torch.linalg.cross(u, e, dim=-1)
+    n_ortho = torch.nn.functional.normalize(n_ortho, dim=-1, eps=1e-8)
+
+    # Fill rotation matrix columns with ENU basis vectors.
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = e
     rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.n] = (
-        torch.nn.functional.normalize(n, dim=-1)
+        n_ortho
     )
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = (
-        torch.nn.functional.normalize(u, dim=-1)
-    )
-
+    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = u
     rotation_matrix[
         :, :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
     ] = 1.0
 
+    # Data is represented as row vectors (..., 4); therefore:
+    # - forward canting uses R^T
+    # - inverse canting uses R
     if inverse:
-        canted_data = data @ rotation_matrix
-    else:
-        canted_data = data @ rotation_matrix.mT
-
-    return canted_data
+        return data @ rotation_matrix
+    return data @ rotation_matrix.mT
 
 
 def trapezoid_distribution(
