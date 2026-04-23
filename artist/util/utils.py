@@ -716,11 +716,11 @@ def create_nurbs_evaluation_grid(
     ----------
     number_of_evaluation_points : torch.Tensor
         The number of nurbs evaluation points in east and north direction.
-        Shape is [2].
+        Shape is ``[2]``.
     epsilon : float
         Offset for the NURBS evaluation points (default is 1e-7).
-        NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints
-        therefore the evaluation points need a small offset from the endpoints.
+        NURBS are defined in the interval of [0, 1] but have numerical instabilities at their endpoints.
+        Therefore, the evaluation points need a small offset from the endpoints.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -730,25 +730,23 @@ def create_nurbs_evaluation_grid(
     -------
     torch.Tensor
         The evaluation points.
-        Shape is [number_of_evaluation_points_e * number_of_evaluation_points_n, 2].
+        Shape is ``[number_of_evaluation_points_e * number_of_evaluation_points_n, 2]``.
     """
     device = get_device(device=device)
 
     evaluation_points_e = torch.linspace(
         epsilon,
         1 - epsilon,
-        number_of_evaluation_points[index_mapping.evaluation_points_e],
+        int(number_of_evaluation_points[index_mapping.evaluation_points_e].item()),
         device=device,
     )
     evaluation_points_n = torch.linspace(
         epsilon,
         1 - epsilon,
-        number_of_evaluation_points[index_mapping.evaluation_points_n],
+        int(number_of_evaluation_points[index_mapping.evaluation_points_n].item()),
         device=device,
     )
-    evaluation_points = torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
-
-    return evaluation_points
+    return torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
 
 
 def create_ideal_canted_nurbs_control_points(
@@ -758,19 +756,19 @@ def create_ideal_canted_nurbs_control_points(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create ideal, canted and translated control points for each facet.
+    Create ideal, canted, and translated control points for each facet.
 
     Parameters
     ----------
     number_of_control_points : torch.Tensor
         The number of NURBS control points.
-        Shape is [2].
+        Shape is ``[2]``.
     canting : torch.Tensor
         The canting vector for each facet.
-        Shape is [number_of_facets, 2, 4].
+        Shape is ``[number_of_facets, 2, 4]``.
     facet_translation_vectors : torch.Tensor
         The facet translation vector for each facet.
-        Shape is [number_of_facets, 4].
+        Shape is ``[number_of_facets, 4]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -780,7 +778,7 @@ def create_ideal_canted_nurbs_control_points(
     -------
     torch.Tensor
         The canted and translated ideal NURBS control points.
-        Shape is [number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+        Shape is ``[number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
     """
     device = get_device(device=device)
 
@@ -791,8 +789,8 @@ def create_ideal_canted_nurbs_control_points(
     control_points = torch.zeros(
         (
             number_of_facets,
-            number_of_control_points[index_mapping.nurbs_u],
-            number_of_control_points[index_mapping.nurbs_v],
+            int(number_of_control_points[index_mapping.nurbs_u].item()),
+            int(number_of_control_points[index_mapping.nurbs_v].item()),
             3,
         ),
         device=device,
@@ -811,7 +809,7 @@ def create_ideal_canted_nurbs_control_points(
         device=device,
     )
     start = -torch.norm(canting, dim=index_mapping.canting)
-    end = torch.norm(canting, dim=index_mapping.canting)
+    end = -start
     origin_offsets_e = (
         start[:, index_mapping.e, None]
         + (end - start)[:, index_mapping.e, None] * offsets_e[None, :]
@@ -822,15 +820,14 @@ def create_ideal_canted_nurbs_control_points(
     )
 
     control_points_e = origin_offsets_e[:, :, None].expand(
-        -1, -1, number_of_control_points[index_mapping.nurbs_u]
+        -1, -1, int(number_of_control_points[index_mapping.nurbs_u].item())
     )
     control_points_n = origin_offsets_n[:, None, :].expand(
-        -1, number_of_control_points[index_mapping.nurbs_v], -1
+        -1, int(number_of_control_points[index_mapping.nurbs_v].item()), -1
     )
 
     control_points[:, :, :, index_mapping.e] = control_points_e
     control_points[:, :, :, index_mapping.n] = control_points_n
-    control_points[:, :, :, index_mapping.u] = 0
 
     return control_points
 
@@ -848,12 +845,13 @@ def perform_canting(
     ----------
     canting_angles : torch.Tensor
         Canting angles.
-        Shape is [number_of_surfaces, number_of_facets, 2, 4].
+        Shape is ``[number_of_surfaces, number_of_facets, 2, 4]``.
     data : torch.Tensor
         Data to be canted.
-        Shape is [number_of_surfaces, number_of_facets, number_of_points_per_facet, 4].
+        Shape is ``[number_of_surfaces, number_of_facets, number_of_points_per_facet, 4]``.
     inverse : bool
-        Indicates the direction of the rotation. Use ``inverse=False`` for canting and ``inverse=True`` for decanting (default is False).
+        Indicates the direction of the rotation.
+        Use ``inverse=False`` for canting and ``inverse=True`` for decanting (default is False).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -863,7 +861,7 @@ def perform_canting(
     -------
     torch.Tensor
         The (de-)canted data.
-        Shape is [number_of_surfaces, number_of_facets, number_of_points_per_facet, 4].
+        Shape is ``[number_of_surfaces, number_of_facets, number_of_points_per_facet, 4]``.
     """
     number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
     number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
@@ -906,8 +904,8 @@ def trapezoid_distribution(
     """
     Create a one dimensional trapezoid distribution.
 
-    If the total width is less than 2 * slope_width + plateau_width, the slope is cut off.
-    If total total width is greater than 2 * slope_width + plateau_width the trapezoid is
+    If the total width is less than ``2 * slope_width + plateau_width``, the slope is cut off.
+    If the total width is greater than ``2 * slope_width + plateau_width``, the trapezoid is
     padded with zeros on both sides.
 
     Parameters
@@ -927,7 +925,7 @@ def trapezoid_distribution(
     -------
     torch.Tensor
         The one dimensional trapezoid distribution.
-        Shape is [total_width].
+        Shape is ``[total_width]``.
     """
     indices = torch.arange(total_width, device=device)
     center = (total_width - 1) / 2
@@ -960,12 +958,12 @@ def crop_flux_distributions_around_center(
     ----------
     flux_distributions : torch.Tensor
         Flux density bitmaps, one per heliostat.
-        Shape is [number_of_bitmaps, bitmap_height, bitmap_width].
+        Shape is ``[number_of_bitmaps, bitmap_height, bitmap_width]``.
     solar_tower : SolarTower
         Solar tower containing the physical target area dimensions.
     target_area_indices : torch.Tensor
         Global target area index for each bitmap (planar indices first, cylindrical second).
-        Shape is [number_of_bitmaps].
+        Shape is ``[number_of_bitmaps]``.
     crop_width : float
         Desired width of the cropped region in meters (default is ``config_dictionary.utis_crop_width``).
     crop_height : float
@@ -979,7 +977,7 @@ def crop_flux_distributions_around_center(
     -------
     torch.Tensor
         Cropped and centered image regions.
-        Shape is [number_of_bitmaps, bitmap_height, bitmap_width].
+        Shape is ``[number_of_bitmaps, bitmap_height, bitmap_width]``.
     """
     device = get_device(device=device)
 
@@ -1013,9 +1011,10 @@ def crop_flux_distributions_around_center(
         < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
     )
     if target_area_indices[planar_mask].numel() > 0:
-        planar: TowerTargetAreasPlanar = solar_tower.target_areas[
-            index_mapping.planar_target_areas
-        ]  # type: ignore[assignment]
+        planar = cast(
+            TowerTargetAreasPlanar,
+            solar_tower.target_areas[index_mapping.planar_target_areas],
+        )
         target_dimensions[planar_mask] = planar.dimensions[
             target_area_indices[planar_mask]
         ]
@@ -1026,9 +1025,10 @@ def crop_flux_distributions_around_center(
                 index_mapping.planar_target_areas
             ]
         )
-        cylindrical: TowerTargetAreasCylindrical = solar_tower.target_areas[
-            index_mapping.cylindrical_target_areas
-        ]  # type: ignore[assignment]
+        cylindrical = cast(
+            TowerTargetAreasCylindrical,
+            solar_tower.target_areas[index_mapping.cylindrical_target_areas],
+        )
         target_dimensions[~planar_mask, index_mapping.target_dimensions_width] = (
             cylindrical.radii[cylinder_indices]
             * cylindrical.opening_angles[cylinder_indices]
@@ -1051,7 +1051,7 @@ def crop_flux_distributions_around_center(
     # Apply affine transform.
     images_expanded = flux_distributions[:, None, :, :]
     sampling_grid = torch.nn.functional.affine_grid(
-        affine_matrices, size=images_expanded.shape, align_corners=True
+        affine_matrices, size=list(images_expanded.shape), align_corners=True
     )
     cropped_images = torch.nn.functional.grid_sample(
         images_expanded, sampling_grid, align_corners=True, padding_mode="zeros"
@@ -1076,10 +1076,10 @@ def azimuth_elevation_to_enu(
     ----------
     azimuth : torch.Tensor
         Azimuth, 0° points toward the south (degrees).
-        Shape is [number_of_samples].
+        Shape is ``[number_of_samples]``.
     elevation : torch.Tensor
         Elevation angle above horizon, neglecting aberrations (degrees).
-        Shape is [number_of_samples].
+        Shape is ``[number_of_samples]``.
     slant_range : float
         Slant range in meters (default is 1.0).
     degree : bool
@@ -1092,8 +1092,8 @@ def azimuth_elevation_to_enu(
     Returns
     -------
     torch.Tensor
-        The east, north and up (ENU) coordinates.
-        Shape is [number_of_samples, 3].
+        The east, north, and up (ENU) coordinates.
+        Shape is ``[number_of_samples, 3]``.
     """
     device = get_device(device=device)
 
@@ -1122,7 +1122,7 @@ def convert_wgs84_coordinates_to_local_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from latitude, longitude and altitude (WGS84) to local east, north and up (ENU).
+    Transform coordinates from latitude, longitude, and altitude (WGS84) to local east, north, and up (ENU).
 
     This function calculates the north and east offsets in meters of a coordinate from the reference point.
     It converts the latitude and longitude to radians, calculates the radius of curvature values,
@@ -1133,10 +1133,10 @@ def convert_wgs84_coordinates_to_local_enu(
     ----------
     coordinates_to_transform : torch.Tensor
         The coordinates in latitude, longitude, altitude that are to be transformed.
-        Shape is [number_of_coordinates, 3].
+        Shape is ``[number_of_coordinates, 3]``.
     reference_point : torch.Tensor
         The center of origin of the ENU coordinate system in WGS84 coordinates.
-        Shape is [3].
+        Shape is ``[3]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -1146,7 +1146,7 @@ def convert_wgs84_coordinates_to_local_enu(
     -------
     torch.Tensor
         The east offsets in meters, north offsets in meters, and the altitude differences from the reference point.
-        Shape is [number_of_coordinates, 3].
+        Shape is ``[number_of_coordinates, 3]``.
     """
     device = get_device(device=device)
 
