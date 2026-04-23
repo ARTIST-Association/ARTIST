@@ -207,6 +207,19 @@ def test_nurbs_forward(device: torch.device) -> None:
     AssertionError
         If test does not complete as expected.
     """
+    canting = torch.tensor(
+        [
+            [
+                [
+                    [8.0249e-01, -0.0000e00, -4.7736e-03, 0.0000e00],
+                    [1.7949e-05, 6.3749e-01, 3.0172e-03, 0.0000e00],
+                ]
+            ]
+        ],
+        device=device,
+    )
+    facet_translation = torch.tensor([[[1.0, 0.0, 0.0, 0.0]]], device=device)
+
     evaluation_points = (
         torch.cartesian_prod(
             torch.linspace(1e-5, 1 - 1e-5, 2, device=device),
@@ -215,50 +228,15 @@ def test_nurbs_forward(device: torch.device) -> None:
         .unsqueeze(0)
         .unsqueeze(0)
     )
-    control_points = torch.tensor(
-        [
-            [
-                [
-                    [
-                        [-5.0000, -5.0000, 0.0000],
-                        [-5.0000, -1.6667, 0.0000],
-                        [-5.0000, 1.6667, 0.0000],
-                        [-5.0000, 5.0000, 0.0000],
-                    ],
-                    [
-                        [-1.6667, -5.0000, 0.0000],
-                        [-1.6667, -1.6667, 0.0000],
-                        [-1.6667, 1.6667, 0.0000],
-                        [-1.6667, 5.0000, 0.0000],
-                    ],
-                    [
-                        [1.6667, -5.0000, 0.0000],
-                        [1.6667, -1.6667, 0.0000],
-                        [1.6667, 1.6667, 0.0000],
-                        [1.6667, 5.0000, 0.0000],
-                    ],
-                    [
-                        [5.0000, -5.0000, 0.0000],
-                        [5.0000, -1.6667, 0.0000],
-                        [5.0000, 1.6667, 0.0000],
-                        [5.0000, 5.0000, 0.0000],
-                    ],
-                ]
-            ]
-        ],
-        device=device,
-    )
+    control_points = utils.create_planar_nurbs_control_points(
+        torch.tensor([4, 4], device=device), canting[0], device=device
+    )[None, ...]
 
     nurbs = NURBSSurfaces(
         degrees=torch.tensor([2, 2], device=device),
         control_points=control_points,
         device=device,
     )
-
-    canting = torch.tensor(
-        [[[[0.7071, 0.7071, 0.0, 0.0], [0.7071, 0.7071, 0.0, 0.0]]]], device=device
-    )
-    facet_translation = torch.tensor([[[[0.5, 0.0, 0.0, 0.0]]]], device=device)
 
     surface_points, surface_normals = nurbs(
         evaluation_points, canting, facet_translation, device
@@ -269,27 +247,27 @@ def test_nurbs_forward(device: torch.device) -> None:
             [
                 [
                     [
-                        -6.570879459381e00,
-                        -7.070879459381e00,
-                        0.000000000000e00,
+                        1.975133419037e-01,
+                        -6.374730467796e-01,
+                        1.756353536621e-03,
                         1.000000000000e00,
                     ],
                     [
-                        4.999997615814e-01,
-                        -2.384185791016e-07,
-                        0.000000000000e00,
+                        1.975492835045e-01,
+                        6.374730467796e-01,
+                        7.790592499077e-03,
                         1.000000000000e00,
                     ],
                     [
-                        4.999997615814e-01,
-                        -2.384185791016e-07,
-                        0.000000000000e00,
+                        1.802450656891e00,
+                        -6.374730467796e-01,
+                        -7.790592499077e-03,
                         1.000000000000e00,
                     ],
                     [
-                        7.570879459381e00,
-                        7.070879459381e00,
-                        0.000000000000e00,
+                        1.802486538887e00,
+                        6.374729871750e-01,
+                        -1.756352838129e-03,
                         1.000000000000e00,
                     ],
                 ]
@@ -297,14 +275,15 @@ def test_nurbs_forward(device: torch.device) -> None:
         ],
         device=device,
     )
+
     expected_normals = torch.tensor(
         [
             [
                 [
-                    [0.0, 0.0, -1.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
+                    [0.005948313046, -0.004732967820, 0.999971091747, 0.000000000000],
+                    [0.005948313046, -0.004732967820, 0.999971091747, 0.000000000000],
+                    [0.005948313046, -0.004732967820, 0.999971091747, 0.000000000000],
+                    [0.005948313046, -0.004732967820, 0.999971091747, 0.000000000000],
                 ]
             ]
         ],
