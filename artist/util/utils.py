@@ -1068,7 +1068,7 @@ def azimuth_elevation_to_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from azimuth and elevation to east, north and up.
+    Transform coordinates from azimuth and elevation to east, north, and up.
 
     This method assumes a south-oriented azimuth-elevation coordinate system, where 0° points toward the south.
 
@@ -1097,11 +1097,18 @@ def azimuth_elevation_to_enu(
     """
     device = get_device(device=device)
 
+    azimuth = azimuth.to(device=device, dtype=torch.float32)
+    elevation = elevation.to(device=device, dtype=torch.float32)
+
+    if azimuth.shape != elevation.shape:
+        raise ValueError("``azimuth`` and ``elevation`` must have identical shapes.")
+
     if degree:
         elevation = torch.deg2rad(elevation)
         azimuth = torch.deg2rad(azimuth)
 
-    azimuth[azimuth < 0] += 2 * torch.pi
+    # Normalize azimuth to [0, 2π).
+    azimuth = torch.remainder(azimuth, 2 * torch.pi)
 
     r = slant_range * torch.cos(elevation)
 
@@ -1110,7 +1117,9 @@ def azimuth_elevation_to_enu(
     )
 
     enu[:, index_mapping.e] = r * torch.sin(azimuth)
-    enu[:, index_mapping.n] = -r * torch.cos(azimuth)
+    enu[:, index_mapping.n] = -r * torch.cos(
+        azimuth
+    )  # South-oriented azimuth convention
     enu[:, index_mapping.u] = slant_range * torch.sin(elevation)
 
     return enu
@@ -1122,12 +1131,15 @@ def convert_wgs84_coordinates_to_local_enu(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Transform coordinates from latitude, longitude, and altitude (WGS84) to local east, north, and up (ENU).
+    Transform WGS84 coordinates (latitude, longitude, altitude) to local east, north, and up (ENU) offsets.
 
     This function calculates the north and east offsets in meters of a coordinate from the reference point.
     It converts the latitude and longitude to radians, calculates the radius of curvature values,
     and then computes the offsets based on the differences between the coordinate and the reference point.
     Finally, it returns a tensor containing these offsets along with the altitude difference.
+
+    Note that this implementation uses a local differential approximation (small-distance linearization),
+    not a full ECEF->ENU transform. It is most accurate for coordinates near the reference point.
 
     Parameters
     ----------
@@ -1150,13 +1162,20 @@ def convert_wgs84_coordinates_to_local_enu(
     """
     device = get_device(device=device)
 
+    # Ensure inputs are on the target device and use consistent dtype.
+    coordinates_to_transform = coordinates_to_transform.to(
+        device=device, dtype=torch.float32
+    )
+    reference_point = reference_point.to(device=device, dtype=torch.float32)
+
     transformed_coordinates = torch.zeros_like(
         coordinates_to_transform, dtype=torch.float32, device=device
     )
 
-    wgs84_a = 6378137.0  # Major axis in meters.
-    wgs84_b = 6356752.314245  # Minor axis in meters.
-    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity squared.
+    # WGS84 ellipsoid constants
+    wgs84_a = 6378137.0  # Major axis in meters
+    wgs84_b = 6356752.314245  # Minor axis in meters
+    wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity^2
 
     # Convert latitude and longitude to radians.
     latitudes = torch.deg2rad(coordinates_to_transform[:, index_mapping.latitude])
