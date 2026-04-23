@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+"""
+Run this script second to download the required calibration, deflectometry, and tower data.
+
+The data will be downloaded based on the minimum number of calibration measurements required. If a certain heliostat
+does not contain the required number of measurements, its data will not be downloaded.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+data_dir : str
+    Path to the directory used for storing the data.
+metadata_root : str
+    Path to the root directory where the metadata folder is stored.
+metadata_file_name : str
+    Name of the metadata file.
+minimum_number_of_measurements : int
+    Minimum number of calibration measurements per heliostat required.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -12,25 +32,6 @@ from paint.util import set_logger_config
 set_logger_config()
 
 if __name__ == "__main__":
-    """
-    This script should be run second to download the required calibration, deflectometry, and tower data.
-
-    The data will be downloaded based on the minimum number of calibration measurements required. If a certain heliostat
-    does not contain the required number of measurements, its data will not be downloaded.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    data_dir : str
-        Path to the directory used for storing the data.
-    metadata_root : str
-        Path to the root directory where the metadata folder is stored.
-    metadata_file_name : str
-        Name of the metadata file.
-    minimum_number_of_measurements : int
-        Minimum number of calibration measurements per heliostat required.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
@@ -49,14 +50,12 @@ if __name__ == "__main__":
     config = {}
     if config_path.exists():
         try:
-            with open(config_path, "r") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         except yaml.YAMLError as exc:
             warnings.warn(f"Error parsing YAML file: {exc}")
     else:
-        warnings.warn(
-            f"Warning: Configuration file not found at {config_path}. Using defaults."
-        )
+        warnings.warn(f"Configuration file not found at {config_path}. Using defaults.")
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     data_dir_default = config.get("data_dir", "./paint_data")
@@ -96,7 +95,7 @@ if __name__ == "__main__":
     )
 
     # Re-parse the full set of arguments.
-    args = parser.parse_args(args=unknown)
+    args = parser.parse_args()
 
     # Create STAC client.
     client = StacClient(output_dir=args.data_dir)
