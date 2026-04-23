@@ -38,7 +38,7 @@ def test_target_area_load_from_hdf5(
     mock_height.__getitem__.return_value = 6.0
 
     mock_opening_angle = mock.MagicMock()
-    mock_opening_angle.__getitem__.return_value = 180.0
+    mock_opening_angle.__getitem__.return_value = torch.pi
 
     mock_axis = mock.MagicMock()
     mock_axis.__getitem__.return_value = [0.0, 0.0, 1.0, 0.0]
@@ -105,7 +105,7 @@ def test_target_area_load_from_hdf5(
     )
     torch.testing.assert_close(
         target_areas.opening_angles,
-        torch.tensor([180.0], device=device),
+        torch.tensor([torch.pi], device=device),
         atol=1e-5,
         rtol=1e-5,
     )
