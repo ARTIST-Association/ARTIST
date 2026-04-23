@@ -904,7 +904,7 @@ def trapezoid_distribution(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Create a one dimensional trapezoid distribution.
+    Create a one-dimensional trapezoid distribution.
 
     If the total width is less than ``2 * slope_width + plateau_width``, the slope is cut off.
     If the total width is greater than ``2 * slope_width + plateau_width``, the trapezoid is
@@ -913,7 +913,7 @@ def trapezoid_distribution(
     Parameters
     ----------
     total_width : int
-        The total width of the trapezoid.
+        The total width of the trapezoid. Must be > 0.
     slope_width : int
         The width of the slope of the trapezoid.
     plateau_width : int
@@ -929,16 +929,19 @@ def trapezoid_distribution(
         The one dimensional trapezoid distribution.
         Shape is ``[total_width]``.
     """
+    device = get_device(device=device)
     indices = torch.arange(total_width, device=device)
-    center = (total_width - 1) / 2
-    half_plateau = plateau_width / 2
+    center = (total_width - 1) / 2.0
+    half_plateau = plateau_width / 2.0
 
     # Distances from the plateau edge.
     distances = torch.abs(indices - center) - half_plateau
 
-    trapezoid = 1 - (distances / slope_width).clamp(min=0, max=1)
+    # Special case: no slope -> hard plateau/rectangle.
+    if slope_width == 0:
+        return (distances <= 0).to(dtype=torch.float32)
 
-    return trapezoid
+    return 1 - (distances / slope_width).clamp(min=0, max=1)
 
 
 def crop_flux_distributions_around_center(
@@ -983,9 +986,12 @@ def crop_flux_distributions_around_center(
     """
     device = get_device(device=device)
 
+    target_area_indices = target_area_indices.to(device)
+    flux_distributions = flux_distributions.to(device)
+
     number_of_flux_distributions, image_height, image_width = flux_distributions.shape
 
-    # Compute center of mass.
+    # Compute center of mass in normalized image coordinates [-1, 1].
     normalized_mass_map = flux_distributions / (
         flux_distributions.sum(
             dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
@@ -1007,6 +1013,7 @@ def crop_flux_distributions_around_center(
         dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
     )
 
+    # Gather target dimensions per bitmap (width, height) in meters.
     target_dimensions = torch.empty((number_of_flux_distributions, 2), device=device)
     planar_mask = (
         target_area_indices
@@ -1039,9 +1046,18 @@ def crop_flux_distributions_around_center(
             cylindrical.heights[cylinder_indices]
         )
 
+    # Robust division for very small dimensions.
+    epsilon = 1e-8
+    width = target_dimensions[:, index_mapping.target_dimensions_width].clamp(
+        min=epsilon
+    )
+    height = target_dimensions[:, index_mapping.target_dimensions_height].clamp(
+        min=epsilon
+    )
+
     # Compute scale to match desired crop size in meters.
-    scale_x = crop_width / target_dimensions[:, index_mapping.target_dimensions_width]
-    scale_y = crop_height / target_dimensions[:, index_mapping.target_dimensions_height]
+    scale_x = crop_width / width
+    scale_y = crop_height / height
 
     # Build affine transform matrices (scale and center).
     affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)
