@@ -1,44 +1,53 @@
 import argparse
 import json
 import pathlib
-import re
 import warnings
 
-import paint.util.paint_mappings as paint_mappings
+import pandas as pd
 import yaml
 
 
-def find_viable_heliostats(
-    data_directory: pathlib.Path,
-    minimum_number_of_measurements: int,
+def find_calibration_data(
+    metadata_file: pathlib.Path,
+    heliostat_names: list[str] | None,
+    date: str,
+    maximum_number_of_measurements: int,
     kinematic_reconstruction_image_type: str,
     surface_reconstruction_image_type: str,
-    excluded_heliostats: set[str],
-    heliostat_list: list[str] | None = None,
+    excluded_heliostats: set[str] | None,
+    data_dir: pathlib.Path,
 ) -> list[
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path], pathlib.Path]
 ]:
     """
-    Find heliostats that have at least a minimum number of valid calibration files.
+    Select calibration file paths for heliostats based on metadata filtering.
 
-    This function iterates through a data directory to find all heliostats having at least the minimum number of measurements
-    calibration files. All paths are collected, and a sorted list of the  heliostats is returned containing tuples including
-    the heliostat name, path to the calibration file, and path to the flux images for surface and kinematic reconstruction.
+    The function reads a metadata CSV file and selects calibration entries per heliostat.
+    If `heliostat_names` is provided, only those heliostats are considered and entries
+    are filtered to the exact date (YYYY-MM-DD match). If `heliostat_names` is None,
+    all heliostats are considered and the function selects the `maximum_number_of_measurements`
+    calibration entries closest in time to the provided date per heliostat.
 
     Parameters
     ----------
-    data_directory : pathlib.Path
-        The path to the data directory.
-    minimum_number_of_measurements : int
-        The minimum number of calibration files required.
+    metadata_file : pathlib.Path
+        Path to the CSV file containing metadata of all available calibration data.
+    heliostat_names : list[str] | None
+        Optional list of heliostat identifiers to include. If None, all heliostats are included (default is None).
+    date : str
+        Reference date in 'YYYY-MM-DD' format. Used either for exact day filtering
+        (when heliostat_names is provided) or as a reference for selecting the closest
+        calibration entries in time (when heliostat_names is None).
+    maximum_number_of_measurements : int
+        Maximum number of calibration entries to select per heliostat when performing nearest-time selection.
     kinematic_reconstruction_image_type : str
         The type of calibration image to use for the kinematic reconstruction, i.e., ''flux'', or ''flux-centered''.
     surface_reconstruction_image_type : str
         The type of calibration image to use for the surface reconstruction, i.e., ''flux'', or ''flux-centered''.
-    excluded_heliostats : set[str]
-        Heliostat names to exclude from the reconstruction process.
-    heliostat_list : list[str] | None
-        An optional list of heliostat names, if included only these heliostats will be collected (default is None).
+    excluded_heliostats : set[str] | None
+        Heliostats to exclude from processing. This filter is applied globally and overrides `heliostat_names` selection (default is None).
+    data_dir : pathlib.Path
+        Path to the data directory containing the calibration and heliostat data.
 
     Returns
     -------
@@ -50,100 +59,83 @@ def find_viable_heliostats(
         - A list of flux image file paths for surface reconstruction.
         - The associated heliostat properties path.
     """
-    heliostat_name_pattern = re.compile(r"^[A-Z]{2}[0-9]{2}$")
-    found_heliostats = []
+    df = pd.read_csv(metadata_file)
+    df["DateTime"] = pd.to_datetime(df["DateTime"])
 
-    json_suffix_to_remove = (
-        paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER.removesuffix(".json")
-    )
+    if excluded_heliostats:
+        df = df[~df["HeliostatId"].isin(excluded_heliostats)]
 
-    all_heliostats = (
-        directory
-        for directory in data_directory.iterdir()
-        if directory.is_dir()
-        and heliostat_name_pattern.match(directory.name)
-        and (heliostat_list is None or directory.name in heliostat_list)
-    )
-
-    for heliostat_directory in sorted(all_heliostats):
-        heliostat_name = heliostat_directory.name
-
-        if heliostat_name in excluded_heliostats:
-            print(f"Skipping {heliostat_name}, part of the excluded heliostats list")
-            continue
-
-        properties_path = (
-            heliostat_directory
-            / paint_mappings.SAVE_PROPERTIES
-            / f"{paint_mappings.HELIOSTAT_PROPERTIES_SAVE_NAME % heliostat_name}"
+    if heliostat_names is not None:
+        df = df[df["HeliostatId"].isin(heliostat_names)]
+        df = df[df["DateTime"].dt.strftime("%Y-%m-%d").str.startswith(date)]
+        grouped = df.groupby("HeliostatId")["Id"].apply(list).to_dict()
+    else:
+        target_date = pd.to_datetime(date, utc=True)
+        df["time_diff"] = (df["DateTime"] - target_date).abs()
+        grouped = (
+            df.sort_values("time_diff")
+            .groupby("HeliostatId")
+            .head(maximum_number_of_measurements)
+            .groupby("HeliostatId")["Id"]
+            .apply(list)
+            .to_dict()
         )
-        calibration_dir = heliostat_directory / paint_mappings.SAVE_CALIBRATION
 
-        if not calibration_dir.exists():
-            print(
-                f"Skipping {heliostat_name}, no calibration directory found for this heliostat."
+    data_mapping = []
+    for heliostat_id, id_list in grouped.items():
+        calibration_properties = []
+        kinematics_reconstruction_fluxes = []
+        surface_reconstruction_fluxes = []
+
+        valid_ids = []
+
+        for id_ in id_list:
+            calibration_properties_path = (
+                data_dir
+                / heliostat_id
+                / "Calibration"
+                / f"{id_}-calibration-properties.json"
             )
+            kinematic_flux_path = (
+                data_dir
+                / heliostat_id
+                / "Calibration"
+                / f"{id_}-{kinematic_reconstruction_image_type}.png"
+            )
+            surface_flux_path = (
+                data_dir
+                / heliostat_id
+                / "Calibration"
+                / f"{id_}-{surface_reconstruction_image_type}.png"
+            )
+
+            if (
+                calibration_properties_path.exists()
+                and kinematic_flux_path.exists()
+                and surface_flux_path.exists()
+            ):
+                valid_ids.append(id_)
+                calibration_properties.append(calibration_properties_path)
+                kinematics_reconstruction_fluxes.append(kinematic_flux_path)
+                surface_reconstruction_fluxes.append(surface_flux_path)
+
+        if not valid_ids:
             continue
 
-        valid_calibration_files = []
-        flux_images_kinematic_reconstruction = []
-        flux_images_surface_reconstruction = []
-
-        for calibration_file_path in sorted(
-            calibration_dir.glob(f"*{paint_mappings.CALIBRATION_PROPERTIES_IDENTIFIER}")
-        ):
-            try:
-                with calibration_file_path.open("r") as f:
-                    calibration_data = json.load(f)
-                    focal_spot_data = calibration_data.get(
-                        paint_mappings.FOCAL_SPOT_KEY, {}
-                    )
-
-                    if paint_mappings.UTIS_KEY in focal_spot_data:
-                        # Check for the existence of the corresponding flux image.
-                        file_stem = calibration_file_path.stem.removesuffix(
-                            json_suffix_to_remove
-                        )
-                        kinematic_reconstruction_flux_image_path = (
-                            calibration_dir
-                            / f"{file_stem}-{kinematic_reconstruction_image_type}.png"
-                        )
-                        surface_reconstruction_flux_image_path = (
-                            calibration_dir
-                            / f"{file_stem}-{surface_reconstruction_image_type}.png"
-                        )
-
-                        if (
-                            kinematic_reconstruction_flux_image_path.exists()
-                            and surface_reconstruction_flux_image_path.exists()
-                        ):
-                            valid_calibration_files.append(calibration_file_path)
-                            flux_images_kinematic_reconstruction.append(
-                                kinematic_reconstruction_flux_image_path
-                            )
-                            flux_images_surface_reconstruction.append(
-                                surface_reconstruction_flux_image_path
-                            )
-            except Exception as e:
-                print(f"Warning: Skipping {calibration_file_path} due to error: {e}")
-
-        if len(valid_calibration_files) >= minimum_number_of_measurements:
-            found_heliostats.append(
-                (
-                    heliostat_name,
-                    valid_calibration_files[:minimum_number_of_measurements],
-                    flux_images_kinematic_reconstruction[
-                        :minimum_number_of_measurements
-                    ],
-                    flux_images_surface_reconstruction[:minimum_number_of_measurements],
-                    properties_path,
-                )
+        data_mapping.append(
+            (
+                heliostat_id,
+                calibration_properties,
+                kinematics_reconstruction_fluxes,
+                surface_reconstruction_fluxes,
+                data_dir
+                / heliostat_id
+                / "Properties"
+                / f"{heliostat_id}-heliostat-properties.json",
             )
-            print(
-                f"Added heliostat {heliostat_name}. Found {len(found_heliostats)} so far."
-            )
+        )
 
-    return sorted(found_heliostats, key=lambda x: x[0])
+    return data_mapping
 
 
 if __name__ == "__main__":
@@ -205,13 +197,17 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
+    metadata_file_default = config.get(
+        "metadata_file_name", "calibration_metadata_all_heliostats.csv"
+    )
     data_dir_default = config.get("data_dir", "./paint_data")
     results_dir_default = config.get(
         "results_dir", "./examples/field_optimizations/results"
     )
-    minimum_number_of_measurements_default = config.get(
-        "minimum_number_of_measurements", 4
+    maximum_number_of_measurements_default = config.get(
+        "maximum_number_of_measurements", 4
     )
+    date_of_measurement_default = config.get("date_of_measurement", "2021-09-16")
     kinematic_reconstruction_image_type_default = config.get(
         "kinematic_reconstruction_image_type", "flux"
     )
@@ -230,6 +226,12 @@ if __name__ == "__main__":
         default=device_default,
     )
     parser.add_argument(
+        "--metadata_file_name",
+        type=str,
+        help="Name of metadata file.",
+        default=metadata_file_default,
+    )
+    parser.add_argument(
         "--data_dir",
         type=str,
         help="Path to the data directory.",
@@ -242,10 +244,16 @@ if __name__ == "__main__":
         default=results_dir_default,
     )
     parser.add_argument(
-        "--minimum_number_of_measurements",
+        "--maximum_number_of_measurements",
         type=int,
-        help="Minimum number of calibration measurements per heliostat required.",
-        default=minimum_number_of_measurements_default,
+        help="Maximum number of calibration measurements per heliostat.",
+        default=maximum_number_of_measurements_default,
+    )
+    parser.add_argument(
+        "--date_of_measurement",
+        type=str,
+        help="Date of the calibration measurement.",
+        default=date_of_measurement_default,
     )
     parser.add_argument(
         "--kinematic_reconstruction_image_type",
@@ -277,6 +285,9 @@ if __name__ == "__main__":
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
+    metadata_file = pathlib.Path(
+        "./examples/field_optimizations/metadata/", args.metadata_file_name
+    )
     data_dir = pathlib.Path(args.data_dir)
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
@@ -286,16 +297,16 @@ if __name__ == "__main__":
         else:
             heliostat_list = None
 
-        heliostat_data_list = find_viable_heliostats(
-            data_directory=data_dir,
-            minimum_number_of_measurements=args.minimum_number_of_measurements,
+        heliostat_data_list = find_calibration_data(
+            metadata_file=metadata_file,
+            heliostat_names=heliostat_list,
+            date=args.date_of_measurement,
+            maximum_number_of_measurements=args.maximum_number_of_measurements,
             kinematic_reconstruction_image_type=args.kinematic_reconstruction_image_type,
             surface_reconstruction_image_type=args.surface_reconstruction_image_type,
-            heliostat_list=heliostat_list,
             excluded_heliostats=excluded_heliostats,
+            data_dir=data_dir,
         )
-
-        print(f"Selected {len(heliostat_data_list)} heliostats for the {case}:")
 
         serializable_data = [
             {
