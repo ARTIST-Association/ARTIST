@@ -407,18 +407,18 @@ class MotorPositionsOptimizer:
 
                 # Activate heliostats.
                 heliostat_alignment_group.activate_heliostats(
-                    active_heliostats_mask=torch.tensor(
-                        active_heliostats_masks_all_groups[heliostat_group_index]
-                    ),
+                    active_heliostats_mask=active_heliostats_masks_all_groups[
+                        heliostat_group_index
+                    ],
                     device=device,
                 )
 
                 # Align heliostats.
                 heliostat_alignment_group.align_surfaces_with_motor_positions(
                     motor_positions=heliostat_alignment_group.kinematics.active_motor_positions,
-                    active_heliostats_mask=torch.tensor(
-                        active_heliostats_masks_all_groups[heliostat_group_index]
-                    ),
+                    active_heliostats_mask=active_heliostats_masks_all_groups[
+                        heliostat_group_index
+                    ],
                     device=device,
                 )
 
@@ -452,15 +452,15 @@ class MotorPositionsOptimizer:
                     on_target_factor,
                     blocking_factor,
                 ) = ray_tracer.trace_rays(
-                    incident_ray_directions=torch.tensor(
-                        incident_ray_directions_all_groups[heliostat_group_index]
-                    ),
-                    active_heliostats_mask=torch.tensor(
-                        active_heliostats_masks_all_groups[heliostat_group_index]
-                    ),
-                    target_area_indices=torch.tensor(
-                        target_area_indices_all_groups[heliostat_group_index]
-                    ),
+                    incident_ray_directions=incident_ray_directions_all_groups[
+                        heliostat_group_index
+                    ],
+                    active_heliostats_mask=active_heliostats_masks_all_groups[
+                        heliostat_group_index
+                    ],
+                    target_area_indices=target_area_indices_all_groups[
+                        heliostat_group_index
+                    ],
                     device=device,
                 )
                 sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
