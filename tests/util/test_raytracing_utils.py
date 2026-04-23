@@ -1,11 +1,9 @@
 import pytest
 import torch
 
+from artist.field.tower_target_areas import TowerTargetAreas
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import (
-    TowerTargetAreas,
-    TowerTargetAreasPlanar,
-)
+from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.scene.rays import Rays
 from artist.util import raytracing_utils
 
