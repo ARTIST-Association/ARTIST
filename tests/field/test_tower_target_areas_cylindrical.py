@@ -11,7 +11,7 @@ def test_target_area_load_from_hdf5(
     device: torch.device,
 ) -> None:
     """
-    Test the target area load from hdf5 method.
+    Test the cylindrical target area is correctly loaded from an HDF5 scenario file.
 
     Parameters
     ----------

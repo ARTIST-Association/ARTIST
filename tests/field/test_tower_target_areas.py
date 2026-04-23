@@ -23,14 +23,8 @@ def test_abstract_tower_target_areas(
     AssertionError
         If test does not complete as expected.
     """
-    abstract_target_area = TowerTargetAreas(
-        names=["area_1"],
-        centers=torch.tensor([[0.0, 0.0, 1.0, 1.0]], device=device),
-        normals=torch.tensor([[0.0, 1.0, 0.0, 0.0]], device=device),
-    )
-
     with pytest.raises(NotImplementedError) as exc_info:
-        abstract_target_area.from_hdf5(
+        TowerTargetAreas.from_hdf5(
             config_file=mock.MagicMock(spec=h5py.File),
             device=device,
         )

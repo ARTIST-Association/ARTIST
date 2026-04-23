@@ -38,7 +38,7 @@ def test_get_number_of_heliostat_groups_from_hdf5() -> None:
 
 def test_value_errors_load_scenario_from_hdf5(device: torch.device) -> None:
     """
-    Test the get number of heliostat groups method.
+    Test that loading malformed scenario files raises the expected ValueErrors.
 
     Parameters
     ----------
@@ -286,11 +286,7 @@ def test_index_mapping(
                 single_incident_ray_direction is None
                 and single_target_area_index is None
             ):
-                (
-                    active_heliostats_mask,
-                    target_area_indices,
-                    incident_ray_directions,
-                ) = mock_scenario.index_mapping(
+                mock_scenario.index_mapping(
                     self=mock_scenario,
                     heliostat_group=mock_heliostat_group,
                     string_mapping=mapping,
@@ -380,10 +376,9 @@ def test_load_scenario_and_change_control_points(
             device=device,
         )
 
-        torch.testing.assert_close(
-            scenario.heliostat_field.heliostat_groups[0].nurbs_control_points.shape,
-            torch.Size([1, 4, 13, 13, 3]),
-        )
+        assert scenario.heliostat_field.heliostat_groups[
+            0
+        ].nurbs_control_points.shape == (1, 4, 13, 13, 3)
 
 
 def test_set_number_of_rays(
@@ -418,7 +413,4 @@ def test_set_number_of_rays(
 
         scenario.set_number_of_rays(number_of_rays=200)
 
-        torch.testing.assert_close(
-            scenario.light_sources.light_source_list[0].number_of_rays,
-            200,
-        )
+        assert scenario.light_sources.light_source_list[0].number_of_rays == 200

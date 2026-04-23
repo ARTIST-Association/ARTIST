@@ -819,6 +819,9 @@ def test_wgs84_to_enu_converter(
     )
 
 
+inv_sqrt2 = 1.0 / math.sqrt(2)
+
+
 @pytest.mark.parametrize(
     "azimuth, elevation, degree, expected",
     [
@@ -829,19 +832,19 @@ def test_wgs84_to_enu_converter(
             torch.tensor(
                 [
                     [
-                        -1 / torch.sqrt(torch.tensor([2.0])),
-                        -1 / torch.sqrt(torch.tensor([2.0])),
+                        -inv_sqrt2,
+                        -inv_sqrt2,
                         0.0,
                     ],
                     [
                         -0.5,
                         -0.5,
-                        1 / torch.sqrt(torch.tensor([2.0])),
+                        inv_sqrt2,
                     ],
-                    [0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [0.5, 0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [-0.5, 0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [-0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
+                    [0.5, -0.5, inv_sqrt2],
+                    [0.5, 0.5, inv_sqrt2],
+                    [-0.5, 0.5, inv_sqrt2],
+                    [-0.5, -0.5, inv_sqrt2],
                 ]
             ),
         ),
@@ -851,8 +854,8 @@ def test_wgs84_to_enu_converter(
             False,
             torch.tensor(
                 [
-                    [-0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
-                    [0.5, -0.5, 1 / torch.sqrt(torch.tensor([2.0]))],
+                    [-0.5, -0.5, inv_sqrt2],
+                    [0.5, -0.5, inv_sqrt2],
                 ]
             ),
         ),
@@ -897,40 +900,40 @@ def test_azimuth_elevation_to_enu(
 @pytest.mark.parametrize(
     "from_orientation, to_orientation, expected_axis, expected_angle",
     [
-        # Same orientation, no rotation, zero degree angle.
+        # Same orientation, no rotation, zero-degree angle.
         (
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([1.0, 0.0, 0.0]),
-            torch.tensor([0.0]),
+            torch.tensor(0.0),
         ),
         # From x-axis to y-axis, 90 degrees rotation around z.
         (
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 1.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0]),
-            torch.tensor([torch.pi / 2]),
+            torch.tensor(torch.pi / 2),
         ),
         # From y-axis to z-axis, 90 degrees rotation around x.
         (
             torch.tensor([0.0, 1.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0, 0.0]),
             torch.tensor([1.0, 0.0, 0.0]),
-            torch.tensor([torch.pi / 2]),
+            torch.tensor(torch.pi / 2),
         ),
-        # From positive x-axis, ti negative x-axis, 180 degrees rotation, .
+        # From positive x-axis, to negative x-axis, 180 degrees rotation, .
         (
             torch.tensor([1.0, 0.0, 0.0, 0.0]),
             torch.tensor([-1.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0]),
-            torch.tensor([torch.pi]),
+            torch.tensor(torch.pi),
         ),
         # Non-normalized input vectors, from x-axis to y-axis, 90 degrees.
         (
             torch.tensor([2.0, 0.0, 0.0, 0.0]),
             torch.tensor([0.0, 3.0, 0.0, 0.0]),
             torch.tensor([0.0, 0.0, 1.0]),
-            torch.tensor([torch.pi / 2]),
+            torch.tensor(torch.pi / 2),
         ),
     ],
 )
@@ -1005,7 +1008,7 @@ def test_bitmap_coordinates_to_target_coordinates(
     target_area_indices: torch.Tensor,
     expected_coordinates: torch.Tensor,
     device: torch.device,
-):
+) -> None:
     """
     Test the conversion from bitmap coordinates to target coordinates.
 

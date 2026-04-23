@@ -83,7 +83,8 @@ def test_integration_alignment(
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     # Load the scenario.
     with h5py.File(
@@ -99,9 +100,9 @@ def test_integration_alignment(
     bitmap_resolution = torch.tensor([256, 256], device=device)
     flux_distributions = torch.zeros(
         (
-            scenario.solar_tower.number_of_target_areas_per_type.sum(),
-            bitmap_resolution[0],
-            bitmap_resolution[1],
+            int(scenario.solar_tower.number_of_target_areas_per_type.sum()),
+            int(bitmap_resolution[0].item()),
+            int(bitmap_resolution[1].item()),
         ),
         device=device,
     )
@@ -165,5 +166,8 @@ def test_integration_alignment(
     expected = torch.load(expected_path, map_location=device, weights_only=True)
 
     torch.testing.assert_close(
-        flux_distributions, expected, atol=flux_distributions.mean() * 0.01, rtol=0.01
+        flux_distributions,
+        expected,
+        atol=max(float(flux_distributions.mean().item()) * 0.01, 1e-6),
+        rtol=0.01,
     )

@@ -63,7 +63,8 @@ def test_nurbs(device: torch.device) -> None:
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     e_range = torch.linspace(-5, 5, 40, device=device)
     n_range = torch.linspace(-5, 5, 40, device=device)
@@ -137,12 +138,14 @@ def test_nurbs(device: torch.device) -> None:
 
         optimizer.step()
 
+    final_err = (points - canted_and_translated).abs().mean()
+    assert final_err < 1e-2
     torch.testing.assert_close(points, canted_and_translated, atol=1e-2, rtol=1e-2)
 
 
 def test_find_span(device: torch.device) -> None:
     """
-    Test the find span method for non uniform knot vectors.
+    Test finding spans for non-uniform knot vectors.
 
     Parameters
     ----------
@@ -159,8 +162,7 @@ def test_find_span(device: torch.device) -> None:
     evaluation_points = utils.create_nurbs_evaluation_grid(
         torch.tensor([4, 5], device=device), device=device
     )
-    evaluation_points[:, 0] = utils.normalize_points(evaluation_points[:, 0])
-    evaluation_points[:, 1] = utils.normalize_points(evaluation_points[:, 1])
+    evaluation_points = utils.normalize_points(evaluation_points)
 
     x, y = torch.meshgrid(
         torch.linspace(1e-2, 1 - 1e-2, 6),
@@ -195,7 +197,7 @@ def test_find_span(device: torch.device) -> None:
 
 def test_nurbs_forward(device: torch.device) -> None:
     """
-    Test the forward method of nurbs.
+    Test the forward method of NURBS.
 
     Parameters
     ----------

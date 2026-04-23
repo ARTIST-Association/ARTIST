@@ -6,15 +6,12 @@ import torch
 
 from artist.scene.light_source import LightSource
 
-torch.manual_seed(7)
-torch.cuda.manual_seed(7)
-
 
 def test_load_light_source_from_hdf5(
     device: torch.device,
 ) -> None:
     """
-    Test abstract light source load from hdf5 file.
+    Test loading a light source from HDF5 file.
 
     Parameters
     ----------

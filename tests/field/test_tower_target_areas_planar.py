@@ -11,7 +11,7 @@ def test_target_area_load_from_hdf5(
     device: torch.device,
 ) -> None:
     """
-    Test the target area load from hdf5 method.
+    Load planar target areas from mocked HDF5 and verify parsed tensors.
 
     Parameters
     ----------
@@ -23,6 +23,7 @@ def test_target_area_load_from_hdf5(
     AssertionError
         If test does not complete as expected.
     """
+    target_name = config_dictionary.target_area_receiver
     mock_h5_file = mock.MagicMock(spec=h5py.File)
 
     mock_center = mock.MagicMock()
@@ -48,9 +49,9 @@ def test_target_area_load_from_hdf5(
 
     mock_level_target_areas = mock.MagicMock()
     mock_level_target_areas.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_receiver: mock_level_planar_target
+        target_name: mock_level_planar_target
     }[key]
-    mock_level_target_areas.keys.return_value = [config_dictionary.target_area_receiver]
+    mock_level_target_areas.keys.return_value = [target_name]
     mock_level_target_areas.__len__.return_value = 1
 
     mock_h5_file.__getitem__.side_effect = lambda key: {
@@ -64,7 +65,7 @@ def test_target_area_load_from_hdf5(
     )
 
     assert isinstance(target_areas, TowerTargetAreasPlanar)
-    assert target_areas.names == [config_dictionary.target_area_receiver]
+    assert target_areas.names == [target_name]
     torch.testing.assert_close(
         target_areas.centers,
         torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device),
