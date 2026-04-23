@@ -16,7 +16,8 @@ from artist.scenario.configuration_classes import (
 )
 
 torch.manual_seed(7)
-torch.cuda.manual_seed(7)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(7)
 
 
 @pytest.mark.parametrize(
@@ -73,7 +74,7 @@ def test_extract_paint_tower_measurements(
     device: torch.device,
 ) -> None:
     """
-    Test the tower measurement loader for ``PAINT`` data.
+    Test the tower measurement loader for PAINT data.
 
     Parameters
     ----------
@@ -210,7 +211,7 @@ def test_extract_paint_heliostats_ideal_surface(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat extraction for ``PAINT`` data.
+    Test the heliostat extraction for PAINT data with ideal surfaces.
 
     Parameters
     ----------
@@ -231,7 +232,8 @@ def test_extract_paint_heliostats_ideal_surface(
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     extracted_list = list(
         paint_scenario_parser.extract_paint_heliostats_ideal_surface(
@@ -332,7 +334,7 @@ def test_extract_paint_heliostats_fitted_surface(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat extraction for ``PAINT`` data with fitted surfaces.
+    Test the heliostat extraction for PAINT data with fitted surfaces.
 
     Parameters
     ----------
@@ -355,7 +357,8 @@ def test_extract_paint_heliostats_fitted_surface(
         If test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -534,7 +537,8 @@ def test_extract_paint_heliostats_mixed_surface(
         If the test does not complete as expected.
     """
     torch.manual_seed(7)
-    torch.cuda.manual_seed(7)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(7)
 
     optimizer = torch.optim.Adam([torch.empty(1, requires_grad=True)], lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -692,15 +696,17 @@ def test_build_heliostat_data_mapping_shape_parametrized(
     `randomize_selection=False` and `randomize_selection=True`.
 
     The test:
+
     1. Creates fake calibration data for multiple heliostats.
     2. Monkeypatches relevant module variables to point to the fake data.
     3. Invokes the mapping function with the given parameters.
     4. Verifies:
-    - The return value is a list of the same length as the heliostat list.
-    - Each element is a tuple of `(heliostat_name, property_file_paths, image_file_paths)`.
-    - Types of elements and paths are correct.
-    - The number of measurements matches the expected value.
-    - Property/image file paths correspond by ID and reside in the same directory.
+
+      - The return value is a list of the same length as the heliostat list.
+      - Each element is a tuple of `(heliostat_name, property_file_paths, image_file_paths)`.
+      - Types of elements and paths are correct.
+      - The number of measurements matches the expected value.
+      - Property/image file paths correspond by ID and reside in the same directory.
 
     Parameters
     ----------
@@ -781,8 +787,8 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
     """
     Test that randomized selection order or subset differs from the non-randomized version.
 
-    This test verifies that when `randomize=True`, the file selection order (or subset)
-    returned by `utils.build_heliostat_data_mapping` differs from the deterministic
+    This test verifies that when ``randomize=True``, the file selection order (or subset)
+    returned by ``utils.build_heliostat_data_mapping`` differs from the deterministic
     sorted selection for at least one heliostat, given enough available samples.
 
     Parameters
@@ -849,6 +855,6 @@ def test_build_heliostat_data_mapping_randomization_changes_order(
 
         if randomized_identifiers != sorted_identifiers:
             different_for_any_heliostat = True
-        assert different_for_any_heliostat, (
-            "Randomized selection did not differ from sorted order."
-        )
+    assert different_for_any_heliostat, (
+        "Randomized selection did not differ from sorted order for any heliostat."
+    )
