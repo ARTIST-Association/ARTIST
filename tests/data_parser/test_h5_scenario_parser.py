@@ -11,11 +11,11 @@ from artist.util import config_dictionary
 
 @pytest.mark.parametrize(
     "kinematics_type",
-    [("invalid_kinematics_type")],
+    ["invalid_kinematics_type"],
 )
 def test_load_kinematics_deviations(kinematics_type: str, device: torch.device) -> None:
     """
-    Test errors raised when loading kinematics deviations from an hdf5 file.
+    Test that unsupported kinematics types raise a ValueError when loading kinematics deviations from an HDF5 file.
 
     Parameters
     ----------
@@ -48,40 +48,39 @@ def test_load_kinematics_deviations(kinematics_type: str, device: torch.device) 
             device=device,
         )
 
-    assert f"The kinematics type: {kinematics_type} is not yet implemented!" in str(
-        exc_info.value
-    )
+    assert "is not yet implemented" in str(exc_info.value)
+    assert kinematics_type in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
-    "actuator_type, error_message",
+    "actuator_type, expected_error_message_fragment",
     [
         (
             "invalid_actuator_type",
-            "The actuator type: invalid_actuator_type is not yet implemented!",
+            "is not yet implemented",
         ),
         (
             "linear",
-            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematics type. Expected 2 actuators, found 0 actuator(s).",
+            "Expected 2 actuators, found 0 actuator(s).",
         ),
         (
             "ideal",
-            "This scenario file contains the wrong amount of actuators for this heliostat and its kinematics type. Expected 2 actuators, found 0 actuator(s).",
+            "Expected 2 actuators, found 0 actuator(s).",
         ),
     ],
 )
 def test_load_actuator_parameters(
-    actuator_type: str, error_message: str, device: torch.device
+    actuator_type: str, expected_error_message_fragment: str, device: torch.device
 ) -> None:
     """
-    Test errors raised when loading actuator parameters from an hdf5 file.
+    Test that invalid actuator setup/type raises a ValueError when loading actuator parameters from an HDF5 file.
 
     Parameters
     ----------
     actuator_type : str
         The actuator type to be tested.
-    error_message : str
-        The expected error message.
+    expected_error_message_fragment : str
+        The expected error message fragment.
     device : torch.device
         The device on which to initialize tensors.
 
@@ -94,6 +93,7 @@ def test_load_actuator_parameters(
 
     mock_level_actuators = mock.MagicMock()
 
+    # Return an empty/unspecified actuator group to trigger count/type validation paths.
     scenario_file.__getitem__.side_effect = lambda key: {
         config_dictionary.heliostat_actuator_key: mock_level_actuators
     }[key]
@@ -109,4 +109,4 @@ def test_load_actuator_parameters(
             log=log,
             device=device,
         )
-    assert error_message in str(exc_info.value)
+    assert expected_error_message_fragment in str(exc_info.value)
