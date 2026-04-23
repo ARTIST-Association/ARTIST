@@ -36,7 +36,8 @@ from artist.util.environment_setup import (
 
 set_logger_config()
 torch.manual_seed(7)
-torch.cuda.manual_seed(7)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(7)
 
 
 def get_incremented_path_number(base_path: pathlib.Path) -> int:
@@ -187,7 +188,7 @@ def create_deflectometry_surface_for_comparison(
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        device = ddp_setup[config_dictionary.device]  # type: ignore
+        device = ddp_setup["device"]
 
         number_of_surface_points_per_facet = torch.tensor(
             [
@@ -398,9 +399,9 @@ def kinematics_plots(
         device = get_device(device)
         bitmaps_for_plots = {}
 
-        for heliostat_group_index in ddp_setup[
-            config_dictionary.groups_to_ranks_mapping  # type: ignore
-        ][ddp_setup[config_dictionary.rank]]:  # type: ignore
+        for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
+            ddp_setup["rank"]
+        ]:
             heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -440,10 +441,10 @@ def kinematics_plots(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type: ignore
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
+                world_size=ddp_setup["heliostat_group_world_size"],
+                rank=ddp_setup["heliostat_group_rank"],
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
+                random_seed=ddp_setup["heliostat_group_rank"],
             )
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
@@ -500,9 +501,9 @@ def surface_plots(
         device = get_device(device=device)
         data_for_plots = {}
 
-        for heliostat_group_index in ddp_setup[
-            config_dictionary.groups_to_ranks_mapping  # type: ignore
-        ][ddp_setup[config_dictionary.rank]]:  # type: ignore
+        for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
+            ddp_setup["rank"]
+        ]:
             heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
@@ -542,10 +543,10 @@ def surface_plots(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type: ignore
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
+                world_size=ddp_setup["heliostat_group_world_size"],
+                rank=ddp_setup["heliostat_group_rank"],
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type: ignore
+                random_seed=ddp_setup["heliostat_group_rank"],
             )
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions.detach(),
@@ -594,7 +595,7 @@ def aim_point_plots(
     batch_size: int = 96,
     number_of_rays: int = 25,
     device: torch.device | None = None,
-) -> dict[str, dict[str, torch.Tensor]]:
+) -> torch.Tensor:
     """
     Plot the flux distribution with the current heliostat configuration.
 
@@ -604,7 +605,7 @@ def aim_point_plots(
         The scenario.
     incident_ray_direction : torch.Tensor
         The incident ray direction during the optimization.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     target_area_index : int
         The index of the target used for the optimization.
     aim_point : torch.Tensor
@@ -624,16 +625,17 @@ def aim_point_plots(
 
     Returns
     -------
-    dict[str, dict[str, torch.Tensor]]
-        Flux data.
+    torch.Tensor
+        Total flux distribution on the selected target.
+        Shape is ``[bitmap_resolution_e, bitmap_resolution_u]``.
     """
     with torch.no_grad():
         device = get_device(device)
         bitmap_resolution = torch.tensor([256, 256], device=device)
         total_flux = torch.zeros(
             (
-                bitmap_resolution[index_mapping.unbatched_bitmap_e],
-                bitmap_resolution[index_mapping.unbatched_bitmap_u],
+                int(bitmap_resolution[index_mapping.unbatched_bitmap_e].item()),
+                int(bitmap_resolution[index_mapping.unbatched_bitmap_u].item()),
             ),
             device=device,
         )
@@ -764,7 +766,7 @@ def full_field_optimizations(
         number_of_heliostat_groups=number_of_heliostat_groups,
         device=device,
     ) as ddp_setup:
-        device = ddp_setup[config_dictionary.device]  # type: ignore
+        device = ddp_setup["device"]
 
         assert data_mappings is not None, "data_mappings must be provided."
         assert surface_config is not None, "surface_config must be provided."
@@ -887,7 +889,7 @@ def full_field_optimizations(
                 device=device,
             )
         )
-        if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
+        if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
         kinematics_data_after = kinematics_plots(
             scenario=scenario_kinematics_ideal_surfaces,
@@ -1011,7 +1013,7 @@ def full_field_optimizations(
             )
             surface_reconstruction_final_loss_per_heliostat.append(losses_surfaces)
             loss_history_surface.append(loss_history_surface_part)
-            if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
+            if ddp_setup["is_distributed"]:
                 torch.distributed.barrier()
         surface_data_after = surface_plots(
             scenario=scenario_surface,
@@ -1086,7 +1088,7 @@ def full_field_optimizations(
                 device=device,
             )
         )
-        if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
+        if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
         kinematics_data_after = kinematics_plots(
             scenario=scenario_kinematics,
@@ -1230,7 +1232,7 @@ def full_field_optimizations(
             number_of_rays=200,
             device=device,
         )
-        if ddp_setup[config_dictionary.is_distributed]:  # type: ignore
+        if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
         results_dict["aim_point_optimization_reconstructed_model"] = {
             "aim_point_plot": torch.stack(
@@ -1523,25 +1525,21 @@ def main() -> None:
     )
     parser.add_argument(
         "--heliostats_for_plots",
-        type=list[str],  # type: ignore[arg-type, misc]
         help="List of heliostat names used for the evaluation plots.",
         default=heliostats_for_plots_default,
     )
     parser.add_argument(
         "--surface_reconstruction_optimization_configuration",
-        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=surface_reconstruction_optimization_configuration_default,
     )
     parser.add_argument(
         "--kinematics_reconstruction_optimization_configuration",
-        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=kinematics_reconstruction_optimization_configuration_default,
     )
     parser.add_argument(
         "--aim_point_optimization_configuration",
-        type=dict[Any],  # type: ignore[arg-type, misc]
         help="Config.",
         default=aim_point_optimization_configuration_default,
     )
@@ -1553,7 +1551,7 @@ def main() -> None:
     )
 
     # Re-parse the full set of arguments.
-    args = parser.parse_args(args=unknown)
+    args = parser.parse_args()
     device = get_device(torch.device(args.device))
 
     for case in ["baseline", "full_field"]:

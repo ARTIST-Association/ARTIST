@@ -1,7 +1,19 @@
 #!/usr/bin/env python
+"""
+Run this script first to download the required metadata.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+metadata_root : str
+    Path to the root directory where the metadata folder is created.
+"""
+
 import argparse
 import pathlib
 import warnings
+from typing import Any
 
 import paint.util.paint_mappings as paint_mappings
 import yaml
@@ -11,16 +23,6 @@ from paint.util import set_logger_config
 set_logger_config()
 
 if __name__ == "__main__":
-    """
-    This script should be run first to download the required metadata.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    metadata_root : str
-        Path to the root directory where the metadata folder is created.
-    """
     # Set default location for configuration file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
@@ -36,18 +38,16 @@ if __name__ == "__main__":
     # Parse the config argument first to load the configuration.
     args, unknown = parser.parse_known_args()
     config_path = pathlib.Path(args.config)
-    config = {}
+    config: dict[str, Any] = {}
 
     if config_path.exists():
         try:
-            with open(config_path, "r") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         except yaml.YAMLError as exc:
             warnings.warn(f"Error parsing YAML file: {exc}")
     else:
-        warnings.warn(
-            f"Warning: Configuration file not found at {config_path}. Using defaults."
-        )
+        warnings.warn(f"Configuration file not found at {config_path}. Using defaults.")
 
     metadata_root_default = config.get("metadata_root", "./")
 

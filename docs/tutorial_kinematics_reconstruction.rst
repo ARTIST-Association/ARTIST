@@ -100,7 +100,7 @@ Configuring Optimizer and Scheduler
 As in the :ref:`surface reconstruction<tutorial_surface_reconstruction>` tutorial, the kinematics reconstructor uses
 the ``torch.optim.Adam`` optimizer. Again, we must define the optimizer parameters and configure a learning
 rate scheduler. In the kinematics reconstruction, the optimizable parameters are learned using three different learning rates.
-Each parameter has its own scale and magnitude therefore they must be treated separately:
+Since each parameter has its own scale and magnitude, they must be treated separately:
 
 .. code-block:: python
 

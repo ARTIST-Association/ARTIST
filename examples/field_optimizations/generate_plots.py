@@ -26,8 +26,10 @@ plot_colors = {
 }
 
 plt.rcParams["text.usetex"] = True
-plt.rcParams["text.latex.preamble"] = r"\usepackage{cmbright}"
-plt.rcParams["text.latex.preamble"] = r"\setlength{\parindent}{0pt}"
+plt.rcParams["text.latex.preamble"] = [
+    r"\usepackage{cmbright}",
+    r"\setlength{\parindent}{0pt}",
+]
 cmap = "inferno"
 
 
@@ -86,6 +88,7 @@ def plot_heliostat_positions(
 def plot_surface_reconstruction_flux(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the surface reconstruction flux results.
@@ -96,6 +99,8 @@ def plot_surface_reconstruction_flux(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     plot_data = results["surface_reconstruction"]["flux_plot_data"]
     number_of_heliostats = len(plot_data)
@@ -249,6 +254,7 @@ def plot_surface_reconstruction_flux(
 def plot_surface_error_analysis(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the surface reconstruction error analysis.
@@ -259,6 +265,8 @@ def plot_surface_error_analysis(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     losses_list = results["surface_reconstruction"]["loss"]
     errors = torch.min(torch.stack(losses_list, dim=0), dim=0).values.cpu().numpy()
@@ -344,6 +352,7 @@ def plot_surface_error_analysis(
 def plot_surface_loss_history(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the surface reconstruction loss history.
@@ -354,6 +363,8 @@ def plot_surface_loss_history(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     loss_history = results["surface_reconstruction"]["loss_history"]
     epochs = np.arange(0, len(loss_history[0]["total_loss"]))
@@ -430,6 +441,7 @@ def plot_surface_loss_history(
 def plot_kinematics_reconstruction_flux(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the kinematic reconstruction flux results.
@@ -440,6 +452,8 @@ def plot_kinematics_reconstruction_flux(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     reconstructions = [
         "kinematics_reconstruction_with_ideal_surfaces",
@@ -545,6 +559,7 @@ def plot_kinematics_error_analysis(
     results: dict[str, Any],
     save_dir: pathlib.Path,
     split_left: bool = True,
+    results_number: int = 1,
 ) -> None:
     """
     Plot kinematic reconstruction error analysis.
@@ -558,6 +573,8 @@ def plot_kinematics_error_analysis(
     split_left : bool, default=True
         If True, left column contains two stacked KDE plots (meters + mrad).
         If False, left column contains only meters KDE.
+    results_number : int
+        Identifier of the results run.
     """
     reconstructions = [
         "kinematics_reconstruction_with_ideal_surfaces",
@@ -718,6 +735,7 @@ def plot_kinematics_error_analysis(
 def plot_kinematics_loss_history(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the kinematic reconstruction loss history.
@@ -728,6 +746,8 @@ def plot_kinematics_loss_history(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     reconstructions = [
         "kinematics_reconstruction_with_ideal_surfaces",
@@ -769,6 +789,7 @@ def plot_kinematics_loss_history(
 def plot_model_reconstruction(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the aim point optimization flux results.
@@ -779,6 +800,8 @@ def plot_model_reconstruction(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     measured_flux = results["measured_flux"]
     ideal_model_flux = results["ideal_model"]["aim_point_plot"]
@@ -1002,6 +1025,7 @@ def plot_model_reconstruction(
 def plot_aim_point_flux(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the aim point optimization flux results.
@@ -1012,6 +1036,8 @@ def plot_aim_point_flux(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     measured_flux = results["measured_flux"]
     homogeneous_distribution = results["homogeneous_distribution"]
@@ -1074,7 +1100,12 @@ def plot_aim_point_flux(
         rf"$\mathrm{{KL}}(\mathrm{{H}} \,\|\, \mathrm{{O}}) = {kl_div_optimized_homogeneous.item():.4f}$",
         "",
     ]
-    improvement_labels = ["", r"$\mathrm{100\%}$", rf"$\mathrm{improvement:.2f}\%$", ""]
+    improvement_labels = [
+        "",
+        r"$\mathrm{100\%}$",
+        rf"$\mathrm{{{improvement:.2f}\%}}$",
+        "",
+    ]
     titles = [
         r"\textbf{Baseline Aim Point}",
         r"\textbf{Reconstructed Model}",
@@ -1095,7 +1126,7 @@ def plot_aim_point_flux(
             fontsize=12,
         )
 
-    cbar_ax = fig.add_axes([0.15, 0.01, 0.7, 0.03])
+    cbar_ax = fig.add_axes((0.15, 0.01, 0.7, 0.03))
     cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
     cbar.ax.tick_params(labelsize=14)
 
@@ -1120,6 +1151,7 @@ def plot_aim_point_flux(
 def plot_aim_point_loss_history(
     results: dict[str, Any],
     save_dir: pathlib.Path,
+    results_number: int,
 ) -> None:
     """
     Plot the aim point optimization loss history.
@@ -1130,6 +1162,8 @@ def plot_aim_point_loss_history(
         Results of the study.
     save_dir : pathlib.Path
         Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
     """
     loss_history = results["aim_point_optimization_reconstructed_model"]["loss_history"]
     epochs = np.arange(0, len(loss_history["total_loss"]))
@@ -1228,17 +1262,15 @@ if __name__ == "__main__":
     # Parse the config argument first to load the configuration.
     args, unknown = parser.parse_known_args()
     config_path = pathlib.Path(args.config)
-    config = {}
+    config: dict[str, Any] = {}
     if config_path.exists():
         try:
             with open(config_path, "r") as f:
-                config = yaml.safe_load(f)
+                config = yaml.safe_load(f) or {}
         except yaml.YAMLError as exc:
             warnings.warn(f"Error parsing YAML file: {exc}.")
     else:
-        warnings.warn(
-            f"Warning: Configuration file not found at {config_path}. Using defaults."
-        )
+        warnings.warn(f"Configuration file not found at {config_path}. Using defaults.")
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
@@ -1265,7 +1297,7 @@ if __name__ == "__main__":
     )
 
     # Re-parse the full set of arguments.
-    args = parser.parse_args(args=unknown)
+    args = parser.parse_args()
 
     device = get_device(torch.device(args.device))
 
@@ -1300,17 +1332,36 @@ if __name__ == "__main__":
             results=results, results_ftp=results_ftp, save_dir=plots_path
         )
 
-        plot_surface_reconstruction_flux(results=results, save_dir=plots_path)
-        plot_surface_error_analysis(results=results, save_dir=plots_path)
-        plot_surface_loss_history(results=results, save_dir=plots_path)
-
-        plot_kinematics_reconstruction_flux(results=results, save_dir=plots_path)
-        plot_kinematics_error_analysis(
-            results=results, save_dir=plots_path, split_left=False
+        plot_surface_reconstruction_flux(
+            results=results, save_dir=plots_path, results_number=results_number
         )
-        plot_kinematics_loss_history(results=results, save_dir=plots_path)
+        plot_surface_error_analysis(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
+        plot_surface_loss_history(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
 
-        plot_model_reconstruction(results=results, save_dir=plots_path)
+        plot_kinematics_reconstruction_flux(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
+        plot_kinematics_error_analysis(
+            results=results,
+            save_dir=plots_path,
+            split_left=False,
+            results_number=results_number,
+        )
+        plot_kinematics_loss_history(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
 
-        plot_aim_point_flux(results=results, save_dir=plots_path)
-        plot_aim_point_loss_history(results=results, save_dir=plots_path)
+        plot_model_reconstruction(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
+
+        plot_aim_point_flux(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
+        plot_aim_point_loss_history(
+            results=results, save_dir=plots_path, results_number=results_number
+        )

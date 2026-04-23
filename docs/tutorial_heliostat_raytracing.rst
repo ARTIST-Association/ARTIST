@@ -242,7 +242,7 @@ significantly more computationally efficient. Concretely, heliostat ray tracing 
    reflection directions multiple times, thus generating many realistically reflected rays.
 3. We trace these rays onto the target area by performing *line-plane intersection* tests and computing the resulting flux
    density image on the receiver. If the selected target area were a cylindrical target area, ``ARTIST`` would
-   automatically call the *line-cylinder intersection* tests and to compute the resulting flux.
+   call the *line-cylinder intersection* tests to compute the resulting flux.
 
 Luckily, ``ARTIST`` automatically performs all of these steps within the ``HeliostatRayTracer`` class. Therefore, ray
 tracing with ``ARTIST`` involves only two simple lines of code. First, we define the ``HeliostatRayTracer``. A
