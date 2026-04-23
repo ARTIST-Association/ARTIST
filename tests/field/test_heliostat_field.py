@@ -45,7 +45,7 @@ def test_heliostat_field_load_from_hdf5_errors(
     device: torch.device,
 ) -> None:
     """
-    Test the heliostat field load from hdf5 method.
+    Test the heliostat field loaded from HDF5 method.
 
     Parameters
     ----------
