@@ -77,7 +77,7 @@ value:
     )
     target_flux_integral = (
         dni * total_heliostat_area * 0.75
-    )  # account for mirror and angle based losses.
+    )  # Account for mirror and angle based losses.
 
 
 Loss Function
