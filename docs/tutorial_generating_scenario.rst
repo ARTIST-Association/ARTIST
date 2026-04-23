@@ -160,7 +160,7 @@ Each defines the following attributes:
   4D representation is a 0 – for more information, see :ref:`our docs page on coordinates <artist_under_hood>`.
 ``opening_angle``
   The cylinder opening angle. Cylindrical target areas can either be full cylinders or cylinder sectors.
-  For a full cylinder the opening angle is 2 pi.
+  For a full cylinder the opening angle is :math:`2\pi`.
 
 .. _light_source:
 

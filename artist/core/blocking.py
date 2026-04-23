@@ -24,13 +24,14 @@ def create_blocking_primitives_rectangle(
     - the plane normal
 
     The corner points are indexed clockwise. The lower left corner point of a heliostat is indexed
-    by 0, and so on. Overview of corner points and their indices:
+    by 0, and so on. Overview of corner points and their indices::
 
-    1 | 2
-    -----
-    0 | 3
+        1 | 2
+        -----
+        0 | 3
 
     Assumptions:
+
     - The heliostat is rectangular.
     - The heliostat is oriented to the south if it is not aligned.
 
@@ -129,13 +130,14 @@ def create_blocking_primitives_rectangles_by_index(
     The blocking plane for rectangular heliostats is represented by its four
     corner points, and its normal vector. The corner points are indexed
     clockwise. The lower left corner point of a heliostat is indexed
-    by 0, and so on. Overview of corner points and their indices:
+    by 0, and so on. Overview of corner points and their indices::
 
-    1 | 2
-    -----
-    0 | 3
+        1 | 2
+        -----
+        0 | 3
 
     Assumptions:
+
     - The heliostat is rectangular, each facet is also rectangular.
     - There are four facets ordered in two columns and two rows.
     - Each facet has the same number of surface points -> ``number_of_surface_points / 4``

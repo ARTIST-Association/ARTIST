@@ -163,6 +163,7 @@ class SurfaceReconstructor:
             Shape is ``[total_number_of_heliostats_in_scenario]``.
         list[list[dict[str, list[float]]]]
             Loss histories over epochs grouped by rank.
+
             - Outer list: one entry per rank.
             - Inner list: one entry per heliostat group processed on that rank.
             - Each group entry is a dict with keys:
