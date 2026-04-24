@@ -456,8 +456,8 @@ class HeliostatRayTracer:
         flux_distributions = torch.empty(
             (
                 int(active_heliostats_mask.sum()),
-                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
                 int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
             ),
             device=device,
         )
@@ -746,8 +746,8 @@ class HeliostatRayTracer:
         group_bitmaps_per_target = torch.zeros(
             (
                 int(self.scenario.solar_tower.number_of_target_areas_per_type.sum()),
-                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
                 int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
             ),
             device=device,
         )

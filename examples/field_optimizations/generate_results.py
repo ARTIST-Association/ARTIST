@@ -79,6 +79,7 @@ def get_incremented_path_number(base_path: pathlib.Path) -> int:
 
 
 def create_distributions(
+    resolution: torch.Tensor,
     measured_data_dir: pathlib.Path,
     results_path: pathlib.Path,
     device: torch.device | None = None,
@@ -121,20 +122,29 @@ def create_distributions(
         bitmap_tensor = torch.tensor(data, dtype=torch.float32, device=device)
         bitmap_resized = bitmap_tensor.unsqueeze(0).unsqueeze(0)
         measured_flux = torch.nn.functional.interpolate(
-            bitmap_resized, size=(256, 256), mode="bilinear", align_corners=True
+            bitmap_resized,
+            size=(
+                resolution[index_mapping.unbatched_bitmap_u],
+                resolution[index_mapping.unbatched_bitmap_e],
+            ),
+            mode="bilinear",
+            align_corners=True,
         ).squeeze()
 
         results_dict["measured_flux"] = measured_flux
 
     if "homogeneous_distribution" not in results_dict.keys():
         e_trapezoid = utils.trapezoid_distribution(
-            total_width=256,
+            total_width=resolution[index_mapping.unbatched_bitmap_u],
             slope_width=30,
             plateau_width=180,
             device=device,  # 180
         )
         u_trapezoid = utils.trapezoid_distribution(
-            total_width=256, slope_width=30, plateau_width=180, device=device
+            total_width=resolution[index_mapping.unbatched_bitmap_e],
+            slope_width=30,
+            plateau_width=180,
+            device=device,
         )
         eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
@@ -591,6 +601,7 @@ def aim_point_plots(
     target_area_index: int,
     aim_point: torch.Tensor,
     dni: float,
+    bitmap_resolution: torch.Tensor,
     label: str,
     batch_size: int = 96,
     number_of_rays: int = 25,
@@ -631,11 +642,10 @@ def aim_point_plots(
     """
     with torch.no_grad():
         device = get_device(device)
-        bitmap_resolution = torch.tensor([256, 256], device=device)
         total_flux = torch.zeros(
             (
-                int(bitmap_resolution[index_mapping.unbatched_bitmap_e].item()),
                 int(bitmap_resolution[index_mapping.unbatched_bitmap_u].item()),
+                int(bitmap_resolution[index_mapping.unbatched_bitmap_e].item()),
             ),
             device=device,
         )
@@ -695,6 +705,30 @@ def aim_point_plots(
                 target_area_indices=target_area_indices,
                 device=device,
             )
+            ###########
+            import matplotlib.pyplot as plt
+
+            aim_point_measured_bitmap = 256 - torch.tensor([112.9362, 111.4531])
+            for i in range(bitmaps_per_heliostat.shape[0]):
+                total_f = bitmaps_per_heliostat[i].sum()
+                if total_f > 0:
+                    h, w = bitmaps_per_heliostat[i].shape
+                    y_grid = torch.arange(h, device=device).unsqueeze(1).expand(h, w)
+                    x_grid = torch.arange(w, device=device).unsqueeze(0).expand(h, w)
+                    cy_f = (y_grid * bitmaps_per_heliostat[i]).sum() / total_f
+                    cx_f = (x_grid * bitmaps_per_heliostat[i]).sum() / total_f
+                plt.imshow(bitmaps_per_heliostat[i].cpu().detach())
+                plt.scatter(
+                    x=aim_point_measured_bitmap[0],
+                    y=aim_point_measured_bitmap[1],
+                    c="r",
+                    s=30,
+                )
+                plt.scatter(cx_f.cpu().detach(), cy_f.cpu().detach(), c="g", s=30)
+                plt.scatter(x=w / 2, y=h / 2, c="black", s=30, marker="x")
+                plt.savefig(f"./bitmaps/aim_points/{label}_{i}")
+                plt.close()
+            ###########
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
                 target_area_indices=target_area_indices,
@@ -773,7 +807,9 @@ def full_field_optimizations(
         assert kinematics_config is not None, "kinematics_config must be provided."
         assert aim_point_config is not None, "aim_point_config must be provided."
 
-        bitmap_resolution = torch.tensor([256, 256], device=device)
+        bitmap_resolution = torch.tensor(
+            basic_config["bitmap_resolution"], device=device
+        )
         baseline_incident_ray_direction = torch.nn.functional.normalize(
             torch.tensor(
                 basic_config["baseline_incident_ray_direction"], device=device
@@ -825,6 +861,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
@@ -909,6 +946,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
@@ -1036,6 +1074,7 @@ def full_field_optimizations(
                 baseline_target_area
             ],
             aim_point=baseline_aim_point,
+            bitmap_resolution=bitmap_resolution,
             dni=baseline_dni,
             label="before",
             batch_size=20,
@@ -1115,6 +1154,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
@@ -1158,6 +1198,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
@@ -1227,6 +1268,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="after",
             batch_size=20,
             number_of_rays=200,
@@ -1300,7 +1342,7 @@ def create_heliostat_data_mappings(
         (
             item["name"],
             [pathlib.Path(item["calibrations"][0])],
-            [pathlib.Path(item["kinematic_reconstruction_flux_images"][0])],
+            [pathlib.Path(item["kinematics_reconstruction_flux_images"][0])],
         )
         for item in viable_heliostats
         if item["name"] in heliostats_for_plots
@@ -1321,7 +1363,7 @@ def create_heliostat_data_mappings(
         (
             item["name"],
             [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["kinematic_reconstruction_flux_images"]],
+            [pathlib.Path(p) for p in item["kinematics_reconstruction_flux_images"]],
         )
         for item in viable_heliostats
     ]
@@ -1562,7 +1604,7 @@ def main() -> None:
         results_number = get_incremented_path_number(
             base_path=results_dir / "results.pt"
         )
-        results_path = results_dir / f"results_{results_number}.pt"
+        results_path = results_dir / f"results_{0}.pt"
 
         measured_data_dir = pathlib.Path(args.measured_data_dir)
         measured_data_dir.mkdir(parents=True, exist_ok=True)
@@ -1613,6 +1655,7 @@ def main() -> None:
         )
 
         create_distributions(
+            resolution=basic_config["bitmap_resolution"],
             measured_data_dir=measured_data_dir,
             results_path=results_path,
             device=device,
