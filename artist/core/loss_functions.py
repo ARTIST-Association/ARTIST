@@ -203,7 +203,7 @@ class FocalSpotLoss(Loss):
 
         focal_spot_coordinates = utils.bitmap_coordinates_to_target_coordinates(
             bitmap_coordinates=focal_spots_bitmap,
-            bitmap_resolution=torch.tensor(prediction.shape[1:]),
+            bitmap_resolution=torch.tensor([prediction.shape[index_mapping.batched_bitmap_u], prediction.shape[index_mapping.batched_bitmap_e]], device=device),
             solar_tower=self.scenario.solar_tower,
             target_area_indices=target_area_indices,
             device=device,

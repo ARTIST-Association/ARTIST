@@ -146,7 +146,9 @@ class Scenario:
         power_plant_position = torch.tensor(
             scenario_file[config_dictionary.power_plant_key][
                 config_dictionary.power_plant_position
-            ][()]
+            ][()],
+            dtype=torch.float64,
+            device=device,
         )
 
         solar_tower = SolarTower.from_hdf5(config_file=scenario_file, device=device)

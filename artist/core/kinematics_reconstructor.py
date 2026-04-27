@@ -67,6 +67,7 @@ class KinematicsReconstructor:
         optimization_configuration: dict[str, Any],
         dni: float | None = None,
         reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
+        bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     ) -> None:
         """
         Initialize the kinematics optimizer.
@@ -86,6 +87,9 @@ class KinematicsReconstructor:
             Direct normal irradiance in W/m^2 (default is None which leads to a ray magnitude of 1.0).
         reconstruction_method : str
             The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
+        bitmap_resolution : torch.Tensor
+            The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256, 256])``).
+            Shape is ``[2]``.
         """
         rank = ddp_setup["rank"]
         if rank == 0:
@@ -97,6 +101,7 @@ class KinematicsReconstructor:
         self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
         self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
         self.dni = dni
+        self.bitmap_resolution = bitmap_resolution
 
         if reconstruction_method in [
             config_dictionary.kinematics_reconstruction_raytracing,
@@ -240,6 +245,7 @@ class KinematicsReconstructor:
                 heliostat_data_mapping=heliostat_mapping,
                 heliostat_group=heliostat_group,
                 scenario=self.scenario,
+                bitmap_resolution=self.bitmap_resolution,
                 device=device,
             )
 
@@ -250,7 +256,7 @@ class KinematicsReconstructor:
                 )
                 focal_spots_measured = utils.bitmap_coordinates_to_target_coordinates(
                     bitmap_coordinates=focal_spots_bitmap_coordinates,
-                    bitmap_resolution=torch.tensor([256, 256], device=device),
+                    bitmap_resolution=self.bitmap_resolution,
                     solar_tower=self.scenario.solar_tower,
                     target_area_indices=target_area_indices,
                     device=device,
@@ -408,6 +414,7 @@ class KinematicsReconstructor:
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup["heliostat_group_rank"],
                         dni=self.dni,
+                        bitmap_resolution=self.bitmap_resolution
                     )
 
                     # Perform heliostat-based ray tracing.
@@ -487,75 +494,75 @@ class KinematicsReconstructor:
 
                     epoch += 1
 
-                ##################################################
-                import matplotlib.pyplot as plt
+                # ##################################################
+                # import matplotlib.pyplot as plt
+                # m = 18
+                # n = flux_measured.shape[0]
+                # for i in range(0, n, m):
+                #     fig, axes = plt.subplots(m, 2, figsize=(8, 50))
 
-                n = flux_measured.shape[0]
-                for i in range(0, n, 3):
-                    fig, axes = plt.subplots(3, 2, figsize=(8, 10))
+                #     for j in range(m):
+                #         idx = i + j
+                #         if idx >= n:
+                #             axes[j, 0].axis("off")
+                #             axes[j, 1].axis("off")
+                #             continue
+                #         img_flux = flux_distributions[idx]
+                #         total_f = img_flux.sum()
+                #         if total_f > 0:
+                #             h, w = img_flux.shape
+                #             y_grid = (
+                #                 torch.arange(h, device=img_flux.device)
+                #                 .unsqueeze(1)
+                #                 .expand(h, w)
+                #             )
+                #             x_grid = (
+                #                 torch.arange(w, device=img_flux.device)
+                #                 .unsqueeze(0)
+                #                 .expand(h, w)
+                #             )
 
-                    for j in range(3):
-                        idx = i + j
-                        if idx >= n:
-                            axes[j, 0].axis("off")
-                            axes[j, 1].axis("off")
-                            continue
-                        img_flux = flux_distributions[idx]
-                        total_f = img_flux.sum()
-                        if total_f > 0:
-                            h, w = img_flux.shape
-                            y_grid = (
-                                torch.arange(h, device=img_flux.device)
-                                .unsqueeze(1)
-                                .expand(h, w)
-                            )
-                            x_grid = (
-                                torch.arange(w, device=img_flux.device)
-                                .unsqueeze(0)
-                                .expand(h, w)
-                            )
+                #             cy_f = (y_grid * img_flux).sum() / total_f
+                #             cx_f = (x_grid * img_flux).sum() / total_f
+                #         else:
+                #             cy_f, cx_f = 0.0, 0.0
+                #         img_meas = flux_measured[idx].cpu().detach()
+                #         total_m = img_meas.sum().cpu().detach()
+                #         if total_m > 0:
+                #             h, w = img_meas.shape
+                #             y_grid = (
+                #                 torch.arange(h, device=img_meas.device)
+                #                 .unsqueeze(1)
+                #                 .expand(h, w)
+                #             )
+                #             x_grid = (
+                #                 torch.arange(w, device=img_meas.device)
+                #                 .unsqueeze(0)
+                #                 .expand(h, w)
+                #             )
 
-                            cy_f = (y_grid * img_flux).sum() / total_f
-                            cx_f = (x_grid * img_flux).sum() / total_f
-                        else:
-                            cy_f, cx_f = 0.0, 0.0
-                        img_meas = flux_measured[idx].cpu().detach()
-                        total_m = img_meas.sum().cpu().detach()
-                        if total_m > 0:
-                            h, w = img_meas.shape
-                            y_grid = (
-                                torch.arange(h, device=img_meas.device)
-                                .unsqueeze(1)
-                                .expand(h, w)
-                            )
-                            x_grid = (
-                                torch.arange(w, device=img_meas.device)
-                                .unsqueeze(0)
-                                .expand(h, w)
-                            )
-
-                            cy_m = (y_grid * img_meas).sum() / total_m
-                            cx_m = (x_grid * img_meas).sum() / total_m
-                        else:
-                            cy_m, cx_m = 0.0, 0.0
-                        cx_f, cy_f = float(cx_f), float(cy_f)
-                        cx_m, cy_m = float(cx_m), float(cy_m)
-                        ax1 = axes[j, 0]
-                        ax1.imshow(img_flux.cpu().detach())
-                        ax1.scatter(cx_f, cy_f, c="r", s=30, marker="x")
-                        ax1.scatter(cx_m, cy_m, c="g", s=30, marker="x")
-                        ax1.set_title(f"heliostat {i // 3}]")
-                        ax1.axis("off")
-                        ax2 = axes[j, 1]
-                        ax2.imshow(img_meas.cpu().detach())
-                        ax2.scatter(cx_f, cy_f, c="r", s=30, marker="x")
-                        ax2.scatter(cx_m, cy_m, c="g", s=30, marker="x")
-                        ax2.set_title(f"heliostat {i // 3}]")
-                        ax2.axis("off")
-                    plt.tight_layout()
-                    plt.savefig(f"./bitmaps/kinematics/heliostat_{i // 3}.png")
-                    plt.close(fig)
-                ##################################################
+                #             cy_m = (y_grid * img_meas).sum() / total_m
+                #             cx_m = (x_grid * img_meas).sum() / total_m
+                #         else:
+                #             cy_m, cx_m = 0.0, 0.0
+                #         cx_f, cy_f = float(cx_f), float(cy_f)
+                #         cx_m, cy_m = float(cx_m), float(cy_m)
+                #         ax1 = axes[j, 0]
+                #         ax1.imshow(img_flux.cpu().detach())
+                #         ax1.scatter(cx_m, cy_m, c="black", s=30, marker="o")
+                #         ax1.scatter(cx_f, cy_f, c="r", s=30, marker="x")
+                #         ax1.set_title(f"heliostat {i // m}")
+                #         ax1.axis("off")
+                #         ax2 = axes[j, 1]
+                #         ax2.imshow(img_meas.cpu().detach())
+                #         ax2.scatter(cx_m, cy_m, c="black", s=30, marker="o")
+                #         ax2.scatter(cx_f, cy_f, c="r", s=30, marker="x")
+                #         ax2.set_title(f"loss: {loss_per_sample[i + j]}")
+                #         ax2.axis("off")
+                #     plt.tight_layout()
+                #     plt.savefig(f"./bitmaps/kinematics/heliostat_{i // m}.png")
+                #     plt.close(fig)
+                # ##################################################
 
                 loss_history.append(
                     {
