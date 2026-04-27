@@ -22,7 +22,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -161,7 +161,9 @@ with setup_distributed_environment(
                     for name, m in zip(heliostat_group.names, active_heliostats_mask)
                     for _ in range(m)
                 ]
-                target_names = {v: k for k, v in scenario.solar_tower.target_name_to_index.items()}
+                target_names = {
+                    v: k for k, v in scenario.solar_tower.target_name_to_index.items()
+                }
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
@@ -193,7 +195,9 @@ with setup_distributed_environment(
 
         # Plot the combined bitmaps of heliostats on the same target reduced within each group.
         for target_area_index in range(combined_bitmaps_per_target.shape[0]):
-            target_names = {v: k for k, v in scenario.solar_tower.target_name_to_index.items()}
+            target_names = {
+                v: k for k, v in scenario.solar_tower.target_name_to_index.items()
+            }
             plt.imshow(
                 combined_bitmaps_per_target[target_area_index].cpu().detach(),
                 cmap="gray",
@@ -213,7 +217,9 @@ with setup_distributed_environment(
 
     # Plot the final combined bitmaps of heliostats on the same target fully reduced.
     for target_area_index in range(combined_bitmaps_per_target.shape[0]):
-        target_names = {v: k for k, v in scenario.solar_tower.target_name_to_index.items()}
+        target_names = {
+            v: k for k, v in scenario.solar_tower.target_name_to_index.items()
+        }
         plt.imshow(
             combined_bitmaps_per_target[target_area_index].cpu().detach(),
             cmap="gray",

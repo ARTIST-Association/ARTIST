@@ -23,11 +23,11 @@ torch.cuda.manual_seed(7)
 device = get_device()
 
 # Specify the path to your scenario file.
-scenario_path = pathlib.Path("test")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/name")
 
 # Specify the path to your tower-measurements.json file.
 tower_file = pathlib.Path(
-    "/workVERLEIHNIX/mb/ARTIST/tutorials/data/paint/tower-measurements.json"
+    "please/insert/the/path/to/the/paint/data/here/tower-measurements.json"
 )
 
 # Specify the following data for each heliostat that you want to include in the scenario:

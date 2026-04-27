@@ -359,51 +359,51 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file and specify the configuration.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_ideal.h5")
-base_path_data = "/workVERLEIHNIX/share/PAINT_data"
-heliostat_names_reconstruction = ["AA39", "AC43"]
-heliostat_names_plots = ["AA39", "AC43"]
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+base_path_data = "base/path/data"
+heliostat_names_reconstruction = ["heliostat_1"]
+heliostat_names_plots = ["heliostat_1", "..."]
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-# heliostat_data_mapping = [
-#     (
-#         "heliostat_name_1",
-#         [
-#             pathlib.Path(
-#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-#             ),
-#             # ....
-#         ],
-#         [
-#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-#             # ....
-#         ],
-#     ),
-#     (
-#         "heliostat_name_2",
-#         [
-#             pathlib.Path(
-#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-#             ),
-#             # ....
-#         ],
-#         [
-#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-#             # ....
-#         ],
-#     ),
-#     # ...
-# ]
+heliostat_data_mapping = [
+    (
+        "heliostat_name_1",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    (
+        "heliostat_name_2",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    # ...
+]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
-heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-    base_path=base_path_data,
-    heliostat_names=heliostat_names_reconstruction,
-    number_of_measurements=7,
-    image_variant="flux-centered",
-    randomize=True,
-)
+# heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
+#     base_path=base_path_data,
+#     heliostat_names=heliostat_names_reconstruction,
+#     number_of_measurements=2,
+#     image_variant="flux-centered",
+#     randomize=True,
+# )
 
 # Configure the optimization.
 optimizer_dict = {
@@ -447,7 +447,7 @@ data: dict[
     str,
     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ] = {
-    config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=7),
+    config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=2),
     config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
 }
 
@@ -476,8 +476,8 @@ with setup_distributed_environment(
     # Another possibility would be the pixel loss:
     # loss_definition = PixelLoss(scenario=scenario)
 
-    scenario.set_number_of_rays(number_of_rays=150)
-    resolution = torch.tensor([300, 360], device=device)
+    scenario.set_number_of_rays(number_of_rays=170)
+    resolution = torch.tensor([256, 256], device=device)
 
     # Visualize the surfaces and flux distributions from the initial heliostats.
     number_of_plots_per_heliostat = 2

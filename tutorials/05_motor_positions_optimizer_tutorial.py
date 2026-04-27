@@ -33,7 +33,13 @@ def create_flux_plot(label: str, resolution: torch.Tensor) -> None:
     resolution : torch.Tensor
         Bitmap resolution.
     """
-    total_flux = torch.zeros((resolution[index_mapping.unbatched_bitmap_u], resolution[index_mapping.unbatched_bitmap_e]), device=device)
+    total_flux = torch.zeros(
+        (
+            resolution[index_mapping.unbatched_bitmap_u],
+            resolution[index_mapping.unbatched_bitmap_e],
+        ),
+        device=device,
+    )
 
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
@@ -124,7 +130,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/examples/field_optimizations/scenarios/ideal_baseline_scenario.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Set optimizer parameters.
 optimizer_dict = {
@@ -179,8 +185,8 @@ with setup_distributed_environment(
             scenario_file=scenario_file,
             device=device,
         )
-    
-    bitmap_resolution = torch.tensor([300, 360], device=device)
+
+    bitmap_resolution = torch.tensor([256, 256], device=device)
     # Set DNI W/m^2.
     dni = 800
     # Set number of rays per surface point.
@@ -211,10 +217,16 @@ with setup_distributed_environment(
     # loss_definition = FocalSpotLoss(scenario=scenario)
     # For an optimization using a distribution as target use this loss function definition:
     e_trapezoid = utils.trapezoid_distribution(
-        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_e], slope_width=30, plateau_width=110, device=device
+        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_e],
+        slope_width=30,
+        plateau_width=110,
+        device=device,
     )
     u_trapezoid = utils.trapezoid_distribution(
-        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_u], slope_width=30, plateau_width=110, device=device
+        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_u],
+        slope_width=30,
+        plateau_width=110,
+        device=device,
     )
     ground_truth = u_trapezoid.unsqueeze(
         index_mapping.unbatched_bitmap_u
