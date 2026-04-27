@@ -260,7 +260,9 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         target_area_mapping = torch.empty(
             total_samples, device=device, dtype=torch.long
         )
-        focal_spots_global = torch.empty((total_samples, 3), device=device)
+        focal_spots_global = torch.empty(
+            (total_samples, 3), dtype=torch.float64, device=device
+        )
         azimuths = torch.empty(total_samples, device=device)
         elevations = torch.empty(total_samples, device=device)
         motor_positions = torch.empty((total_samples, 2), device=device)
@@ -275,7 +277,9 @@ class PaintCalibrationDataParser(CalibrationDataParser):
                 motor_pos,
             ) in calibration_data_per_heliostat.get(name, []):
                 target_area_mapping[index] = target_index
-                focal_spots_global[index] = torch.tensor(focal_spot, device=device)
+                focal_spots_global[index] = torch.tensor(
+                    focal_spot, dtype=torch.float64, device=device
+                )
                 azimuths[index] = azimuth
                 elevations[index] = elevation
                 motor_positions[index] = torch.tensor(motor_pos, device=device)

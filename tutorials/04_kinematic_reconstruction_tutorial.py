@@ -30,6 +30,7 @@ torch.cuda.manual_seed(7)
 def create_fluxes(
     data_parser: CalibrationDataParser,
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    resolution: torch.Tensor,
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -40,6 +41,8 @@ def create_fluxes(
         Data parser used to load calibration data from files.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Mapping from heliostats to calibration data files.
+    resolution : torch.Tensor
+        Bitmap resolution.
 
     Returns
     -------
@@ -66,7 +69,7 @@ def create_fluxes(
             heliostat_data_mapping=heliostat_data_mapping,
             heliostat_group=heliostat_group,
             scenario=scenario,
-            bitmap_resolution=torch.tensor([256, 256]),
+            bitmap_resolution=resolution,
             device=device,
         )
 
@@ -95,7 +98,7 @@ def create_fluxes(
                 heliostat_group=heliostat_group,
                 blocking_active=False,
                 batch_size=heliostat_group.number_of_active_heliostats,
-                bitmap_resolution=torch.tensor([256, 256], device=device),
+                bitmap_resolution=resolution,
             )
 
             # Perform heliostat-based ray tracing.
@@ -291,12 +294,15 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
+    resolution = torch.tensor([256, 256], device=device)
+
     bitmaps_before, _ = create_fluxes(
         data_parser=data_parser_plots,
         heliostat_data_mapping=[
             (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
             for heliostat in heliostat_data_mapping
         ],
+        resolution=resolution,
     )
 
     loss_definition = FocalSpotLoss(scenario=scenario)
@@ -309,6 +315,7 @@ with setup_distributed_environment(
         dni=500,
         optimization_configuration=optimization_configuration,
         reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
+        bitmap_resolution=resolution,
     )
 
     # Reconstruct the kinematics.
@@ -325,6 +332,7 @@ bitmaps_after, bitmaps_measured = create_fluxes(
         (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
         for heliostat in heliostat_data_mapping
     ],
+    resolution=resolution,
 )
 create_plots(
     fluxes_before=bitmaps_before,

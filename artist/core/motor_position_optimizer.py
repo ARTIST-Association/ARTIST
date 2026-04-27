@@ -371,8 +371,8 @@ class MotorPositionsOptimizer:
 
             total_flux = torch.zeros(
                 (
-                    int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
                     int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
+                    int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
                 ),
                 device=device,
             )

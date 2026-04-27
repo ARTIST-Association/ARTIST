@@ -67,6 +67,7 @@ class KinematicsReconstructor:
         optimization_configuration: dict[str, Any],
         dni: float | None = None,
         reconstruction_method: str = config_dictionary.kinematics_reconstruction_raytracing,
+        bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     ) -> None:
         """
         Initialize the kinematics optimizer.
@@ -86,6 +87,9 @@ class KinematicsReconstructor:
             Direct normal irradiance in W/m^2 (default is None which leads to a ray magnitude of 1.0).
         reconstruction_method : str
             The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
+        bitmap_resolution : torch.Tensor
+            The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256, 256])``).
+            Shape is ``[2]``.
         """
         rank = ddp_setup["rank"]
         if rank == 0:
@@ -97,6 +101,7 @@ class KinematicsReconstructor:
         self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
         self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
         self.dni = dni
+        self.bitmap_resolution = bitmap_resolution
 
         if reconstruction_method in [
             config_dictionary.kinematics_reconstruction_raytracing,
@@ -240,6 +245,7 @@ class KinematicsReconstructor:
                 heliostat_data_mapping=heliostat_mapping,
                 heliostat_group=heliostat_group,
                 scenario=self.scenario,
+                bitmap_resolution=self.bitmap_resolution,
                 device=device,
             )
 
@@ -250,7 +256,7 @@ class KinematicsReconstructor:
                 )
                 focal_spots_measured = utils.bitmap_coordinates_to_target_coordinates(
                     bitmap_coordinates=focal_spots_bitmap_coordinates,
-                    bitmap_resolution=torch.tensor([256, 256], device=device),
+                    bitmap_resolution=self.bitmap_resolution,
                     solar_tower=self.scenario.solar_tower,
                     target_area_indices=target_area_indices,
                     device=device,
@@ -260,70 +266,79 @@ class KinematicsReconstructor:
                 initial_actuator_params = (
                     heliostat_group.kinematics.actuators.optimizable_parameters.detach()
                 )
-
-                angle_mean = initial_actuator_params[
-                    :, index_mapping.actuator_params_initial_angle
-                ].mean()
-                angle_std = (
-                    initial_actuator_params[
+                if initial_actuator_params is not None:
+                    angle_mean = initial_actuator_params[
                         :, index_mapping.actuator_params_initial_angle
-                    ]
-                    .std()
-                    .clamp(min=1e-3)
-                )
+                    ].mean()
+                    angle_std = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_angle
+                        ]
+                        .std()
+                        .clamp(min=1e-3)
+                    )
 
-                stroke_mean = initial_actuator_params[
-                    :, index_mapping.actuator_params_initial_stroke_length
-                ].mean()
-                stroke_std = (
-                    initial_actuator_params[
+                    stroke_mean = initial_actuator_params[
                         :, index_mapping.actuator_params_initial_stroke_length
-                    ]
-                    .std()
-                    .clamp(min=1e-3)
-                )
+                    ].mean()
+                    stroke_std = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_stroke_length
+                        ]
+                        .std()
+                        .clamp(min=1e-3)
+                    )
 
-                angle_normalized = (
-                    initial_actuator_params[
-                        :, index_mapping.actuator_params_initial_angle
-                    ]
-                    - angle_mean
-                ) / angle_std
-                stroke_length_normalized = (
-                    initial_actuator_params[
-                        :, index_mapping.actuator_params_initial_stroke_length
-                    ]
-                    - stroke_mean
-                ) / stroke_std
+                    angle_normalized = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_angle
+                        ]
+                        - angle_mean
+                    ) / angle_std
+                    stroke_length_normalized = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_stroke_length
+                        ]
+                        - stroke_mean
+                    ) / stroke_std
 
-                delta_angle = torch.zeros_like(angle_normalized, requires_grad=True)
-                delta_stroke = torch.zeros_like(
-                    stroke_length_normalized, requires_grad=True
-                )
+                    delta_angle = torch.zeros_like(angle_normalized, requires_grad=True)
+                    delta_stroke = torch.zeros_like(
+                        stroke_length_normalized, requires_grad=True
+                    )
+                else:
+                    delta_angle = None
+                    delta_stroke = None
 
                 # Set up optimizer, scheduler, and early stopping.
-                optimizer = torch.optim.Adam(
-                    [
-                        {
-                            "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-                            "lr": self.optimizer_dict[
-                                config_dictionary.initial_learning_rate_rotation_deviation
-                            ],
-                        },
-                        {
-                            "params": delta_angle,
-                            "lr": self.optimizer_dict[
-                                config_dictionary.initial_learning_rate_initial_angles
-                            ],
-                        },
-                        {
-                            "params": delta_stroke,
-                            "lr": self.optimizer_dict[
-                                config_dictionary.initial_learning_rate_initial_stroke_length
-                            ],
-                        },
-                    ]
-                )
+                optimizer_params = [
+                    {
+                        "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+                        "lr": self.optimizer_dict[
+                            config_dictionary.initial_learning_rate_rotation_deviation
+                        ],
+                    }
+                ]
+
+                if initial_actuator_params is not None:
+                    optimizer_params.extend(
+                        [
+                            {
+                                "params": delta_angle,
+                                "lr": self.optimizer_dict[
+                                    config_dictionary.initial_learning_rate_initial_angles
+                                ],
+                            },
+                            {
+                                "params": delta_stroke,
+                                "lr": self.optimizer_dict[
+                                    config_dictionary.initial_learning_rate_initial_stroke_length
+                                ],
+                            },
+                        ]
+                    )
+
+                optimizer = torch.optim.Adam(optimizer_params)
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
@@ -408,6 +423,7 @@ class KinematicsReconstructor:
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup["heliostat_group_rank"],
                         dni=self.dni,
+                        bitmap_resolution=self.bitmap_resolution,
                     )
 
                     # Perform heliostat-based ray tracing.

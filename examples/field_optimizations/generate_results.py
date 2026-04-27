@@ -79,6 +79,7 @@ def get_incremented_path_number(base_path: pathlib.Path) -> int:
 
 
 def create_distributions(
+    resolution: torch.Tensor,
     measured_data_dir: pathlib.Path,
     results_path: pathlib.Path,
     device: torch.device | None = None,
@@ -88,6 +89,8 @@ def create_distributions(
 
     Parameters
     ----------
+    resolution : torch.Tensor
+        The bitmap resolution.
     measured_data_dir : pathlib.Path
         Path to the measured baseline data.
     results_path : pathlib.Path
@@ -121,20 +124,29 @@ def create_distributions(
         bitmap_tensor = torch.tensor(data, dtype=torch.float32, device=device)
         bitmap_resized = bitmap_tensor.unsqueeze(0).unsqueeze(0)
         measured_flux = torch.nn.functional.interpolate(
-            bitmap_resized, size=(256, 256), mode="bilinear", align_corners=True
+            bitmap_resized,
+            size=(
+                resolution[index_mapping.unbatched_bitmap_u],
+                resolution[index_mapping.unbatched_bitmap_e],
+            ),
+            mode="bilinear",
+            align_corners=True,
         ).squeeze()
 
         results_dict["measured_flux"] = measured_flux
 
     if "homogeneous_distribution" not in results_dict.keys():
         e_trapezoid = utils.trapezoid_distribution(
-            total_width=256,
+            total_width=resolution[index_mapping.unbatched_bitmap_e],
             slope_width=30,
-            plateau_width=180,
-            device=device,  # 180
+            plateau_width=120,
+            device=device,
         )
         u_trapezoid = utils.trapezoid_distribution(
-            total_width=256, slope_width=30, plateau_width=180, device=device
+            total_width=resolution[index_mapping.unbatched_bitmap_u],
+            slope_width=30,
+            plateau_width=166,
+            device=device,
         )
         eu_trapezoid = u_trapezoid.unsqueeze(1) * e_trapezoid.unsqueeze(0)
 
@@ -364,7 +376,7 @@ def merge_data(
         return merged
 
 
-def kinematics_plots(
+def kinematics_evaluation(
     scenario: Scenario,
     ddp_setup: DdpSetup,
     heliostat_data: dict[
@@ -466,7 +478,7 @@ def kinematics_plots(
         return bitmaps_for_plots
 
 
-def surface_plots(
+def surface_evaluation(
     scenario: Scenario,
     ddp_setup: DdpSetup,
     heliostat_data: dict[
@@ -591,6 +603,7 @@ def aim_point_plots(
     target_area_index: int,
     aim_point: torch.Tensor,
     dni: float,
+    bitmap_resolution: torch.Tensor,
     label: str,
     batch_size: int = 96,
     number_of_rays: int = 25,
@@ -612,6 +625,8 @@ def aim_point_plots(
         The aim point.
     dni : float
         Direct normal irradiance in W/m^2.
+    bitmap_resolution : torch.Tensor
+        The bitmap resolution.
     label : str
         Identifier fluxes.
     batch_size : int
@@ -627,15 +642,14 @@ def aim_point_plots(
     -------
     torch.Tensor
         Total flux distribution on the selected target.
-        Shape is ``[bitmap_resolution_e, bitmap_resolution_u]``.
+        Shape is ``[bitmap_resolution_u, bitmap_resolution_e]``.
     """
     with torch.no_grad():
         device = get_device(device)
-        bitmap_resolution = torch.tensor([256, 256], device=device)
         total_flux = torch.zeros(
             (
-                int(bitmap_resolution[index_mapping.unbatched_bitmap_e].item()),
                 int(bitmap_resolution[index_mapping.unbatched_bitmap_u].item()),
+                int(bitmap_resolution[index_mapping.unbatched_bitmap_e].item()),
             ),
             device=device,
         )
@@ -767,13 +781,18 @@ def full_field_optimizations(
         device=device,
     ) as ddp_setup:
         device = ddp_setup["device"]
+        control_points_path = (
+            results_path.parent / "reconstructed_nurbs_control_points.pt"
+        )
 
         assert data_mappings is not None, "data_mappings must be provided."
         assert surface_config is not None, "surface_config must be provided."
         assert kinematics_config is not None, "kinematics_config must be provided."
         assert aim_point_config is not None, "aim_point_config must be provided."
 
-        bitmap_resolution = torch.tensor([256, 256], device=device)
+        bitmap_resolution = torch.tensor(
+            basic_config["bitmap_resolution"], device=device
+        )
         baseline_incident_ray_direction = torch.nn.functional.normalize(
             torch.tensor(
                 basic_config["baseline_incident_ray_direction"], device=device
@@ -825,6 +844,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
@@ -833,7 +853,7 @@ def full_field_optimizations(
         results_dict["ideal_model"] = {"aim_point_plot": aim_point_data_ideal_models}
         torch.cuda.empty_cache()
 
-        kinematics_data_before = kinematics_plots(
+        kinematics_data_plot_before = kinematics_evaluation(
             scenario=scenario_kinematics_ideal_surfaces,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["kinematics_plot"],
@@ -876,7 +896,7 @@ def full_field_optimizations(
         kinematics_reconstructor = KinematicsReconstructor(
             ddp_setup=ddp_setup,
             scenario=scenario_kinematics_ideal_surfaces,
-            data=data_mappings["kinematics_reconstruction"],
+            data=data_mappings["kinematics_training"],
             dni=baseline_dni,
             optimization_configuration=optimization_configuration_kinematics,
             reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
@@ -891,15 +911,21 @@ def full_field_optimizations(
         )
         if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
-        kinematics_data_after = kinematics_plots(
+        kinematics_validation = kinematics_evaluation(
+            scenario=scenario_kinematics_ideal_surfaces,
+            ddp_setup=ddp_setup,
+            heliostat_data=data_mappings["kinematics_validation"],
+            device=device,
+        )
+        kinematics_data_plot_after = kinematics_evaluation(
             scenario=scenario_kinematics_ideal_surfaces,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["kinematics_plot"],
             device=device,
         )
-        merged_data_kinematics = merge_data(
-            unoptimized_data=kinematics_data_before,
-            optimized_data=kinematics_data_after,
+        merged_plot_data_kinematics = merge_data(
+            unoptimized_data=kinematics_data_plot_before,
+            optimized_data=kinematics_data_plot_after,
         )
         aim_point_data_kinematic_reconstruction = aim_point_plots(
             scenario=scenario_kinematics_ideal_surfaces,
@@ -909,13 +935,15 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
         )
         results_dict["kinematics_reconstruction_with_ideal_surfaces"] = {
-            "flux_plot_data": merged_data_kinematics,
+            "flux_plot_data": merged_plot_data_kinematics,
+            "validation_data": kinematics_validation,
             "loss_history": loss_history_kinematics,
             "loss": kinematics_reconstruction_final_loss_per_heliostat,
             "aim_point_plot": aim_point_data_kinematic_reconstruction,
@@ -932,7 +960,7 @@ def full_field_optimizations(
             )
         for heliostat_group in scenario_surface.heliostat_field.heliostat_groups:
             heliostat_group.nurbs_degrees = nurbs_degree
-        surface_data_before = surface_plots(
+        surface_data_plot_before = surface_evaluation(
             scenario=scenario_surface,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["surface_plot"],
@@ -945,16 +973,16 @@ def full_field_optimizations(
         loss_history_surface = []
         data_surfaces = []
         batch_size = surface_config["batch_size_outer"]
-        heliostat_data = data_mappings["surface_reconstruction"][
+        heliostat_data = data_mappings["surface_training"][
             config_dictionary.heliostat_data_mapping
         ]
         for i in range(0, len(heliostat_data), batch_size):
             batch = heliostat_data[i : i + batch_size]
             data_surfaces.append(
                 {
-                    config_dictionary.data_parser: data_mappings[
-                        "surface_reconstruction"
-                    ][config_dictionary.data_parser],
+                    config_dictionary.data_parser: data_mappings["surface_training"][
+                        config_dictionary.data_parser
+                    ],
                     config_dictionary.heliostat_data_mapping: batch,
                 }
             )
@@ -995,40 +1023,60 @@ def full_field_optimizations(
                 config_dictionary.energy_tolerance: surface_config["energy_tolerance"],
             },
         }
-        for data in data_surfaces:
-            surface_reconstructor = SurfaceReconstructor(
-                ddp_setup=ddp_setup,
-                scenario=scenario_surface,
-                data=data,
-                optimization_configuration=optimization_configuration_surface,
-                dni=baseline_dni,
-                number_of_surface_points=number_of_surface_points_per_facet,
-                bitmap_resolution=bitmap_resolution,
-                device=device,
-            )
-            losses_surfaces, loss_history_surface_part = (
-                surface_reconstructor.reconstruct_surfaces(
-                    loss_definition=KLDivergenceLoss(), device=device
+        if not control_points_path.exists():
+            for data in data_surfaces:
+                surface_reconstructor = SurfaceReconstructor(
+                    ddp_setup=ddp_setup,
+                    scenario=scenario_surface,
+                    data=data,
+                    optimization_configuration=optimization_configuration_surface,
+                    dni=baseline_dni,
+                    number_of_surface_points=number_of_surface_points_per_facet,
+                    bitmap_resolution=bitmap_resolution,
+                    device=device,
                 )
+                losses_surfaces, loss_history_surface_part = (
+                    surface_reconstructor.reconstruct_surfaces(
+                        loss_definition=KLDivergenceLoss(), device=device
+                    )
+                )
+                surface_reconstruction_final_loss_per_heliostat.append(losses_surfaces)
+                loss_history_surface.append(loss_history_surface_part)
+                if ddp_setup["is_distributed"]:
+                    torch.distributed.barrier()
+
+            reconstructed_nurbs_control_points = [
+                heliostat_group.nurbs_control_points.detach()
+                for heliostat_group in scenario_surface.heliostat_field.heliostat_groups
+            ]
+            torch.save(reconstructed_nurbs_control_points, control_points_path)
+        else:
+            reconstructed_nurbs_control_points = torch.load(
+                control_points_path, weights_only=False
             )
-            surface_reconstruction_final_loss_per_heliostat.append(losses_surfaces)
-            loss_history_surface.append(loss_history_surface_part)
-            if ddp_setup["is_distributed"]:
-                torch.distributed.barrier()
-        surface_data_after = surface_plots(
+            for heliostat_group, control_points in zip(
+                scenario_surface.heliostat_field.heliostat_groups,
+                reconstructed_nurbs_control_points,
+            ):
+                heliostat_group.nurbs_degrees = nurbs_degree
+                heliostat_group.nurbs_control_points = control_points
+            scenario_surface.heliostat_field.update_surfaces(device=device)
+        surface_validation = surface_evaluation(
+            scenario=scenario_surface,
+            ddp_setup=ddp_setup,
+            heliostat_data=data_mappings["surface_validation"],
+            device=device,
+        )
+        surface_data_plot_after = surface_evaluation(
             scenario=scenario_surface,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["surface_plot"],
             device=device,
         )
         merged_data_surface = merge_data(
-            unoptimized_data=surface_data_before,
-            optimized_data=surface_data_after,
+            unoptimized_data=surface_data_plot_before,
+            optimized_data=surface_data_plot_after,
         )
-        reconstructed_nurbs_control_points = [
-            heliostat_group.nurbs_control_points.detach()
-            for heliostat_group in scenario_surface.heliostat_field.heliostat_groups
-        ]
         aim_point_data_surface_reconstruction = aim_point_plots(
             scenario=scenario_surface,
             incident_ray_direction=baseline_incident_ray_direction,
@@ -1036,6 +1084,7 @@ def full_field_optimizations(
                 baseline_target_area
             ],
             aim_point=baseline_aim_point,
+            bitmap_resolution=bitmap_resolution,
             dni=baseline_dni,
             label="before",
             batch_size=20,
@@ -1044,6 +1093,7 @@ def full_field_optimizations(
         )
         results_dict["surface_reconstruction"] = {
             "flux_plot_data": merged_data_surface,
+            "validation_data": surface_validation,
             "loss_history": loss_history_surface,
             "loss": surface_reconstruction_final_loss_per_heliostat,
             "aim_point_plot": aim_point_data_surface_reconstruction,
@@ -1065,7 +1115,7 @@ def full_field_optimizations(
             heliostat_group.nurbs_degrees = nurbs_degree
             heliostat_group.nurbs_control_points = control_points
         scenario_kinematics.heliostat_field.update_surfaces(device=device)
-        kinematics_data_before = kinematics_plots(
+        kinematics_data_plot_before = kinematics_evaluation(
             scenario=scenario_kinematics,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["kinematics_plot"],
@@ -1077,7 +1127,7 @@ def full_field_optimizations(
         kinematics_reconstructor = KinematicsReconstructor(
             ddp_setup=ddp_setup,
             scenario=scenario_kinematics,
-            data=data_mappings["kinematics_reconstruction"],
+            data=data_mappings["kinematics_training"],
             dni=baseline_dni,
             optimization_configuration=optimization_configuration_kinematics,
             reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
@@ -1090,15 +1140,21 @@ def full_field_optimizations(
         )
         if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
-        kinematics_data_after = kinematics_plots(
-            scenario=scenario_kinematics,
+        kinematics_validation = kinematics_evaluation(
+            scenario=scenario_kinematics_ideal_surfaces,
+            ddp_setup=ddp_setup,
+            heliostat_data=data_mappings["kinematics_validation"],
+            device=device,
+        )
+        kinematics_data_plot_after = kinematics_evaluation(
+            scenario=scenario_kinematics_ideal_surfaces,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["kinematics_plot"],
             device=device,
         )
-        merged_data_kinematics = merge_data(
-            unoptimized_data=kinematics_data_before,
-            optimized_data=kinematics_data_after,
+        merged_plot_data_kinematics = merge_data(
+            unoptimized_data=kinematics_data_plot_before,
+            optimized_data=kinematics_data_plot_after,
         )
         reconstructed_kinematics = [
             {
@@ -1115,13 +1171,15 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
             device=device,
         )
         results_dict["kinematics_reconstruction_with_reconstructed_surfaces"] = {
-            "flux_plot_data": merged_data_kinematics,
+            "flux_plot_data": merged_plot_data_kinematics,
+            "validation_data": kinematics_validation,
             "loss_history": loss_history_kinematics,
             "loss": kinematics_reconstruction_final_loss_per_heliostat,
             "aim_point_plot": aim_point_data_combined_reconstruction,
@@ -1158,6 +1216,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="before",
             batch_size=20,
             number_of_rays=200,
@@ -1227,6 +1286,7 @@ def full_field_optimizations(
             ],
             aim_point=baseline_aim_point,
             dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
             label="after",
             batch_size=20,
             number_of_rays=200,
@@ -1254,8 +1314,7 @@ def full_field_optimizations(
 
 
 def create_heliostat_data_mappings(
-    viable_heliostats_data: pathlib.Path,
-    heliostats_for_plots: list[str],
+    dataset_splits_file: pathlib.Path,
     sample_limit_surfaces: int,
     sample_limit_kinematics: int,
 ) -> dict[str, Any]:
@@ -1264,10 +1323,8 @@ def create_heliostat_data_mappings(
 
     Parameters
     ----------
-    viable_heliostats_data : pathlib.Path
-        Path to the viable heliostats list.
-    heliostats_for_plots : list[str]
-        List of all heliostats considered in the plots.
+    dataset_splits_file : pathlib.Path
+        Path to the dataset splits file.
     sample_limit_surfaces : int
         Sample limit for the surface reconstruction.
     sample_limit_kinematics : int
@@ -1278,8 +1335,8 @@ def create_heliostat_data_mappings(
     dict[str, Any]
         The mappings from heliostat name to data files and data parsers for each task.
     """
-    with open(viable_heliostats_data, "r") as f:
-        viable_heliostats = json.load(f)
+    with open(dataset_splits_file, "r") as f:
+        dataset_splits = json.load(f)
 
     data_parser_surface = PaintCalibrationDataParser(
         sample_limit=sample_limit_surfaces,
@@ -1290,95 +1347,80 @@ def create_heliostat_data_mappings(
         centroid_extraction_method=paint_mappings.UTIS_KEY,
     )
     data_parser_plots = PaintCalibrationDataParser(
-        sample_limit=2, centroid_extraction_method=paint_mappings.UTIS_KEY
+        sample_limit=1, centroid_extraction_method=paint_mappings.UTIS_KEY
     )
 
-    # Data mappings for the kinematics reconstruction plot.
-    path_mapping_kinematics_plot: list[
-        tuple[str, list[pathlib.Path], list[pathlib.Path]]
-    ] = [
-        (
-            item["name"],
-            [pathlib.Path(item["calibrations"][0])],
-            [pathlib.Path(item["kinematic_reconstruction_flux_images"][0])],
-        )
-        for item in viable_heliostats
-        if item["name"] in heliostats_for_plots
-    ]
     data_kinematics_plot: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: path_mapping_kinematics_plot,
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "kinematics_reconstruction"
+        ]["plot"],
     }
 
-    # Data mappings for the kinematics reconstruction.
-    path_mapping_kinematics_reconstruction: list[
-        tuple[str, list[pathlib.Path], list[pathlib.Path]]
-    ] = [
-        (
-            item["name"],
-            [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["kinematic_reconstruction_flux_images"]],
-        )
-        for item in viable_heliostats
-    ]
-    data_kinematics_reconstruction: dict[
+    data_kinematics_training: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_kinematics,
-        config_dictionary.heliostat_data_mapping: path_mapping_kinematics_reconstruction,
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "kinematics_reconstruction"
+        ]["training"],
     }
 
-    # Data mappings for the surface reconstruction plot.
-    path_mapping_surface_plot: list[
-        tuple[str, list[pathlib.Path], list[pathlib.Path]]
-    ] = [
-        (
-            item["name"],
-            [pathlib.Path(item["calibrations"][0])],
-            [pathlib.Path(item["surface_reconstruction_flux_images"][0])],
-        )
-        for item in viable_heliostats
-        if item["name"] in heliostats_for_plots
-    ]
+    data_kinematics_validation: dict[
+        str,
+        CalibrationDataParser
+        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: data_parser_kinematics,
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "kinematics_reconstruction"
+        ]["validation"],
+    }
+
     data_surface_plot: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: path_mapping_surface_plot,
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "surface_reconstruction"
+        ]["plot"],
     }
 
-    # Data mappings for the surface reconstruction.
-    path_mapping_surface_reconstruction: list[
-        tuple[str, list[pathlib.Path], list[pathlib.Path]]
-    ] = [
-        (
-            item["name"],
-            [pathlib.Path(p) for p in item["calibrations"]],
-            [pathlib.Path(p) for p in item["surface_reconstruction_flux_images"]],
-        )
-        for item in viable_heliostats
-    ]
-    data_surface_reconstruction: dict[
+    data_surface_training: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_surface,
-        config_dictionary.heliostat_data_mapping: path_mapping_surface_reconstruction,
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "surface_reconstruction"
+        ]["training"],
+    }
+    data_surface_validation: dict[
+        str,
+        CalibrationDataParser
+        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    ] = {
+        config_dictionary.data_parser: data_parser_surface,
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "surface_reconstruction"
+        ]["validation"],
     }
 
     data_mappings = {
-        "kinematics_reconstruction": data_kinematics_reconstruction,
+        "kinematics_training": data_kinematics_training,
+        "kinematics_validation": data_kinematics_validation,
         "kinematics_plot": data_kinematics_plot,
-        "surface_reconstruction": data_surface_reconstruction,
+        "surface_training": data_surface_training,
+        "surface_validation": data_surface_validation,
         "surface_plot": data_surface_plot,
     }
 
@@ -1596,23 +1638,21 @@ def main() -> None:
                 f"The deflectometry scenario located at {scenario_path_deflectometry} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
             )
 
-        viable_heliostats_data = (
-            pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
-        )
-        if not viable_heliostats_data.exists():
+        dataset_splits = pathlib.Path(args.results_dir) / case / "dataset_splits.json"
+        if not dataset_splits.exists():
             raise FileNotFoundError(
-                f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
+                f"The viable heliostat list located at {dataset_splits} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
             )
 
-        # Create heliostat data mappings from viable heliostats.
+        # Create heliostat data mappings.
         data_mappings = create_heliostat_data_mappings(
-            viable_heliostats_data=viable_heliostats_data,
-            heliostats_for_plots=args.heliostats_for_plots,
+            dataset_splits_file=dataset_splits,
             sample_limit_kinematics=kinematics_optimization_config["sample_limit"],
             sample_limit_surfaces=surface_optimization_config["sample_limit"],
         )
 
         create_distributions(
+            resolution=basic_config["bitmap_resolution"],
             measured_data_dir=measured_data_dir,
             results_path=results_path,
             device=device,
@@ -1651,7 +1691,7 @@ def main() -> None:
 
         # Logging.
         runtime_log.info(
-            f"Number of heliostats: {len(data_mappings['kinematics_reconstruction']['heliostat_data_mapping'])}"
+            f"Number of heliostats: {len(data_mappings['kinematics_training'])}"
         )
         runtime_log.info(f"surface reconstruction: {surface_optimization_config}")
         runtime_log.info(f"kinematics reconstruction: {kinematics_optimization_config}")

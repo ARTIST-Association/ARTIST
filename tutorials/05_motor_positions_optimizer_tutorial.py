@@ -22,7 +22,7 @@ torch.cuda.manual_seed(7)
 #############################################################################################################
 
 
-def create_flux_plot(label: str) -> None:
+def create_flux_plot(label: str, resolution: torch.Tensor) -> None:
     """
     Create flux plots.
 
@@ -30,8 +30,16 @@ def create_flux_plot(label: str) -> None:
     ----------
     label : str
         Identifier of flux.
+    resolution : torch.Tensor
+        Bitmap resolution.
     """
-    total_flux = torch.zeros((256, 256), device=device)
+    total_flux = torch.zeros(
+        (
+            resolution[index_mapping.unbatched_bitmap_u],
+            resolution[index_mapping.unbatched_bitmap_e],
+        ),
+        device=device,
+    )
 
     for heliostat_group_index, heliostat_group in enumerate(
         scenario.heliostat_field.heliostat_groups
@@ -84,7 +92,7 @@ def create_flux_plot(label: str) -> None:
             scenario=scenario,
             heliostat_group=heliostat_group,
             batch_size=heliostat_group.number_of_active_heliostats,
-            bitmap_resolution=torch.tensor([256, 256], device=device),
+            bitmap_resolution=resolution,
             dni=dni,
         )
 
@@ -107,8 +115,8 @@ def create_flux_plot(label: str) -> None:
     # Create the plot.
     plt.imshow(total_flux.cpu().detach(), cmap="gray")
     plt.axis("off")
-    plt.title(f"Flux {id} aimpoint optimization {total_flux.sum():.3f}")
-    plt.savefig(f"flux_{id}_aimpoint_optimization.png")
+    plt.title(f"Flux {label} aimpoint optimization {total_flux.sum():.3f}")
+    plt.savefig(f"flux_{label}_aimpoint_optimization.png")
 
 
 #############################################################################################################
@@ -177,6 +185,8 @@ with setup_distributed_environment(
             scenario_file=scenario_file,
             device=device,
         )
+
+    bitmap_resolution = torch.tensor([256, 256], device=device)
     # Set DNI W/m^2.
     dni = 800
     # Set number of rays per surface point.
@@ -207,10 +217,16 @@ with setup_distributed_environment(
     # loss_definition = FocalSpotLoss(scenario=scenario)
     # For an optimization using a distribution as target use this loss function definition:
     e_trapezoid = utils.trapezoid_distribution(
-        total_width=256, slope_width=30, plateau_width=110, device=device
+        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_e],
+        slope_width=30,
+        plateau_width=110,
+        device=device,
     )
     u_trapezoid = utils.trapezoid_distribution(
-        total_width=256, slope_width=30, plateau_width=110, device=device
+        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_u],
+        slope_width=30,
+        plateau_width=110,
+        device=device,
     )
     ground_truth = u_trapezoid.unsqueeze(
         index_mapping.unbatched_bitmap_u
@@ -219,7 +235,7 @@ with setup_distributed_environment(
 
     loss_definition = KLDivergenceLoss()
 
-    create_flux_plot(label="before")
+    create_flux_plot(label="before", resolution=bitmap_resolution)
 
     # Create the motor positions optimizer.
     motor_positions_optimizer = MotorPositionsOptimizer(
@@ -230,6 +246,7 @@ with setup_distributed_environment(
         target_area_index=target_area_index,
         ground_truth=ground_truth,
         dni=dni,
+        bitmap_resolution=bitmap_resolution,
         device=device,
     )
 
@@ -241,4 +258,4 @@ with setup_distributed_environment(
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss {final_loss}")
 
-create_flux_plot(label="after")
+create_flux_plot(label="after", resolution=bitmap_resolution)

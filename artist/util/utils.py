@@ -527,6 +527,9 @@ def get_center_of_mass(
     """
     Calculate the coordinates of the flux density center of mass.
 
+    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
+    Tensor memory layout follows PyTorch convention: [H, W] # height, width
+
     First determine the indices of the bitmap center of mass.
     Next determine the position (coordinates) of the center of mass on the target.
 
@@ -545,35 +548,38 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        Bitmap coordinates of the flux density centers of mass (x pixel, y pixel).
+        Bitmap coordinates of the flux density centers of mass (e pixel, u pixel).
         Shape is ``[number_of_active_heliostats, 2]``.
     """
     device = get_device(device=device)
 
-    number_of_flux_distributions, image_height, image_width = bitmaps.shape
+    batch, height_u, width_e = bitmaps.shape
 
-    # Compute center of mass.
     normalized_bitmaps = bitmaps / (
         bitmaps.sum(
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e),
             keepdim=True,
         )
         + 1e-8
     )
 
-    y_coordinates = torch.linspace(0, image_height - 1, image_height, device=device)
-    x_coordinates = torch.linspace(0, image_width - 1, image_width, device=device)
-    y_grid, x_grid = torch.meshgrid(y_coordinates, x_coordinates, indexing="ij")
-    x_grid = x_grid.expand(number_of_flux_distributions, -1, -1)
-    y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
+    e_coords = torch.linspace(0, width_e - 1, width_e, device=device)
+    u_coords = torch.linspace(0, height_u - 1, height_u, device=device)
 
-    x_center_of_mass = (x_grid * normalized_bitmaps).sum(
-        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    # meshgrid in (u, e) order because tensor is [u, e].
+    u_grid, e_grid = torch.meshgrid(u_coords, e_coords, indexing="ij")
+    u_grid = u_grid.expand(batch, -1, -1)
+    e_grid = e_grid.expand(batch, -1, -1)
+
+    # Center of mass.
+    e_center_of_mass = (e_grid * normalized_bitmaps).sum(
+        dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e)
     )
-    y_center_of_mass = (y_grid * normalized_bitmaps).sum(
-        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+    u_center_of_mass = (u_grid * normalized_bitmaps).sum(
+        dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e)
     )
-    return torch.stack([x_center_of_mass, y_center_of_mass], dim=1)
+
+    return torch.stack([e_center_of_mass, u_center_of_mass], dim=1)
 
 
 def bitmap_coordinates_to_target_coordinates(
@@ -590,10 +596,26 @@ def bitmap_coordinates_to_target_coordinates(
     For cylindrical target areas the pixel coordinates are mapped to cylindrical surface coordinates
     using the cylinder's radius, opening angle, height, axis, and normal.
 
+    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
+    Tensor memory layout follows PyTorch convention: [H, W] # height, width
+
+    The bitmap is treated as a discrete image grid with resolution:
+        - bitmap_resolution = [width, height]
+    Pixel coordinates follow image indexing conventions:
+        - bitmap_coordinates[..., e] ∈ [0, W-1]
+        - bitmap_coordinates[..., u] ∈ [0, H-1]
+    They are interpreted as centered pixels:
+        - (e + 0.5) / W
+        - (u + 0.5) / H
+    This ensures each pixel represents its spatial cell center rather than its corner.
+
+    The e-axis is intentionally flipped (0.5 - e_norm) to match the desired bitmap orientation.
+    This means: increasing bitmap e → decreases world e.
+
     Parameters
     ----------
     bitmap_coordinates : torch.Tensor
-        Pixel coordinates in the bitmap for each heliostat, as (x, y) pairs.
+        Pixel coordinates in the bitmap for each heliostat, as (e, u) pairs.
         Shape is ``[number_of_active_heliostats, 2]``.
     bitmap_resolution : torch.Tensor
         Resolution of the bitmap (width, height) in pixels.
@@ -616,92 +638,86 @@ def bitmap_coordinates_to_target_coordinates(
     """
     device = get_device(device=device)
 
-    center_coordinates = torch.zeros((target_area_indices.numel(), 4), device=device)
-    center_coordinates[:, -1] = 1.0
+    number_of_coordinates = target_area_indices.numel()
+    target_coordinates = torch.zeros((number_of_coordinates, 4), device=device)
+    target_coordinates[:, -1] = 1.0
+
+    bitmap_width = bitmap_resolution[index_mapping.unbatched_bitmap_e]
+    bitmap_height = bitmap_resolution[index_mapping.unbatched_bitmap_u]
+
+    e_norm = (
+        bitmap_coordinates[:, index_mapping.unbatched_bitmap_e] + 0.5
+    ) / bitmap_width
+    u_norm = (
+        bitmap_coordinates[:, index_mapping.unbatched_bitmap_u] + 0.5
+    ) / bitmap_height
 
     planar_mask = (
         target_area_indices
         < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
     )
-    if target_area_indices[planar_mask].numel() > 0:
+
+    if planar_mask.any():
         planar_indices = target_area_indices[planar_mask]
 
-        resolution = torch.tensor(
-            [
-                bitmap_resolution[index_mapping.unbatched_bitmap_e],
-                1e-8,
-                bitmap_resolution[index_mapping.unbatched_bitmap_u],
-                1e-8,
-            ],
-            device=device,
-        )
-        coordinates = torch.zeros((planar_indices.numel(), 4), device=device)
-        coordinates[:, index_mapping.e] = bitmap_coordinates[
-            planar_mask, index_mapping.unbatched_bitmap_e
-        ]
-        coordinates[:, index_mapping.u] = bitmap_coordinates[
-            planar_mask, index_mapping.unbatched_bitmap_u
-        ]
-
-        # Account for flips from bitmap to target coordinates.
-        target_dimensions = torch.zeros((int(planar_mask.sum()), 4), device=device)
         planar = cast(
             TowerTargetAreasPlanar,
             solar_tower.target_areas[index_mapping.planar_target_areas],
         )
-        target_dimensions[:, index_mapping.e] = -planar.dimensions[
-            planar_indices, index_mapping.target_dimensions_width
-        ]
-        target_dimensions[:, index_mapping.u] = -planar.dimensions[
-            planar_indices, index_mapping.target_dimensions_height
-        ]
 
-        center_coordinates[planar_mask] = (
-            planar.centers[planar_indices]
-            - 0.5 * target_dimensions
-            + coordinates / (resolution - 1) * target_dimensions
+        centers = planar.centers[planar_indices][:, :3]
+        dims = planar.dimensions[planar_indices]
+
+        e_axis = torch.tensor([1.0, 0.0, 0.0], device=device).expand(
+            planar_indices.numel(), 3
+        )
+        u_axis = torch.tensor([0.0, 0.0, 1.0], device=device).expand(
+            planar_indices.numel(), 3
         )
 
-    if target_area_indices[~planar_mask].numel() > 0:
+        e_local = (0.5 - e_norm[planar_mask]) * dims[
+            :, index_mapping.target_dimensions_width
+        ]
+        u_local = (0.5 - u_norm[planar_mask]) * dims[
+            :, index_mapping.target_dimensions_height
+        ]
+
+        target_coordinates[planar_mask, :3] = (
+            centers + e_local[:, None] * e_axis + u_local[:, None] * u_axis
+        )
+
+    if (~planar_mask).any():
         cylinder_indices = (
             target_area_indices[~planar_mask]
             - solar_tower.number_of_target_areas_per_type[
                 index_mapping.planar_target_areas
             ]
         )
-
         cylindrical = cast(
             TowerTargetAreasCylindrical,
             solar_tower.target_areas[index_mapping.cylindrical_target_areas],
         )
-        cylinder_normals = cylindrical.normals[cylinder_indices][:, :3]
-        cylinder_axes = cylindrical.axes[cylinder_indices][:, :3]
-        cylinder_centers = cylindrical.centers[cylinder_indices]
+
+        centers = cylindrical.centers[cylinder_indices][:, :3]
+        axes = cylindrical.axes[cylinder_indices][:, :3]
+        normals = cylindrical.normals[cylinder_indices][:, :3]
         radii = cylindrical.radii[cylinder_indices].flatten()
+        heights = cylindrical.heights[cylinder_indices].flatten()
+        opening_angles = cylindrical.opening_angles[cylinder_indices].flatten()
 
-        theta = (
-            bitmap_coordinates[~planar_mask, index_mapping.unbatched_bitmap_e]
-            / (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
-            - 0.5
-        ) * cylindrical.opening_angles[cylinder_indices].flatten()
-        z = (
-            (
-                (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
-                - bitmap_coordinates[~planar_mask, index_mapping.unbatched_bitmap_u]
-            )
-            / (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
-            - 0.5
-        ) * cylindrical.heights[cylinder_indices].flatten()
+        v = torch.cross(axes, normals, dim=-1)
 
-        v = torch.cross(cylinder_axes, cylinder_normals, dim=-1)
+        theta = (e_norm[~planar_mask] - 0.5) * opening_angles
+        z = (0.5 - u_norm[~planar_mask]) * heights
 
-        center_coordinates[~planar_mask, :3] = cylinder_centers[:, :3] + (
-            radii[:, None] * torch.cos(theta)[:, None] * cylinder_normals
+        target_coordinates[~planar_mask, :3] = (
+            centers
+            + radii[:, None] * torch.cos(theta)[:, None] * normals
             + radii[:, None] * torch.sin(theta)[:, None] * v
-            + z[:, None] * cylinder_axes
+            + z[:, None] * axes
         )
 
-    return center_coordinates
+    return target_coordinates
 
 
 def create_nurbs_evaluation_grid(

@@ -211,6 +211,7 @@ def create_flux_plots(
     number_of_plots_per_heliostat: int,
     base_path_data: str,
     data_parser: CalibrationDataParser,
+    resolution: torch.Tensor,
     plot_name: str,
 ) -> None:
     """
@@ -226,6 +227,8 @@ def create_flux_plots(
         The path to the data directory from which to load heliostat field calibration data.
     data_parser : CalibrationDataParser
         The data parser used to load calibration data from files.
+    resolution : torch.Tensor
+        Bitmap resolution.
     plot_name : str
         The name for the plots.
     """
@@ -254,7 +257,7 @@ def create_flux_plots(
             heliostat_data_mapping=validation_heliostat_data_mapping,
             heliostat_group=heliostat_group,
             scenario=scenario,
-            bitmap_resolution=torch.tensor([256, 256]),
+            bitmap_resolution=resolution,
             device=device,
         )
 
@@ -323,7 +326,7 @@ def create_flux_plots(
                 heliostat_group=heliostat_group,
                 blocking_active=False,
                 batch_size=heliostat_group.number_of_active_heliostats,
-                bitmap_resolution=torch.tensor([256, 256], device=device),
+                bitmap_resolution=resolution,
             )
 
             # Perform heliostat-based ray tracing.
@@ -486,6 +489,7 @@ with setup_distributed_environment(
         data_parser=PaintCalibrationDataParser(
             sample_limit=number_of_plots_per_heliostat
         ),
+        resolution=resolution,
         plot_name="ideal",
     )
 
@@ -495,6 +499,7 @@ with setup_distributed_environment(
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
+        bitmap_resolution=resolution,
         device=device,
     )
 
@@ -513,5 +518,6 @@ create_flux_plots(
     number_of_plots_per_heliostat=number_of_plots_per_heliostat,
     base_path_data=base_path_data,
     data_parser=PaintCalibrationDataParser(sample_limit=number_of_plots_per_heliostat),
+    resolution=resolution,
     plot_name="reconstructed",
 )
