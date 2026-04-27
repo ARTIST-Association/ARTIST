@@ -23,16 +23,18 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                     ],
                 )
             ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
+            torch.tensor(
+                [50.91342112259258, 6.387824755874856, 87.0], dtype=torch.float64
+            ),
             1,
             paint_mappings.UTIS_KEY,
             [
                 torch.tensor(
                     [
                         [
-                            -17.623041152954,
-                            -3.039341926575,
-                            50.708953857422,
+                            -17.639921188354,
+                            -2.744207382202,
+                            50.708946228027,
                             1.000000000000,
                         ]
                     ]
@@ -57,22 +59,24 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                     ],
                 )
             ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
+            torch.tensor(
+                [50.91342112259258, 6.387824755874856, 87.0], dtype=torch.float64
+            ),
             3,
             paint_mappings.HELIOS_KEY,
             [
                 torch.tensor(
                     [
                         [
-                            -17.593019485474,
-                            -3.039341926575,
-                            50.708175659180,
+                            -17.614156723022,
+                            -2.744694471359,
+                            50.708179473877,
                             1.000000000000,
                         ],
                         [
-                            -17.202730178833,
-                            -3.039341926575,
-                            51.339904785156,
+                            -17.210176467896,
+                            -2.746782302856,
+                            51.339900970459,
                             1.000000000000,
                         ],
                     ]
@@ -110,7 +114,9 @@ from artist.data_parser.paint_calibration_parser import PaintCalibrationDataPars
                     ],
                 )
             ],
-            torch.tensor([50.91342112259258, 6.387824755874856, 87.0]),
+            torch.tensor(
+                [50.91342112259258, 6.387824755874856, 87.0], dtype=torch.float64
+            ),
             2,
             "invalid",
             [
