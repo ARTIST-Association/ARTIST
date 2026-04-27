@@ -414,7 +414,7 @@ class KinematicsReconstructor:
                         batch_size=self.optimizer_dict[config_dictionary.batch_size],
                         random_seed=self.ddp_setup["heliostat_group_rank"],
                         dni=self.dni,
-                        bitmap_resolution=self.bitmap_resolution
+                        bitmap_resolution=self.bitmap_resolution,
                     )
 
                     # Perform heliostat-based ray tracing.
@@ -493,76 +493,6 @@ class KinematicsReconstructor:
                         break
 
                     epoch += 1
-
-                # ##################################################
-                # import matplotlib.pyplot as plt
-                # m = 18
-                # n = flux_measured.shape[0]
-                # for i in range(0, n, m):
-                #     fig, axes = plt.subplots(m, 2, figsize=(8, 50))
-
-                #     for j in range(m):
-                #         idx = i + j
-                #         if idx >= n:
-                #             axes[j, 0].axis("off")
-                #             axes[j, 1].axis("off")
-                #             continue
-                #         img_flux = flux_distributions[idx]
-                #         total_f = img_flux.sum()
-                #         if total_f > 0:
-                #             h, w = img_flux.shape
-                #             y_grid = (
-                #                 torch.arange(h, device=img_flux.device)
-                #                 .unsqueeze(1)
-                #                 .expand(h, w)
-                #             )
-                #             x_grid = (
-                #                 torch.arange(w, device=img_flux.device)
-                #                 .unsqueeze(0)
-                #                 .expand(h, w)
-                #             )
-
-                #             cy_f = (y_grid * img_flux).sum() / total_f
-                #             cx_f = (x_grid * img_flux).sum() / total_f
-                #         else:
-                #             cy_f, cx_f = 0.0, 0.0
-                #         img_meas = flux_measured[idx].cpu().detach()
-                #         total_m = img_meas.sum().cpu().detach()
-                #         if total_m > 0:
-                #             h, w = img_meas.shape
-                #             y_grid = (
-                #                 torch.arange(h, device=img_meas.device)
-                #                 .unsqueeze(1)
-                #                 .expand(h, w)
-                #             )
-                #             x_grid = (
-                #                 torch.arange(w, device=img_meas.device)
-                #                 .unsqueeze(0)
-                #                 .expand(h, w)
-                #             )
-
-                #             cy_m = (y_grid * img_meas).sum() / total_m
-                #             cx_m = (x_grid * img_meas).sum() / total_m
-                #         else:
-                #             cy_m, cx_m = 0.0, 0.0
-                #         cx_f, cy_f = float(cx_f), float(cy_f)
-                #         cx_m, cy_m = float(cx_m), float(cy_m)
-                #         ax1 = axes[j, 0]
-                #         ax1.imshow(img_flux.cpu().detach())
-                #         ax1.scatter(cx_m, cy_m, c="black", s=30, marker="o")
-                #         ax1.scatter(cx_f, cy_f, c="r", s=30, marker="x")
-                #         ax1.set_title(f"heliostat {i // m}")
-                #         ax1.axis("off")
-                #         ax2 = axes[j, 1]
-                #         ax2.imshow(img_meas.cpu().detach())
-                #         ax2.scatter(cx_m, cy_m, c="black", s=30, marker="o")
-                #         ax2.scatter(cx_f, cy_f, c="r", s=30, marker="x")
-                #         ax2.set_title(f"loss: {loss_per_sample[i + j]}")
-                #         ax2.axis("off")
-                #     plt.tight_layout()
-                #     plt.savefig(f"./bitmaps/kinematics/heliostat_{i // m}.png")
-                #     plt.close(fig)
-                # ##################################################
 
                 loss_history.append(
                     {

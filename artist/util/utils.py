@@ -527,29 +527,13 @@ def get_center_of_mass(
     """
     Calculate the coordinates of the flux density center of mass.
 
-    Convention
-    ----------
-    Resolution is conceptually defined as:
-        [W, H]  # width, height
-
-    Tensor storage follows PyTorch convention:
-        [H, W]  # height, width
-
-    Axis mapping in this function:
-        e (horizontal / width / x-axis)  -> dim 2
-        u (vertical   / height / y-axis) -> dim 1
-
-    So:
-        bitmaps shape = [batch, u, e] = [batch, H, W]
+    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
+    Tensor memory layout follows PyTorch convention: [H, W] # height, width
 
     First determine the indices of the bitmap center of mass.
     Next determine the position (coordinates) of the center of mass on the target.
 
     Returns (0.0, 0.0) for empty fluxes.
-
-    Layer	Order	Meaning
-    tensor	[u, e]	memory layout
-    output	(e, u)	geometry
 
     Parameters
     ----------
@@ -564,8 +548,8 @@ def get_center_of_mass(
     Returns
     -------
     torch.Tensor
-        Bitmap coordinates of the flux density centers of mass (x pixel, y pixel).
-        Shape is ``[number_of_active_heliostats, 2]`` as (e, u).
+        Bitmap coordinates of the flux density centers of mass (e pixel, u pixel).
+        Shape is ``[number_of_active_heliostats, 2]``.
     """
     device = get_device(device=device)
 
@@ -579,17 +563,15 @@ def get_center_of_mass(
         + 1e-8
     )
 
-    # e = horizontal axis = width = dim 2
     e_coords = torch.linspace(0, width_e - 1, width_e, device=device)
-    # u = vertical axis = height = dim 1
     u_coords = torch.linspace(0, height_u - 1, height_u, device=device)
 
-    # meshgrid in (u, e) order because tensor is [u, e]
+    # meshgrid in (u, e) order because tensor is [u, e].
     u_grid, e_grid = torch.meshgrid(u_coords, e_coords, indexing="ij")
     u_grid = u_grid.expand(batch, -1, -1)
     e_grid = e_grid.expand(batch, -1, -1)
 
-    # center of mass
+    # Center of mass.
     e_center_of_mass = (e_grid * normalized_bitmaps).sum(
         dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e)
     )
@@ -599,6 +581,7 @@ def get_center_of_mass(
 
     return torch.stack([e_center_of_mass, u_center_of_mass], dim=1)
 
+
 def bitmap_coordinates_to_target_coordinates(
     bitmap_coordinates: torch.Tensor,
     bitmap_resolution: torch.Tensor,
@@ -607,149 +590,67 @@ def bitmap_coordinates_to_target_coordinates(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Map 2D bitmap pixel coordinates to 3D world coordinates on planar or cylindrical target surfaces.
+    Convert bitmap pixel coordinates to 4D homogeneous world coordinates on the target surface.
 
-    This function implements a unified projection model that converts discrete bitmap sampling
-    coordinates into continuous 3D positions on the solar tower target geometry.
+    For planar target areas the pixel coordinates are mapped linearly to target plane coordinates.
+    For cylindrical target areas the pixel coordinates are mapped to cylindrical surface coordinates
+    using the cylinder's radius, opening angle, height, axis, and normal.
 
-    The mapping supports:
-        - Planar target areas (rectangular surfaces in 3D space)
-        - Cylindrical target areas (partial cylindrical surfaces)
+    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
+    Tensor memory layout follows PyTorch convention: [H, W] # height, width
 
-    ------------------------------------------------------------------------
-    BITMAP CONVENTIONS
-    ------------------------------------------------------------------------
     The bitmap is treated as a discrete image grid with resolution:
-
-        bitmap_resolution = [width, height]
-
+        - bitmap_resolution = [width, height]
     Pixel coordinates follow image indexing conventions:
+        - bitmap_coordinates[..., e] ∈ [0, W-1]
+        - bitmap_coordinates[..., u] ∈ [0, H-1]
+    They are interpreted as centered pixels:
+        - (e + 0.5) / W
+        - (u + 0.5) / H
+    This ensures each pixel represents its spatial cell center rather than its corner.
 
-        bitmap_coordinates[..., e] ∈ [0, W-1]
-        bitmap_coordinates[..., u] ∈ [0, H-1]
+    The e-axis is intentionally flipped (0.5 - e_norm) to match the desired bitmap orientation.
+    This means: increasing bitmap e → decreases world e.
 
-    where:
-        e-axis → horizontal axis (width direction)
-        u-axis → vertical axis (height direction)
-
-    IMPORTANT CONVENTION:
-        Pixel coordinates are interpreted as CENTERED pixels using:
-
-            e_norm = (e + 0.5) / W
-            u_norm = (u + 0.5) / H
-
-        This ensures each pixel represents its spatial cell center rather than its corner.
-
-    ------------------------------------------------------------------------
-    WORLD / TARGET COORDINATE CONVENTIONS
-    ------------------------------------------------------------------------
-
-    PLANAR TARGETS:
-        - Each plane has a center point and two fixed global axes:
-              e_axis = (1, 0, 0)
-              u_axis = (0, 0, 1)
-
-        - These define a 2D coordinate system embedded in 3D space.
-
-        - Mapping:
-              e_local = (0.5 - e_norm) * width
-              u_local = (0.5 - u_norm) * height
-
-        NOTE:
-            The e-axis is intentionally flipped (0.5 - e_norm) to match
-            the desired bitmap orientation.
-
-            This means:
-                increasing bitmap x → decreases world x
-
-            This convention is deliberate and consistent across inverse mapping.
-
-    CYLINDRICAL TARGETS:
-        - Each cylindrical segment is defined by:
-              center
-              axis (longitudinal direction)
-              normal (radial reference direction)
-              radius
-              height
-              opening angle
-
-        - A local orthonormal basis is constructed:
-              v = axis × normal
-
-        - Angular mapping:
-              theta = (e_norm - 0.5) * opening_angle
-
-        - Axial mapping:
-              z = (0.5 - u_norm) * height
-
-        - Final mapping:
-              world = center
-                    + r cos(theta) * normal
-                    + r sin(theta) * v
-                    + z * axis
-
-    ------------------------------------------------------------------------
-    COORDINATE SYSTEM CONSISTENCY
-    ------------------------------------------------------------------------
-
-    - Bitmap space: discrete grid, centered pixel sampling
-    - Planar world space: fixed global axes (hardcoded orientation)
-    - Cylindrical world space: local basis derived per target
-
-    Vertical convention:
-        Both planar and cylindrical mappings use:
-            u_norm ↑ → world z decreases
-
-        i.e.:
-            top of bitmap maps to +height/2
-            bottom maps to -height/2
-
-    ------------------------------------------------------------------------
-    PARAMETERS
-    ------------------------------------------------------------------------
+    Parameters
+    ----------
     bitmap_coordinates : torch.Tensor
-        Pixel coordinates per sample.
-        Shape: [N, 2] where columns are (e, u)
-
+        Pixel coordinates in the bitmap for each heliostat, as (e, u) pairs.
+        Shape is ``[number_of_active_heliostats, 2]``.
     bitmap_resolution : torch.Tensor
-        Bitmap resolution as [W, H].
-
+        Resolution of the bitmap (width, height) in pixels.
+        Shape is ``[2]``.
     solar_tower : SolarTower
-        Geometry container defining planar and cylindrical target areas.
-
+        Solar tower containing all target area definitions (planar and cylindrical).
     target_area_indices : torch.Tensor
-        Index of target surface per sample.
-
+        Global target area index for each heliostat (planar indices first, cylindrical second).
+        Shape is ``[number_of_active_heliostats]``.
     device : torch.device | None
-        Computation device.
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
-    ------------------------------------------------------------------------
-    RETURNS
-    ------------------------------------------------------------------------
+    Returns
+    -------
     torch.Tensor
-        Homogeneous world coordinates [x, y, z, 1].
-        Shape: [N, 4]
-
-    ------------------------------------------------------------------------
-    NOTES
-    ------------------------------------------------------------------------
-    - Pixel coordinates are treated as centered (0.5 offset convention).
-    - Planar axes are intentionally hardcoded to a global orientation.
-    - Cylindrical mapping uses local orthonormal basis per target.
-    - The mapping is designed to be invertible with the corresponding
-      world → bitmap function.
+        World coordinates on the target surface in homogeneous format.
+        Shape is ``[number_of_active_heliostats, 4]``.
     """
     device = get_device(device=device)
 
-    N = target_area_indices.numel()
-    target_coordinates = torch.zeros((N, 4), device=device)
+    number_of_coordinates = target_area_indices.numel()
+    target_coordinates = torch.zeros((number_of_coordinates, 4), device=device)
     target_coordinates[:, -1] = 1.0
 
-    W = bitmap_resolution[index_mapping.unbatched_bitmap_e]
-    H = bitmap_resolution[index_mapping.unbatched_bitmap_u]
+    bitmap_width = bitmap_resolution[index_mapping.unbatched_bitmap_e]
+    bitmap_height = bitmap_resolution[index_mapping.unbatched_bitmap_u]
 
-    e_norm = (bitmap_coordinates[:, index_mapping.unbatched_bitmap_e] + 0.5) / W
-    u_norm = (bitmap_coordinates[:, index_mapping.unbatched_bitmap_u] + 0.5) / H
+    e_norm = (
+        bitmap_coordinates[:, index_mapping.unbatched_bitmap_e] + 0.5
+    ) / bitmap_width
+    u_norm = (
+        bitmap_coordinates[:, index_mapping.unbatched_bitmap_u] + 0.5
+    ) / bitmap_height
 
     planar_mask = (
         target_area_indices
@@ -758,7 +659,7 @@ def bitmap_coordinates_to_target_coordinates(
 
     if planar_mask.any():
         planar_indices = target_area_indices[planar_mask]
-        
+
         planar = cast(
             TowerTargetAreasPlanar,
             solar_tower.target_areas[index_mapping.planar_target_areas],
@@ -767,22 +668,30 @@ def bitmap_coordinates_to_target_coordinates(
         centers = planar.centers[planar_indices][:, :3]
         dims = planar.dimensions[planar_indices]
 
-        e_axis = torch.tensor([1.0, 0.0, 0.0], device=device).expand(planar_indices.numel(), 3)
-        u_axis = torch.tensor([0.0, 0.0, 1.0], device=device).expand(planar_indices.numel(), 3)
+        e_axis = torch.tensor([1.0, 0.0, 0.0], device=device).expand(
+            planar_indices.numel(), 3
+        )
+        u_axis = torch.tensor([0.0, 0.0, 1.0], device=device).expand(
+            planar_indices.numel(), 3
+        )
 
-        e_local = (0.5 - e_norm[planar_mask]) * dims[:, index_mapping.target_dimensions_width]
-        u_local = (0.5 - u_norm[planar_mask]) * dims[:, index_mapping.target_dimensions_height]
-        
+        e_local = (0.5 - e_norm[planar_mask]) * dims[
+            :, index_mapping.target_dimensions_width
+        ]
+        u_local = (0.5 - u_norm[planar_mask]) * dims[
+            :, index_mapping.target_dimensions_height
+        ]
+
         target_coordinates[planar_mask, :3] = (
-            centers
-            + e_local[:, None] * e_axis
-            + u_local[:, None] * u_axis
+            centers + e_local[:, None] * e_axis + u_local[:, None] * u_axis
         )
 
     if (~planar_mask).any():
         cylinder_indices = (
             target_area_indices[~planar_mask]
-            - solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+            - solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
         )
         cylindrical = cast(
             TowerTargetAreasCylindrical,
@@ -819,105 +728,57 @@ def target_coordinates_to_bitmap_coordinates(
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
-    Map 3D world coordinates on planar or cylindrical solar tower targets
-    back into 2D bitmap pixel coordinates.
+    Map 3D world coordinates on tower targets into 2D bitmap pixel coordinates.
 
-    This function is the exact inverse of
-    `bitmap_coordinates_to_target_coordinates`, using identical geometric
-    conventions and centered-pixel sampling.
+    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
+    Tensor memory layout follows PyTorch convention: [H, W] # height, width
 
-    ------------------------------------------------------------------------
-    BITMAP CONVENTIONS
-    ------------------------------------------------------------------------
-    Bitmap resolution is defined as:
+    The bitmap is treated as a discrete image grid with resolution:
+        - bitmap_resolution = [width, height]
+    Pixel coordinates follow image indexing conventions:
+        - bitmap_coordinates[..., e] ∈ [0, W-1]
+        - bitmap_coordinates[..., u] ∈ [0, H-1]
+    They are interpreted as centered pixels:
+        - (e + 0.5) / W
+        - (u + 0.5) / H
+    This ensures each pixel represents its spatial cell center rather than its corner.
 
-        bitmap_resolution = [W, H]
+    The e-axis is intentionally flipped (0.5 - e_norm) to match the desired bitmap orientation.
+    This means: increasing bitmap e → decreases world e.
 
-    Pixel coordinates are interpreted as CENTERED samples:
+    Parameters
+    ----------
+    world_coordinates : torch.Tensor
+        Coordinates in world space.
+        Shape is ``[number_of_active_heliostats, 4]``.
+    bitmap_resolution : torch.Tensor
+        Resolution of the bitmap (width, height) in pixels.
+        Shape is ``[2]``.
+    solar_tower : SolarTower
+        Solar tower containing all target area definitions (planar and cylindrical).
+    target_area_indices : torch.Tensor
+        Global target area index for each heliostat (planar indices first, cylindrical second).
+        Shape is ``[number_of_active_heliostats]``.
+    device : torch.device | None
+        The device on which to perform computations or load tensors and models (default is None).
+        If None, ``ARTIST`` will automatically select the most appropriate
+        device (CUDA or CPU) based on availability and OS.
 
-        e_norm = (e + 0.5) / W
-        u_norm = (u + 0.5) / H
-
-    Inverse mapping:
-
-        e = e_norm * W - 0.5
-        u = u_norm * H - 0.5
-
-    ------------------------------------------------------------------------
-    PLANAR TARGETS
-    ------------------------------------------------------------------------
-    Planar targets use a fixed global basis:
-
-        e_axis = (1, 0, 0)
-        u_axis = (0, 0, 1)
-
-    IMPORTANT SIGN CONVENTION:
-
-        Forward mapping uses:
-            e_local = (0.5 - e_norm) * width
-            u_local = (0.5 - u_norm) * height
-
-        Therefore inverse projection must include sign correction:
-
-            e_local = -dot(world - center, e_axis)
-            u_local = -dot(world - center, u_axis)
-
-    Normalization:
-
-        e_norm = e_local / width + 0.5
-        u_norm = u_local / height + 0.5
-
-    ------------------------------------------------------------------------
-    CYLINDRICAL TARGETS
-    ------------------------------------------------------------------------
-    Cylindrical targets define a local orthonormal basis:
-
-        axis   → cylinder axis (height direction)
-        normal → radial reference direction
-        v      → axis × normal
-
-    Angular coordinate:
-
-        theta = atan2(dot(rel, v), dot(rel, normal))
-
-    Axial coordinate:
-
-        z = dot(rel, axis)
-
-    Normalization:
-
-        e_norm = theta / opening_angle + 0.5
-        u_norm = -z / height + 0.5
-
-    ------------------------------------------------------------------------
-    CONSISTENCY GUARANTEE
-    ------------------------------------------------------------------------
-    This function is the exact inverse of the forward mapping:
-        bitmap → world
-
-    under identical assumptions:
-        - centered pixel sampling
-        - fixed planar axes
-        - consistent cylindrical basis
-        - shared sign conventions
-
-    ------------------------------------------------------------------------
-    RETURNS
-    ------------------------------------------------------------------------
+    Returns
+    -------
     torch.Tensor
-        Bitmap coordinates [e, u] per input world point.
-        Shape: [N, 2]
+        Bitmap coordinates in homogeneous format.
+        Shape is ``[number_of_active_heliostats, 4]``.
     """
-
     device = get_device(device=device)
 
-    world_xyz = world_coordinates[:, :3]
-    N = world_xyz.shape[0]
+    world_enu = world_coordinates[:, :3]
+    number_of_coordinates = world_enu.shape[0]
 
-    bitmap_coords = torch.zeros((N, 2), device=device)
+    bitmap_coords = torch.zeros((number_of_coordinates, 2), device=device)
 
-    W = bitmap_resolution[index_mapping.unbatched_bitmap_e]
-    H = bitmap_resolution[index_mapping.unbatched_bitmap_u]
+    bitmap_width = bitmap_resolution[index_mapping.unbatched_bitmap_e]
+    bitmap_height = bitmap_resolution[index_mapping.unbatched_bitmap_u]
 
     planar_mask = (
         target_area_indices
@@ -935,10 +796,14 @@ def target_coordinates_to_bitmap_coordinates(
         centers = planar.centers[planar_indices][:, :3]
         dims = planar.dimensions[planar_indices]
 
-        e_axis = torch.tensor([1.0, 0.0, 0.0], device=device).expand(planar_indices.numel(), 3)
-        u_axis = torch.tensor([0.0, 0.0, 1.0], device=device).expand(planar_indices.numel(), 3)
+        e_axis = torch.tensor([1.0, 0.0, 0.0], device=device).expand(
+            planar_indices.numel(), 3
+        )
+        u_axis = torch.tensor([0.0, 0.0, 1.0], device=device).expand(
+            planar_indices.numel(), 3
+        )
 
-        rel = world_xyz[planar_mask] - centers
+        rel = world_enu[planar_mask] - centers
 
         e_local = -torch.sum(rel * e_axis, dim=-1)
         u_local = -torch.sum(rel * u_axis, dim=-1)
@@ -946,13 +811,19 @@ def target_coordinates_to_bitmap_coordinates(
         e_norm = e_local / dims[:, index_mapping.target_dimensions_width] + 0.5
         u_norm = u_local / dims[:, index_mapping.target_dimensions_height] + 0.5
 
-        bitmap_coords[planar_mask, index_mapping.unbatched_bitmap_e] = e_norm * W - 0.5
-        bitmap_coords[planar_mask, index_mapping.unbatched_bitmap_u] = u_norm * H - 0.5
+        bitmap_coords[planar_mask, index_mapping.unbatched_bitmap_e] = (
+            e_norm * bitmap_width - 0.5
+        )
+        bitmap_coords[planar_mask, index_mapping.unbatched_bitmap_u] = (
+            u_norm * bitmap_height - 0.5
+        )
 
     if (~planar_mask).any():
         cylinder_indices = (
             target_area_indices[~planar_mask]
-            - solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+            - solar_tower.number_of_target_areas_per_type[
+                index_mapping.planar_target_areas
+            ]
         )
         cylindrical = cast(
             TowerTargetAreasCylindrical,
@@ -962,13 +833,12 @@ def target_coordinates_to_bitmap_coordinates(
         centers = cylindrical.centers[cylinder_indices][:, :3]
         axes = cylindrical.axes[cylinder_indices][:, :3]
         normals = cylindrical.normals[cylinder_indices][:, :3]
-        radii = cylindrical.radii[cylinder_indices].flatten()
         heights = cylindrical.heights[cylinder_indices].flatten()
         opening_angles = cylindrical.opening_angles[cylinder_indices].flatten()
 
         v = torch.cross(axes, normals, dim=-1)
 
-        rel = world_xyz[~planar_mask] - centers
+        rel = world_enu[~planar_mask] - centers
 
         z = torch.sum(rel * axes, dim=-1)
 
@@ -980,8 +850,12 @@ def target_coordinates_to_bitmap_coordinates(
         e_norm = theta / opening_angles + 0.5
         u_norm = -z / heights + 0.5
 
-        bitmap_coords[~planar_mask, index_mapping.unbatched_bitmap_e] = e_norm * W - 0.5
-        bitmap_coords[~planar_mask, index_mapping.unbatched_bitmap_u] = u_norm * H - 0.5
+        bitmap_coords[~planar_mask, index_mapping.unbatched_bitmap_e] = (
+            e_norm * bitmap_width - 0.5
+        )
+        bitmap_coords[~planar_mask, index_mapping.unbatched_bitmap_u] = (
+            u_norm * bitmap_height - 0.5
+        )
 
     return bitmap_coords
 
