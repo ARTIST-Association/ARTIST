@@ -89,6 +89,8 @@ def create_distributions(
 
     Parameters
     ----------
+    resolution : torch.Tensor
+        The bitmap resolution.
     measured_data_dir : pathlib.Path
         Path to the measured baseline data.
     results_path : pathlib.Path
@@ -623,6 +625,8 @@ def aim_point_plots(
         The aim point.
     dni : float
         Direct normal irradiance in W/m^2.
+    bitmap_resolution : torch.Tensor
+        The bitmap resolution.
     label : str
         Identifier fluxes.
     batch_size : int
@@ -638,7 +642,7 @@ def aim_point_plots(
     -------
     torch.Tensor
         Total flux distribution on the selected target.
-        Shape is ``[bitmap_resolution_e, bitmap_resolution_u]``.
+        Shape is ``[bitmap_resolution_u, bitmap_resolution_e]``.
     """
     with torch.no_grad():
         device = get_device(device)
@@ -705,30 +709,6 @@ def aim_point_plots(
                 target_area_indices=target_area_indices,
                 device=device,
             )
-            # ###########
-            # import matplotlib.pyplot as plt
-
-            # aim_point_measured_bitmap = 256 - torch.tensor([112.9362, 111.4531])
-            # for i in range(bitmaps_per_heliostat.shape[0]):
-            #     total_f = bitmaps_per_heliostat[i].sum()
-            #     if total_f > 0:
-            #         h, w = bitmaps_per_heliostat[i].shape
-            #         y_grid = torch.arange(h, device=device).unsqueeze(1).expand(h, w)
-            #         x_grid = torch.arange(w, device=device).unsqueeze(0).expand(h, w)
-            #         cy_f = (y_grid * bitmaps_per_heliostat[i]).sum() / total_f
-            #         cx_f = (x_grid * bitmaps_per_heliostat[i]).sum() / total_f
-            #     plt.imshow(bitmaps_per_heliostat[i].cpu().detach())
-            #     plt.scatter(
-            #         x=aim_point_measured_bitmap[0],
-            #         y=aim_point_measured_bitmap[1],
-            #         c="r",
-            #         s=30,
-            #     )
-            #     plt.scatter(cx_f.cpu().detach(), cy_f.cpu().detach(), c="g", s=30)
-            #     plt.scatter(x=w / 2, y=h / 2, c="black", s=30, marker="x")
-            #     plt.savefig(f"./bitmaps/aim_points/{label}_{i}")
-            #     plt.close()
-            # ###########
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
                 target_area_indices=target_area_indices,
@@ -801,7 +781,9 @@ def full_field_optimizations(
         device=device,
     ) as ddp_setup:
         device = ddp_setup["device"]
-        control_points_path = results_path.parent / "reconstructed_nurbs_control_points.pt"
+        control_points_path = (
+            results_path.parent / "reconstructed_nurbs_control_points.pt"
+        )
 
         assert data_mappings is not None, "data_mappings must be provided."
         assert surface_config is not None, "surface_config must be provided."
@@ -998,9 +980,9 @@ def full_field_optimizations(
             batch = heliostat_data[i : i + batch_size]
             data_surfaces.append(
                 {
-                    config_dictionary.data_parser: data_mappings[
-                        "surface_training"
-                    ][config_dictionary.data_parser],
+                    config_dictionary.data_parser: data_mappings["surface_training"][
+                        config_dictionary.data_parser
+                    ],
                     config_dictionary.heliostat_data_mapping: batch,
                 }
             )
@@ -1062,14 +1044,16 @@ def full_field_optimizations(
                 loss_history_surface.append(loss_history_surface_part)
                 if ddp_setup["is_distributed"]:
                     torch.distributed.barrier()
-            
+
             reconstructed_nurbs_control_points = [
                 heliostat_group.nurbs_control_points.detach()
                 for heliostat_group in scenario_surface.heliostat_field.heliostat_groups
             ]
             torch.save(reconstructed_nurbs_control_points, control_points_path)
         else:
-            reconstructed_nurbs_control_points = torch.load(control_points_path, weights_only=False)
+            reconstructed_nurbs_control_points = torch.load(
+                control_points_path, weights_only=False
+            )
             for heliostat_group, control_points in zip(
                 scenario_surface.heliostat_field.heliostat_groups,
                 reconstructed_nurbs_control_points,
@@ -1352,7 +1336,7 @@ def create_heliostat_data_mappings(
         The mappings from heliostat name to data files and data parsers for each task.
     """
     with open(dataset_splits_file, "r") as f:
-        dataset_splits_file = json.load(f)
+        dataset_splits = json.load(f)
 
     data_parser_surface = PaintCalibrationDataParser(
         sample_limit=sample_limit_surfaces,
@@ -1372,7 +1356,9 @@ def create_heliostat_data_mappings(
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: dataset_splits_file["kinematics_reconstruction"]["plot"],
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "kinematics_reconstruction"
+        ]["plot"],
     }
 
     data_kinematics_training: dict[
@@ -1381,7 +1367,9 @@ def create_heliostat_data_mappings(
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_kinematics,
-        config_dictionary.heliostat_data_mapping: dataset_splits_file["kinematics_reconstruction"]["training"],
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "kinematics_reconstruction"
+        ]["training"],
     }
 
     data_kinematics_validation: dict[
@@ -1390,7 +1378,9 @@ def create_heliostat_data_mappings(
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_kinematics,
-        config_dictionary.heliostat_data_mapping: dataset_splits_file["kinematics_reconstruction"]["validation"],
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "kinematics_reconstruction"
+        ]["validation"],
     }
 
     data_surface_plot: dict[
@@ -1399,7 +1389,9 @@ def create_heliostat_data_mappings(
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: dataset_splits_file["surface_reconstruction"]["plot"],
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "surface_reconstruction"
+        ]["plot"],
     }
 
     data_surface_training: dict[
@@ -1408,7 +1400,9 @@ def create_heliostat_data_mappings(
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_surface,
-        config_dictionary.heliostat_data_mapping: dataset_splits_file["surface_reconstruction"]["training"],
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "surface_reconstruction"
+        ]["training"],
     }
     data_surface_validation: dict[
         str,
@@ -1416,7 +1410,9 @@ def create_heliostat_data_mappings(
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         config_dictionary.data_parser: data_parser_surface,
-        config_dictionary.heliostat_data_mapping: dataset_splits_file["surface_reconstruction"]["validation"],
+        config_dictionary.heliostat_data_mapping: dataset_splits[
+            "surface_reconstruction"
+        ]["validation"],
     }
 
     data_mappings = {
@@ -1608,7 +1604,7 @@ def main() -> None:
         results_number = get_incremented_path_number(
             base_path=results_dir / "results.pt"
         )
-        results_path = results_dir / f"results_{0}.pt"
+        results_path = results_dir / f"results_{results_number}.pt"
 
         measured_data_dir = pathlib.Path(args.measured_data_dir)
         measured_data_dir.mkdir(parents=True, exist_ok=True)
@@ -1642,9 +1638,7 @@ def main() -> None:
                 f"The deflectometry scenario located at {scenario_path_deflectometry} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
             )
 
-        dataset_splits = (
-            pathlib.Path(args.results_dir) / case / "dataset_splits.json"
-        )
+        dataset_splits = pathlib.Path(args.results_dir) / case / "dataset_splits.json"
         if not dataset_splits.exists():
             raise FileNotFoundError(
                 f"The viable heliostat list located at {dataset_splits} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
