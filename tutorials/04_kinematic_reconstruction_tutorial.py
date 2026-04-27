@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
+from artist.data_parser import paint_scenario_parser
 from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
@@ -30,6 +31,7 @@ torch.cuda.manual_seed(7)
 def create_fluxes(
     data_parser: CalibrationDataParser,
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
+    resolution: torch.Tensor,
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -40,6 +42,8 @@ def create_fluxes(
         Data parser used to load calibration data from files.
     heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
         Mapping from heliostats to calibration data files.
+    resolution : torch.Tensor
+        Bitmap resolution.
 
     Returns
     -------
@@ -66,7 +70,7 @@ def create_fluxes(
             heliostat_data_mapping=heliostat_data_mapping,
             heliostat_group=heliostat_group,
             scenario=scenario,
-            bitmap_resolution=torch.tensor([256, 256]),
+            bitmap_resolution=resolution,
             device=device,
         )
 
@@ -95,7 +99,7 @@ def create_fluxes(
                 heliostat_group=heliostat_group,
                 blocking_active=False,
                 batch_size=heliostat_group.number_of_active_heliostats,
-                bitmap_resolution=torch.tensor([256, 256], device=device),
+                bitmap_resolution=resolution,
             )
 
             # Perform heliostat-based ray tracing.
@@ -178,47 +182,47 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-heliostat_data_mapping = [
-    (
-        "heliostat_name_1",
-        [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-    (
-        "heliostat_name_2",
-        [
-            pathlib.Path(
-                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-            ),
-            # ....
-        ],
-        [
-            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-            # ....
-        ],
-    ),
-]
+# heliostat_data_mapping = [
+#     (
+#         "heliostat_name_1",
+#         [
+#             pathlib.Path(
+#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+#             ),
+#             # ....
+#         ],
+#         [
+#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+#             # ....
+#         ],
+#     ),
+#     (
+#         "heliostat_name_2",
+#         [
+#             pathlib.Path(
+#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+#             ),
+#             # ....
+#         ],
+#         [
+#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+#             # ....
+#         ],
+#     ),
+# ]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
-# heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-#     base_path="base/path/data",
-#     heliostat_names=["heliostat_1", "..."],
-#     number_of_measurements=5,
-#     image_variant="flux",
-#     randomize=True,
-# )
+heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
+    base_path="/workVERLEIHNIX/share/PAINT_data",
+    heliostat_names=["AA39", "AA31"],
+    number_of_measurements=2,
+    image_variant="flux",
+    randomize=True,
+)
 
 # Configure the optimization.
 optimizer_dict = {
@@ -291,12 +295,15 @@ with setup_distributed_environment(
             scenario_file=scenario_file, device=device
         )
 
+    resolution = torch.tensor([300, 360], device=device)
+
     bitmaps_before, _ = create_fluxes(
         data_parser=data_parser_plots,
         heliostat_data_mapping=[
             (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
             for heliostat in heliostat_data_mapping
         ],
+        resolution=resolution
     )
 
     loss_definition = FocalSpotLoss(scenario=scenario)
@@ -309,6 +316,7 @@ with setup_distributed_environment(
         dni=500,
         optimization_configuration=optimization_configuration,
         reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
+        bitmap_resolution=resolution
     )
 
     # Reconstruct the kinematics.
@@ -325,6 +333,7 @@ bitmaps_after, bitmaps_measured = create_fluxes(
         (heliostat[0], [heliostat[1][-1]], [heliostat[2][-1]])
         for heliostat in heliostat_data_mapping
     ],
+    resolution=resolution
 )
 create_plots(
     fluxes_before=bitmaps_before,

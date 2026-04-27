@@ -22,7 +22,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/tutorials/data/scenarios/test_scenario_paint_multiple_heliostat_groups_deflectometry.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -65,8 +65,8 @@ with setup_distributed_environment(
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.solar_tower.number_of_target_areas_per_type.sum(),
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
             bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            bitmap_resolution[index_mapping.unbatched_bitmap_e],
         ),
         device=device,
     )
@@ -161,10 +161,11 @@ with setup_distributed_environment(
                     for name, m in zip(heliostat_group.names, active_heliostats_mask)
                     for _ in range(m)
                 ]
+                target_names = {v: k for k, v in scenario.solar_tower.target_name_to_index.items()}
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
-                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']} Target: {scenario.solar_tower.index_to_target_area[target_area_indices[i]]}"
+                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']}, Target: {target_names[target_area_indices[i].item()]}"
                 )
                 plt.savefig(
                     f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
@@ -192,16 +193,17 @@ with setup_distributed_environment(
 
         # Plot the combined bitmaps of heliostats on the same target reduced within each group.
         for target_area_index in range(combined_bitmaps_per_target.shape[0]):
+            target_names = {v: k for k, v in scenario.solar_tower.target_name_to_index.items()}
             plt.imshow(
                 combined_bitmaps_per_target[target_area_index].cpu().detach(),
                 cmap="gray",
             )
             plt.axis("off")
             plt.title(
-                f"Reduced within group, Target area: {scenario.solar_tower.index_to_target_area[target_area_index]}, Rank: {ddp_setup['rank']}"
+                f"Reduced within group, Target area: {target_names[target_area_index]}, Rank: {ddp_setup['rank']}"
             )
             plt.savefig(
-                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
+                f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{target_names[target_area_index]}.png"
             )
 
     if ddp_setup[config_dictionary.is_distributed]:  # type:ignore
@@ -211,14 +213,15 @@ with setup_distributed_environment(
 
     # Plot the final combined bitmaps of heliostats on the same target fully reduced.
     for target_area_index in range(combined_bitmaps_per_target.shape[0]):
+        target_names = {v: k for k, v in scenario.solar_tower.target_name_to_index.items()}
         plt.imshow(
             combined_bitmaps_per_target[target_area_index].cpu().detach(),
             cmap="gray",
         )
         plt.axis("off")
         plt.title(
-            f"Final bitmap, Target area: {scenario.solar_tower.index_to_target_area[target_area_index]}, Rank: {ddp_setup['rank']}"
+            f"Final bitmap, Target area: {target_names[target_area_index]}, Rank: {ddp_setup['rank']}"
         )
         plt.savefig(
-            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{scenario.solar_tower.index_to_target_area[target_area_index]}.png"
+            f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{target_names[target_area_index]}.png"
         )
