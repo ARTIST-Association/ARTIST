@@ -105,24 +105,26 @@ def plot_surface_reconstruction_flux(
     plot_data = results["surface_reconstruction"]["flux_plot_data"]
     number_of_heliostats = len(plot_data)
     fig, axes = plt.subplots(number_of_heliostats, 7, figsize=(35, 15))
-    for index, heliostat_name in enumerate(plot_data):
+    fontsize = 28
+    for index in range(1):
+        heliostat_name = "AK54"
         heliostat_data = plot_data[heliostat_name]
         axes[index, 0].imshow(
             heliostat_data["fluxes"][0].cpu().detach(), cmap="inferno"
         )
-        axes[index, 0].set_title("Calibration Flux")
+        axes[index, 0].set_title("Calibration Flux", fontsize=fontsize)
         axes[index, 0].axis("off")
 
         axes[index, 1].imshow(
             heliostat_data["fluxes"][1].cpu().detach(), cmap="inferno"
         )
-        axes[index, 1].set_title("Surface not reconstructed")
+        axes[index, 1].set_title("Surface not reconstructed", fontsize=fontsize)
         axes[index, 1].axis("off")
 
         axes[index, 2].imshow(
             heliostat_data["fluxes"][2].cpu().detach(), cmap="inferno"
         )
-        axes[index, 2].set_title("Surface reconstructed")
+        axes[index, 2].set_title("Surface reconstructed", fontsize=fontsize)
         axes[index, 2].axis("off")
 
         reference_direction = torch.tensor([0.0, 0.0, 1.0], device=torch.device("cpu"))
@@ -164,13 +166,14 @@ def plot_surface_reconstruction_flux(
             vmin=0.0345,
             vmax=0.036,
         )
-        axes[index, 3].set_title("Deflectometry Points original")
+        axes[index, 3].set_title("Deflectometry Points", fontsize=fontsize)
         axes[index, 3].axis("off")
         axes[index, 3].set_aspect("equal", adjustable="box")
         cbar3 = fig.colorbar(
             sc3, ax=axes[index, 3], orientation="horizontal", fraction=0.046, pad=0.1
         )
-        cbar3.set_label("m")
+        cbar3.set_label("m", fontsize=fontsize)
+        cbar3.ax.tick_params(labelsize=23)
 
         sc4 = axes[index, 4].scatter(
             x=deflectometry_points_original[:, 0],
@@ -180,13 +183,14 @@ def plot_surface_reconstruction_flux(
             vmin=0.0,
             vmax=0.005,
         )
-        axes[index, 4].set_title("Deflectometry normals")
+        axes[index, 4].set_title("Deflectometry Normals", fontsize=fontsize)
         axes[index, 4].axis("off")
         axes[index, 4].set_aspect("equal", adjustable="box")
         cbar4 = fig.colorbar(
             sc4, ax=axes[index, 4], orientation="horizontal", fraction=0.046, pad=0.1
         )
-        cbar4.set_label("Angle (rad)")
+        cbar4.set_label("Angle (rad)", fontsize=fontsize)
+        cbar4.ax.tick_params(labelsize=23)
 
         # Process reconstructed data.
         points_uncanted = utils.perform_canting(
@@ -217,13 +221,14 @@ def plot_surface_reconstruction_flux(
             vmin=0.0345,
             vmax=0.036,
         )
-        axes[index, 5].set_title("Reconstructed Surface (Points)")
+        axes[index, 5].set_title("Reconstructed Points", fontsize=fontsize)
         axes[index, 5].axis("off")
         axes[index, 5].set_aspect("equal", adjustable="box")
         cbar5 = fig.colorbar(
             sc5, ax=axes[index, 5], orientation="horizontal", fraction=0.046, pad=0.1
         )
-        cbar5.set_label("m")
+        cbar5.set_label("m", fontsize=fontsize)
+        cbar5.ax.tick_params(labelsize=23)
 
         sc6 = axes[index, 6].scatter(
             x=reconstructed_points[:, 0],
@@ -233,22 +238,23 @@ def plot_surface_reconstruction_flux(
             vmin=0.0,
             vmax=0.005,
         )
-        axes[index, 6].set_title("Reconstructed normals")
+        axes[index, 6].set_title("Reconstructed Normals", fontsize=fontsize)
         axes[index, 6].axis("off")
         axes[index, 6].set_aspect("equal", adjustable="box")
         cbar6 = fig.colorbar(
             sc6, ax=axes[index, 6], orientation="horizontal", fraction=0.046, pad=0.1
         )
-        cbar6.set_label("Angle (rad)")
+        cbar6.set_label("Angle (rad)", fontsize=fontsize)
+        cbar6.ax.tick_params(labelsize=23)
 
     save_dir = save_dir / f"run_{results_number}"
     save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / "surface_reconstruction_flux.pdf"
+    filename = save_dir / "surface_reconstruction_flux.png"
     fig.tight_layout()
     fig.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"Saved surface reconstruction error distribution plot at: {filename}.")
+    print(f"Saved surface reconstruction flux plot at: {filename}.")
 
 
 def plot_surface_error_analysis(
@@ -436,6 +442,125 @@ def plot_surface_loss_history(
         plt.close(fig)
 
         print(f"Saved surface reconstruction loss history plot at: {filename}.")
+
+
+def plot_surface_validation(
+    results: dict[str, Any],
+    save_dir: pathlib.Path,
+    results_number: int,
+) -> None:
+    """
+    Plot the surface reconstruction validation.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Results of the study.
+    save_dir : pathlib.Path
+        Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
+    """
+    plot_data = results["surface_reconstruction"]["validation_data"]
+
+    kl_divergence = KLDivergenceLoss()
+    kl_losses = []
+    mse_losses = []
+    l1_norm_losses = []
+
+    keys = list(plot_data.keys())
+
+    for k in keys:
+        measured_flux = torch.nn.functional.normalize(
+            plot_data[k]["measured_flux"],
+            p=1,
+            dim=(0, 1),
+            eps=1e-12,
+        )
+        artist_flux = torch.nn.functional.normalize(
+            plot_data[k]["artist_flux"],
+            p=1,
+            dim=(0, 1),
+            eps=1e-12,
+        )
+
+        kl = kl_divergence(
+            measured_flux.unsqueeze(0),
+            artist_flux.unsqueeze(0),
+            reduction_dimensions=(1, 2),
+        )
+        kl_losses.append(float(kl))
+
+        # MSE
+        mse = torch.nn.functional.mse_loss(measured_flux, artist_flux).item()
+        mse_losses.append(mse)
+
+        # normalized L1-like
+        l1_norm = (
+            torch.abs(artist_flux - measured_flux).sum() / measured_flux.sum()
+        ).item()
+        l1_norm_losses.append(l1_norm)
+
+    x = list(range(len(keys)))
+
+    plt.figure(figsize=(10, 5))
+    plt.scatter(x, kl_losses, label="KL Divergence")
+    plt.scatter(x, mse_losses, label="MSE")
+    plt.scatter(x, l1_norm_losses, label="L1 normalized")
+    plt.title("Loss comparison per heliostat")
+    plt.xlabel("Heliostat index")
+    plt.ylabel("Loss value")
+    plt.legend()
+    plt.tight_layout()
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+    filename = (
+        save_dir / f"run_{results_number}/surface_reconstruction_validation_loss.pdf"
+    )
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.clf()
+
+    print(f"Saved surface reconstruction validation loss at: {filename}.")
+
+    selected_indices = list(range(0, len(keys), 1))
+    n_rows = len(selected_indices)
+
+    fig, axes = plt.subplots(
+        n_rows,
+        2,
+        figsize=(8, 3 * n_rows),
+    )
+
+    if n_rows == 1:
+        axes = [axes]
+
+    for row, idx in enumerate(selected_indices):
+        k = keys[idx]
+
+        measured_flux = plot_data[k]["measured_flux"].detach().cpu()
+        artist_flux = plot_data[k]["artist_flux"].detach().cpu()
+
+        ax1 = axes[row][0]
+        ax2 = axes[row][1]
+
+        im1 = ax1.imshow(measured_flux)
+        ax1.set_title(f"Measured {k}")
+        ax1.axis("off")
+
+        im2 = ax2.imshow(artist_flux)
+        ax2.set_title(f"Artist {k}")
+        ax2.axis("off")
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+    filename = (
+        save_dir / f"run_{results_number}/surface_reconstruction_validation_fluxes.pdf"
+    )
+    fig.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Saved surface reconstruction validation fluxes at: {filename}.")
 
 
 def plot_kinematics_reconstruction_flux(
@@ -786,6 +911,112 @@ def plot_kinematics_loss_history(
         print(f"Saved kinematics reconstructions loss history plot at: {filename}.")
 
 
+def plot_kinematics_validation(
+    results: dict[str, Any],
+    save_dir: pathlib.Path,
+    results_number: int,
+) -> None:
+    """
+    Plot the surface reconstruction validation.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Results of the study.
+    save_dir : pathlib.Path
+        Path to the location where the plots are saved.
+    results_number : int
+        Identifier of the results run.
+    """
+    plot_data = results["kinematics_reconstruction_with_reconstructed_surfaces"][
+        "validation_data"
+    ]
+
+    keys = list(plot_data.keys())
+
+    # for k in keys:
+    #     measured_flux = plot_data[k]["measured_flux"]
+    #     artist_flux = plot_data[k]["artist_flux"]
+
+    #     centers = utils.get_center_of_mass(
+    #         bitmaps=torch.stack([measured_flux, artist_flux]),
+    #     )
+
+    # x = list(range(len(keys)))
+    # plt.figure(figsize=(10, 5))
+    # plt.scatter(x, kl_losses, label="KL Divergence")
+    # plt.scatter(x, mse_losses, label="MSE")
+    # plt.scatter(x, l1_norm_losses, label="L1 normalized")
+    # plt.title("Loss comparison per heliostat")
+    # plt.xlabel("Heliostat index")
+    # plt.ylabel("Loss value")
+    # plt.legend()
+    # plt.tight_layout()
+
+    # save_dir.mkdir(parents=True, exist_ok=True)
+    # filename = (
+    #     save_dir
+    #     / f"run_{results_number}/kinematics_reconstruction_validation_loss.pdf"
+    # )
+    # plt.tight_layout()
+    # plt.savefig(filename, dpi=300, bbox_inches="tight")
+    # plt.clf()
+
+    # print(f"Saved kinematics reconstruction validation loss at: {filename}.")
+
+    selected_indices = list(range(0, len(keys), 1))
+    n_rows = len(selected_indices)
+
+    fig, axes = plt.subplots(
+        n_rows,
+        2,
+        figsize=(8, 3 * n_rows),
+    )
+
+    if n_rows == 1:
+        axes = [axes]
+
+    for row, idx in enumerate(selected_indices):
+        k = keys[idx]
+
+        measured_flux = plot_data[k]["measured_flux"]
+        artist_flux = plot_data[k]["artist_flux"]
+
+        centers = (
+            utils.get_center_of_mass(
+                bitmaps=torch.stack([measured_flux, artist_flux]),
+            )
+            .detach()
+            .cpu()
+        )
+
+        ax1 = axes[row][0]
+        ax2 = axes[row][1]
+
+        im1 = ax1.imshow(measured_flux.detach().cpu())
+        ax1.set_title(f"Measured {k}")
+        ax1.scatter(x=centers[0, 0], y=centers[0, 1], c="black", marker="o", s=30)
+        ax1.scatter(x=centers[1, 0], y=centers[1, 1], c="red", marker="x", s=30)
+        ax1.axis("off")
+
+        im2 = ax2.imshow(artist_flux.detach().cpu())
+        ax2.set_title(f"Artist {k}")
+        ax2.scatter(x=centers[0, 0], y=centers[0, 1], c="black", marker="o", s=30)
+        ax2.scatter(x=centers[1, 0], y=centers[1, 1], c="red", marker="x", s=30)
+        ax2.axis("off")
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+    filename = (
+        save_dir
+        / f"run_{results_number}/kinematics_reconstruction_validation_fluxes.pdf"
+    )
+    fig.tight_layout()
+    fig.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Saved kinematics reconstruction validation fluxes at: {filename}.")
+
+
 def plot_model_reconstruction(
     results: dict[str, Any],
     save_dir: pathlib.Path,
@@ -914,7 +1145,7 @@ def plot_model_reconstruction(
     fig, axes = plt.subplots(
         1,
         n_images,
-        figsize=(4 * n_images, 5),
+        figsize=(4 * n_images, 8),
         gridspec_kw={"bottom": 0.15, "top": 0.95, "wspace": 0.05},
     )
     if n_images == 1:
@@ -928,56 +1159,57 @@ def plot_model_reconstruction(
         r"\textbf{Combined Reconstructions}",
     ]
 
-    points = {
-        "focal spot aim point": 256
-        - torch.tensor([104.7413, 139.8122], device="cuda:0"),
-        "aim point 'measured'": 256
-        - torch.tensor([112.9362, 111.4531], device="cuda:0"),
-    }
+    # height, width = measured_flux.shape
+    # points = {
+    #     "focal spot aim point": 256
+    #     - torch.tensor([104.7413, 139.8122], device="cuda:0"),
+    #     "aim point 'measured'": 256
+    #     - torch.tensor([112.9362, 111.4531], device="cuda:0"),
+    # }
 
-    measured = images[0]
-    y_grid, x_grid = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
-    x_com_measured = (x_grid * measured).sum() / measured.sum()
-    y_com_measured = (y_grid * measured).sum() / measured.sum()
+    # measured = images[0]
+    # y_grid, x_grid = torch.meshgrid(torch.arange(256), torch.arange(256), indexing="ij")
+    # x_com_measured = (x_grid * measured).sum() / measured.sum()
+    # y_com_measured = (y_grid * measured).sum() / measured.sum()
 
     for idx, (ax, flux) in enumerate(zip(axes, images)):
         im = ax.imshow(flux, cmap=cmap, vmin=vmin, vmax=vmax)
         ax.axis("off")
         ax.set_title(titles[idx], fontsize=13)
-        ax.scatter(
-            x_com_measured,
-            y_com_measured,
-            s=80,
-            marker="x",
-            color="blue",
-            label="center of mass reference",
-        )
+        # ax.scatter(
+        #     x_com_measured,
+        #     y_com_measured,
+        #     s=80,
+        #     marker="x",
+        #     color="blue",
+        #     label="center of mass reference",
+        # )
 
-        y_grid, x_grid = torch.meshgrid(
-            torch.arange(256), torch.arange(256), indexing="ij"
-        )
-        x_com = (x_grid * flux).sum() / flux.sum()
-        y_com = (y_grid * flux).sum() / flux.sum()
-        ax.scatter(
-            x_com, y_com, s=80, marker="o", color="green", label="center of mass"
-        )
+        # y_grid, x_grid = torch.meshgrid(
+        #     torch.arange(256), torch.arange(256), indexing="ij"
+        # )
+        # x_com = (x_grid * flux).sum() / flux.sum()
+        # y_com = (y_grid * flux).sum() / flux.sum()
+        # ax.scatter(
+        #     x_com, y_com, s=80, marker="o", color="green", label="center of mass"
+        # )
 
-        ax.scatter(
-            256 / 2,
-            256 / 2,
-            s=40,
-            marker="x",
-            color="white",
-            label="geometric center of bitmap",
-        )
-        ax.scatter(
-            points["aim point 'measured'"][0].cpu(),
-            points["aim point 'measured'"][1].cpu(),
-            s=80,
-            marker="x",
-            color="white",
-            label="aim point from protocol",
-        )
+        # ax.scatter(
+        #     256 / 2,
+        #     256 / 2,
+        #     s=40,
+        #     marker="x",
+        #     color="white",
+        #     label="geometric center of bitmap",
+        # )
+        # ax.scatter(
+        #     points["aim point 'measured'"][0].cpu(),
+        #     points["aim point 'measured'"][1].cpu(),
+        #     s=80,
+        #     marker="x",
+        #     color="white",
+        #     label="aim point from protocol",
+        # )
 
         ax.legend(fontsize=9, loc="upper right")
 
@@ -1000,13 +1232,14 @@ def plot_model_reconstruction(
             fontsize=12,
         )
 
-    cbar_ax = fig.add_axes([0.15, 0.01, 0.7, 0.03])
+    fig.subplots_adjust(bottom=0.15)
+    cbar_ax = fig.add_axes([0.15, 0.05, 0.7, 0.03])
     cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
     cbar.ax.tick_params(labelsize=14)
 
     fig.text(
         0.95,
-        0.02,
+        0.01,
         "M = Measured flux\nU = Unoptimized flux\nO = Optimized flux\nH = Homogeneous flux",
         ha="right",
         va="bottom",
@@ -1302,7 +1535,7 @@ if __name__ == "__main__":
     device = get_device(torch.device(args.device))
 
     for case in ["baseline", "full_field"]:
-        results_number = 10
+        results_number = 5
         results_path = (
             pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
         )
@@ -1332,26 +1565,32 @@ if __name__ == "__main__":
         #     results=results, results_ftp=results_ftp, save_dir=plots_path
         # )
 
-        # plot_surface_reconstruction_flux(
+        # plot_kinematics_reconstruction_flux(
         #     results=results, save_dir=plots_path, results_number=results_number
         # )
+        # plot_kinematics_error_analysis(
+        #     results=results,
+        #     save_dir=plots_path,
+        #     split_left=False,
+        #     results_number=results_number,
+        # )
+        # plot_kinematics_loss_history(
+        #     results=results, save_dir=plots_path, results_number=results_number
+        # )
+        # plot_kinematics_validation(
+        #     results=results, save_dir=plots_path, results_number=results_number
+        # )
+
+        plot_surface_reconstruction_flux(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
         plot_surface_error_analysis(
             results=results, save_dir=plots_path, results_number=results_number
         )
         plot_surface_loss_history(
             results=results, save_dir=plots_path, results_number=results_number
         )
-
-        plot_kinematics_reconstruction_flux(
-            results=results, save_dir=plots_path, results_number=results_number
-        )
-        plot_kinematics_error_analysis(
-            results=results,
-            save_dir=plots_path,
-            split_left=False,
-            results_number=results_number,
-        )
-        plot_kinematics_loss_history(
+        plot_surface_validation(
             results=results, save_dir=plots_path, results_number=results_number
         )
 

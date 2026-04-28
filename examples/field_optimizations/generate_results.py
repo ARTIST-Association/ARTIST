@@ -709,6 +709,30 @@ def aim_point_plots(
                 target_area_indices=target_area_indices,
                 device=device,
             )
+            # ###########
+            # import matplotlib.pyplot as plt
+
+            # aim_point_measured_bitmap = 256 - torch.tensor([112.9362, 111.4531])
+            # for i in range(bitmaps_per_heliostat.shape[0]):
+            #     total_f = bitmaps_per_heliostat[i].sum()
+            #     if total_f > 0:
+            #         h, w = bitmaps_per_heliostat[i].shape
+            #         y_grid = torch.arange(h, device=device).unsqueeze(1).expand(h, w)
+            #         x_grid = torch.arange(w, device=device).unsqueeze(0).expand(h, w)
+            #         cy_f = (y_grid * bitmaps_per_heliostat[i]).sum() / total_f
+            #         cx_f = (x_grid * bitmaps_per_heliostat[i]).sum() / total_f
+            #     plt.imshow(bitmaps_per_heliostat[i].cpu().detach())
+            #     plt.scatter(
+            #         x=aim_point_measured_bitmap[0],
+            #         y=aim_point_measured_bitmap[1],
+            #         c="r",
+            #         s=30,
+            #     )
+            #     plt.scatter(cx_f.cpu().detach(), cy_f.cpu().detach(), c="g", s=30)
+            #     plt.scatter(x=w / 2, y=h / 2, c="black", s=30, marker="x")
+            #     plt.savefig(f"./bitmaps/aim_points/{label}_{i}")
+            #     plt.close()
+            # ###########
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
                 target_area_indices=target_area_indices,
@@ -771,6 +795,9 @@ def full_field_optimizations(
     results_dict = cast(
         dict[str, dict[str, torch.Tensor]], torch.load(results_path, weights_only=False)
     )
+    control_points_path = (
+        results_path.parent / f"reconstructed_nurbs_control_points_{results_number}.pt"
+    )
 
     number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
         scenario_path=scenario_path
@@ -781,9 +808,6 @@ def full_field_optimizations(
         device=device,
     ) as ddp_setup:
         device = ddp_setup["device"]
-        control_points_path = (
-            results_path.parent / "reconstructed_nurbs_control_points.pt"
-        )
 
         assert data_mappings is not None, "data_mappings must be provided."
         assert surface_config is not None, "surface_config must be provided."
@@ -853,101 +877,101 @@ def full_field_optimizations(
         results_dict["ideal_model"] = {"aim_point_plot": aim_point_data_ideal_models}
         torch.cuda.empty_cache()
 
-        kinematics_data_plot_before = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_plot"],
-            device=device,
-        )
-        scenario_kinematics_ideal_surfaces.set_number_of_rays(
-            number_of_rays=kinematics_config["number_of_rays"]
-        )
-        optimization_configuration_kinematics = {
-            config_dictionary.optimization: {
-                config_dictionary.initial_learning_rate_rotation_deviation: kinematics_config[
-                    "initial_learning_rate_rotation_deviation"
-                ],
-                config_dictionary.initial_learning_rate_initial_angles: kinematics_config[
-                    "initial_learning_rate_initial_angles"
-                ],
-                config_dictionary.initial_learning_rate_initial_stroke_length: kinematics_config[
-                    "initial_learning_rate_initial_stroke_length"
-                ],
-                config_dictionary.tolerance: 1e-5,
-                config_dictionary.max_epoch: kinematics_config["max_epoch"],
-                config_dictionary.batch_size: kinematics_config["batch_size"],
-                config_dictionary.log_step: basic_config[config_dictionary.log_step],
-                config_dictionary.early_stopping_delta: 1e-12,
-                config_dictionary.early_stopping_patience: 10000,
-                config_dictionary.early_stopping_window: 10000,
-            },
-            config_dictionary.scheduler: {
-                config_dictionary.scheduler_type: kinematics_config["scheduler"],
-                config_dictionary.gamma: kinematics_config["gamma"],
-                config_dictionary.lr_min: kinematics_config["min_learning_rate"],
-                config_dictionary.lr_max: kinematics_config["max_learning_rate"],
-                config_dictionary.step_size_up: kinematics_config["step_size_up"],
-                config_dictionary.reduce_factor: kinematics_config["reduce_factor"],
-                config_dictionary.patience: kinematics_config["patience"],
-                config_dictionary.threshold: kinematics_config["threshold"],
-                config_dictionary.cooldown: kinematics_config["cooldown"],
-            },
-        }
-        kinematics_reconstructor = KinematicsReconstructor(
-            ddp_setup=ddp_setup,
-            scenario=scenario_kinematics_ideal_surfaces,
-            data=data_mappings["kinematics_training"],
-            dni=baseline_dni,
-            optimization_configuration=optimization_configuration_kinematics,
-            reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
-        )
-        kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
-            kinematics_reconstructor.reconstruct_kinematics(
-                loss_definition=FocalSpotLoss(
-                    scenario=scenario_kinematics_ideal_surfaces
-                ),
-                device=device,
-            )
-        )
-        if ddp_setup["is_distributed"]:
-            torch.distributed.barrier()
-        kinematics_validation = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_validation"],
-            device=device,
-        )
-        kinematics_data_plot_after = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_plot"],
-            device=device,
-        )
-        merged_plot_data_kinematics = merge_data(
-            unoptimized_data=kinematics_data_plot_before,
-            optimized_data=kinematics_data_plot_after,
-        )
-        aim_point_data_kinematic_reconstruction = aim_point_plots(
-            scenario=scenario_kinematics_ideal_surfaces,
-            incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[
-                baseline_target_area
-            ],
-            aim_point=baseline_aim_point,
-            dni=baseline_dni,
-            bitmap_resolution=bitmap_resolution,
-            label="before",
-            batch_size=20,
-            number_of_rays=200,
-            device=device,
-        )
-        results_dict["kinematics_reconstruction_with_ideal_surfaces"] = {
-            "flux_plot_data": merged_plot_data_kinematics,
-            "validation_data": kinematics_validation,
-            "loss_history": loss_history_kinematics,
-            "loss": kinematics_reconstruction_final_loss_per_heliostat,
-            "aim_point_plot": aim_point_data_kinematic_reconstruction,
-        }
+        # kinematics_data_plot_before = kinematics_evaluation(
+        #     scenario=scenario_kinematics_ideal_surfaces,
+        #     ddp_setup=ddp_setup,
+        #     heliostat_data=data_mappings["kinematics_plot"],
+        #     device=device,
+        # )
+        # scenario_kinematics_ideal_surfaces.set_number_of_rays(
+        #     number_of_rays=kinematics_config["number_of_rays"]
+        # )
+        # optimization_configuration_kinematics = {
+        #     config_dictionary.optimization: {
+        #         config_dictionary.initial_learning_rate_rotation_deviation: kinematics_config[
+        #             "initial_learning_rate_rotation_deviation"
+        #         ],
+        #         config_dictionary.initial_learning_rate_initial_angles: kinematics_config[
+        #             "initial_learning_rate_initial_angles"
+        #         ],
+        #         config_dictionary.initial_learning_rate_initial_stroke_length: kinematics_config[
+        #             "initial_learning_rate_initial_stroke_length"
+        #         ],
+        #         config_dictionary.tolerance: 1e-5,
+        #         config_dictionary.max_epoch: kinematics_config["max_epoch"],
+        #         config_dictionary.batch_size: kinematics_config["batch_size"],
+        #         config_dictionary.log_step: basic_config[config_dictionary.log_step],
+        #         config_dictionary.early_stopping_delta: 1e-12,
+        #         config_dictionary.early_stopping_patience: 10000,
+        #         config_dictionary.early_stopping_window: 10000,
+        #     },
+        #     config_dictionary.scheduler: {
+        #         config_dictionary.scheduler_type: kinematics_config["scheduler"],
+        #         config_dictionary.gamma: kinematics_config["gamma"],
+        #         config_dictionary.lr_min: kinematics_config["min_learning_rate"],
+        #         config_dictionary.lr_max: kinematics_config["max_learning_rate"],
+        #         config_dictionary.step_size_up: kinematics_config["step_size_up"],
+        #         config_dictionary.reduce_factor: kinematics_config["reduce_factor"],
+        #         config_dictionary.patience: kinematics_config["patience"],
+        #         config_dictionary.threshold: kinematics_config["threshold"],
+        #         config_dictionary.cooldown: kinematics_config["cooldown"],
+        #     },
+        # }
+        # kinematics_reconstructor = KinematicsReconstructor(
+        #     ddp_setup=ddp_setup,
+        #     scenario=scenario_kinematics_ideal_surfaces,
+        #     data=data_mappings["kinematics_training"],
+        #     dni=baseline_dni,
+        #     optimization_configuration=optimization_configuration_kinematics,
+        #     reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
+        # )
+        # kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
+        #     kinematics_reconstructor.reconstruct_kinematics(
+        #         loss_definition=FocalSpotLoss(
+        #             scenario=scenario_kinematics_ideal_surfaces
+        #         ),
+        #         device=device,
+        #     )
+        # )
+        # if ddp_setup["is_distributed"]:
+        #     torch.distributed.barrier()
+        # kinematics_validation = kinematics_evaluation(
+        #     scenario=scenario_kinematics_ideal_surfaces,
+        #     ddp_setup=ddp_setup,
+        #     heliostat_data=data_mappings["kinematics_validation"],
+        #     device=device,
+        # )
+        # kinematics_data_plot_after = kinematics_evaluation(
+        #     scenario=scenario_kinematics_ideal_surfaces,
+        #     ddp_setup=ddp_setup,
+        #     heliostat_data=data_mappings["kinematics_plot"],
+        #     device=device,
+        # )
+        # merged_plot_data_kinematics = merge_data(
+        #     unoptimized_data=kinematics_data_plot_before,
+        #     optimized_data=kinematics_data_plot_after,
+        # )
+        # aim_point_data_kinematic_reconstruction = aim_point_plots(
+        #     scenario=scenario_kinematics_ideal_surfaces,
+        #     incident_ray_direction=baseline_incident_ray_direction,
+        #     target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[
+        #         baseline_target_area
+        #     ],
+        #     aim_point=baseline_aim_point,
+        #     dni=baseline_dni,
+        #     bitmap_resolution=bitmap_resolution,
+        #     label="before",
+        #     batch_size=20,
+        #     number_of_rays=200,
+        #     device=device,
+        # )
+        # results_dict["kinematics_reconstruction_with_ideal_surfaces"] = {
+        #     "flux_plot_data": merged_plot_data_kinematics,
+        #     "validation_data": kinematics_validation,
+        #     "loss_history": loss_history_kinematics,
+        #     "loss": kinematics_reconstruction_final_loss_per_heliostat,
+        #     "aim_point_plot": aim_point_data_kinematic_reconstruction,
+        # }
         torch.cuda.empty_cache()
 
         # Surface reconstruction.
@@ -1141,13 +1165,13 @@ def full_field_optimizations(
         if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
         kinematics_validation = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
+            scenario=scenario_kinematics,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["kinematics_validation"],
             device=device,
         )
         kinematics_data_plot_after = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
+            scenario=scenario_kinematics,
             ddp_setup=ddp_setup,
             heliostat_data=data_mappings["kinematics_plot"],
             device=device,
