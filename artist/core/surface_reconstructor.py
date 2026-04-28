@@ -614,6 +614,34 @@ class SurfaceReconstructor:
                         break
 
                     epoch += 1
+                # ##################################################
+                import matplotlib.pyplot as plt
+
+                m = 3
+                n = measured_flux_distributions.shape[0]
+                for i in range(0, n, m):
+                    fig, axes = plt.subplots(m, 2, figsize=(8, 20))
+                    for j in range(m):
+                        idx = i + j
+                        if idx >= n:
+                            axes[j, 0].axis("off")
+                            axes[j, 1].axis("off")
+                            continue
+                        img_flux = cropped_flux_distributions[idx]
+                        img_meas = measured_flux_distributions[idx].cpu().detach()
+
+                        ax1 = axes[j, 0]
+                        ax1.imshow(img_flux.cpu().detach())
+                        ax1.set_title(f"heliostat {i // m}")
+                        ax1.axis("off")
+                        ax2 = axes[j, 1]
+                        ax2.imshow(img_meas.cpu().detach())
+                        # ax2.set_title(f"loss: {flux_loss_per_heliostat[i]}")
+                        ax2.axis("off")
+                    plt.tight_layout()
+                    plt.savefig(f"./bitmaps/kinematics/heliostat_{i // m}.png")
+                    plt.close(fig)
+                # ##################################################
 
                 loss_history.append(
                     {
