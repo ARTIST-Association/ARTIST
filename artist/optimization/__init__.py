@@ -1,4 +1,4 @@
-"""Bundle all classes responsible for the core functions in ``ARTIST``."""
+"""Bundle all classes responsible for the optimization functions in ``ARTIST``."""
 
 from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
 from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer

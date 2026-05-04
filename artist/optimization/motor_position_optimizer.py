@@ -4,9 +4,9 @@ from typing import Any
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import learning_rate_schedulers
-from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.field.heliostat_group import HeliostatGroup
+from artist.optimization import training
+from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping
@@ -292,7 +292,7 @@ class MotorPositionsOptimizer:
 
         # Create a learning rate scheduler.
         scheduler_fn = getattr(
-            learning_rate_schedulers,
+            training,
             self.scheduler_dict[config_dictionary.scheduler_type],
         )
         scheduler: LRScheduler = scheduler_fn(
@@ -300,7 +300,7 @@ class MotorPositionsOptimizer:
         )
 
         # Set up early stopping.
-        early_stopper = learning_rate_schedulers.EarlyStopping(
+        early_stopper = training.EarlyStopping(
             window_size=self.optimizer_dict[config_dictionary.early_stopping_window],
             patience=self.optimizer_dict[config_dictionary.early_stopping_patience],
             min_improvement=self.optimizer_dict[config_dictionary.early_stopping_delta],

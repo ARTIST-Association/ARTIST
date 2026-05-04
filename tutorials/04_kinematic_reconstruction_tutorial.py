@@ -7,10 +7,10 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 from matplotlib import pyplot as plt
+from optimization.kinematics_reconstructor import KinematicsReconstructor
+from optimization.loss_functions import FocalSpotLoss
 from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
-from artist.core.kinematics_reconstructor import KinematicsReconstructor
-from artist.core.loss_functions import FocalSpotLoss
 from artist.field.heliostat_group import HeliostatGroup
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser

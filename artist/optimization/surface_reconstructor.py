@@ -7,12 +7,16 @@ from torch.optim.lr_scheduler import LRScheduler
 
 import artist.nurbs.utils
 import artist.util.utils
-from artist.core import core_utils, learning_rate_schedulers
-from artist.core.loss_functions import Loss
-from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
+from artist.core import core_utils
 from artist.field.heliostat_group import HeliostatGroup
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
+from artist.optimization import training
+from artist.optimization.loss_functions import Loss
+from artist.optimization.regularizers import (
+    IdealSurfaceRegularizer,
+    SmoothnessRegularizer,
+)
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import (
@@ -266,7 +270,7 @@ class SurfaceReconstructor:
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
-                    learning_rate_schedulers,
+                    training,
                     self.scheduler_dict[config_dictionary.scheduler_type],
                 )
                 scheduler: LRScheduler = scheduler_fn(
@@ -274,7 +278,7 @@ class SurfaceReconstructor:
                 )
 
                 # Set up early stopping on stagnating loss.
-                early_stopper = learning_rate_schedulers.EarlyStopping(
+                early_stopper = training.EarlyStopping(
                     window_size=self.optimizer_dict[
                         config_dictionary.early_stopping_window
                     ],

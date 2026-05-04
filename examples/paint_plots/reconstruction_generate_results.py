@@ -9,9 +9,9 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
+from optimization.kinematics_reconstructor import KinematicsReconstructor
+from optimization.loss_functions import FocalSpotLoss
 
-from artist.core.kinematics_reconstructor import KinematicsReconstructor
-from artist.core.loss_functions import FocalSpotLoss
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario import Scenario

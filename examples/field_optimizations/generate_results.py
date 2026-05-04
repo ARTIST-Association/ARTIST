@@ -10,12 +10,12 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
+from optimization.kinematics_reconstructor import KinematicsReconstructor
+from optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss
+from optimization.motor_position_optimizer import MotorPositionsOptimizer
+from optimization.surface_reconstructor import SurfaceReconstructor
 from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
-from artist.core.kinematics_reconstructor import KinematicsReconstructor
-from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
-from artist.core.motor_position_optimizer import MotorPositionsOptimizer
-from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.field.heliostat_group import HeliostatGroup
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser

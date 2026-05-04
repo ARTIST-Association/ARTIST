@@ -1,5 +1,6 @@
 import pytest
-from raytracing.sampling import RestrictedDistributedSampler
+
+from artist.raytracing.sampling import RestrictedDistributedSampler
 
 
 @pytest.mark.parametrize(

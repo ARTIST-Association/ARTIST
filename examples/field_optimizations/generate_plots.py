@@ -8,9 +8,9 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
+from optimization.loss_functions import KLDivergenceLoss
 from scipy.stats import gaussian_kde
 
-from artist.core.loss_functions import KLDivergenceLoss
 from artist.util import utils
 from artist.util.environment_setup import get_device
 

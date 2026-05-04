@@ -3,19 +3,19 @@ from unittest import mock
 import pytest
 import torch
 
-from artist.core.loss_functions import (
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import (
+    TowerTargetAreas,
+    TowerTargetAreasPlanar,
+)
+from artist.optimization.loss_functions import (
     AngleLoss,
     FocalSpotLoss,
     KLDivergenceLoss,
     Loss,
     PixelLoss,
     VectorLoss,
-)
-from artist.field.solar_tower import SolarTower
-from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import (
-    TowerTargetAreas,
-    TowerTargetAreasPlanar,
 )
 from artist.scenario.scenario import Scenario
 from artist.scene.light_source import LightSource

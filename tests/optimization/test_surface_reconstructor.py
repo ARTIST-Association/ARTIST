@@ -5,10 +5,10 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
-from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
+from artist.optimization.loss_functions import KLDivergenceLoss, Loss, PixelLoss
+from artist.optimization.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import DdpSetup

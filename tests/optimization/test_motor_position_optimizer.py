@@ -5,8 +5,8 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
-from artist.core.motor_position_optimizer import MotorPositionsOptimizer
+from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
+from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import DdpSetup
