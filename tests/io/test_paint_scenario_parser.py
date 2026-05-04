@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_parser import paint_scenario_parser
+from artist.io import paint_scenario_parser
 from artist.scenario.configuration_classes import (
     HeliostatListConfig,
     PowerPlantConfig,

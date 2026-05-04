@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_parser import stral_scenario_parser
+from artist.io import stral_scenario_parser
 
 
 @pytest.mark.parametrize(

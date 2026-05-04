@@ -6,7 +6,7 @@ import warnings
 import torch
 import yaml
 
-from artist.data_parser import paint_scenario_parser
+from artist.io import paint_scenario_parser
 from artist.scenario import (
     H5ScenarioGenerator,
     LightSourceConfig,

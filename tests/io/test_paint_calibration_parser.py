@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
+from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 
 
 @pytest.mark.parametrize(

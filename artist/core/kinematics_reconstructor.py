@@ -8,8 +8,8 @@ from torch.optim.lr_scheduler import LRScheduler
 from artist.core import core_utils, learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
+from artist.io.calibration_data_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, utils
 from artist.util.environment_setup import DdpSetup, get_device

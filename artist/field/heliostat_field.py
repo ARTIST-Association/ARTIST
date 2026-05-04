@@ -9,9 +9,9 @@ import torch
 from typing_extensions import Self
 
 import artist.util.index_mapping
-from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
+from artist.io import h5_scenario_parser
 from artist.util.nurbs import NURBSSurfaces
 
 if TYPE_CHECKING:

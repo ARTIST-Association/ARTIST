@@ -4,7 +4,7 @@ import pathlib
 
 import torch
 
-from artist.data_parser import paint_scenario_parser
+from artist.io import paint_scenario_parser
 from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,

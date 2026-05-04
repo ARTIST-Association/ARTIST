@@ -7,7 +7,7 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.data_parser import paint_scenario_parser
+from artist.io import paint_scenario_parser
 from artist.scenario.configuration_classes import (
     LightSourceConfig,
     LightSourceListConfig,

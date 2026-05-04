@@ -6,10 +6,10 @@ import h5py
 import torch
 from typing_extensions import Self
 
-from artist.data_parser import h5_scenario_parser
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.solar_tower import SolarTower
+from artist.io import h5_scenario_parser
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import config_dictionary
 from artist.util.environment_setup import get_device

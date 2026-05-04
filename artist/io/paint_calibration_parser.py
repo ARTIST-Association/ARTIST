@@ -7,8 +7,8 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 
 import artist.util.index_mapping
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
+from artist.io.calibration_data_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import utils
 from artist.util.environment_setup import get_device

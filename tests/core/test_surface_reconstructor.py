@@ -7,8 +7,8 @@ import torch
 from artist import ARTIST_ROOT
 from artist.core.loss_functions import KLDivergenceLoss, Loss, PixelLoss
 from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
+from artist.io.calibration_data_parser import CalibrationDataParser
+from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary
 from artist.util.environment_setup import DdpSetup

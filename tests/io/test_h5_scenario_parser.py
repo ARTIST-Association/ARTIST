@@ -5,7 +5,7 @@ import h5py
 import pytest
 import torch
 
-from artist.data_parser import h5_scenario_parser
+from artist.io import h5_scenario_parser
 from artist.util import config_dictionary
 
 

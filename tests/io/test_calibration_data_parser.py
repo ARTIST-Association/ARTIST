@@ -3,7 +3,7 @@ import pathlib
 import torch
 
 from artist import ARTIST_ROOT
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
+from artist.io.calibration_data_parser import CalibrationDataParser
 
 
 def test_load_flux_from_png(device: torch.device) -> None:

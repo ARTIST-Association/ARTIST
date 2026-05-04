@@ -11,8 +11,8 @@ import yaml
 from PIL import Image
 
 from artist.core import HeliostatRayTracer
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
-from artist.data_parser.paint_scenario_parser import extract_paint_heliostat_properties
+from artist.io.paint_calibration_parser import PaintCalibrationDataParser
+from artist.io.paint_scenario_parser import extract_paint_heliostat_properties
 from artist.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.environment_setup import get_device

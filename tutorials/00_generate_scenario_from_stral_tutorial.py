@@ -4,7 +4,7 @@ import pathlib
 
 import torch
 
-from artist.data_parser import stral_scenario_parser
+from artist.io import stral_scenario_parser
 from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorPrototypeConfig,
