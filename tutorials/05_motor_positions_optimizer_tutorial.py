@@ -5,8 +5,8 @@ import pathlib
 import h5py
 import torch
 from matplotlib import pyplot as plt
+from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario

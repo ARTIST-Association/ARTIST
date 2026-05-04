@@ -2,11 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
+from raytracing.heliostat_ray_tracer import HeliostatRayTracer
+from raytracing.sampling import RestrictedDistributedSampler
 
-from artist.core.heliostat_ray_tracer import (
-    HeliostatRayTracer,
-    RestrictedDistributedSampler,
-)
 from artist.field.heliostat_field import HeliostatField
 from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
 from artist.scenario.scenario import Scenario

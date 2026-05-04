@@ -6,9 +6,9 @@ import pathlib
 import h5py
 import torch
 from matplotlib import pyplot as plt
+from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
 import artist.nurbs.utils
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import KLDivergenceLoss
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.io import paint_scenario_parser

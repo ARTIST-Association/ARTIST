@@ -7,8 +7,8 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 from matplotlib import pyplot as plt
+from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.kinematics_reconstructor import KinematicsReconstructor
 from artist.core.loss_functions import FocalSpotLoss
 from artist.field.heliostat_group import HeliostatGroup
