@@ -7,8 +7,8 @@ from artist.field.solar_tower import (
     TowerTargetAreasCylindrical,
     TowerTargetAreasPlanar,
 )
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 def convert_3d_points_to_4d_format(
@@ -112,11 +112,9 @@ def normalize_points(points: torch.Tensor) -> torch.Tensor:
         Shape is ``[number_of_points, number_of_dimensions]``.
     """
     # Since we want the open interval (0,1), a small offset is required to also exclude the boundaries.
-    min_vals = torch.min(points, dim=index_mapping.unbatched_tensor_values).values
+    min_vals = torch.min(points, dim=indices.unbatched_tensor_values).values
     point_range = points - min_vals
-    max_vals = torch.max(
-        point_range + 2e-5, dim=index_mapping.unbatched_tensor_values
-    ).values
+    max_vals = torch.max(point_range + 2e-5, dim=indices.unbatched_tensor_values).values
     return (point_range + 1e-5) / max_vals
 
 
@@ -180,19 +178,15 @@ def bitmap_coordinates_to_target_coordinates(
     target_coordinates = torch.zeros((number_of_coordinates, 4), device=device)
     target_coordinates[:, -1] = 1.0
 
-    bitmap_width = bitmap_resolution[index_mapping.unbatched_bitmap_e]
-    bitmap_height = bitmap_resolution[index_mapping.unbatched_bitmap_u]
+    bitmap_width = bitmap_resolution[indices.unbatched_bitmap_e]
+    bitmap_height = bitmap_resolution[indices.unbatched_bitmap_u]
 
-    e_norm = (
-        bitmap_coordinates[:, index_mapping.unbatched_bitmap_e] + 0.5
-    ) / bitmap_width
-    u_norm = (
-        bitmap_coordinates[:, index_mapping.unbatched_bitmap_u] + 0.5
-    ) / bitmap_height
+    e_norm = (bitmap_coordinates[:, indices.unbatched_bitmap_e] + 0.5) / bitmap_width
+    u_norm = (bitmap_coordinates[:, indices.unbatched_bitmap_u] + 0.5) / bitmap_height
 
     planar_mask = (
         target_area_indices
-        < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+        < solar_tower.number_of_target_areas_per_type[indices.planar_target_areas]
     )
 
     if planar_mask.any():
@@ -200,7 +194,7 @@ def bitmap_coordinates_to_target_coordinates(
 
         planar = cast(
             TowerTargetAreasPlanar,
-            solar_tower.target_areas[index_mapping.planar_target_areas],
+            solar_tower.target_areas[indices.planar_target_areas],
         )
 
         centers = planar.centers[planar_indices][:, :3]
@@ -213,11 +207,9 @@ def bitmap_coordinates_to_target_coordinates(
             planar_indices.numel(), 3
         )
 
-        e_local = (0.5 - e_norm[planar_mask]) * dims[
-            :, index_mapping.target_dimensions_width
-        ]
+        e_local = (0.5 - e_norm[planar_mask]) * dims[:, indices.target_dimensions_width]
         u_local = (0.5 - u_norm[planar_mask]) * dims[
-            :, index_mapping.target_dimensions_height
+            :, indices.target_dimensions_height
         ]
 
         target_coordinates[planar_mask, :3] = (
@@ -227,13 +219,11 @@ def bitmap_coordinates_to_target_coordinates(
     if (~planar_mask).any():
         cylinder_indices = (
             target_area_indices[~planar_mask]
-            - solar_tower.number_of_target_areas_per_type[
-                index_mapping.planar_target_areas
-            ]
+            - solar_tower.number_of_target_areas_per_type[indices.planar_target_areas]
         )
         cylindrical = cast(
             TowerTargetAreasCylindrical,
-            solar_tower.target_areas[index_mapping.cylindrical_target_areas],
+            solar_tower.target_areas[indices.cylindrical_target_areas],
         )
 
         centers = cylindrical.centers[cylinder_indices][:, :3]
@@ -311,14 +301,12 @@ def azimuth_elevation_to_enu(
     r = slant_range * torch.cos(elevation)
 
     enu = torch.zeros(
-        (azimuth.shape[index_mapping.unbatched_tensor_values], 3), device=device
+        (azimuth.shape[indices.unbatched_tensor_values], 3), device=device
     )
 
-    enu[:, index_mapping.e] = r * torch.sin(azimuth)
-    enu[:, index_mapping.n] = -r * torch.cos(
-        azimuth
-    )  # South-oriented azimuth convention
-    enu[:, index_mapping.u] = slant_range * torch.sin(elevation)
+    enu[:, indices.e] = r * torch.sin(azimuth)
+    enu[:, indices.n] = -r * torch.cos(azimuth)  # South-oriented azimuth convention
+    enu[:, indices.u] = slant_range * torch.sin(elevation)
 
     return enu
 
@@ -374,10 +362,10 @@ def convert_wgs84_coordinates_to_local_enu(
     wgs84_e2 = (wgs84_a**2 - wgs84_b**2) / wgs84_a**2  # Eccentricity^2
 
     # Convert latitude and longitude to radians.
-    latitudes = torch.deg2rad(coordinates_to_transform[:, index_mapping.latitude])
-    longitudes = torch.deg2rad(coordinates_to_transform[:, index_mapping.longitude])
-    latitude_reference_point = torch.deg2rad(reference_point[index_mapping.latitude])
-    longitude_reference_point = torch.deg2rad(reference_point[index_mapping.longitude])
+    latitudes = torch.deg2rad(coordinates_to_transform[:, indices.latitude])
+    longitudes = torch.deg2rad(coordinates_to_transform[:, indices.longitude])
+    latitude_reference_point = torch.deg2rad(reference_point[indices.latitude])
+    longitude_reference_point = torch.deg2rad(reference_point[indices.longitude])
 
     # Calculate meridional radius of curvature for the first latitude.
     sin_lat1 = torch.sin(latitudes)
@@ -391,13 +379,11 @@ def convert_wgs84_coordinates_to_local_enu(
     dlon_rad = longitude_reference_point - longitudes
 
     # Calculate north and east offsets in meters.
-    transformed_coordinates[:, index_mapping.e] = -(
-        dlon_rad * rn1 * torch.cos(latitudes)
-    )
-    transformed_coordinates[:, index_mapping.n] = -(dlat_rad * rm1)
-    transformed_coordinates[:, index_mapping.u] = (
-        coordinates_to_transform[:, index_mapping.altitude]
-        - reference_point[index_mapping.altitude]
+    transformed_coordinates[:, indices.e] = -(dlon_rad * rn1 * torch.cos(latitudes))
+    transformed_coordinates[:, indices.n] = -(dlat_rad * rm1)
+    transformed_coordinates[:, indices.u] = (
+        coordinates_to_transform[:, indices.altitude]
+        - reference_point[indices.altitude]
     )
 
     return transformed_coordinates

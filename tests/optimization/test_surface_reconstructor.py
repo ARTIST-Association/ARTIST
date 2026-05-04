@@ -10,8 +10,8 @@ from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.optimization.loss_functions import KLDivergenceLoss, Loss, PixelLoss
 from artist.optimization.surface_reconstructor import SurfaceReconstructor
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary
-from artist.util.environment_setup import DdpSetup
+from artist.util import constants
+from artist.util.environment import DdpSetup
 
 
 @pytest.mark.parametrize(
@@ -21,10 +21,10 @@ from artist.util.environment_setup import DdpSetup
             KLDivergenceLoss,
             40,
             PaintCalibrationDataParser(),
-            config_dictionary.reduce_on_plateau,
+            constants.reduce_on_plateau,
         ),
-        (PixelLoss, 20, PaintCalibrationDataParser(), config_dictionary.cyclic),
-        (PixelLoss, 10, CalibrationDataParser(), config_dictionary.cyclic),
+        (PixelLoss, 20, PaintCalibrationDataParser(), constants.cyclic),
+        (PixelLoss, 10, CalibrationDataParser(), constants.cyclic),
     ],
 )
 def test_surface_reconstructor(
@@ -62,35 +62,35 @@ def test_surface_reconstructor(
     torch.cuda.manual_seed(7)
 
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 1e-4,
-        config_dictionary.tolerance: 5e-4,
-        config_dictionary.max_epoch: 50,
-        config_dictionary.batch_size: 30,
-        config_dictionary.log_step: 0,
-        config_dictionary.early_stopping_delta: 1.0,
-        config_dictionary.early_stopping_patience: 2,
-        config_dictionary.early_stopping_window: early_stopping_window,
+        constants.initial_learning_rate: 1e-4,
+        constants.tolerance: 5e-4,
+        constants.max_epoch: 50,
+        constants.batch_size: 30,
+        constants.log_step: 0,
+        constants.early_stopping_delta: 1.0,
+        constants.early_stopping_patience: 2,
+        constants.early_stopping_window: early_stopping_window,
     }
     scheduler_dict = {
-        config_dictionary.scheduler_type: scheduler,
-        config_dictionary.lr_min: 1e-6,
-        config_dictionary.lr_max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.8,
-        config_dictionary.patience: 10,
-        config_dictionary.threshold: 1e-4,
-        config_dictionary.cooldown: 5,
+        constants.scheduler_type: scheduler,
+        constants.lr_min: 1e-6,
+        constants.lr_max: 1e-3,
+        constants.step_size_up: 500,
+        constants.reduce_factor: 0.8,
+        constants.patience: 10,
+        constants.threshold: 1e-4,
+        constants.cooldown: 5,
     }
     constraint_dict = {
-        config_dictionary.rho_flux_integral: 1.0,
-        config_dictionary.energy_tolerance: 0.01,
-        config_dictionary.weight_smoothness: 0.005,
-        config_dictionary.weight_ideal_surface: 0.005,
+        constants.rho_flux_integral: 1.0,
+        constants.energy_tolerance: 0.01,
+        constants.weight_smoothness: 0.005,
+        constants.weight_ideal_surface: 0.005,
     }
     optimization_configuration = {
-        config_dictionary.optimization: optimizer_dict,
-        config_dictionary.scheduler: scheduler_dict,
-        config_dictionary.constraints: constraint_dict,
+        constants.optimization: optimizer_dict,
+        constants.scheduler: scheduler_dict,
+        constants.constraints: constraint_dict,
     }
 
     scenario_path = (
@@ -136,8 +136,8 @@ def test_surface_reconstructor(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser,
-        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+        constants.data_parser: data_parser,
+        constants.heliostat_data_mapping: heliostat_data_mapping,
     }
 
     with h5py.File(scenario_path, "r") as scenario_file:

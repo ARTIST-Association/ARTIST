@@ -12,8 +12,8 @@ from artist.raytracing import blocking, geometry
 from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
 from artist.scenario import Scenario
 from artist.scene import Rays
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat ray tracer."""
@@ -82,8 +82,8 @@ class HeliostatRayTracer:
         random_seed: int = 7,
         bitmap_resolution: torch.Tensor = torch.tensor(
             [
-                index_mapping.bitmap_resolution,
-                index_mapping.bitmap_resolution,
+                indices.bitmap_resolution,
+                indices.bitmap_resolution,
             ]
         ),
         dni: float | None = None,
@@ -128,14 +128,14 @@ class HeliostatRayTracer:
         self.batch_size = batch_size
 
         self.light_source = scenario.light_sources.light_source_list[
-            index_mapping.first_light_source
+            indices.first_light_source
         ]
 
         # Create distortions dataset.
         self.distortions_dataset = DistortionsDataset(
             light_source=self.light_source,
             number_of_points_per_heliostat=self.heliostat_group.active_surface_points.shape[
-                index_mapping.number_of_surface_points_dimension
+                indices.number_of_surface_points_dimension
             ],
             number_of_active_heliostats=self.heliostat_group.number_of_active_heliostats,
             random_seed=random_seed,
@@ -190,15 +190,15 @@ class HeliostatRayTracer:
             canting_norm = (torch.norm(self.heliostat_group.canting[0], dim=1)[0])[:2]
             dimensions = (canting_norm * 4) + 0.02
             heliostat_surface_area = (
-                dimensions[index_mapping.heliostat_width]
-                * dimensions[index_mapping.heliostat_height]
+                dimensions[indices.heliostat_width]
+                * dimensions[indices.heliostat_height]
             )
             # Calculate ray magnitude.
             power_single_heliostat = dni * heliostat_surface_area
             rays_per_heliostat = (
                 self.heliostat_group.surface_points.shape[1]
                 * self.scenario.light_sources.light_source_list[
-                    index_mapping.first_light_source
+                    indices.first_light_source
                 ].number_of_rays
             )
             self.ray_magnitude = power_single_heliostat / rays_per_heliostat
@@ -287,7 +287,7 @@ class HeliostatRayTracer:
 
         self.heliostat_group.preferred_reflection_directions = geometry.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(
-                index_mapping.number_rays_per_point
+                indices.number_rays_per_point
             ),
             reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
@@ -306,8 +306,8 @@ class HeliostatRayTracer:
         flux_distributions = torch.empty(
             (
                 int(active_heliostats_mask.sum()),
-                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
-                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
             ),
             device=device,
         )
@@ -343,7 +343,7 @@ class HeliostatRayTracer:
                 & (
                     target_area_indices
                     < self.scenario.solar_tower.number_of_target_areas_per_type[
-                        index_mapping.planar_target_areas
+                        indices.planar_target_areas
                     ]
                 )
             )[active_heliostats_mask_batch]
@@ -402,7 +402,7 @@ class HeliostatRayTracer:
                         active_heliostats_mask_batch
                     ][planar_active_mask],
                     target_areas=self.scenario.solar_tower.target_areas[
-                        index_mapping.planar_target_areas
+                        indices.planar_target_areas
                     ],  # type: ignore[arg-type]
                     target_area_indices=target_area_indices[
                         active_heliostats_mask_batch
@@ -423,13 +423,13 @@ class HeliostatRayTracer:
                         active_heliostats_mask_batch
                     ][~planar_active_mask],
                     target_areas=self.scenario.solar_tower.target_areas[
-                        index_mapping.cylindrical_target_areas
+                        indices.cylindrical_target_areas
                     ],  # type: ignore[arg-type]
                     target_area_indices=target_area_indices[
                         active_heliostats_mask_batch
                     ][~planar_active_mask]
                     - self.scenario.solar_tower.number_of_target_areas_per_type[
-                        index_mapping.planar_target_areas
+                        indices.planar_target_areas
                     ],
                     bitmap_resolution=self.bitmap_resolution,
                     device=device,
@@ -549,15 +549,15 @@ class HeliostatRayTracer:
 
         scattered_rays = (
             rotations
-            @ original_ray_direction.unsqueeze(
-                index_mapping.number_rays_per_point
-            ).unsqueeze(-1)
+            @ original_ray_direction.unsqueeze(indices.number_rays_per_point).unsqueeze(
+                -1
+            )
         ).squeeze(-1)
 
         return Rays(
             ray_directions=scattered_rays,
             ray_magnitudes=torch.full(
-                (scattered_rays.shape[: index_mapping.ray_directions]),
+                (scattered_rays.shape[: indices.ray_directions]),
                 self.ray_magnitude,
                 device=device,
             ),
@@ -596,8 +596,8 @@ class HeliostatRayTracer:
         group_bitmaps_per_target = torch.zeros(
             (
                 int(self.scenario.solar_tower.number_of_target_areas_per_type.sum()),
-                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
-                int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
             ),
             device=device,
         )
@@ -605,7 +605,7 @@ class HeliostatRayTracer:
             mask = target_area_indices == index
             if mask.any():
                 group_bitmaps_per_target[index] = bitmaps_per_heliostat[mask].sum(
-                    dim=index_mapping.heliostat_dimension
+                    dim=indices.heliostat_dimension
                 )
 
         return group_bitmaps_per_target
@@ -648,8 +648,8 @@ class HeliostatRayTracer:
             The flux density bitmaps, one per active heliostat.
             Shape is ``[number_of_active_heliostats, bitmap_resolution_u, bitmap_resolution_e]``.
         """
-        bitmap_height = self.bitmap_resolution[index_mapping.unbatched_bitmap_u]
-        bitmap_width = self.bitmap_resolution[index_mapping.unbatched_bitmap_e]
+        bitmap_height = self.bitmap_resolution[indices.unbatched_bitmap_u]
+        bitmap_width = self.bitmap_resolution[indices.unbatched_bitmap_e]
         num_heliostats = absolute_intensities.shape[0]
 
         bitmap_intersections_e = bitmap_intersections_e.reshape(num_heliostats, -1)

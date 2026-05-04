@@ -16,8 +16,8 @@ from artist.optimization.loss_functions import KLDivergenceLoss
 from artist.optimization.surface_reconstructor import SurfaceReconstructor
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, set_logger_config
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util import constants, indices, set_logger_config
+from artist.util.environment import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -59,9 +59,9 @@ def plot_surface_points_and_angle_map(
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
     normals = (
         (
-            surface_normals[..., : index_mapping.slice_fourth_dimension]
+            surface_normals[..., : indices.slice_fourth_dimension]
             / torch.linalg.norm(
-                surface_normals[..., : index_mapping.slice_fourth_dimension],
+                surface_normals[..., : indices.slice_fourth_dimension],
                 axis=-1,
                 keepdims=True,
             )
@@ -71,9 +71,9 @@ def plot_surface_points_and_angle_map(
     )
     reference = (
         (
-            reference_direction[..., : index_mapping.slice_fourth_dimension]
+            reference_direction[..., : indices.slice_fourth_dimension]
             / torch.linalg.norm(
-                reference_direction[..., : index_mapping.slice_fourth_dimension]
+                reference_direction[..., : indices.slice_fourth_dimension]
             )
         )
         .cpu()
@@ -84,9 +84,9 @@ def plot_surface_points_and_angle_map(
 
     for facet_points, facet_normals in zip(surface_points.cpu().detach(), normals):
         x, y, z = (
-            facet_points[:, index_mapping.e].cpu().detach(),
-            facet_points[:, index_mapping.n].cpu().detach(),
-            facet_points[:, index_mapping.u].cpu().detach(),
+            facet_points[:, indices.e].cpu().detach(),
+            facet_points[:, indices.n].cpu().detach(),
+            facet_points[:, indices.u].cpu().detach(),
         )
 
         # Surface points scatter plot.
@@ -165,8 +165,8 @@ def create_surface_plots(name: str) -> None:
                     number_of_evaluation_points=torch.tensor([50, 50], device=device),
                     device=device,
                 )
-                .unsqueeze(index_mapping.heliostat_dimension)
-                .unsqueeze(index_mapping.facet_index_unbatched)
+                .unsqueeze(indices.heliostat_dimension)
+                .unsqueeze(indices.facet_index_unbatched)
                 .expand(
                     1,
                     heliostat_group.number_of_facets_per_heliostat,
@@ -180,7 +180,7 @@ def create_surface_plots(name: str) -> None:
                 degrees=heliostat_group.nurbs_degrees,
                 control_points=heliostat_group.nurbs_control_points[
                     heliostat_index
-                ].unsqueeze(index_mapping.heliostat_dimension),
+                ].unsqueeze(indices.heliostat_dimension),
                 device=device,
             )
 
@@ -189,19 +189,19 @@ def create_surface_plots(name: str) -> None:
                 temporary_nurbs.calculate_surface_points_and_normals(
                     evaluation_points=evaluation_points,
                     canting=heliostat_group.canting[heliostat_index].unsqueeze(
-                        index_mapping.heliostat_dimension
+                        indices.heliostat_dimension
                     ),
                     facet_translations=heliostat_group.facet_translations[
                         heliostat_index
-                    ].unsqueeze(index_mapping.heliostat_dimension),
+                    ].unsqueeze(indices.heliostat_dimension),
                     device=device,
                 )
             )
 
             # Create the plot.
             plot_surface_points_and_angle_map(
-                surface_points=temporary_points[index_mapping.first_heliostat],
-                surface_normals=temporary_normals[index_mapping.first_heliostat],
+                surface_points=temporary_points[indices.first_heliostat],
+                surface_normals=temporary_normals[indices.first_heliostat],
                 reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
                 name=f"{name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}_heliostat_{heliostat_group.names[heliostat_index]}",
             )
@@ -283,8 +283,8 @@ def create_flux_plots(
                     number_of_evaluation_points=torch.tensor([50, 50], device=device),
                     device=device,
                 )
-                .unsqueeze(index_mapping.heliostat_dimension)
-                .unsqueeze(index_mapping.facet_index_unbatched)
+                .unsqueeze(indices.heliostat_dimension)
+                .unsqueeze(indices.facet_index_unbatched)
                 .expand(
                     validation_active_heliostats_mask.sum(),
                     heliostat_group.number_of_facets_per_heliostat,
@@ -408,39 +408,39 @@ heliostat_data_mapping = [
 
 # Configure the optimization.
 optimizer_dict = {
-    config_dictionary.initial_learning_rate: 1e-4,
-    config_dictionary.tolerance: 1e-5,
-    config_dictionary.max_epoch: 100,
-    config_dictionary.batch_size: 30,
-    config_dictionary.log_step: 1,
-    config_dictionary.early_stopping_delta: 1e-4,
-    config_dictionary.early_stopping_patience: 100,
-    config_dictionary.early_stopping_window: 100,
+    constants.initial_learning_rate: 1e-4,
+    constants.tolerance: 1e-5,
+    constants.max_epoch: 100,
+    constants.batch_size: 30,
+    constants.log_step: 1,
+    constants.early_stopping_delta: 1e-4,
+    constants.early_stopping_patience: 100,
+    constants.early_stopping_window: 100,
 }
 # Configure the learning rate scheduler.
 scheduler_dict = {
-    config_dictionary.scheduler_type: config_dictionary.exponential,
-    config_dictionary.gamma: 0.99,
-    config_dictionary.lr_min: 1e-6,
-    config_dictionary.lr_max: 1e-2,
-    config_dictionary.step_size_up: 100,
-    config_dictionary.reduce_factor: 0.5,
-    config_dictionary.patience: 10,
-    config_dictionary.threshold: 1e-4,
-    config_dictionary.cooldown: 5,
+    constants.scheduler_type: constants.exponential,
+    constants.gamma: 0.99,
+    constants.lr_min: 1e-6,
+    constants.lr_max: 1e-2,
+    constants.step_size_up: 100,
+    constants.reduce_factor: 0.5,
+    constants.patience: 10,
+    constants.threshold: 1e-4,
+    constants.cooldown: 5,
 }
 # Configure the regularizers and constraints.
 constraint_dict = {
-    config_dictionary.weight_smoothness: 0.005,
-    config_dictionary.weight_ideal_surface: 0.005,
-    config_dictionary.rho_flux_integral: 1.0,
-    config_dictionary.energy_tolerance: 0.01,
+    constants.weight_smoothness: 0.005,
+    constants.weight_ideal_surface: 0.005,
+    constants.rho_flux_integral: 1.0,
+    constants.energy_tolerance: 0.01,
 }
 # Combine configurations.
 optimization_configuration = {
-    config_dictionary.optimization: optimizer_dict,
-    config_dictionary.scheduler: scheduler_dict,
-    config_dictionary.constraints: constraint_dict,
+    constants.optimization: optimizer_dict,
+    constants.scheduler: scheduler_dict,
+    constants.constraints: constraint_dict,
 }
 
 # Create dict for the data parser and the heliostat_data_mapping.
@@ -448,8 +448,8 @@ data: dict[
     str,
     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ] = {
-    config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=2),
-    config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+    constants.data_parser: PaintCalibrationDataParser(sample_limit=2),
+    constants.heliostat_data_mapping: heliostat_data_mapping,
 }
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -460,7 +460,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]  # type: ignore
+    device = ddp_setup[constants.device]  # type: ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:

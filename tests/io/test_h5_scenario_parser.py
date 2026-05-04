@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from artist.io import h5_scenario_parser
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 @pytest.mark.parametrize(
@@ -34,7 +34,7 @@ def test_load_kinematics_deviations(kinematics_type: str, device: torch.device) 
     mock_level_1 = mock.MagicMock()
 
     scenario_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.heliostat_kinematics_key: mock_level_1
+        constants.heliostat_kinematics_key: mock_level_1
     }[key]
 
     log = mock.MagicMock(spec=logging.Logger)
@@ -95,7 +95,7 @@ def test_load_actuator_parameters(
 
     # Return an empty/unspecified actuator group to trigger count/type validation paths.
     scenario_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.heliostat_actuator_key: mock_level_actuators
+        constants.heliostat_actuator_key: mock_level_actuators
     }[key]
 
     log = mock.MagicMock(spec=logging.Logger)

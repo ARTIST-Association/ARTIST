@@ -5,7 +5,7 @@ import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 def exponential(
@@ -28,7 +28,7 @@ def exponential(
         An exponential learning rate scheduler.
     """
     return torch.optim.lr_scheduler.ExponentialLR(
-        optimizer, gamma=float(parameters[config_dictionary.gamma])
+        optimizer, gamma=float(parameters[constants.gamma])
     )
 
 
@@ -53,9 +53,9 @@ def cyclic(
     """
     return torch.optim.lr_scheduler.CyclicLR(
         optimizer,
-        base_lr=float(parameters[config_dictionary.lr_min]),
-        max_lr=float(parameters[config_dictionary.lr_max]),
-        step_size_up=int(parameters[config_dictionary.step_size_up]),
+        base_lr=float(parameters[constants.lr_min]),
+        max_lr=float(parameters[constants.lr_max]),
+        step_size_up=int(parameters[constants.step_size_up]),
     )
 
 
@@ -80,11 +80,11 @@ def reduce_on_plateau(
     """
     return torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        factor=float(parameters[config_dictionary.reduce_factor]),
-        patience=int(parameters[config_dictionary.patience]),
-        threshold=float(parameters[config_dictionary.threshold]),
-        cooldown=int(parameters[config_dictionary.cooldown]),
-        min_lr=float(parameters[config_dictionary.lr_min]),
+        factor=float(parameters[constants.reduce_factor]),
+        patience=int(parameters[constants.patience]),
+        threshold=float(parameters[constants.threshold]),
+        cooldown=int(parameters[constants.cooldown]),
+        min_lr=float(parameters[constants.lr_min]),
     )
 
 

@@ -4,7 +4,7 @@ import torch
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.kinematics_rigid_body import RigidBody
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat groups with a rigid body kinematics."""

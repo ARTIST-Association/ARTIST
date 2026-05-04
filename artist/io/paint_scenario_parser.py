@@ -29,8 +29,8 @@ from artist.scenario.configuration_classes import (
     TargetAreaPlanarListConfig,
 )
 from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import constants, indices
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the paint data loader."""
@@ -147,7 +147,7 @@ def extract_paint_tower_measurements(
         if tower_dict[target_area][paint_mappings.TOWER_TYPE_KEY] == "convex_cylinder":
             prefix = (
                 "receiver_inner_"
-                if target_area == config_dictionary.target_area_receiver
+                if target_area == constants.target_area_receiver
                 else ""
             )
 
@@ -328,13 +328,13 @@ def extract_paint_heliostat_properties(
             ][facet][paint_mappings.TRANSLATION_VECTOR],
             device=device,
         )
-        canting[facet, index_mapping.facet_canting_e] = torch.tensor(
+        canting[facet, indices.facet_canting_e] = torch.tensor(
             heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
                 paint_mappings.FACETS_LIST
             ][facet][paint_mappings.CANTING_E],
             device=device,
         )
-        canting[facet, index_mapping.facet_canting_n] = torch.tensor(
+        canting[facet, indices.facet_canting_n] = torch.tensor(
             heliostat_dict[paint_mappings.FACET_PROPERTIES_KEY][
                 paint_mappings.FACETS_LIST
             ][facet][paint_mappings.CANTING_N],
@@ -427,31 +427,29 @@ def extract_paint_heliostat_properties(
     for paint_actuator in paint_actuators:
         parameters = ActuatorParameters(
             increment=torch.tensor(
-                paint_actuator[config_dictionary.paint_increment], device=device
+                paint_actuator[constants.paint_increment], device=device
             ),
             initial_stroke_length=torch.tensor(
-                paint_actuator[config_dictionary.paint_initial_stroke_length],
+                paint_actuator[constants.paint_initial_stroke_length],
                 device=device,
             ),
-            offset=torch.tensor(
-                paint_actuator[config_dictionary.paint_offset], device=device
-            ),
+            offset=torch.tensor(paint_actuator[constants.paint_offset], device=device),
             pivot_radius=torch.tensor(
-                paint_actuator[config_dictionary.paint_pivot_radius],
+                paint_actuator[constants.paint_pivot_radius],
                 device=device,
             ),
             initial_angle=torch.tensor(
-                paint_actuator[config_dictionary.paint_initial_angle],
+                paint_actuator[constants.paint_initial_angle],
                 device=device,
             ),
         )
-        actuator_type = paint_actuator[config_dictionary.paint_actuator_type]
+        actuator_type = paint_actuator[constants.paint_actuator_type]
         clockwise_axis_movement = paint_actuator[
-            config_dictionary.paint_clockwise_axis_movement
+            constants.paint_clockwise_axis_movement
         ]
         min_max_motor_positions = [
-            paint_actuator[config_dictionary.paint_min_increment],
-            paint_actuator[config_dictionary.paint_max_increment],
+            paint_actuator[constants.paint_min_increment],
+            paint_actuator[constants.paint_max_increment],
         ]
         actuator_parameters_list.append(
             (
@@ -660,9 +658,7 @@ def _fitted_surface_generator(
         optimizer=kwargs.get("nurbs_fit_optimizer"),
         scheduler=kwargs.get("nurbs_fit_scheduler"),
         deflectometry_step_size=kwargs.get("deflectometry_step_size", 100),
-        fit_method=kwargs.get(
-            "nurbs_fit_method", config_dictionary.fit_nurbs_from_normals
-        ),
+        fit_method=kwargs.get("nurbs_fit_method", constants.fit_nurbs_from_normals),
         tolerance=kwargs.get("nurbs_fit_tolerance", 1e-10),
         max_epoch=kwargs.get("nurbs_fit_max_epoch", 400),
         device=device,
@@ -740,7 +736,7 @@ def _process_heliostats_from_paths(
         prototype_surface = surface_config
 
         kinematics_config = KinematicsConfig(
-            kinematics_type=config_dictionary.rigid_body_key,
+            kinematics_type=constants.rigid_body_key,
             initial_orientation=initial_orientation,
             deviations=kinematics_deviations,
         )
@@ -751,24 +747,24 @@ def _process_heliostats_from_paths(
             actuator_parameters_list
         ):
             actuator = ActuatorConfig(
-                key=f"{config_dictionary.heliostat_actuator_key}_{actuator_index}",
+                key=f"{constants.heliostat_actuator_key}_{actuator_index}",
                 actuator_type=str(
-                    actuator_parameters_tuple[index_mapping.paint_actuator_type]
+                    actuator_parameters_tuple[indices.paint_actuator_type]
                 ),
                 clockwise_axis_movement=bool(
                     actuator_parameters_tuple[
-                        index_mapping.paint_actuator_clockwise_axis_movement
+                        indices.paint_actuator_clockwise_axis_movement
                     ]
                 ),
                 min_max_motor_positions=cast(
                     List[float],
                     actuator_parameters_tuple[
-                        index_mapping.paint_actuator_min_max_motor_positions
+                        indices.paint_actuator_min_max_motor_positions
                     ],
                 ),
                 parameters=cast(
                     ActuatorParameters,
-                    actuator_parameters_tuple[index_mapping.paint_actuator_parameters],
+                    actuator_parameters_tuple[indices.paint_actuator_parameters],
                 ),
             )
             actuator_list.append(actuator)
@@ -858,7 +854,7 @@ def extract_paint_heliostats_fitted_surface(
     nurbs_fit_scheduler: torch.optim.lr_scheduler.LRScheduler,
     number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
     deflectometry_step_size: int = 100,
-    nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
+    nurbs_fit_method: str = constants.fit_nurbs_from_normals,
     nurbs_fit_tolerance: float = 1e-10,
     nurbs_fit_max_epoch: int = 400,
     device: torch.device | None = None,
@@ -883,7 +879,7 @@ def extract_paint_heliostats_fitted_surface(
     deflectometry_step_size : int
         The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
     nurbs_fit_method : str
-        The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+        The method used to fit the NURBS, either from deflectometry points or normals (default is constants.fit_nurbs_from_normals).
     nurbs_fit_tolerance : float
         The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
     nurbs_fit_max_epoch : int
@@ -926,7 +922,7 @@ def extract_paint_heliostats_mixed_surface(
     nurbs_fit_scheduler: torch.optim.lr_scheduler.LRScheduler,
     number_of_nurbs_control_points: torch.Tensor = torch.tensor([10, 10]),
     deflectometry_step_size: int = 100,
-    nurbs_fit_method: str = config_dictionary.fit_nurbs_from_normals,
+    nurbs_fit_method: str = constants.fit_nurbs_from_normals,
     nurbs_fit_tolerance: float = 1e-10,
     nurbs_fit_max_epoch: int = 400,
     device: torch.device | None = None,
@@ -955,7 +951,7 @@ def extract_paint_heliostats_mixed_surface(
     deflectometry_step_size : int
         The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
     nurbs_fit_method : str
-        The method used to fit the NURBS, either from deflectometry points or normals (default is config_dictionary.fit_nurbs_from_normals).
+        The method used to fit the NURBS, either from deflectometry points or normals (default is constants.fit_nurbs_from_normals).
     nurbs_fit_tolerance : float
         The tolerance value used for fitting NURBS surfaces to deflectometry (default is 1e-10).
     nurbs_fit_max_epoch : int
@@ -1051,12 +1047,12 @@ def corner_points_to_plane(
         The plane measurement in up direction.
     """
     plane_e = (
-        torch.abs(upper_right[index_mapping.e] - upper_left[index_mapping.e])
-        + torch.abs(lower_right[index_mapping.e] - lower_left[index_mapping.e])
+        torch.abs(upper_right[indices.e] - upper_left[indices.e])
+        + torch.abs(lower_right[indices.e] - lower_left[indices.e])
     ) / 2
     plane_u = (
-        torch.abs(upper_left[index_mapping.u] - lower_left[index_mapping.u])
-        + torch.abs(upper_right[index_mapping.u] - lower_right[index_mapping.u])
+        torch.abs(upper_left[indices.u] - lower_left[indices.u])
+        + torch.abs(upper_right[indices.u] - lower_right[indices.u])
     ) / 2
     return plane_e, plane_u
 

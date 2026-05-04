@@ -9,13 +9,13 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 from PIL import Image
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.io.paint_scenario_parser import extract_paint_heliostat_properties
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 set_logger_config()
 

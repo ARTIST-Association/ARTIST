@@ -9,7 +9,7 @@ import torch
 from typing_extensions import Self
 
 import artist.nurbs.utils
-import artist.util.index_mapping
+import artist.util.indices
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
 from artist.io import h5_scenario_parser
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
     from artist.scenario.configuration_classes import (
         SurfaceConfig,
     )
-from artist.util import config_dictionary, index_mapping, type_mappings
-from artist.util.environment_setup import get_device
+from artist.util import constants, indices, type_registry
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
@@ -141,15 +141,12 @@ class HeliostatField:
             str, defaultdict[str, list[str | torch.Tensor]]
         ] = defaultdict(lambda: defaultdict(list))
 
-        for heliostat_name in config_file[config_dictionary.heliostat_key].keys():
-            single_heliostat_config = config_file[config_dictionary.heliostat_key][
+        for heliostat_name in config_file[constants.heliostat_key].keys():
+            single_heliostat_config = config_file[constants.heliostat_key][
                 heliostat_name
             ]
 
-            if (
-                config_dictionary.heliostat_surface_key
-                in single_heliostat_config.keys()
-            ):
+            if constants.heliostat_surface_key in single_heliostat_config.keys():
                 surface_config = h5_scenario_parser.surface_config(
                     prototype=False,
                     scenario_file=single_heliostat_config,
@@ -166,20 +163,17 @@ class HeliostatField:
                     )
                 surface_config = prototype_surface
 
-            if (
-                config_dictionary.heliostat_kinematics_key
-                in single_heliostat_config.keys()
-            ):
+            if constants.heliostat_kinematics_key in single_heliostat_config.keys():
                 initial_orientation = torch.tensor(
-                    single_heliostat_config[config_dictionary.heliostat_kinematics_key][
-                        config_dictionary.kinematics_initial_orientation
+                    single_heliostat_config[constants.heliostat_kinematics_key][
+                        constants.kinematics_initial_orientation
                     ][()],
                     dtype=torch.float,
                     device=device,
                 )
                 kinematics_type = single_heliostat_config[
-                    config_dictionary.heliostat_kinematics_key
-                ][config_dictionary.kinematics_type][()].decode("utf-8")
+                    constants.heliostat_kinematics_key
+                ][constants.kinematics_type][()].decode("utf-8")
 
                 translation_deviations, rotation_deviations, number_of_actuators = (
                     h5_scenario_parser.kinematics_deviations(
@@ -200,49 +194,40 @@ class HeliostatField:
                     log.info(
                         "Individual kinematics configuration not provided - loading a heliostat with the kinematics prototype."
                     )
-                kinematics_type = prototype_kinematics[
-                    config_dictionary.kinematics_type
-                ]
+                kinematics_type = prototype_kinematics[constants.kinematics_type]
 
                 initial_orientation = prototype_kinematics[
-                    config_dictionary.kinematics_initial_orientation
+                    constants.kinematics_initial_orientation
                 ]
                 translation_deviations = prototype_kinematics[
-                    config_dictionary.translation_deviations
+                    constants.translation_deviations
                 ]
                 rotation_deviations = prototype_kinematics[
-                    config_dictionary.rotation_deviations
+                    constants.rotation_deviations
                 ]
 
-            if (
-                config_dictionary.heliostat_actuator_key
-                in single_heliostat_config.keys()
-            ):
+            if constants.heliostat_actuator_key in single_heliostat_config.keys():
                 actuator_keys = list(
-                    single_heliostat_config[
-                        config_dictionary.heliostat_actuator_key
-                    ].keys()
+                    single_heliostat_config[constants.heliostat_actuator_key].keys()
                 )
 
                 actuator_type_list = []
                 for key in actuator_keys:
                     actuator_type_list.append(
-                        single_heliostat_config[
-                            config_dictionary.heliostat_actuator_key
-                        ][key][config_dictionary.actuator_type_key][()].decode("utf-8")
+                        single_heliostat_config[constants.heliostat_actuator_key][key][
+                            constants.actuator_type_key
+                        ][()].decode("utf-8")
                     )
 
                 unique_actuators = {a for a in actuator_type_list}
 
-                if kinematics_type == config_dictionary.rigid_body_key:
+                if kinematics_type == constants.rigid_body_key:
                     if len(unique_actuators) > 1:
                         raise ValueError(
                             "When using the rigid body kinematics, all actuators for a given heliostat must have the same type."
                         )
                     else:
-                        actuator_type: str = actuator_type_list[
-                            index_mapping.actuator_type
-                        ]
+                        actuator_type: str = actuator_type_list[indices.actuator_type]
 
                 actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
                     h5_scenario_parser.actuator_parameters(
@@ -264,21 +249,19 @@ class HeliostatField:
                     log.info(
                         "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
                     )
-                actuator_type = str(
-                    prototype_actuators[config_dictionary.actuator_type_key]
-                )
+                actuator_type = str(prototype_actuators[constants.actuator_type_key])
                 actuator_parameters_non_optimizable = prototype_actuators[
-                    config_dictionary.actuator_parameters_non_optimizable
+                    constants.actuator_parameters_non_optimizable
                 ]
                 actuator_parameters_optimizable = prototype_actuators[
-                    config_dictionary.actuator_parameters_optimizable
+                    constants.actuator_parameters_optimizable
                 ]
 
             surface = Surface(surface_config, device=device)
 
             number_of_facets = len(surface_config.facet_list)
             degrees = torch.empty(
-                artist.util.index_mapping.nurbs_degrees,
+                artist.util.indices.nurbs_degrees,
                 dtype=torch.int32,
                 device=device,
             )
@@ -288,20 +271,20 @@ class HeliostatField:
             control_points = torch.empty(
                 (
                     number_of_facets,
-                    surface_config.facet_list[
-                        index_mapping.first_facet
-                    ].control_points.shape[index_mapping.h5_control_points_u],
-                    surface_config.facet_list[
-                        index_mapping.first_facet
-                    ].control_points.shape[index_mapping.h5_control_points_v],
-                    artist.util.index_mapping.control_point_dimension,
+                    surface_config.facet_list[indices.first_facet].control_points.shape[
+                        indices.h5_control_points_u
+                    ],
+                    surface_config.facet_list[indices.first_facet].control_points.shape[
+                        indices.h5_control_points_v
+                    ],
+                    artist.util.indices.control_point_dimension,
                 ),
                 device=device,
             )
             canting = torch.empty(
                 (
                     number_of_facets,
-                    artist.util.index_mapping.canting_direction_dimension,
+                    artist.util.indices.canting_direction_dimension,
                     4,
                 ),
                 device=device,
@@ -328,71 +311,68 @@ class HeliostatField:
 
             heliostat_group_key = f"{kinematics_type}_{actuator_type}"
 
-            grouped_field_data[heliostat_group_key][config_dictionary.names].append(
+            grouped_field_data[heliostat_group_key][constants.names].append(
                 heliostat_name
             )
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.heliostat_group_type
-            ] = [kinematics_type, actuator_type]
+            grouped_field_data[heliostat_group_key][constants.heliostat_group_type] = [
+                kinematics_type,
+                actuator_type,
+            ]
 
-            grouped_field_data[heliostat_group_key][config_dictionary.positions].append(
+            grouped_field_data[heliostat_group_key][constants.positions].append(
                 torch.tensor(
-                    single_heliostat_config[config_dictionary.heliostat_position][()],
+                    single_heliostat_config[constants.heliostat_position][()],
                     dtype=torch.float,
                     device=device,
                 )
             )
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.surface_points
-            ].append(
+            grouped_field_data[heliostat_group_key][constants.surface_points].append(
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
                     canting=canting,
                     facet_translations=facet_translation_vectors,
                     device=device,
-                )[index_mapping.surface_points_from_tuple]
+                )[indices.surface_points_from_tuple]
             )
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.surface_normals
-            ].append(
+            grouped_field_data[heliostat_group_key][constants.surface_normals].append(
                 surface.get_surface_points_and_normals(
                     number_of_points_per_facet=number_of_surface_points_per_facet,
                     canting=canting,
                     facet_translations=facet_translation_vectors,
                     device=device,
-                )[index_mapping.surface_normals_from_tuple]
+                )[indices.surface_normals_from_tuple]
+            )
+            grouped_field_data[heliostat_group_key][constants.facets_canting].append(
+                canting
             )
             grouped_field_data[heliostat_group_key][
-                config_dictionary.facets_canting
-            ].append(canting)
-            grouped_field_data[heliostat_group_key][
-                config_dictionary.facet_translations
+                constants.facet_translations
             ].append(facet_translation_vectors)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.facet_control_points
+                constants.facet_control_points
             ].append(control_points)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.initial_orientations
+                constants.initial_orientations
             ].append(initial_orientation)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.translation_deviations
+                constants.translation_deviations
             ].append(translation_deviations)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.rotation_deviations
+                constants.rotation_deviations
             ].append(rotation_deviations)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.actuator_parameters_non_optimizable
+                constants.actuator_parameters_non_optimizable
             ].append(actuator_parameters_non_optimizable)
             grouped_field_data[heliostat_group_key][
-                config_dictionary.actuator_parameters_optimizable
+                constants.actuator_parameters_optimizable
             ].append(actuator_parameters_optimizable)
 
         for group in grouped_field_data:
             for key in grouped_field_data[group]:
                 if key not in [
-                    config_dictionary.names,
-                    config_dictionary.kinematics_type,
-                    config_dictionary.actuator_type_key,
+                    constants.names,
+                    constants.kinematics_type,
+                    constants.actuator_type_key,
                 ]:
                     grouped_field_data[group][key] = torch.stack(
                         grouped_field_data[group][key]
@@ -401,59 +381,57 @@ class HeliostatField:
         heliostat_groups = []
         for heliostat_group_name in grouped_field_data.keys():
             number_of_heliostats_in_group = len(
-                grouped_field_data[heliostat_group_name][config_dictionary.names]
+                grouped_field_data[heliostat_group_name][constants.names]
             )
             heliostat_groups.append(
-                type_mappings.heliostat_group_type_mapping[heliostat_group_name](
-                    names=grouped_field_data[heliostat_group_name][
-                        config_dictionary.names
-                    ],
+                type_registry.heliostat_group_type_mapping[heliostat_group_name](
+                    names=grouped_field_data[heliostat_group_name][constants.names],
                     positions=grouped_field_data[heliostat_group_name][
-                        config_dictionary.positions
+                        constants.positions
                     ],
                     surface_points=cast(
                         torch.Tensor,
                         grouped_field_data[heliostat_group_name][
-                            config_dictionary.surface_points
+                            constants.surface_points
                         ],
                     ).reshape(number_of_heliostats_in_group, -1, 4),
                     surface_normals=cast(
                         torch.Tensor,
                         grouped_field_data[heliostat_group_name][
-                            config_dictionary.surface_normals
+                            constants.surface_normals
                         ],
                     ).reshape(number_of_heliostats_in_group, -1, 4),
                     canting=grouped_field_data[heliostat_group_name][
-                        config_dictionary.facets_canting
+                        constants.facets_canting
                     ],
                     facet_translations=grouped_field_data[heliostat_group_name][
-                        config_dictionary.facet_translations
+                        constants.facet_translations
                     ],
                     nurbs_control_points=grouped_field_data[heliostat_group_name][
-                        config_dictionary.facet_control_points
+                        constants.facet_control_points
                     ],
                     nurbs_degrees=degrees,
                     initial_orientations=grouped_field_data[heliostat_group_name][
-                        config_dictionary.initial_orientations
+                        constants.initial_orientations
                     ],
                     kinematics_translation_deviation_parameters=grouped_field_data[
                         heliostat_group_name
-                    ][config_dictionary.translation_deviations],
+                    ][constants.translation_deviations],
                     kinematics_rotation_deviation_parameters=grouped_field_data[
                         heliostat_group_name
-                    ][config_dictionary.rotation_deviations],
+                    ][constants.rotation_deviations],
                     actuator_parameters_non_optimizable=grouped_field_data[
                         heliostat_group_name
-                    ][config_dictionary.actuator_parameters_non_optimizable],
+                    ][constants.actuator_parameters_non_optimizable],
                     actuator_parameters_optimizable=grouped_field_data[
                         heliostat_group_name
-                    ][config_dictionary.actuator_parameters_optimizable],
+                    ][constants.actuator_parameters_optimizable],
                     device=device,
                 )
             )
             if rank == 0:
                 log.info(
-                    f"Added a heliostat group with kinematics type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][index_mapping.kinematics_type_index]}, and actuator type: {grouped_field_data[heliostat_group_name][config_dictionary.heliostat_group_type][index_mapping.actuator_type_index]}, to the heliostat field."
+                    f"Added a heliostat group with kinematics type: {grouped_field_data[heliostat_group_name][constants.heliostat_group_type][indices.kinematics_type_index]}, and actuator type: {grouped_field_data[heliostat_group_name][constants.heliostat_group_type][indices.actuator_type_index]}, to the heliostat field."
                 )
 
         return cls(heliostat_groups=heliostat_groups, device=device)
@@ -492,8 +470,8 @@ class HeliostatField:
                     ),
                     device=device,
                 )
-                .unsqueeze(index_mapping.heliostat_dimension)
-                .unsqueeze(index_mapping.facet_index_unbatched)
+                .unsqueeze(indices.heliostat_dimension)
+                .unsqueeze(indices.facet_index_unbatched)
                 .expand(
                     heliostat_group.number_of_heliostats,
                     heliostat_group.number_of_facets_per_heliostat,

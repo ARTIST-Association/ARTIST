@@ -3,8 +3,8 @@ import math
 
 import torch
 
-from artist.util import config_dictionary
-from artist.util.environment_setup import get_device
+from artist.util import constants
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for blocking."""
@@ -553,18 +553,12 @@ def build_linear_bounding_volume_hierarchies(
             "No blocking primitives provided, returning empty tensors for the linear bounding volume hierarchies."
         )
         return {
-            config_dictionary.left_node: torch.empty(
-                (0,), dtype=torch.int32, device=device
-            ),
-            config_dictionary.right_node: torch.empty(
-                (0,), dtype=torch.int32, device=device
-            ),
-            config_dictionary.aabb_min: torch.empty((0, 3), device=device),
-            config_dictionary.aabb_max: torch.empty((0, 3), device=device),
-            config_dictionary.is_leaf: torch.empty(
-                (0,), dtype=torch.bool, device=device
-            ),
-            config_dictionary.primitive_index: torch.empty(
+            constants.left_node: torch.empty((0,), dtype=torch.int32, device=device),
+            constants.right_node: torch.empty((0,), dtype=torch.int32, device=device),
+            constants.aabb_min: torch.empty((0, 3), device=device),
+            constants.aabb_max: torch.empty((0, 3), device=device),
+            constants.is_leaf: torch.empty((0,), dtype=torch.bool, device=device),
+            constants.primitive_index: torch.empty(
                 (0,), dtype=torch.int32, device=device
             ),
         }
@@ -746,12 +740,12 @@ def build_linear_bounding_volume_hierarchies(
         )
 
     return {
-        config_dictionary.left_node: left,
-        config_dictionary.right_node: right,
-        config_dictionary.aabb_min: aabb_min,
-        config_dictionary.aabb_max: aabb_max,
-        config_dictionary.is_leaf: is_leaf,
-        config_dictionary.primitive_index: primitive_index,
+        constants.left_node: left,
+        constants.right_node: right,
+        constants.aabb_min: aabb_min,
+        constants.aabb_max: aabb_max,
+        constants.is_leaf: is_leaf,
+        constants.primitive_index: primitive_index,
     }
 
 
@@ -880,12 +874,12 @@ def lbvh_filter_blocking_planes(
         blocking_primitives_corners=blocking_primitives_corners, device=device
     )
 
-    left = lbvh[config_dictionary.left_node]
-    right = lbvh[config_dictionary.right_node]
-    aabb_min = lbvh[config_dictionary.aabb_min]
-    aabb_max = lbvh[config_dictionary.aabb_max]
-    is_leaf = lbvh[config_dictionary.is_leaf]
-    primitive_index = lbvh[config_dictionary.primitive_index]
+    left = lbvh[constants.left_node]
+    right = lbvh[constants.right_node]
+    aabb_min = lbvh[constants.aabb_min]
+    aabb_max = lbvh[constants.aabb_max]
+    is_leaf = lbvh[constants.is_leaf]
+    primitive_index = lbvh[constants.primitive_index]
 
     ray_origins = (
         points_at_ray_origins[:, None, :, :3]

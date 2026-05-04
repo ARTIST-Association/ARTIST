@@ -5,8 +5,8 @@ import torch
 from artist.flux import bitmap
 from artist.geometry import coordinates
 from artist.scenario.scenario import Scenario
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 class Loss:
@@ -207,8 +207,8 @@ class FocalSpotLoss(Loss):
             bitmap_coordinates=focal_spots_bitmap,
             bitmap_resolution=torch.tensor(
                 [
-                    prediction.shape[index_mapping.batched_bitmap_u],
-                    prediction.shape[index_mapping.batched_bitmap_e],
+                    prediction.shape[indices.batched_bitmap_u],
+                    prediction.shape[indices.batched_bitmap_e],
                 ],
                 device=device,
             ),
@@ -371,13 +371,13 @@ class KLDivergenceLoss(Loss):
         ground_truth_distributions = torch.nn.functional.normalize(
             ground_truth,
             p=1,
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u),
             eps=eps,
         )
         predicted_distributions = torch.nn.functional.normalize(
             prediction,
             p=1,
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u),
             eps=eps,
         )
 

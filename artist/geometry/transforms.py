@@ -1,7 +1,7 @@
 import torch
 
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 def rotate_distortions(
@@ -56,28 +56,28 @@ def rotate_distortions(
     ones = torch.ones_like(e, device=device)
 
     matrix = torch.zeros(
-        e.shape[index_mapping.heliostat_dimension],
-        e.shape[index_mapping.facet_dimension],
-        e.shape[index_mapping.points_dimension],
+        e.shape[indices.heliostat_dimension],
+        e.shape[indices.facet_dimension],
+        e.shape[indices.points_dimension],
         4,
         4,
         device=device,
     )
 
-    matrix[:, :, :, index_mapping.e, index_mapping.e] = cos_u
-    matrix[:, :, :, index_mapping.e, index_mapping.n] = -sin_u
-    matrix[:, :, :, index_mapping.n, index_mapping.e] = cos_e * sin_u
-    matrix[:, :, :, index_mapping.n, index_mapping.n] = cos_e * cos_u
-    matrix[:, :, :, index_mapping.n, index_mapping.u] = sin_e
-    matrix[:, :, :, index_mapping.u, index_mapping.e] = -sin_e * sin_u
-    matrix[:, :, :, index_mapping.u, index_mapping.n] = -sin_e * cos_u
-    matrix[:, :, :, index_mapping.u, index_mapping.u] = cos_e
+    matrix[:, :, :, indices.e, indices.e] = cos_u
+    matrix[:, :, :, indices.e, indices.n] = -sin_u
+    matrix[:, :, :, indices.n, indices.e] = cos_e * sin_u
+    matrix[:, :, :, indices.n, indices.n] = cos_e * cos_u
+    matrix[:, :, :, indices.n, indices.u] = sin_e
+    matrix[:, :, :, indices.u, indices.e] = -sin_e * sin_u
+    matrix[:, :, :, indices.u, indices.n] = -sin_e * cos_u
+    matrix[:, :, :, indices.u, indices.u] = cos_e
     matrix[
         :,
         :,
         :,
-        index_mapping.transform_homogeneous,
-        index_mapping.transform_homogeneous,
+        indices.transform_homogeneous,
+        indices.transform_homogeneous,
     ] = ones
 
     return matrix
@@ -116,18 +116,14 @@ def rotate_e(
     sin_e = torch.sin(e)
     ones = torch.ones_like(e, device=device)
 
-    matrix = torch.zeros(
-        e.shape[index_mapping.heliostat_dimension], 4, 4, device=device
-    )
+    matrix = torch.zeros(e.shape[indices.heliostat_dimension], 4, 4, device=device)
 
-    matrix[:, index_mapping.e, index_mapping.e] = ones
-    matrix[:, index_mapping.n, index_mapping.n] = cos_e
-    matrix[:, index_mapping.n, index_mapping.u] = -sin_e
-    matrix[:, index_mapping.u, index_mapping.n] = sin_e
-    matrix[:, index_mapping.u, index_mapping.u] = cos_e
-    matrix[
-        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
-    ] = ones
+    matrix[:, indices.e, indices.e] = ones
+    matrix[:, indices.n, indices.n] = cos_e
+    matrix[:, indices.n, indices.u] = -sin_e
+    matrix[:, indices.u, indices.n] = sin_e
+    matrix[:, indices.u, indices.u] = cos_e
+    matrix[:, indices.transform_homogeneous, indices.transform_homogeneous] = ones
 
     return matrix
 
@@ -162,18 +158,14 @@ def rotate_n(n: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     sin_n = torch.sin(n)
     ones = torch.ones_like(n, device=device)
 
-    matrix = torch.zeros(
-        n.shape[index_mapping.heliostat_dimension], 4, 4, device=device
-    )
+    matrix = torch.zeros(n.shape[indices.heliostat_dimension], 4, 4, device=device)
 
-    matrix[:, index_mapping.e, index_mapping.e] = cos_n
-    matrix[:, index_mapping.e, index_mapping.u] = -sin_n
-    matrix[:, index_mapping.n, index_mapping.n] = ones
-    matrix[:, index_mapping.u, index_mapping.e] = sin_n
-    matrix[:, index_mapping.u, index_mapping.u] = cos_n
-    matrix[
-        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
-    ] = ones
+    matrix[:, indices.e, indices.e] = cos_n
+    matrix[:, indices.e, indices.u] = -sin_n
+    matrix[:, indices.n, indices.n] = ones
+    matrix[:, indices.u, indices.e] = sin_n
+    matrix[:, indices.u, indices.u] = cos_n
+    matrix[:, indices.transform_homogeneous, indices.transform_homogeneous] = ones
 
     return matrix
 
@@ -208,18 +200,14 @@ def rotate_u(u: torch.Tensor, device: torch.device | None = None) -> torch.Tenso
     sin_u = torch.sin(u)
     ones = torch.ones_like(u, device=device)
 
-    matrix = torch.zeros(
-        u.shape[index_mapping.heliostat_dimension], 4, 4, device=device
-    )
+    matrix = torch.zeros(u.shape[indices.heliostat_dimension], 4, 4, device=device)
 
-    matrix[:, index_mapping.e, index_mapping.e] = cos_u
-    matrix[:, index_mapping.e, index_mapping.n] = -sin_u
-    matrix[:, index_mapping.n, index_mapping.e] = sin_u
-    matrix[:, index_mapping.n, index_mapping.n] = cos_u
-    matrix[:, index_mapping.u, index_mapping.u] = ones
-    matrix[
-        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
-    ] = ones
+    matrix[:, indices.e, indices.e] = cos_u
+    matrix[:, indices.e, indices.n] = -sin_u
+    matrix[:, indices.n, indices.e] = sin_u
+    matrix[:, indices.n, indices.n] = cos_u
+    matrix[:, indices.u, indices.u] = ones
+    matrix[:, indices.transform_homogeneous, indices.transform_homogeneous] = ones
 
     return matrix
 
@@ -272,19 +260,15 @@ def translate_enu(
 
     ones = torch.ones_like(e, device=device)
 
-    matrix = torch.zeros(
-        e.shape[index_mapping.heliostat_dimension], 4, 4, device=device
-    )
+    matrix = torch.zeros(e.shape[indices.heliostat_dimension], 4, 4, device=device)
 
-    matrix[:, index_mapping.e, index_mapping.e] = ones
-    matrix[:, index_mapping.e, index_mapping.transform_homogeneous] = e
-    matrix[:, index_mapping.n, index_mapping.n] = ones
-    matrix[:, index_mapping.n, index_mapping.transform_homogeneous] = n
-    matrix[:, index_mapping.u, index_mapping.u] = ones
-    matrix[:, index_mapping.u, index_mapping.transform_homogeneous] = u
-    matrix[
-        :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
-    ] = ones
+    matrix[:, indices.e, indices.e] = ones
+    matrix[:, indices.e, indices.transform_homogeneous] = e
+    matrix[:, indices.n, indices.n] = ones
+    matrix[:, indices.n, indices.transform_homogeneous] = n
+    matrix[:, indices.u, indices.u] = ones
+    matrix[:, indices.u, indices.transform_homogeneous] = u
+    matrix[:, indices.transform_homogeneous, indices.transform_homogeneous] = ones
 
     return matrix
 
@@ -324,8 +308,8 @@ def perform_canting(
     canting_angles = canting_angles.to(device)
     data = data.to(device)
 
-    number_of_surfaces = data.shape[index_mapping.heliostat_dimension]
-    number_of_facets_per_surface = data.shape[index_mapping.facet_dimension]
+    number_of_surfaces = data.shape[indices.heliostat_dimension]
+    number_of_facets_per_surface = data.shape[indices.facet_dimension]
 
     rotation_matrix = torch.zeros(
         (number_of_surfaces, number_of_facets_per_surface, 4, 4),
@@ -334,8 +318,8 @@ def perform_canting(
     )
 
     # Extract ENU basis candidates from canting tensor (drop homogeneous component).
-    e = canting_angles[:, :, index_mapping.e, : index_mapping.slice_fourth_dimension]
-    n = canting_angles[:, :, index_mapping.n, : index_mapping.slice_fourth_dimension]
+    e = canting_angles[:, :, indices.e, : indices.slice_fourth_dimension]
+    n = canting_angles[:, :, indices.n, : indices.slice_fourth_dimension]
 
     # Build a numerically stable orthonormal basis:
     # 1) normalize e
@@ -348,13 +332,11 @@ def perform_canting(
     n_ortho = torch.nn.functional.normalize(n_ortho, dim=-1, eps=1e-8)
 
     # Fill rotation matrix columns with ENU basis vectors.
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.e] = e
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.n] = (
-        n_ortho
-    )
-    rotation_matrix[:, :, : index_mapping.slice_fourth_dimension, index_mapping.u] = u
+    rotation_matrix[:, :, : indices.slice_fourth_dimension, indices.e] = e
+    rotation_matrix[:, :, : indices.slice_fourth_dimension, indices.n] = n_ortho
+    rotation_matrix[:, :, : indices.slice_fourth_dimension, indices.u] = u
     rotation_matrix[
-        :, :, index_mapping.transform_homogeneous, index_mapping.transform_homogeneous
+        :, :, indices.transform_homogeneous, indices.transform_homogeneous
     ] = 1.0
 
     # Data is represented as row vectors (..., 4); therefore:

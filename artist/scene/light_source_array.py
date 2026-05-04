@@ -6,8 +6,8 @@ import torch
 from typing_extensions import Self
 
 from artist.scene.light_source import LightSource
-from artist.util import config_dictionary, type_mappings
-from artist.util.environment_setup import get_device
+from artist.util import constants, type_registry
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the light source array."""
@@ -76,17 +76,17 @@ class LightSourceArray:
 
         light_source_array: list[LightSource] = []
         # Iterate through each light source configuration in the list of light source configurations.
-        for ls in sorted(config_file[config_dictionary.light_source_key].keys()):
-            mapping_key = config_file[config_dictionary.light_source_key][ls][
-                config_dictionary.light_source_type
+        for ls in sorted(config_file[constants.light_source_key].keys()):
+            mapping_key = config_file[constants.light_source_key][ls][
+                constants.light_source_type
             ][()].decode("utf-8")
             # Try to load a light source from the given configuration. This will fail, if ARTIST
             # does not recognize the light source type defined in the configuration.
             try:
-                ls_object = type_mappings.light_source_type_mapping[mapping_key]
+                ls_object = type_registry.light_source_type_mapping[mapping_key]
                 light_source_array.append(
                     ls_object.from_hdf5(
-                        config_file=config_file[config_dictionary.light_source_key][ls],
+                        config_file=config_file[constants.light_source_key][ls],
                         light_source_name=ls,
                         device=device,
                     )

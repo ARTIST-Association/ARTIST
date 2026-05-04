@@ -6,8 +6,8 @@ import torch
 from typing_extensions import Self
 
 from artist.scene.light_source import LightSource
-from artist.util import config_dictionary
-from artist.util.environment_setup import get_device
+from artist.util import constants
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the sun."""
@@ -80,18 +80,14 @@ class Sun(LightSource):
         self.distribution_parameters = distribution_parameters
         self.number_of_rays = number_of_rays
         if (
-            self.distribution_parameters[
-                config_dictionary.light_source_distribution_type
-            ]
-            != config_dictionary.light_source_distribution_is_normal
+            self.distribution_parameters[constants.light_source_distribution_type]
+            != constants.light_source_distribution_is_normal
         ):
             raise ValueError("Unknown sunlight distribution type.")
 
         if (
-            self.distribution_parameters[
-                config_dictionary.light_source_distribution_type
-            ]
-            == config_dictionary.light_source_distribution_is_normal
+            self.distribution_parameters[constants.light_source_distribution_type]
+            == constants.light_source_distribution_is_normal
         ):
             if rank == 0:
                 log.info(
@@ -99,8 +95,8 @@ class Sun(LightSource):
                 )
             mean = torch.tensor(
                 [
-                    self.distribution_parameters[config_dictionary.light_source_mean],
-                    self.distribution_parameters[config_dictionary.light_source_mean],
+                    self.distribution_parameters[constants.light_source_mean],
+                    self.distribution_parameters[constants.light_source_mean],
                 ],
                 dtype=torch.float,
                 device=device,
@@ -108,16 +104,12 @@ class Sun(LightSource):
             covariance = torch.tensor(
                 [
                     [
-                        self.distribution_parameters[
-                            config_dictionary.light_source_covariance
-                        ],
+                        self.distribution_parameters[constants.light_source_covariance],
                         0,
                     ],
                     [
                         0,
-                        self.distribution_parameters[
-                            config_dictionary.light_source_covariance
-                        ],
+                        self.distribution_parameters[constants.light_source_covariance],
                     ],
                 ],
                 dtype=torch.float,
@@ -162,44 +154,38 @@ class Sun(LightSource):
         if light_source_name and rank == 0:
             log.info(f"Loading {light_source_name} from an HDF5 file.")
 
-        number_of_rays = int(
-            config_file[config_dictionary.light_source_number_of_rays][()]
-        )
+        number_of_rays = int(config_file[constants.light_source_number_of_rays][()])
 
         distribution_parameters = {
-            config_dictionary.light_source_distribution_type: config_file[
-                config_dictionary.light_source_distribution_parameters
-            ][config_dictionary.light_source_distribution_type][()].decode("utf-8")
+            constants.light_source_distribution_type: config_file[
+                constants.light_source_distribution_parameters
+            ][constants.light_source_distribution_type][()].decode("utf-8")
         }
 
         if (
-            config_dictionary.light_source_mean
-            in config_file[
-                config_dictionary.light_source_distribution_parameters
-            ].keys()
+            constants.light_source_mean
+            in config_file[constants.light_source_distribution_parameters].keys()
         ):
             distribution_parameters.update(
                 {
-                    config_dictionary.light_source_mean: float(
-                        config_file[
-                            config_dictionary.light_source_distribution_parameters
-                        ][config_dictionary.light_source_mean][()]
+                    constants.light_source_mean: float(
+                        config_file[constants.light_source_distribution_parameters][
+                            constants.light_source_mean
+                        ][()]
                     )
                 }
             )
 
         if (
-            config_dictionary.light_source_covariance
-            in config_file[
-                config_dictionary.light_source_distribution_parameters
-            ].keys()
+            constants.light_source_covariance
+            in config_file[constants.light_source_distribution_parameters].keys()
         ):
             distribution_parameters.update(
                 {
-                    config_dictionary.light_source_covariance: float(
-                        config_file[
-                            config_dictionary.light_source_distribution_parameters
-                        ][config_dictionary.light_source_covariance][()]
+                    constants.light_source_covariance: float(
+                        config_file[constants.light_source_distribution_parameters][
+                            constants.light_source_covariance
+                        ][()]
                     )
                 }
             )

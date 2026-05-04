@@ -8,7 +8,7 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 
 def find_viable_heliostats(

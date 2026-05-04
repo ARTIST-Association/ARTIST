@@ -6,7 +6,7 @@ import torch
 
 from artist.field.heliostat_field import HeliostatField
 from artist.scenario.configuration_classes import SurfaceConfig
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 @pytest.mark.parametrize(
@@ -27,10 +27,10 @@ from artist.util import config_dictionary
         (
             mock.MagicMock(),
             {
-                config_dictionary.kinematics_type: config_dictionary.rigid_body_key,
-                config_dictionary.kinematics_initial_orientation: torch.rand(4, 4),
-                config_dictionary.translation_deviations: torch.rand(4, 9),
-                config_dictionary.rotation_deviations: torch.rand(4, 4),
+                constants.kinematics_type: constants.rigid_body_key,
+                constants.kinematics_initial_orientation: torch.rand(4, 4),
+                constants.translation_deviations: torch.rand(4, 9),
+                constants.rotation_deviations: torch.rand(4, 4),
             },
             None,
             "If the heliostat does not have individual actuators, an actuator prototype must be provided!",

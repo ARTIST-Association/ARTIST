@@ -1,7 +1,7 @@
 import torch
 
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 def create_nurbs_evaluation_grid(
@@ -37,13 +37,13 @@ def create_nurbs_evaluation_grid(
     evaluation_points_e = torch.linspace(
         epsilon,
         1 - epsilon,
-        int(number_of_evaluation_points[index_mapping.evaluation_points_e].item()),
+        int(number_of_evaluation_points[indices.evaluation_points_e].item()),
         device=device,
     )
     evaluation_points_n = torch.linspace(
         epsilon,
         1 - epsilon,
-        int(number_of_evaluation_points[index_mapping.evaluation_points_n].item()),
+        int(number_of_evaluation_points[indices.evaluation_points_n].item()),
         device=device,
     )
     return torch.cartesian_prod(evaluation_points_e, evaluation_points_n)
@@ -85,10 +85,10 @@ def create_planar_nurbs_control_points(
     number_of_control_points = number_of_control_points.to(device)
     canting = canting.to(device)
 
-    n_u = int(number_of_control_points[index_mapping.nurbs_u].item())
-    n_v = int(number_of_control_points[index_mapping.nurbs_v].item())
+    n_u = int(number_of_control_points[indices.nurbs_u].item())
+    n_v = int(number_of_control_points[indices.nurbs_v].item())
 
-    number_of_facets = canting.shape[index_mapping.facet_index_unbatched]
+    number_of_facets = canting.shape[indices.facet_index_unbatched]
 
     control_points = torch.zeros(
         (
@@ -105,17 +105,17 @@ def create_planar_nurbs_control_points(
     v_lin = torch.linspace(0, 1, n_v, device=device, dtype=canting.dtype)
 
     # Per-facet extents in local in-plane directions.
-    facet_dimensions = torch.norm(canting, dim=index_mapping.canting)
+    facet_dimensions = torch.norm(canting, dim=indices.canting)
     u_coordinates = (
-        -facet_dimensions[:, index_mapping.e, None]
-        + 2 * facet_dimensions[:, index_mapping.e, None] * u_lin
+        -facet_dimensions[:, indices.e, None]
+        + 2 * facet_dimensions[:, indices.e, None] * u_lin
     )
     v_coordinates = (
-        -facet_dimensions[:, index_mapping.n, None]
-        + 2 * facet_dimensions[:, index_mapping.n, None] * v_lin
+        -facet_dimensions[:, indices.n, None]
+        + 2 * facet_dimensions[:, indices.n, None] * v_lin
     )
 
-    control_points[..., index_mapping.nurbs_u] = u_coordinates[:, :, None]
-    control_points[..., index_mapping.nurbs_v] = v_coordinates[:, None, :]
+    control_points[..., indices.nurbs_u] = u_coordinates[:, :, None]
+    control_points[..., indices.nurbs_v] = v_coordinates[:, None, :]
 
     return control_points

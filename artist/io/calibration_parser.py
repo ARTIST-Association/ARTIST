@@ -6,10 +6,10 @@ import torch
 import torchvision
 from PIL import Image
 
-import artist.util.index_mapping
+import artist.util.indices
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the calibration data parser."""
@@ -55,8 +55,8 @@ class CalibrationDataParser:
         scenario: Scenario,
         bitmap_resolution: torch.Tensor = torch.tensor(
             [
-                artist.util.index_mapping.bitmap_resolution,
-                artist.util.index_mapping.bitmap_resolution,
+                artist.util.indices.bitmap_resolution,
+                artist.util.indices.bitmap_resolution,
             ]
         ),
         device: torch.device | None = None,
@@ -115,8 +115,8 @@ class CalibrationDataParser:
         heliostat_names: list[str],
         resolution: torch.Tensor = torch.tensor(
             [
-                artist.util.index_mapping.bitmap_resolution,
-                artist.util.index_mapping.bitmap_resolution,
+                artist.util.indices.bitmap_resolution,
+                artist.util.indices.bitmap_resolution,
             ]
         ),
         device: torch.device | None = None,
@@ -203,7 +203,7 @@ class CalibrationDataParser:
                         np.asarray(bitmap_data, dtype=np.float32)
                     ).to(device)
 
-                bitmap_tensor /= artist.util.index_mapping.bitmap_normalizer
+                bitmap_tensor /= artist.util.indices.bitmap_normalizer
 
                 measured_fluxes[index] = bitmap_tensor
                 index += 1

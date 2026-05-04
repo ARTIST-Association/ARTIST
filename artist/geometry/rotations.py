@@ -1,7 +1,7 @@
 import torch
 
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 def decompose_rotations(
@@ -42,12 +42,12 @@ def decompose_rotations(
     """
     # Normalize the input vectors.
     initial_vector = torch.nn.functional.normalize(
-        initial_vector[:, : index_mapping.slice_fourth_dimension]
+        initial_vector[:, : indices.slice_fourth_dimension]
     )
     target_vector = torch.nn.functional.normalize(
-        target_vector[: index_mapping.slice_fourth_dimension],
-        dim=index_mapping.unbatched_tensor_values,
-    ).unsqueeze(index_mapping.unbatched_tensor_values)
+        target_vector[: indices.slice_fourth_dimension],
+        dim=indices.unbatched_tensor_values,
+    ).unsqueeze(indices.unbatched_tensor_values)
 
     # Compute the cross product (rotation axis).
     r = torch.linalg.cross(initial_vector, target_vector)
@@ -108,9 +108,7 @@ def rotation_angle_and_axis(
         )
     # Inverse vectors.
     if axis_norm < epsilon and dot < 0:
-        if abs(from_orientation[index_mapping.e]) < abs(
-            from_orientation[index_mapping.n]
-        ):
+        if abs(from_orientation[indices.e]) < abs(from_orientation[indices.n]):
             orthogonal = torch.tensor([1.0, 0.0, 0.0], device=device)
         else:
             orthogonal = torch.tensor([0.0, 1.0, 0.0], device=device)

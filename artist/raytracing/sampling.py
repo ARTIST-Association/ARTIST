@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, Sampler
 
 from artist.scene import LightSource
-from artist.util import index_mapping
+from artist.util import indices
 
 
 class DistortionsDataset(Dataset):
@@ -61,7 +61,7 @@ class DistortionsDataset(Dataset):
         int
             The length of the dataset.
         """
-        return self.distortions_u.shape[index_mapping.heliostat_dimension]
+        return self.distortions_u.shape[indices.heliostat_dimension]
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """

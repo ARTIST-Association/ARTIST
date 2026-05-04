@@ -15,8 +15,8 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.field.solar_tower import SolarTower
 from artist.io import h5_scenario_parser
 from artist.scene.light_source_array import LightSourceArray
-from artist.util import config_dictionary
-from artist.util.environment_setup import get_device
+from artist.util import constants
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the scenario."""
@@ -99,7 +99,7 @@ class Scenario:
             Number of heliostat groups to initiate distributed setup.
         """
         with h5py.File(scenario_path) as scenario_file:
-            return scenario_file[config_dictionary.number_of_heliostat_groups][()]
+            return scenario_file[constants.number_of_heliostat_groups][()]
 
     @classmethod
     def load_scenario_from_hdf5(
@@ -150,9 +150,9 @@ class Scenario:
             )
 
         power_plant_position = torch.tensor(
-            scenario_file[config_dictionary.power_plant_key][
-                config_dictionary.power_plant_position
-            ][()],
+            scenario_file[constants.power_plant_key][constants.power_plant_position][
+                ()
+            ],
             dtype=torch.float64,
             device=device,
         )
@@ -168,16 +168,16 @@ class Scenario:
         )
 
         prototype_initial_orientation = torch.tensor(
-            scenario_file[config_dictionary.prototype_key][
-                config_dictionary.kinematics_prototype_key
-            ][config_dictionary.kinematics_initial_orientation][()],
+            scenario_file[constants.prototype_key][constants.kinematics_prototype_key][
+                constants.kinematics_initial_orientation
+            ][()],
             dtype=torch.float,
             device=device,
         )
 
-        prototype_kinematics_type = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.kinematics_prototype_key
-        ][config_dictionary.kinematics_type][()].decode("utf-8")
+        prototype_kinematics_type = scenario_file[constants.prototype_key][
+            constants.kinematics_prototype_key
+        ][constants.kinematics_type][()].decode("utf-8")
 
         (
             prototype_translation_deviations,
@@ -192,22 +192,22 @@ class Scenario:
         )
 
         prototype_kinematics = {
-            config_dictionary.kinematics_type: prototype_kinematics_type,
-            config_dictionary.kinematics_initial_orientation: prototype_initial_orientation,
-            config_dictionary.translation_deviations: prototype_translation_deviations,
-            config_dictionary.rotation_deviations: prototype_rotation_deviations,
+            constants.kinematics_type: prototype_kinematics_type,
+            constants.kinematics_initial_orientation: prototype_initial_orientation,
+            constants.translation_deviations: prototype_translation_deviations,
+            constants.rotation_deviations: prototype_rotation_deviations,
         }
 
         prototype_actuator_keys = list(
-            scenario_file[config_dictionary.prototype_key][
-                config_dictionary.actuators_prototype_key
+            scenario_file[constants.prototype_key][
+                constants.actuators_prototype_key
             ].keys()
         )
 
         prototype_actuator_type_list = [
-            scenario_file[config_dictionary.prototype_key][
-                config_dictionary.actuators_prototype_key
-            ][key][config_dictionary.actuator_type_key][()].decode("utf-8")
+            scenario_file[constants.prototype_key][constants.actuators_prototype_key][
+                key
+            ][constants.actuator_type_key][()].decode("utf-8")
             for key in prototype_actuator_keys
         ]
 
@@ -234,9 +234,9 @@ class Scenario:
         )
 
         prototype_actuators = {
-            config_dictionary.actuator_type_key: prototype_actuator_type,
-            config_dictionary.actuator_parameters_non_optimizable: prototype_actuator_parameters_non_optimizable,
-            config_dictionary.actuator_parameters_optimizable: prototype_actuator_parameters_optimizable,
+            constants.actuator_type_key: prototype_actuator_type,
+            constants.actuator_parameters_non_optimizable: prototype_actuator_parameters_non_optimizable,
+            constants.actuator_parameters_optimizable: prototype_actuator_parameters_optimizable,
         }
 
         heliostat_field = HeliostatField.from_hdf5(

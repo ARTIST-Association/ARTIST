@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from artist.scene import Sun
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 def calculate_expected(
@@ -31,16 +31,16 @@ def calculate_expected(
     """
     mean = torch.tensor(
         [
-            distribution_parameters[config_dictionary.light_source_mean],
-            distribution_parameters[config_dictionary.light_source_mean],
+            distribution_parameters[constants.light_source_mean],
+            distribution_parameters[constants.light_source_mean],
         ],
         dtype=torch.float,
         device=device,
     )
     covariance = torch.tensor(
         [
-            [distribution_parameters[config_dictionary.light_source_covariance], 0],
-            [0, distribution_parameters[config_dictionary.light_source_covariance]],
+            [distribution_parameters[constants.light_source_covariance], 0],
+            [0, distribution_parameters[constants.light_source_covariance]],
         ],
         dtype=torch.float,
         device=device,
@@ -68,9 +68,9 @@ def distribution_parameters_1() -> dict[str, Any]:
         Distribution parameters for the sun.
     """
     return {
-        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
-        config_dictionary.light_source_mean: 0,
-        config_dictionary.light_source_covariance: 1,
+        constants.light_source_distribution_type: constants.light_source_distribution_is_normal,
+        constants.light_source_mean: 0,
+        constants.light_source_covariance: 1,
     }
 
 
@@ -85,9 +85,9 @@ def distribution_parameters_2() -> dict[str, Any]:
         Distribution parameters for the sun.
     """
     return {
-        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
-        config_dictionary.light_source_mean: 0,
-        config_dictionary.light_source_covariance: 0.004596,
+        constants.light_source_distribution_type: constants.light_source_distribution_is_normal,
+        constants.light_source_mean: 0,
+        constants.light_source_covariance: 0.004596,
     }
 
 
@@ -102,9 +102,9 @@ def distribution_parameters_3() -> dict[str, Any]:
         Distribution parameters for the sun.
     """
     return {
-        config_dictionary.light_source_distribution_type: config_dictionary.light_source_distribution_is_normal,
-        config_dictionary.light_source_mean: 10,
-        config_dictionary.light_source_covariance: 15,
+        constants.light_source_distribution_type: constants.light_source_distribution_is_normal,
+        constants.light_source_mean: 10,
+        constants.light_source_covariance: 15,
     }
 
 
@@ -119,9 +119,9 @@ def distribution_parameters_4() -> dict[str, Any]:
         Distribution parameters for the sun.
     """
     return {
-        config_dictionary.light_source_distribution_type: "invalid_distribution_type",
-        config_dictionary.light_source_mean: 10,
-        config_dictionary.light_source_covariance: 15,
+        constants.light_source_distribution_type: "invalid_distribution_type",
+        constants.light_source_mean: 10,
+        constants.light_source_covariance: 15,
     }
 
 

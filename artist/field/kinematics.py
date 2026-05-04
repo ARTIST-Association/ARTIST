@@ -4,7 +4,7 @@ from typing import Optional
 
 import torch
 
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 
 class Kinematics(torch.nn.Module):

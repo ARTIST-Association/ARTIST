@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 class PowerPlantConfig:
@@ -44,7 +44,7 @@ class PowerPlantConfig:
             A dictionary containing the configuration parameters for the power plant.
         """
         power_plant_dict = {
-            config_dictionary.power_plant_position: self.power_plant_position,
+            constants.power_plant_position: self.power_plant_position,
         }
         return power_plant_dict
 
@@ -112,10 +112,10 @@ class TargetAreaPlanarConfig:
             A dictionary containing the configuration parameters for the planar target area.
         """
         target_area_dict = {
-            config_dictionary.target_area_position_center: self.center,
-            config_dictionary.target_area_normal_vector: self.normal_vector,
-            config_dictionary.target_area_plane_e: self.plane_e,
-            config_dictionary.target_area_plane_u: self.plane_u,
+            constants.target_area_position_center: self.center,
+            constants.target_area_normal_vector: self.normal_vector,
+            constants.target_area_plane_e: self.plane_e,
+            constants.target_area_plane_u: self.plane_u,
         }
 
         return target_area_dict
@@ -237,12 +237,12 @@ class TargetAreaCylindricalConfig:
             A dictionary containing the configuration parameters for the cylindrical target area.
         """
         target_area_dict = {
-            config_dictionary.target_area_cylinder_radius: self.radius,
-            config_dictionary.target_area_cylinder_center: self.center,
-            config_dictionary.target_area_cylinder_height: self.height,
-            config_dictionary.target_area_cylinder_axis: self.axis,
-            config_dictionary.target_area_cylinder_normal: self.normal,
-            config_dictionary.target_area_cylinder_opening_angle: self.opening_angle,
+            constants.target_area_cylinder_radius: self.radius,
+            constants.target_area_cylinder_center: self.center,
+            constants.target_area_cylinder_height: self.height,
+            constants.target_area_cylinder_axis: self.axis,
+            constants.target_area_cylinder_normal: self.normal,
+            constants.target_area_cylinder_opening_angle: self.opening_angle,
         }
 
         return target_area_dict
@@ -351,10 +351,7 @@ class LightSourceConfig:
         self.number_of_rays = number_of_rays
         self.distribution_type = distribution_type
 
-        if (
-            self.distribution_type
-            != config_dictionary.light_source_distribution_is_normal
-        ):
+        if self.distribution_type != constants.light_source_distribution_is_normal:
             raise ValueError("Unknown light source distribution type.")
 
         else:
@@ -371,17 +368,15 @@ class LightSourceConfig:
             A dictionary containing the configuration parameters for the light source.
         """
         light_source_distribution_parameters_dict = {
-            config_dictionary.light_source_distribution_type: str(
-                self.distribution_type
-            ),
-            config_dictionary.light_source_mean: self.mean,
-            config_dictionary.light_source_covariance: self.covariance,
+            constants.light_source_distribution_type: str(self.distribution_type),
+            constants.light_source_mean: self.mean,
+            constants.light_source_covariance: self.covariance,
         }
 
         return {
-            config_dictionary.light_source_type: self.light_source_type,
-            config_dictionary.light_source_number_of_rays: self.number_of_rays,
-            config_dictionary.light_source_distribution_parameters: light_source_distribution_parameters_dict,
+            constants.light_source_type: self.light_source_type,
+            constants.light_source_number_of_rays: self.number_of_rays,
+            constants.light_source_distribution_parameters: light_source_distribution_parameters_dict,
         }
 
 
@@ -489,10 +484,10 @@ class FacetConfig:
             A dictionary containing the configuration parameters for the facet.
         """
         return {
-            config_dictionary.facet_control_points: self.control_points,
-            config_dictionary.facet_degrees: self.degrees,
-            config_dictionary.facets_translation_vector: self.translation_vector,
-            config_dictionary.facets_canting: self.canting,
+            constants.facet_control_points: self.control_points,
+            constants.facet_degrees: self.degrees,
+            constants.facets_translation_vector: self.translation_vector,
+            constants.facets_canting: self.canting,
         }
 
 
@@ -534,7 +529,7 @@ class SurfaceConfig:
         facet_dict = {
             facet.facet_key: facet.create_facet_dict() for facet in self.facet_list
         }
-        return {config_dictionary.facets_key: facet_dict}
+        return {constants.facets_key: facet_dict}
 
 
 class SurfacePrototypeConfig(SurfaceConfig):
@@ -671,73 +666,55 @@ class KinematicsDeviations:
         deviations_dict = {}
         if self.first_joint_translation_e is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.first_joint_translation_e: self.first_joint_translation_e
-                }
+                {constants.first_joint_translation_e: self.first_joint_translation_e}
             )
         if self.first_joint_translation_n is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.first_joint_translation_n: self.first_joint_translation_n
-                }
+                {constants.first_joint_translation_n: self.first_joint_translation_n}
             )
         if self.first_joint_translation_u is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.first_joint_translation_u: self.first_joint_translation_u
-                }
+                {constants.first_joint_translation_u: self.first_joint_translation_u}
             )
         if self.first_joint_tilt_n is not None:
             deviations_dict.update(
-                {config_dictionary.first_joint_tilt_n: self.first_joint_tilt_n}
+                {constants.first_joint_tilt_n: self.first_joint_tilt_n}
             )
         if self.first_joint_tilt_u is not None:
             deviations_dict.update(
-                {config_dictionary.first_joint_tilt_u: self.first_joint_tilt_u}
+                {constants.first_joint_tilt_u: self.first_joint_tilt_u}
             )
         if self.second_joint_translation_e is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.second_joint_translation_e: self.second_joint_translation_e
-                }
+                {constants.second_joint_translation_e: self.second_joint_translation_e}
             )
         if self.second_joint_translation_n is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.second_joint_translation_n: self.second_joint_translation_n
-                }
+                {constants.second_joint_translation_n: self.second_joint_translation_n}
             )
         if self.second_joint_translation_u is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.second_joint_translation_u: self.second_joint_translation_u
-                }
+                {constants.second_joint_translation_u: self.second_joint_translation_u}
             )
         if self.second_joint_tilt_e is not None:
             deviations_dict.update(
-                {config_dictionary.second_joint_tilt_e: self.second_joint_tilt_e}
+                {constants.second_joint_tilt_e: self.second_joint_tilt_e}
             )
         if self.second_joint_tilt_n is not None:
             deviations_dict.update(
-                {config_dictionary.second_joint_tilt_n: self.second_joint_tilt_n}
+                {constants.second_joint_tilt_n: self.second_joint_tilt_n}
             )
         if self.concentrator_translation_e is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.concentrator_translation_e: self.concentrator_translation_e
-                }
+                {constants.concentrator_translation_e: self.concentrator_translation_e}
             )
         if self.concentrator_translation_n is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.concentrator_translation_n: self.concentrator_translation_n
-                }
+                {constants.concentrator_translation_n: self.concentrator_translation_n}
             )
         if self.concentrator_translation_u is not None:
             deviations_dict.update(
-                {
-                    config_dictionary.concentrator_translation_u: self.concentrator_translation_u
-                }
+                {constants.concentrator_translation_u: self.concentrator_translation_u}
             )
         return deviations_dict
 
@@ -793,13 +770,13 @@ class KinematicsConfig:
             A dictionary containing the configuration parameters for the kinematics.
         """
         kinematics_dict: dict[str, Any] = {
-            config_dictionary.kinematics_type: self.kinematics_type,
-            config_dictionary.kinematics_initial_orientation: self.initial_orientation,
+            constants.kinematics_type: self.kinematics_type,
+            constants.kinematics_initial_orientation: self.initial_orientation,
         }
         if self.deviations is not None:
             kinematics_dict.update(
                 {
-                    config_dictionary.kinematics_deviations: self.deviations.create_kinematics_deviations_dict()
+                    constants.kinematics_deviations: self.deviations.create_kinematics_deviations_dict()
                 }
             )
         return kinematics_dict
@@ -904,25 +881,21 @@ class ActuatorParameters:
         actuator_parameters_dict: dict[str, torch.Tensor] = {}
         if self.increment is not None:
             actuator_parameters_dict.update(
-                {config_dictionary.actuator_increment: self.increment}
+                {constants.actuator_increment: self.increment}
             )
         if self.initial_stroke_length is not None:
             actuator_parameters_dict.update(
-                {
-                    config_dictionary.actuator_initial_stroke_length: self.initial_stroke_length
-                }
+                {constants.actuator_initial_stroke_length: self.initial_stroke_length}
             )
         if self.offset is not None:
-            actuator_parameters_dict.update(
-                {config_dictionary.actuator_offset: self.offset}
-            )
+            actuator_parameters_dict.update({constants.actuator_offset: self.offset})
         if self.pivot_radius is not None:
             actuator_parameters_dict.update(
-                {config_dictionary.actuator_pivot_radius: self.pivot_radius}
+                {constants.actuator_pivot_radius: self.pivot_radius}
             )
         if self.initial_angle is not None:
             actuator_parameters_dict.update(
-                {config_dictionary.actuator_initial_angle: self.initial_angle}
+                {constants.actuator_initial_angle: self.initial_angle}
             )
         return actuator_parameters_dict
 
@@ -990,14 +963,14 @@ class ActuatorConfig:
             A dictionary containing the actuator configuration.
         """
         actuator_dict = {
-            config_dictionary.actuator_type_key: self.actuator_type,
-            config_dictionary.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
-            config_dictionary.actuator_min_max_motor_positions: self.min_max_motor_positions,
+            constants.actuator_type_key: self.actuator_type,
+            constants.actuator_clockwise_axis_movement: self.clockwise_axis_movement,
+            constants.actuator_min_max_motor_positions: self.min_max_motor_positions,
         }
         if self.parameters is not None:
             actuator_dict.update(
                 {
-                    config_dictionary.actuator_parameters_key: self.parameters.create_actuator_parameters_dict()
+                    constants.actuator_parameters_key: self.parameters.create_actuator_parameters_dict()
                 }
             )
         return actuator_dict
@@ -1124,9 +1097,9 @@ class PrototypeConfig:
             A dictionary containing the prototypes.
         """
         return {
-            config_dictionary.surface_prototype_key: self.surface_prototype.create_surface_dict(),
-            config_dictionary.kinematics_prototype_key: self.kinematics_prototype.create_kinematics_dict(),
-            config_dictionary.actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
+            constants.surface_prototype_key: self.surface_prototype.create_surface_dict(),
+            constants.kinematics_prototype_key: self.kinematics_prototype.create_kinematics_dict(),
+            constants.actuators_prototype_key: self.actuators_prototype.create_actuator_list_dict(),
         }
 
 
@@ -1199,25 +1172,23 @@ class HeliostatConfig:
             A dictionary containing the heliostat configuration parameters.
         """
         heliostat_dict = {
-            config_dictionary.heliostat_id: self.heliostat_id,
-            config_dictionary.heliostat_position: self.position,
+            constants.heliostat_id: self.heliostat_id,
+            constants.heliostat_position: self.position,
         }
         if self.surface is not None:
             heliostat_dict.update(
-                {
-                    config_dictionary.heliostat_surface_key: self.surface.create_surface_dict()
-                }
+                {constants.heliostat_surface_key: self.surface.create_surface_dict()}
             )
         if self.kinematics is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_kinematics_key: self.kinematics.create_kinematics_dict()
+                    constants.heliostat_kinematics_key: self.kinematics.create_kinematics_dict()
                 }
             )
         if self.actuators is not None:
             heliostat_dict.update(
                 {
-                    config_dictionary.heliostat_actuator_key: self.actuators.create_actuator_list_dict()
+                    constants.heliostat_actuator_key: self.actuators.create_actuator_list_dict()
                 }
             )
 

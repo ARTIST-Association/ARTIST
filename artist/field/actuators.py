@@ -1,6 +1,6 @@
 import torch
 
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 
 class Actuators(torch.nn.Module):

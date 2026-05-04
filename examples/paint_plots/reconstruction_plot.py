@@ -10,7 +10,7 @@ import yaml
 from matplotlib import pyplot as plt
 from scipy.stats import gaussian_kde
 
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 plot_colors = {
     paint_mappings.HELIOS_KEY: "#002864",

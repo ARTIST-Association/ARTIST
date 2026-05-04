@@ -79,8 +79,8 @@ the optimization process:
         str,
         CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: PaintCalibrationDataParser(sample_limit=2),
-        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+        constants.data_parser: PaintCalibrationDataParser(sample_limit=2),
+        constants.heliostat_data_mapping: heliostat_data_mapping,
     }
 
 Next, you can load the scenario and set up the distributed environment as in the previous tutorials.
@@ -121,26 +121,26 @@ exponential scheduler. In practice, cyclic or reduce-on-plateau schedulers have 
 
     # Configure the optimizer.
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 1e-4,
-        config_dictionary.tolerance: 1e-5,
-        config_dictionary.max_epoch: 30,
-        config_dictionary.batch_size: 30,
-        config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 100,
-        config_dictionary.early_stopping_window: 100,
+        constants.initial_learning_rate: 1e-4,
+        constants.tolerance: 1e-5,
+        constants.max_epoch: 30,
+        constants.batch_size: 30,
+        constants.log_step: 1,
+        constants.early_stopping_delta: 1e-4,
+        constants.early_stopping_patience: 100,
+        constants.early_stopping_window: 100,
     }
     # Configure the learning rate scheduler.
     scheduler_dict = {
-        config_dictionary.scheduler_type: config_dictionary.exponential,
-        config_dictionary.gamma: 0.99,
-        config_dictionary.lr_min: 1e-6,
-        config_dictionary.lr_max: 1e-2,
-        config_dictionary.step_size_up: 100,
-        config_dictionary.reduce_factor: 0.5,
-        config_dictionary.patience: 10,
-        config_dictionary.threshold: 1e-4,
-        config_dictionary.cooldown: 5,
+        constants.scheduler_type: constants.exponential,
+        constants.gamma: 0.99,
+        constants.lr_min: 1e-6,
+        constants.lr_max: 1e-2,
+        constants.step_size_up: 100,
+        constants.reduce_factor: 0.5,
+        constants.patience: 10,
+        constants.threshold: 1e-4,
+        constants.cooldown: 5,
     }
 
 Regularizers are used to prevent overfitting and ensure that the reconstructed surface is smooth and remains physically
@@ -162,10 +162,10 @@ through the weights specified in the constraints dict. Setting a weight to zero 
 
     # Configure the regularizers and constraints.
     constraint_dict = {
-        config_dictionary.weight_smoothness: 0.005,
-        config_dictionary.weight_ideal_surface: 0.005,
-        config_dictionary.rho_flux_integral: 1.0,
-        config_dictionary.energy_tolerance: 0.01,
+        constants.weight_smoothness: 0.005,
+        constants.weight_ideal_surface: 0.005,
+        constants.rho_flux_integral: 1.0,
+        constants.energy_tolerance: 0.01,
     }
 
 In addition to the regularizers, ``ARTIST`` applies an *energy conservation constraint* to further stabilize the
@@ -194,9 +194,9 @@ We can now combine all optimization parameters in the ``optimization_configurati
 .. code-block:: python
 
     optimization_configuration = {
-        config_dictionary.optimization: optimizer_dict,
-        config_dictionary.scheduler: scheduler_dict,
-        config_dictionary.constraints: constraint_dict,
+        constants.optimization: optimizer_dict,
+        constants.scheduler: scheduler_dict,
+        constants.constraints: constraint_dict,
     }
 
 .. note::

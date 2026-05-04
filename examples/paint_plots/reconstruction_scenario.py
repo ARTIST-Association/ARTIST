@@ -12,8 +12,8 @@ from artist.scenario import (
     LightSourceConfig,
     LightSourceListConfig,
 )
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util import constants, set_logger_config
+from artist.util.environment import get_device
 
 set_logger_config()
 
@@ -54,9 +54,9 @@ def generate_reconstruction_scenario(
     # Set up light source configuration.
     light_source_config = LightSourceConfig(
         light_source_key="sun",
-        light_source_type=config_dictionary.sun_key,
+        light_source_type=constants.sun_key,
         number_of_rays=10,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )

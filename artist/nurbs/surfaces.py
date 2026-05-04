@@ -1,8 +1,8 @@
 import torch
 
 from artist.geometry import transforms
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 class NURBSSurfaces(torch.nn.Module):
@@ -84,17 +84,15 @@ class NURBSSurfaces(torch.nn.Module):
         self.degrees = degrees
         self.control_points = control_points
         self.uniform = uniform
-        self.number_of_surfaces = self.control_points.shape[
-            index_mapping.nurbs_surfaces
-        ]
+        self.number_of_surfaces = self.control_points.shape[indices.nurbs_surfaces]
         self.number_of_facets_per_surface = self.control_points.shape[
-            index_mapping.nurbs_facets
+            indices.nurbs_facets
         ]
         self.knot_vectors_u = self.calculate_uniform_knot_vectors(
-            direction=index_mapping.nurbs_u, device=device
+            direction=indices.nurbs_u, device=device
         )
         self.knot_vectors_v = self.calculate_uniform_knot_vectors(
-            direction=index_mapping.nurbs_v, device=device
+            direction=indices.nurbs_v, device=device
         )
 
     def calculate_uniform_knot_vectors(
@@ -132,7 +130,7 @@ class NURBSSurfaces(torch.nn.Module):
         knot_vector = torch.zeros(
             (
                 self.control_points.shape[
-                    index_mapping.nurbs_control_points_start + direction
+                    indices.nurbs_control_points_start + direction
                 ]
                 + degree
                 + 1
@@ -140,7 +138,7 @@ class NURBSSurfaces(torch.nn.Module):
             device=device,
         )
         number_of_knot_values = knot_vector[degree:-degree].shape[
-            index_mapping.nurbs_knots_unbatched
+            indices.nurbs_knots_unbatched
         ]
         knot_vector[:degree] = 0
         knot_vector[degree:-degree] = torch.linspace(
@@ -148,12 +146,10 @@ class NURBSSurfaces(torch.nn.Module):
         )
         knot_vector[-degree:] = 1
 
-        knot_vectors = knot_vector.unsqueeze(
-            index_mapping.nurbs_knots_unbatched
-        ).repeat(
+        knot_vectors = knot_vector.unsqueeze(indices.nurbs_knots_unbatched).repeat(
             self.number_of_surfaces,
             self.number_of_facets_per_surface,
-            index_mapping.nurbs_facets,
+            indices.nurbs_facets,
         )
 
         return knot_vectors
@@ -200,21 +196,19 @@ class NURBSSurfaces(torch.nn.Module):
         evaluation_points = evaluation_points[:, :, :, direction]
 
         if self.uniform:
-            unique_knots = torch.unique(
-                knot_vectors, dim=index_mapping.nurbs_knots_batched
-            )
+            unique_knots = torch.unique(knot_vectors, dim=indices.nurbs_knots_batched)
 
             spans = (
                 torch.floor(
                     evaluation_points
-                    * (unique_knots.shape[index_mapping.nurbs_knots_batched] - 1)
+                    * (unique_knots.shape[indices.nurbs_knots_batched] - 1)
                 ).long()
                 + degree
             )
 
         else:
             number_of_knots = (
-                knot_vectors.shape[index_mapping.nurbs_knots_batched] - degree - 1
+                knot_vectors.shape[indices.nurbs_knots_batched] - degree - 1
             )
 
             valid_spans = []
@@ -224,20 +218,18 @@ class NURBSSurfaces(torch.nn.Module):
                 valid_spans.append((left, right))
 
             lefts = torch.stack(
-                [span[index_mapping.nurbs_span_lower] for span in valid_spans],
-                dim=index_mapping.nurbs_knots_batched,
+                [span[indices.nurbs_span_lower] for span in valid_spans],
+                dim=indices.nurbs_knots_batched,
             )
             rights = torch.stack(
-                [span[index_mapping.nurbs_span_upper] for span in valid_spans],
-                dim=index_mapping.nurbs_knots_batched,
+                [span[indices.nurbs_span_upper] for span in valid_spans],
+                dim=indices.nurbs_knots_batched,
             )
 
             in_span = (
-                evaluation_points.unsqueeze(-1)
-                >= lefts.unsqueeze(index_mapping.nurbs_spans)
+                evaluation_points.unsqueeze(-1) >= lefts.unsqueeze(indices.nurbs_spans)
             ) & (
-                evaluation_points.unsqueeze(-1)
-                < rights.unsqueeze(index_mapping.nurbs_spans)
+                evaluation_points.unsqueeze(-1) < rights.unsqueeze(indices.nurbs_spans)
             )
             is_last_knot = torch.isclose(
                 evaluation_points,
@@ -296,9 +288,7 @@ class NURBSSurfaces(torch.nn.Module):
         degree = self.degrees[direction].item()
 
         evaluation_points = evaluation_points[:, :, :, direction]
-        num_evaluation_points = evaluation_points.shape[
-            index_mapping.nurbs_evaluation_points
-        ]
+        num_evaluation_points = evaluation_points.shape[indices.nurbs_evaluation_points]
 
         # Introduce `ndu` to store the basis functions (called "n" in The NURBS book) and the knot differences (du).
         ndu = torch.zeros(
@@ -311,9 +301,7 @@ class NURBSSurfaces(torch.nn.Module):
             ),
             device=device,
         )
-        ndu[
-            index_mapping.nurbs_ndu_basis_index_0, index_mapping.nurbs_ndu_basis_index_0
-        ] = 1.0
+        ndu[indices.nurbs_ndu_basis_index_0, indices.nurbs_ndu_basis_index_0] = 1.0
 
         left = torch.zeros(
             (
@@ -367,9 +355,7 @@ class NURBSSurfaces(torch.nn.Module):
             for _ in range(nth_derivative + 1)
         ]
         for j in range(degree + 1):
-            derivatives[index_mapping.basis_function_derivative_order][j] = ndu[j][
-                degree
-            ]
+            derivatives[indices.basis_function_derivative_order][j] = ndu[j][degree]
         # `a` stores (in alternating fashion) the two most recently computed rows a_k,j and a_k-1,j.
         a = [
             [
@@ -470,7 +456,7 @@ class NURBSSurfaces(torch.nn.Module):
             .expand(
                 self.number_of_surfaces,
                 self.number_of_facets_per_surface,
-                index_u.shape[index_mapping.nurbs_evaluation_points],
+                index_u.shape[indices.nurbs_evaluation_points],
             )
         )
         facet_index = (
@@ -479,7 +465,7 @@ class NURBSSurfaces(torch.nn.Module):
             .expand(
                 self.number_of_surfaces,
                 self.number_of_facets_per_surface,
-                index_u.shape[index_mapping.nurbs_evaluation_points],
+                index_u.shape[indices.nurbs_evaluation_points],
             )
         )
 
@@ -521,7 +507,7 @@ class NURBSSurfaces(torch.nn.Module):
 
         # Find the spans in u direction (based on A2.1, p. 68).
         spans_u = self.find_spans(
-            direction=index_mapping.nurbs_u,
+            direction=indices.nurbs_u,
             evaluation_points=evaluation_points,
             knot_vectors=self.knot_vectors_u,
             device=device,
@@ -529,7 +515,7 @@ class NURBSSurfaces(torch.nn.Module):
 
         # Find the spans in v direction (based on A2.1, p. 68).
         spans_v = self.find_spans(
-            direction=index_mapping.nurbs_v,
+            direction=indices.nurbs_v,
             evaluation_points=evaluation_points,
             knot_vectors=self.knot_vectors_v,
             device=device,
@@ -539,41 +525,41 @@ class NURBSSurfaces(torch.nn.Module):
             (
                 self.number_of_surfaces,
                 self.number_of_facets_per_surface,
-                self.control_points.shape[index_mapping.nurbs_control_points_u],
-                self.control_points.shape[index_mapping.nurbs_control_points_v],
+                self.control_points.shape[indices.nurbs_control_points_u],
+                self.control_points.shape[indices.nurbs_control_points_v],
                 1,
             ),
             device=device,
         )
         control_points = torch.cat(
             [self.control_points, control_point_weights],
-            dim=index_mapping.nurbs_control_points,
+            dim=indices.nurbs_control_points,
         )
 
         derivatives = torch.zeros(
             self.number_of_surfaces,
             self.number_of_facets_per_surface,
-            evaluation_points.shape[index_mapping.nurbs_evaluation_points],
+            evaluation_points.shape[indices.nurbs_evaluation_points],
             nth_derivative + 1,
             nth_derivative + 1,
-            control_points.shape[index_mapping.nurbs_control_points],
+            control_points.shape[indices.nurbs_control_points],
             device=device,
         )
 
         # Find minimum of `nth_derivative` and degree, will be used to specify how many partial derivatives will be
         # computed.
-        du = min(nth_derivative, self.degrees[index_mapping.nurbs_u])
-        for k in range(self.degrees[index_mapping.nurbs_u] + 1, nth_derivative + 1):
+        du = min(nth_derivative, self.degrees[indices.nurbs_u])
+        for k in range(self.degrees[indices.nurbs_u] + 1, nth_derivative + 1):
             for t in range(nth_derivative - k + 1):
                 derivatives[:, :, :, k, t] = 0
-        dv = min(nth_derivative, self.degrees[index_mapping.nurbs_v])
-        for t in range(self.degrees[index_mapping.nurbs_v] + 1, nth_derivative + 1):
+        dv = min(nth_derivative, self.degrees[indices.nurbs_v])
+        for t in range(self.degrees[indices.nurbs_v] + 1, nth_derivative + 1):
             for k in range(nth_derivative - t + 1):
                 derivatives[:, :, :, k, t] = 0
 
         # Find derivatives of basis functions (based on A2.3, p. 72).
         basis_values_derivatives_u = self.basis_functions_and_derivatives(
-            direction=index_mapping.nurbs_u,
+            direction=indices.nurbs_u,
             evaluation_points=evaluation_points,
             knot_vectors=self.knot_vectors_u,
             spans=spans_u,
@@ -581,7 +567,7 @@ class NURBSSurfaces(torch.nn.Module):
             device=device,
         )
         basis_values_derivatives_v = self.basis_functions_and_derivatives(
-            direction=index_mapping.nurbs_v,
+            direction=indices.nurbs_v,
             evaluation_points=evaluation_points,
             knot_vectors=self.knot_vectors_v,
             spans=spans_v,
@@ -596,20 +582,20 @@ class NURBSSurfaces(torch.nn.Module):
                 (
                     self.number_of_surfaces,
                     self.number_of_facets_per_surface,
-                    evaluation_points.shape[index_mapping.nurbs_evaluation_points],
-                    control_points.shape[index_mapping.nurbs_control_points],
+                    evaluation_points.shape[indices.nurbs_evaluation_points],
+                    control_points.shape[indices.nurbs_control_points],
                 ),
                 device=device,
             )
-            for _ in range(self.degrees[index_mapping.nurbs_v] + 1)
+            for _ in range(self.degrees[indices.nurbs_v] + 1)
         ]
         for k in range(du + 1):
-            for s in range(self.degrees[index_mapping.nurbs_v] + 1):
+            for s in range(self.degrees[indices.nurbs_v] + 1):
                 temp[s] = torch.zeros_like(temp[s], device=device)
-                for r in range(self.degrees[index_mapping.nurbs_u] + 1):
+                for r in range(self.degrees[indices.nurbs_u] + 1):
                     bu = basis_values_derivatives_u[k][r].unsqueeze(-1)
-                    index_u = spans_u - self.degrees[index_mapping.nurbs_u] + r
-                    index_v = spans_v - self.degrees[index_mapping.nurbs_v] + s
+                    index_u = spans_u - self.degrees[indices.nurbs_u] + r
+                    index_v = spans_v - self.degrees[indices.nurbs_v] + s
                     gathered_control_points = self._batched_gather_control_points(
                         control_points=control_points,
                         index_u=index_u,
@@ -621,7 +607,7 @@ class NURBSSurfaces(torch.nn.Module):
             dd = min(nth_derivative - k, dv)
             for t in range(dd + 1):
                 derivatives[:, :, :, k, t] = 0
-                for s in range(self.degrees[index_mapping.nurbs_v] + 1):
+                for s in range(self.degrees[indices.nurbs_v] + 1):
                     derivatives[:, :, :, k, t] += (
                         basis_values_derivatives_v[t][s].unsqueeze(-1) * temp[s]
                     )
@@ -631,16 +617,16 @@ class NURBSSurfaces(torch.nn.Module):
                 :,
                 :,
                 :,
-                index_mapping.nurbs_derivative_order_1,
-                index_mapping.nurbs_derivative_order_0,
+                indices.nurbs_derivative_order_1,
+                indices.nurbs_derivative_order_0,
                 :3,
             ],
             derivatives[
                 :,
                 :,
                 :,
-                index_mapping.nurbs_derivative_order_0,
-                index_mapping.nurbs_derivative_order_1,
+                indices.nurbs_derivative_order_0,
+                indices.nurbs_derivative_order_1,
                 :3,
             ],
         )
@@ -649,13 +635,13 @@ class NURBSSurfaces(torch.nn.Module):
             :,
             :,
             :,
-            index_mapping.nurbs_derivative_order_0,
-            index_mapping.nurbs_derivative_order_0,
+            indices.nurbs_derivative_order_0,
+            indices.nurbs_derivative_order_0,
         ]
 
         homogenous_weights = surface_points_homogenous[:, :, :, 3:4]
         surface_points = (
-            surface_points_homogenous[:, :, :, : index_mapping.slice_fourth_dimension]
+            surface_points_homogenous[:, :, :, : indices.slice_fourth_dimension]
             / homogenous_weights
         )
 
@@ -667,22 +653,22 @@ class NURBSSurfaces(torch.nn.Module):
                     device=device,
                 ),
             ),
-            dim=index_mapping.nurbs_normals,
+            dim=indices.nurbs_normals,
         )
 
         surface_normals = torch.nn.functional.normalize(
-            surface_normals, dim=index_mapping.nurbs_normals
+            surface_normals, dim=indices.nurbs_normals
         )
 
         surface_normals = torch.cat(
             (
                 surface_normals,
                 torch.zeros(
-                    tuple(surface_normals.shape[: index_mapping.nurbs_normals]) + (1,),
+                    tuple(surface_normals.shape[: indices.nurbs_normals]) + (1,),
                     device=device,
                 ),
             ),
-            dim=index_mapping.nurbs_normals,
+            dim=indices.nurbs_normals,
         )
 
         if canting is not None:

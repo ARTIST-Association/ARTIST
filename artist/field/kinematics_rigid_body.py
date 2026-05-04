@@ -1,10 +1,10 @@
 import torch
 
-import artist.util.index_mapping
+import artist.util.indices
 from artist.field.kinematics import Kinematics
 from artist.geometry import rotations, transforms
-from artist.util import config_dictionary, index_mapping, type_mappings
-from artist.util.environment_setup import get_device
+from artist.util import constants, indices, type_registry
+from artist.util.environment import get_device
 
 
 class RigidBody(Kinematics):
@@ -123,7 +123,7 @@ class RigidBody(Kinematics):
         self.motor_positions = torch.zeros(
             (
                 number_of_heliostats,
-                artist.util.index_mapping.rigid_body_motor_position_dimension,
+                artist.util.indices.rigid_body_motor_position_dimension,
             ),
             device=device,
         )
@@ -152,9 +152,9 @@ class RigidBody(Kinematics):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        self.actuators = type_mappings.actuator_type_mapping[
+        self.actuators = type_registry.actuator_type_mapping[
             actuator_parameters_non_optimizable[
-                0, index_mapping.actuator_type, index_mapping.actuator_one_index
+                0, indices.actuator_type, indices.actuator_one_index
             ].item()
         ](
             non_optimizable_parameters=actuator_parameters_non_optimizable,
@@ -195,94 +195,94 @@ class RigidBody(Kinematics):
 
         # Account for positions.
         initial_orientations = initial_orientations @ transforms.translate_enu(
-            e=self.active_heliostat_positions[:, index_mapping.e],
-            n=self.active_heliostat_positions[:, index_mapping.n],
-            u=self.active_heliostat_positions[:, index_mapping.u],
+            e=self.active_heliostat_positions[:, indices.e],
+            n=self.active_heliostat_positions[:, indices.n],
+            u=self.active_heliostat_positions[:, indices.u],
             device=device,
         )
 
         joint_rotations = torch.zeros(
             (
                 self.number_of_active_heliostats,
-                config_dictionary.rigid_body_number_of_actuators,
+                constants.rigid_body_number_of_actuators,
                 4,
                 4,
             ),
             device=device,
         )
 
-        joint_rotations[:, index_mapping.first_joint_index] = (
+        joint_rotations[:, indices.first_joint_index] = (
             transforms.rotate_n(
                 n=self.active_rotation_deviation_parameters[
-                    :, index_mapping.first_joint_tilt_n
+                    :, indices.first_joint_tilt_n
                 ],
                 device=device,
             )
             @ transforms.rotate_u(
                 u=self.active_rotation_deviation_parameters[
-                    :, index_mapping.first_joint_tilt_u
+                    :, indices.first_joint_tilt_u
                 ],
                 device=device,
             )
             @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
-                    :, index_mapping.first_joint_translation_e
+                    :, indices.first_joint_translation_e
                 ],
                 n=self.active_translation_deviation_parameters[
-                    :, index_mapping.first_joint_translation_n
+                    :, indices.first_joint_translation_n
                 ],
                 u=self.active_translation_deviation_parameters[
-                    :, index_mapping.first_joint_translation_u
+                    :, indices.first_joint_translation_u
                 ],
                 device=device,
             )
             @ transforms.rotate_e(
-                e=joint_angles[:, index_mapping.joint_angles_e], device=device
+                e=joint_angles[:, indices.joint_angles_e], device=device
             )
         )
-        joint_rotations[:, index_mapping.second_joint_index] = (
+        joint_rotations[:, indices.second_joint_index] = (
             transforms.rotate_e(
                 e=self.active_rotation_deviation_parameters[
-                    :, index_mapping.second_joint_tilt_e
+                    :, indices.second_joint_tilt_e
                 ],
                 device=device,
             )
             @ transforms.rotate_n(
                 n=self.active_rotation_deviation_parameters[
-                    :, index_mapping.second_joint_tilt_n
+                    :, indices.second_joint_tilt_n
                 ],
                 device=device,
             )
             @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ],
                 n=self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_n
+                    :, indices.second_joint_translation_n
                 ],
                 u=self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_u
+                    :, indices.second_joint_translation_u
                 ],
                 device=device,
             )
             @ transforms.rotate_u(
-                u=joint_angles[:, index_mapping.joint_angles_u], device=device
+                u=joint_angles[:, indices.joint_angles_u], device=device
             )
         )
 
         orientations = (
             initial_orientations
-            @ joint_rotations[:, index_mapping.first_joint_index]
-            @ joint_rotations[:, index_mapping.second_joint_index]
+            @ joint_rotations[:, indices.first_joint_index]
+            @ joint_rotations[:, indices.second_joint_index]
             @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
-                    :, index_mapping.concentrator_translation_e
+                    :, indices.concentrator_translation_e
                 ],
                 n=self.active_translation_deviation_parameters[
-                    :, index_mapping.concentrator_translation_n
+                    :, indices.concentrator_translation_n
                 ],
                 u=self.active_translation_deviation_parameters[
-                    :, index_mapping.concentrator_translation_u
+                    :, indices.concentrator_translation_u
                 ],
                 device=device,
             )
@@ -371,7 +371,7 @@ class RigidBody(Kinematics):
         motor_positions = torch.zeros(
             (
                 self.number_of_active_heliostats,
-                config_dictionary.rigid_body_number_of_actuators,
+                constants.rigid_body_number_of_actuators,
             ),
             device=device,
         )
@@ -412,10 +412,10 @@ class RigidBody(Kinematics):
             # Analytical solution for joint angles.
             joint_angles_1 = -torch.arcsin(
                 torch.clamp(
-                    -desired_concentrator_normals[:, index_mapping.e]
+                    -desired_concentrator_normals[:, indices.e]
                     / torch.cos(
                         self.active_translation_deviation_parameters[
-                            :, index_mapping.second_joint_translation_n
+                            :, indices.second_joint_translation_n
                         ]
                     ),
                     min=-1,
@@ -425,37 +425,37 @@ class RigidBody(Kinematics):
 
             a = -torch.cos(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.cos(joint_angles_1) + torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_n
+                    :, indices.second_joint_translation_n
                 ]
             ) * torch.sin(joint_angles_1)
             b = -torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.cos(joint_angles_1) - torch.cos(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_n
+                    :, indices.second_joint_translation_n
                 ]
             ) * torch.sin(joint_angles_1)
 
             joint_angles_0 = (
                 torch.arctan2(
-                    a * -desired_concentrator_normals[:, index_mapping.u]
-                    - b * -desired_concentrator_normals[:, index_mapping.n],
-                    a * -desired_concentrator_normals[:, index_mapping.n]
-                    + b * -desired_concentrator_normals[:, index_mapping.u],
+                    a * -desired_concentrator_normals[:, indices.u]
+                    - b * -desired_concentrator_normals[:, indices.n],
+                    a * -desired_concentrator_normals[:, indices.n]
+                    + b * -desired_concentrator_normals[:, indices.u],
                 )
                 - torch.pi
             )

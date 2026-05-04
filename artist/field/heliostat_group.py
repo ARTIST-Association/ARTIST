@@ -3,8 +3,8 @@
 import torch
 
 from artist.field.kinematics import Kinematics
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 class HeliostatGroup:
@@ -122,7 +122,7 @@ class HeliostatGroup:
 
         self.number_of_heliostats = len(names)
         self.number_of_facets_per_heliostat = nurbs_control_points.shape[
-            index_mapping.facet_dimension
+            indices.facet_dimension
         ]
         self.names = names
         self.positions = positions

@@ -3,8 +3,8 @@ from typing import cast
 import torch
 
 from artist.field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreasPlanar
-from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import constants, indices
+from artist.util.environment import get_device
 
 
 def get_center_of_mass(
@@ -44,7 +44,7 @@ def get_center_of_mass(
 
     normalized_bitmaps = bitmaps / (
         bitmaps.sum(
-            dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e),
+            dim=(indices.batched_bitmap_u, indices.batched_bitmap_e),
             keepdim=True,
         )
         + 1e-8
@@ -60,10 +60,10 @@ def get_center_of_mass(
 
     # Center of mass.
     e_center_of_mass = (e_grid * normalized_bitmaps).sum(
-        dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e)
+        dim=(indices.batched_bitmap_u, indices.batched_bitmap_e)
     )
     u_center_of_mass = (u_grid * normalized_bitmaps).sum(
-        dim=(index_mapping.batched_bitmap_u, index_mapping.batched_bitmap_e)
+        dim=(indices.batched_bitmap_u, indices.batched_bitmap_e)
     )
 
     return torch.stack([e_center_of_mass, u_center_of_mass], dim=1)
@@ -120,8 +120,8 @@ def crop_flux_distributions_around_center(
     flux_distributions: torch.Tensor,
     solar_tower: SolarTower,
     target_area_indices: torch.Tensor,
-    crop_width: float = config_dictionary.utis_crop_width,
-    crop_height: float = config_dictionary.utis_crop_height,
+    crop_width: float = constants.utis_crop_width,
+    crop_height: float = constants.utis_crop_height,
     device: torch.device | None = None,
 ) -> torch.Tensor:
     """
@@ -142,9 +142,9 @@ def crop_flux_distributions_around_center(
         Global target area index for each bitmap (planar indices first, cylindrical second).
         Shape is ``[number_of_bitmaps]``.
     crop_width : float
-        Desired width of the cropped region in meters (default is ``config_dictionary.utis_crop_width``).
+        Desired width of the cropped region in meters (default is ``constants.utis_crop_width``).
     crop_height : float
-        Desired height of the cropped region in meters (default is ``config_dictionary.utis_crop_height``).
+        Desired height of the cropped region in meters (default is ``constants.utis_crop_height``).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -166,7 +166,7 @@ def crop_flux_distributions_around_center(
     # Compute center of mass in normalized image coordinates [-1, 1].
     normalized_mass_map = flux_distributions / (
         flux_distributions.sum(
-            dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u),
+            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u),
             keepdim=True,
         )
         + 1e-8
@@ -179,22 +179,22 @@ def crop_flux_distributions_around_center(
     y_grid = y_grid.expand(number_of_flux_distributions, -1, -1)
 
     x_center_of_mass = (x_grid * normalized_mass_map).sum(
-        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+        dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
     )
     y_center_of_mass = (y_grid * normalized_mass_map).sum(
-        dim=(index_mapping.batched_bitmap_e, index_mapping.batched_bitmap_u)
+        dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
     )
 
     # Gather target dimensions per bitmap (width, height) in meters.
     target_dimensions = torch.empty((number_of_flux_distributions, 2), device=device)
     planar_mask = (
         target_area_indices
-        < solar_tower.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+        < solar_tower.number_of_target_areas_per_type[indices.planar_target_areas]
     )
     if target_area_indices[planar_mask].numel() > 0:
         planar = cast(
             TowerTargetAreasPlanar,
-            solar_tower.target_areas[index_mapping.planar_target_areas],
+            solar_tower.target_areas[indices.planar_target_areas],
         )
         target_dimensions[planar_mask] = planar.dimensions[
             target_area_indices[planar_mask]
@@ -202,30 +202,24 @@ def crop_flux_distributions_around_center(
     if target_area_indices[~planar_mask].numel() > 0:
         cylinder_indices = (
             target_area_indices[~planar_mask]
-            - solar_tower.number_of_target_areas_per_type[
-                index_mapping.planar_target_areas
-            ]
+            - solar_tower.number_of_target_areas_per_type[indices.planar_target_areas]
         )
         cylindrical = cast(
             TowerTargetAreasCylindrical,
-            solar_tower.target_areas[index_mapping.cylindrical_target_areas],
+            solar_tower.target_areas[indices.cylindrical_target_areas],
         )
-        target_dimensions[~planar_mask, index_mapping.target_dimensions_width] = (
+        target_dimensions[~planar_mask, indices.target_dimensions_width] = (
             cylindrical.radii[cylinder_indices]
             * cylindrical.opening_angles[cylinder_indices]
         )
-        target_dimensions[~planar_mask, index_mapping.target_dimensions_height] = (
+        target_dimensions[~planar_mask, indices.target_dimensions_height] = (
             cylindrical.heights[cylinder_indices]
         )
 
     # Robust division for very small dimensions.
     epsilon = 1e-8
-    width = target_dimensions[:, index_mapping.target_dimensions_width].clamp(
-        min=epsilon
-    )
-    height = target_dimensions[:, index_mapping.target_dimensions_height].clamp(
-        min=epsilon
-    )
+    width = target_dimensions[:, indices.target_dimensions_width].clamp(min=epsilon)
+    height = target_dimensions[:, indices.target_dimensions_height].clamp(min=epsilon)
 
     # Compute scale to match desired crop size in meters.
     scale_x = crop_width / width
@@ -233,10 +227,10 @@ def crop_flux_distributions_around_center(
 
     # Build affine transform matrices (scale and center).
     affine_matrices = torch.zeros(number_of_flux_distributions, 2, 3, device=device)
-    affine_matrices[:, index_mapping.e, index_mapping.e] = scale_x
-    affine_matrices[:, index_mapping.n, index_mapping.n] = scale_y
-    affine_matrices[:, index_mapping.e, index_mapping.u] = x_center_of_mass
-    affine_matrices[:, index_mapping.n, index_mapping.u] = y_center_of_mass
+    affine_matrices[:, indices.e, indices.e] = scale_x
+    affine_matrices[:, indices.n, indices.n] = scale_y
+    affine_matrices[:, indices.e, indices.u] = x_center_of_mass
+    affine_matrices[:, indices.n, indices.u] = y_center_of_mass
 
     # Apply affine transform.
     images_expanded = flux_distributions[:, None, :, :]

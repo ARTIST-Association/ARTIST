@@ -26,7 +26,7 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 
 def normalize(image: np.ndarray) -> np.ndarray:

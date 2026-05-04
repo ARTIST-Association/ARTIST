@@ -4,7 +4,7 @@ import h5py
 import torch
 
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 def test_target_area_load_from_hdf5(
@@ -23,7 +23,7 @@ def test_target_area_load_from_hdf5(
     AssertionError
         If test does not complete as expected.
     """
-    target_name = config_dictionary.target_area_receiver
+    target_name = constants.target_area_receiver
     mock_h5_file = mock.MagicMock(spec=h5py.File)
 
     mock_center = mock.MagicMock()
@@ -41,10 +41,10 @@ def test_target_area_load_from_hdf5(
     mock_level_planar_target = mock.MagicMock()
 
     mock_level_planar_target.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_position_center: mock_center,
-        config_dictionary.target_area_normal_vector: mock_normal,
-        config_dictionary.target_area_plane_e: mock_plane_e,
-        config_dictionary.target_area_plane_u: mock_plane_u,
+        constants.target_area_position_center: mock_center,
+        constants.target_area_normal_vector: mock_normal,
+        constants.target_area_plane_e: mock_plane_e,
+        constants.target_area_plane_u: mock_plane_u,
     }[key]
 
     mock_level_target_areas = mock.MagicMock()
@@ -55,7 +55,7 @@ def test_target_area_load_from_hdf5(
     mock_level_target_areas.__len__.return_value = 1
 
     mock_h5_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_planar_key: mock_level_target_areas
+        constants.target_area_planar_key: mock_level_target_areas
     }[key]
 
     # Perform the test.

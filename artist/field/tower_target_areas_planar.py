@@ -5,8 +5,8 @@ import torch
 from typing_extensions import Self
 
 from artist.field.tower_target_areas import TowerTargetAreas
-from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import constants, indices
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the planar tower target areas."""
@@ -104,9 +104,7 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         if rank == 0:
             log.info("Loading the planar tower target areas from an HDF5 file.")
 
-        number_of_target_areas = len(
-            config_file[config_dictionary.target_area_planar_key]
-        )
+        number_of_target_areas = len(config_file[constants.target_area_planar_key])
 
         names = []
         centers = torch.zeros((number_of_target_areas, 4), device=device)
@@ -114,31 +112,27 @@ class TowerTargetAreasPlanar(TowerTargetAreas):
         dimensions = torch.zeros((number_of_target_areas, 2), device=device)
 
         for index, target_area_name in enumerate(
-            sorted(config_file[config_dictionary.target_area_planar_key].keys())
+            sorted(config_file[constants.target_area_planar_key].keys())
         ):
-            single_target_area_config = config_file[
-                config_dictionary.target_area_planar_key
-            ][target_area_name]
+            single_target_area_config = config_file[constants.target_area_planar_key][
+                target_area_name
+            ]
             names.append(target_area_name)
             centers[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_position_center
-                ][()],
+                single_target_area_config[constants.target_area_position_center][()],
                 dtype=torch.float,
                 device=device,
             )
             normals[index] = torch.tensor(
-                single_target_area_config[config_dictionary.target_area_normal_vector][
-                    ()
-                ],
+                single_target_area_config[constants.target_area_normal_vector][()],
                 dtype=torch.float,
                 device=device,
             )
-            dimensions[index, index_mapping.target_area_plane_e] = float(
-                single_target_area_config[config_dictionary.target_area_plane_e][()]
+            dimensions[index, indices.target_area_plane_e] = float(
+                single_target_area_config[constants.target_area_plane_e][()]
             )
-            dimensions[index, index_mapping.target_area_plane_u] = float(
-                single_target_area_config[config_dictionary.target_area_plane_u][()]
+            dimensions[index, indices.target_area_plane_u] = float(
+                single_target_area_config[constants.target_area_plane_u][()]
             )
 
         return cls(

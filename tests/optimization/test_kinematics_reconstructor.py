@@ -11,8 +11,8 @@ from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
 from artist.optimization.loss_functions import FocalSpotLoss
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary
-from artist.util.environment_setup import DdpSetup
+from artist.util import constants
+from artist.util.environment import DdpSetup
 
 
 @pytest.mark.parametrize(
@@ -20,27 +20,27 @@ from artist.util.environment_setup import DdpSetup
     [
         # Test normal behavior.
         (
-            config_dictionary.kinematics_reconstruction_raytracing,
+            constants.kinematics_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             50,
-            config_dictionary.exponential,
+            constants.exponential,
         ),
         # Test early stopping.
         (
-            config_dictionary.kinematics_reconstruction_raytracing,
+            constants.kinematics_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             10,
-            config_dictionary.reduce_on_plateau,
+            constants.reduce_on_plateau,
         ),
         # Test invalid centroid extraction.
         (
-            config_dictionary.kinematics_reconstruction_raytracing,
+            constants.kinematics_reconstruction_raytracing,
             PaintCalibrationDataParser(),
             "invalid",
             10,
-            config_dictionary.reduce_on_plateau,
+            constants.reduce_on_plateau,
         ),
         # Test invalid reconstruction method.
         (
@@ -48,15 +48,15 @@ from artist.util.environment_setup import DdpSetup
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             10,
-            config_dictionary.reduce_on_plateau,
+            constants.reduce_on_plateau,
         ),
         # Test invalid parser.
         (
-            config_dictionary.kinematics_reconstruction_raytracing,
+            constants.kinematics_reconstruction_raytracing,
             CalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             10,
-            config_dictionary.reduce_on_plateau,
+            constants.reduce_on_plateau,
         ),
     ],
 )
@@ -98,29 +98,29 @@ def test_kinematics_reconstructor(
     torch.cuda.manual_seed(7)
 
     scheduler_dict = {
-        config_dictionary.scheduler_type: scheduler,
-        config_dictionary.gamma: 0.99,
-        config_dictionary.lr_min: 1e-4,
-        config_dictionary.reduce_factor: 0.9,
-        config_dictionary.patience: 100,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 20,
+        constants.scheduler_type: scheduler,
+        constants.gamma: 0.99,
+        constants.lr_min: 1e-4,
+        constants.reduce_factor: 0.9,
+        constants.patience: 100,
+        constants.threshold: 1e-3,
+        constants.cooldown: 20,
     }
     optimizer_dict = {
-        config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
-        config_dictionary.initial_learning_rate_initial_angles: 1e-3,
-        config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 250,
-        config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: 1.0,
-        config_dictionary.early_stopping_patience: 2,
-        config_dictionary.early_stopping_window: early_stopping_window,
+        constants.initial_learning_rate_rotation_deviation: 1e-4,
+        constants.initial_learning_rate_initial_angles: 1e-3,
+        constants.initial_learning_rate_initial_stroke_length: 1e-2,
+        constants.tolerance: 0.0005,
+        constants.max_epoch: 250,
+        constants.batch_size: 50,
+        constants.log_step: 1,
+        constants.early_stopping_delta: 1.0,
+        constants.early_stopping_patience: 2,
+        constants.early_stopping_window: early_stopping_window,
     }
     optimization_configuration = {
-        config_dictionary.optimization: optimizer_dict,
-        config_dictionary.scheduler: scheduler_dict,
+        constants.optimization: optimizer_dict,
+        constants.scheduler: scheduler_dict,
     }
 
     scenario_path = (
@@ -176,8 +176,8 @@ def test_kinematics_reconstructor(
             CalibrationDataParser
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ] = {
-            config_dictionary.data_parser: data_parser,
-            config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+            constants.data_parser: data_parser,
+            constants.heliostat_data_mapping: heliostat_data_mapping,
         }
 
         with h5py.File(scenario_path, "r") as scenario_file:
@@ -197,7 +197,7 @@ def test_kinematics_reconstructor(
                     reconstruction_method=reconstruction_method,
                 )
                 assert (
-                    f"ARTIST currently only supports the {config_dictionary.kinematics_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
+                    f"ARTIST currently only supports the {constants.kinematics_reconstruction_raytracing} reconstruction method. The reconstruction method {reconstruction_method} is not recognized. Please select another reconstruction method and try again!"
                     in str(exc_info.value)
                 )
         else:

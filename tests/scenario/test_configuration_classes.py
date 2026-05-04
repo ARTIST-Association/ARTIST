@@ -25,7 +25,7 @@ from artist.scenario.configuration_classes import (
     TargetAreaPlanarConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def normal() -> torch.Tensor:
             lambda power_plant_position: PowerPlantConfig(
                 power_plant_position=power_plant_position
             ).create_power_plant_dict(),
-            [config_dictionary.power_plant_position],
+            [constants.power_plant_position],
         ),
     ],
 )
@@ -75,10 +75,10 @@ def test_target_area_planar(normal: torch.Tensor) -> None:
 
     dictionary = target_area_planar.create_target_area_dict()
 
-    assert config_dictionary.target_area_position_center in dictionary
-    assert config_dictionary.target_area_normal_vector in dictionary
-    assert config_dictionary.target_area_plane_e in dictionary
-    assert config_dictionary.target_area_plane_u in dictionary
+    assert constants.target_area_position_center in dictionary
+    assert constants.target_area_normal_vector in dictionary
+    assert constants.target_area_plane_e in dictionary
+    assert constants.target_area_plane_u in dictionary
 
 
 def test_target_area_planar_list(normal: torch.Tensor) -> None:
@@ -111,9 +111,9 @@ def test_target_area_cylindrical() -> None:
 
     dictionary = target_area_cylindrical.create_target_area_dict()
 
-    assert config_dictionary.target_area_cylinder_radius in dictionary
-    assert config_dictionary.target_area_cylinder_center in dictionary
-    assert config_dictionary.target_area_cylinder_height in dictionary
+    assert constants.target_area_cylinder_radius in dictionary
+    assert constants.target_area_cylinder_center in dictionary
+    assert constants.target_area_cylinder_height in dictionary
 
 
 def test_target_area_cylindrical_list() -> None:
@@ -141,7 +141,7 @@ def light_source() -> LightSourceConfig:
         light_source_key="sun",
         light_source_type="sun",
         number_of_rays=100,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=1.0,
     )
@@ -151,9 +151,9 @@ def test_light_source_dict(light_source: LightSourceConfig) -> None:
     """Test that ``LightSourceConfig`` produces a dict with type, ray count, and distribution keys."""
     dictionary = light_source.create_light_source_dict()
 
-    assert config_dictionary.light_source_type in dictionary
-    assert config_dictionary.light_source_number_of_rays in dictionary
-    assert config_dictionary.light_source_distribution_parameters in dictionary
+    assert constants.light_source_type in dictionary
+    assert constants.light_source_number_of_rays in dictionary
+    assert constants.light_source_distribution_parameters in dictionary
 
 
 def test_light_source_list(light_source: LightSourceConfig) -> None:
@@ -195,8 +195,8 @@ def test_facet_dict(facet: FacetConfig) -> None:
     """Test that ``FacetConfig`` produces a dict with control point and degree keys."""
     dictionary = facet.create_facet_dict()
 
-    assert config_dictionary.facet_control_points in dictionary
-    assert config_dictionary.facet_degrees in dictionary
+    assert constants.facet_control_points in dictionary
+    assert constants.facet_degrees in dictionary
 
 
 @pytest.mark.parametrize(
@@ -211,8 +211,8 @@ def test_surface_configs(surface_class: type, facet: FacetConfig) -> None:
     surface_config = surface_class(facet_list=[facet])
     dictionary = surface_config.create_surface_dict()
 
-    assert config_dictionary.facets_key in dictionary
-    assert "facet_1" in dictionary[config_dictionary.facets_key]
+    assert constants.facets_key in dictionary
+    assert "facet_1" in dictionary[constants.facets_key]
 
 
 @pytest.fixture
@@ -254,9 +254,9 @@ def test_kinematics_configs(
 
     dictionary = kinematics.create_kinematics_dict()
 
-    assert config_dictionary.kinematics_type in dictionary
-    assert config_dictionary.kinematics_initial_orientation in dictionary
-    assert config_dictionary.kinematics_deviations in dictionary
+    assert constants.kinematics_type in dictionary
+    assert constants.kinematics_initial_orientation in dictionary
+    assert constants.kinematics_deviations in dictionary
 
 
 def test_actuator_parameters() -> None:
@@ -271,11 +271,11 @@ def test_actuator_parameters() -> None:
 
     dictionary = actuator_parameters.create_actuator_parameters_dict()
 
-    assert config_dictionary.actuator_increment in dictionary
-    assert config_dictionary.actuator_initial_stroke_length in dictionary
-    assert config_dictionary.actuator_offset in dictionary
-    assert config_dictionary.actuator_pivot_radius in dictionary
-    assert config_dictionary.actuator_initial_angle in dictionary
+    assert constants.actuator_increment in dictionary
+    assert constants.actuator_initial_stroke_length in dictionary
+    assert constants.actuator_offset in dictionary
+    assert constants.actuator_pivot_radius in dictionary
+    assert constants.actuator_initial_angle in dictionary
 
 
 @pytest.fixture
@@ -297,8 +297,8 @@ def test_actuator_config(actuator: ActuatorConfig) -> None:
     """Test that ``ActuatorConfig`` produces a dict with the actuator type and motor position keys."""
     dictionary = actuator.create_actuator_dict()
 
-    assert config_dictionary.actuator_type_key in dictionary
-    assert config_dictionary.actuator_min_max_motor_positions in dictionary
+    assert constants.actuator_type_key in dictionary
+    assert constants.actuator_min_max_motor_positions in dictionary
 
 
 @pytest.mark.parametrize(
@@ -331,9 +331,9 @@ def test_prototype_config(facet: FacetConfig, actuator: ActuatorConfig) -> None:
 
     dictionary = prototype.create_prototype_dict()
 
-    assert config_dictionary.surface_prototype_key in dictionary
-    assert config_dictionary.kinematics_prototype_key in dictionary
-    assert config_dictionary.actuators_prototype_key in dictionary
+    assert constants.surface_prototype_key in dictionary
+    assert constants.kinematics_prototype_key in dictionary
+    assert constants.actuators_prototype_key in dictionary
 
 
 def test_heliostat_all_branches(
@@ -363,9 +363,9 @@ def test_heliostat_all_branches(
 
     d = heliostat.create_heliostat_config_dict()
 
-    assert config_dictionary.heliostat_surface_key in d
-    assert config_dictionary.heliostat_kinematics_key in d
-    assert config_dictionary.heliostat_actuator_key in d
+    assert constants.heliostat_surface_key in d
+    assert constants.heliostat_kinematics_key in d
+    assert constants.heliostat_actuator_key in d
 
 
 @pytest.fixture

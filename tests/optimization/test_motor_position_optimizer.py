@@ -8,8 +8,8 @@ from artist import ARTIST_ROOT
 from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary
-from artist.util.environment_setup import DdpSetup
+from artist.util import constants
+from artist.util.environment import DdpSetup
 
 
 @pytest.fixture
@@ -59,9 +59,9 @@ def distribution(device: torch.device) -> torch.Tensor:
 @pytest.mark.parametrize(
     "loss_class, ground_truth_fixture_name, early_stopping_window, scheduler",
     [
-        (FocalSpotLoss, "focal_spot", 50, config_dictionary.cyclic),
-        (KLDivergenceLoss, "distribution", 50, config_dictionary.reduce_on_plateau),
-        (KLDivergenceLoss, "distribution", 10, config_dictionary.reduce_on_plateau),
+        (FocalSpotLoss, "focal_spot", 50, constants.cyclic),
+        (KLDivergenceLoss, "distribution", 50, constants.reduce_on_plateau),
+        (KLDivergenceLoss, "distribution", 10, constants.reduce_on_plateau),
     ],
 )
 def test_motor_positions_optimizer(
@@ -102,36 +102,36 @@ def test_motor_positions_optimizer(
     torch.cuda.manual_seed(7)
 
     scheduler_dict = {
-        config_dictionary.scheduler_type: scheduler,
-        config_dictionary.lr_min: 1e-3,
-        config_dictionary.lr_max: 2e-3,
-        config_dictionary.step_size_up: 100,
-        config_dictionary.reduce_factor: 0.9,
-        config_dictionary.patience: 100,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 20,
+        constants.scheduler_type: scheduler,
+        constants.lr_min: 1e-3,
+        constants.lr_max: 2e-3,
+        constants.step_size_up: 100,
+        constants.reduce_factor: 0.9,
+        constants.patience: 100,
+        constants.threshold: 1e-3,
+        constants.cooldown: 20,
     }
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 1e-3,
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 50,
-        config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: 1.0,
-        config_dictionary.early_stopping_patience: 2,
-        config_dictionary.early_stopping_window: early_stopping_window,
+        constants.initial_learning_rate: 1e-3,
+        constants.tolerance: 0.0005,
+        constants.max_epoch: 50,
+        constants.batch_size: 50,
+        constants.log_step: 1,
+        constants.early_stopping_delta: 1.0,
+        constants.early_stopping_patience: 2,
+        constants.early_stopping_window: early_stopping_window,
     }
     constraint_dict = {
-        config_dictionary.rho_flux_integral: 1.0,
-        config_dictionary.rho_local_flux: 1.0,
-        config_dictionary.rho_intercept: 1.0,
-        config_dictionary.max_flux_density: 1000000,
+        constants.rho_flux_integral: 1.0,
+        constants.rho_local_flux: 1.0,
+        constants.rho_intercept: 1.0,
+        constants.max_flux_density: 1000000,
     }
     # Combine configurations.
     optimization_configuration = {
-        config_dictionary.optimization: optimizer_dict,
-        config_dictionary.scheduler: scheduler_dict,
-        config_dictionary.constraints: constraint_dict,
+        constants.optimization: optimizer_dict,
+        constants.scheduler: scheduler_dict,
+        constants.constraints: constraint_dict,
     }
     scenario_path = (
         pathlib.Path(ARTIST_ROOT)

@@ -9,8 +9,8 @@ from artist.optimization import training
 from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import DdpSetup, get_device
+from artist.util import constants, indices
+from artist.util.environment import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
@@ -114,9 +114,9 @@ class MotorPositionsOptimizer:
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
-        self.optimizer_dict = optimization_configuration[config_dictionary.optimization]
-        self.scheduler_dict = optimization_configuration[config_dictionary.scheduler]
-        self.constraint_dict = optimization_configuration[config_dictionary.constraints]
+        self.optimizer_dict = optimization_configuration[constants.optimization]
+        self.scheduler_dict = optimization_configuration[constants.scheduler]
+        self.constraint_dict = optimization_configuration[constants.constraints]
         self.incident_ray_direction = incident_ray_direction
         self.target_area_index = target_area_index
         self.ground_truth = ground_truth
@@ -263,12 +263,12 @@ class MotorPositionsOptimizer:
             # Read actuator min/max positions.
             motor_positions_minimum = (
                 group.kinematics.actuators.non_optimizable_parameters[
-                    :, index_mapping.actuator_min_motor_position
+                    :, indices.actuator_min_motor_position
                 ]
             )
             motor_positions_maximum = (
                 group.kinematics.actuators.non_optimizable_parameters[
-                    :, index_mapping.actuator_max_motor_position
+                    :, indices.actuator_max_motor_position
                 ]
             )
             lower_margin = initial_motor_positions - motor_positions_minimum
@@ -287,13 +287,13 @@ class MotorPositionsOptimizer:
         # Create one Adam optimizer over all group parameter tensors.
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
-            lr=float(self.optimizer_dict[config_dictionary.initial_learning_rate]),
+            lr=float(self.optimizer_dict[constants.initial_learning_rate]),
         )
 
         # Create a learning rate scheduler.
         scheduler_fn = getattr(
             training,
-            self.scheduler_dict[config_dictionary.scheduler_type],
+            self.scheduler_dict[constants.scheduler_type],
         )
         scheduler: LRScheduler = scheduler_fn(
             optimizer=optimizer, parameters=self.scheduler_dict
@@ -301,9 +301,9 @@ class MotorPositionsOptimizer:
 
         # Set up early stopping.
         early_stopper = training.EarlyStopping(
-            window_size=self.optimizer_dict[config_dictionary.early_stopping_window],
-            patience=self.optimizer_dict[config_dictionary.early_stopping_patience],
-            min_improvement=self.optimizer_dict[config_dictionary.early_stopping_delta],
+            window_size=self.optimizer_dict[constants.early_stopping_window],
+            patience=self.optimizer_dict[constants.early_stopping_patience],
+            min_improvement=self.optimizer_dict[constants.early_stopping_delta],
             relative=True,
         )
 
@@ -315,7 +315,7 @@ class MotorPositionsOptimizer:
         if (
             self.target_area_index
             < self.scenario.solar_tower.number_of_target_areas_per_type[
-                index_mapping.planar_target_areas
+                indices.planar_target_areas
             ]
         ):  # Planar target
             target_plane_dimensions = target_areas.dimensions[self.target_area_index]  # type: ignore[attr-defined]
@@ -323,16 +323,16 @@ class MotorPositionsOptimizer:
             cylinder_indices = (
                 self.target_area_index
                 - self.scenario.solar_tower.number_of_target_areas_per_type[
-                    index_mapping.planar_target_areas
+                    indices.planar_target_areas
                 ]
             )
-            target_plane_dimensions[index_mapping.target_area_width] = (  # type: ignore[attr-defined]
+            target_plane_dimensions[indices.target_area_width] = (  # type: ignore[attr-defined]
                 target_areas.radii[cylinder_indices]  # type: ignore[attr-defined]
                 * target_areas.opening_angles[cylinder_indices]  # type: ignore[attr-defined]
             )
-            target_plane_dimensions[index_mapping.target_area_height] = (
-                target_areas.heights[cylinder_indices]  # type: ignore[attr-defined]
-            )
+            target_plane_dimensions[indices.target_area_height] = target_areas.heights[  # type: ignore[attr-defined]
+                cylinder_indices
+            ]
 
         # Set up constraints.
         flux_integral_reference = 0.0
@@ -340,12 +340,12 @@ class MotorPositionsOptimizer:
         lambda_local_flux = 0.0
         lambda_flux_integral = 0.0
         lambda_intercept = 0.0
-        rho_local_flux = self.constraint_dict[config_dictionary.rho_local_flux]
-        rho_flux_integral = self.constraint_dict[config_dictionary.rho_flux_integral]
-        rho_intercept = self.constraint_dict[config_dictionary.rho_intercept]
+        rho_local_flux = self.constraint_dict[constants.rho_local_flux]
+        rho_flux_integral = self.constraint_dict[constants.rho_flux_integral]
+        rho_intercept = self.constraint_dict[constants.rho_intercept]
         max_flux_density_per_pixel = (
             torch.prod(target_plane_dimensions) / torch.prod(self.bitmap_resolution)
-        ) * self.constraint_dict[config_dictionary.max_flux_density]
+        ) * self.constraint_dict[constants.max_flux_density]
 
         # Initialize histories for the loss plot.
         total_loss_history = []
@@ -359,20 +359,20 @@ class MotorPositionsOptimizer:
         loss = torch.tensor(torch.inf)
         epoch = 0
         log_step = (
-            self.optimizer_dict[config_dictionary.max_epoch]
-            if self.optimizer_dict[config_dictionary.log_step] == 0
-            else self.optimizer_dict[config_dictionary.log_step]
+            self.optimizer_dict[constants.max_epoch]
+            if self.optimizer_dict[constants.log_step] == 0
+            else self.optimizer_dict[constants.log_step]
         )
         while (
-            loss > float(self.optimizer_dict[config_dictionary.tolerance])
-            and epoch <= self.optimizer_dict[config_dictionary.max_epoch]
+            loss > float(self.optimizer_dict[constants.tolerance])
+            and epoch <= self.optimizer_dict[constants.max_epoch]
         ):
             optimizer.zero_grad()
 
             total_flux = torch.zeros(
                 (
-                    int(self.bitmap_resolution[index_mapping.unbatched_bitmap_u]),
-                    int(self.bitmap_resolution[index_mapping.unbatched_bitmap_e]),
+                    int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
+                    int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
                 ),
                 device=device,
             )
@@ -395,9 +395,9 @@ class MotorPositionsOptimizer:
 
                 # Reconstruct true motor positions from reparameterized version.
                 motor_positions_normalized = torch.tanh(
-                    optimizer.param_groups[index_mapping.optimizer_param_group_0][
-                        "params"
-                    ][heliostat_group_index]
+                    optimizer.param_groups[indices.optimizer_param_group_0]["params"][
+                        heliostat_group_index
+                    ]
                 )
                 heliostat_alignment_group.kinematics.motor_positions = (
                     initial_motor_positions_all_groups[heliostat_group_index]
@@ -491,16 +491,14 @@ class MotorPositionsOptimizer:
 
             # Flux loss: Compare predicted total flux vs. ground truth.
             flux_loss = loss_definition(
-                prediction=total_flux.unsqueeze(index_mapping.heliostat_dimension),
-                ground_truth=self.ground_truth.unsqueeze(
-                    index_mapping.heliostat_dimension
-                ),
+                prediction=total_flux.unsqueeze(indices.heliostat_dimension),
+                ground_truth=self.ground_truth.unsqueeze(indices.heliostat_dimension),
                 target_area_indices=torch.tensor(
                     [self.target_area_index], device=device
                 ),
                 reduction_dimensions=(
-                    index_mapping.batched_bitmap_e,
-                    index_mapping.batched_bitmap_u,
+                    indices.batched_bitmap_e,
+                    indices.batched_bitmap_u,
                 ),
                 device=device,
             )
@@ -581,7 +579,7 @@ class MotorPositionsOptimizer:
             loss.backward()
 
             # Reduce gradients across all ranks (global process group).
-            if self.ddp_setup[config_dictionary.is_distributed]:  # type: ignore
+            if self.ddp_setup[constants.is_distributed]:  # type: ignore
                 for param_group in optimizer.param_groups:
                     for param in param_group["params"]:
                         if param.grad is not None:
@@ -589,7 +587,7 @@ class MotorPositionsOptimizer:
                                 param.grad, op=torch.distributed.ReduceOp.SUM
                             )
                             # Average the gradients.
-                            param.grad /= self.ddp_setup[config_dictionary.world_size]  # type: ignore
+                            param.grad /= self.ddp_setup[constants.world_size]  # type: ignore
 
             optimizer.step()
             # Scheduler update.
@@ -600,7 +598,7 @@ class MotorPositionsOptimizer:
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[index_mapping.optimizer_param_group_0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}",
                 )
 
             total_loss_history.append(loss.detach().cpu().item())
@@ -653,7 +651,7 @@ class MotorPositionsOptimizer:
                 source = self.ddp_setup["ranks_to_groups_mapping"][index]
                 torch.distributed.broadcast(
                     heliostat_group.kinematics.motor_positions,
-                    src=source[index_mapping.first_rank_from_group],
+                    src=source[indices.first_rank_from_group],
                 )
 
             log.info(f"Rank: {rank}, synchronized after motor positions optimization.")

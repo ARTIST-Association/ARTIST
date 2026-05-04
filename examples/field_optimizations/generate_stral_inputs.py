@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import yaml
 
-from artist.util.environment_setup import get_device
+from artist.util.environment import get_device
 
 
 def save_binp_from_artist_data(

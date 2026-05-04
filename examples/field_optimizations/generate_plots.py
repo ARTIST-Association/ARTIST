@@ -6,13 +6,13 @@ from typing import Any
 import numpy as np
 import torch
 import yaml
-from geometry import transforms
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 from optimization.loss_functions import KLDivergenceLoss
 from scipy.stats import gaussian_kde
 
-from artist.util.environment_setup import get_device
+from artist.geometry import transforms
+from artist.util.environment import get_device
 
 plot_colors = {
     "darkblue": "#002864",

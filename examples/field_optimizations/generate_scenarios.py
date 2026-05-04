@@ -13,8 +13,8 @@ from artist.scenario.configuration_classes import (
     LightSourceListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util import constants, set_logger_config
+from artist.util.environment import get_device
 
 set_logger_config()
 
@@ -85,9 +85,9 @@ def generate_ideal_scenario(
     # Set up light source configuration.
     light_source1_config = LightSourceConfig(
         light_source_key="sun",
-        light_source_type=config_dictionary.sun_key,
+        light_source_type=constants.sun_key,
         number_of_rays=10,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )
@@ -157,9 +157,9 @@ def generate_fitted_scenario(
     # Include the light source configuration.
     light_source_config = LightSourceConfig(
         light_source_key="sun_1",
-        light_source_type=config_dictionary.sun_key,
+        light_source_type=constants.sun_key,
         number_of_rays=10,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )
@@ -209,7 +209,7 @@ def generate_fitted_scenario(
             power_plant_position=power_plant_config.power_plant_position,
             number_of_nurbs_control_points=torch.tensor([10, 10], device=device),
             deflectometry_step_size=100,
-            nurbs_fit_method=config_dictionary.fit_nurbs_from_normals,
+            nurbs_fit_method=constants.fit_nurbs_from_normals,
             nurbs_fit_tolerance=1e-10,
             nurbs_fit_max_epoch=400,
             nurbs_fit_optimizer=nurbs_fit_optimizer,

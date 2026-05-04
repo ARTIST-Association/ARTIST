@@ -9,8 +9,8 @@ from matplotlib import pyplot as plt
 from artist.field.heliostat_group import HeliostatGroup
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, set_logger_config
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.util import indices, set_logger_config
+from artist.util.environment import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -33,7 +33,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]  # type:ignore
+    device = ddp_setup["device"]
 
     # Load the scenario.
     with h5py.File(scenario_path) as scenario_file:
@@ -65,8 +65,8 @@ with setup_distributed_environment(
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.solar_tower.number_of_target_areas_per_type.sum(),
-            bitmap_resolution[index_mapping.unbatched_bitmap_u],
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
+            bitmap_resolution[indices.unbatched_bitmap_u],
+            bitmap_resolution[indices.unbatched_bitmap_e],
         ),
         device=device,
     )
@@ -112,12 +112,8 @@ with setup_distributed_environment(
     # The ray tracing process is distributed on multiple devices. Each heliostat is assigned to one process group. Within
     # these process groups nested subprocess groups are created to distribute further within each heliostat groups, if the
     # total number of processes allows this.
-    for heliostat_group_index in ddp_setup[
-        config_dictionary.groups_to_ranks_mapping  # type:ignore
-    ][
-        ddp_setup[
-            config_dictionary.rank  # type:ignore
-        ]
+    for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
+        ddp_setup["rank"]
     ]:
         heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
@@ -138,10 +134,10 @@ with setup_distributed_environment(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
-                world_size=ddp_setup[config_dictionary.heliostat_group_world_size],  # type:ignore
-                rank=ddp_setup[config_dictionary.heliostat_group_rank],  # type:ignore
+                world_size=ddp_setup["heliostat_group_world_size"],
+                rank=ddp_setup["heliostat_group_rank"],
                 batch_size=heliostat_group.number_of_active_heliostats,
-                random_seed=ddp_setup[config_dictionary.heliostat_group_rank],  # type:ignore
+                random_seed=ddp_setup["heliostat_group_rank"],
                 bitmap_resolution=bitmap_resolution,
             )
 
@@ -186,11 +182,11 @@ with setup_distributed_environment(
 
     # This nested reduction step could be skipped, since the reduction within the outer process group would handle it.
     # However, performing it here allows us to inspect the intermediate reduction results of the nested process group.
-    if ddp_setup[config_dictionary.is_nested]:  # type:ignore
+    if ddp_setup["is_nested"]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
-            group=ddp_setup[config_dictionary.process_subgroup],  # type:ignore
+            group=ddp_setup["process_subgroup"],
         )
 
         # Plot the combined bitmaps of heliostats on the same target reduced within each group.
@@ -210,7 +206,7 @@ with setup_distributed_environment(
                 f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{target_names[target_area_index]}.png"
             )
 
-    if ddp_setup[config_dictionary.is_distributed]:  # type:ignore
+    if ddp_setup["is_distributed"]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )

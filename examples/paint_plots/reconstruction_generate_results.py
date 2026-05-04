@@ -9,14 +9,14 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
-from optimization.kinematics_reconstructor import KinematicsReconstructor
-from optimization.loss_functions import FocalSpotLoss
 
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
+from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
+from artist.optimization.loss_functions import FocalSpotLoss
 from artist.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import (
+from artist.util import constants, set_logger_config
+from artist.util.environment import (
     DdpSetup,
     get_device,
     setup_distributed_environment,
@@ -75,38 +75,38 @@ def generate_reconstruction_results(
     ) as ddp_setup:
         # Select calibration via raytracing.
         kinematics_reconstruction_method = (
-            config_dictionary.kinematics_reconstruction_raytracing
+            constants.kinematics_reconstruction_raytracing
         )
 
         # Configure the optimization.
         optimizer_dict = {
-            config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
-            config_dictionary.initial_learning_rate_initial_angles: 1e-3,
-            config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
-            config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 1000,
-            config_dictionary.batch_size: 500,
-            config_dictionary.log_step: 50,
-            config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.early_stopping_window: 1000,
+            constants.initial_learning_rate_rotation_deviation: 1e-4,
+            constants.initial_learning_rate_initial_angles: 1e-3,
+            constants.initial_learning_rate_initial_stroke_length: 1e-2,
+            constants.tolerance: 0,
+            constants.max_epoch: 1000,
+            constants.batch_size: 500,
+            constants.log_step: 50,
+            constants.early_stopping_delta: 1e-6,
+            constants.early_stopping_patience: 4000,
+            constants.early_stopping_window: 1000,
         }
         # Configure the learning rate scheduler.
         scheduler_dict = {
-            config_dictionary.scheduler_type: config_dictionary.exponential,
-            config_dictionary.gamma: 0.999,
-            config_dictionary.lr_min: 1e-5,
-            config_dictionary.lr_max: 1e-2,
-            config_dictionary.step_size_up: 500,
-            config_dictionary.reduce_factor: 0.3,
-            config_dictionary.patience: 10,
-            config_dictionary.threshold: 1e-3,
-            config_dictionary.cooldown: 10,
+            constants.scheduler_type: constants.exponential,
+            constants.gamma: 0.999,
+            constants.lr_min: 1e-5,
+            constants.lr_max: 1e-2,
+            constants.step_size_up: 500,
+            constants.reduce_factor: 0.3,
+            constants.patience: 10,
+            constants.threshold: 1e-3,
+            constants.cooldown: 10,
         }
         # Combine configurations.
         optimization_configuration = {
-            config_dictionary.optimization: optimizer_dict,
-            config_dictionary.scheduler: scheduler_dict,
+            constants.optimization: optimizer_dict,
+            constants.scheduler: scheduler_dict,
         }
 
         for centroid in [paint_mappings.UTIS_KEY, paint_mappings.HELIOS_KEY]:
@@ -119,10 +119,10 @@ def generate_reconstruction_results(
                 CalibrationDataParser
                 | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
             ] = {
-                config_dictionary.data_parser: PaintCalibrationDataParser(
+                constants.data_parser: PaintCalibrationDataParser(
                     sample_limit=3, centroid_extraction_method=centroid
                 ),
-                config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+                constants.heliostat_data_mapping: heliostat_data_mapping,
             }
 
             kinematics_reconstructor = KinematicsReconstructor(

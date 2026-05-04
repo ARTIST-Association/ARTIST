@@ -5,8 +5,8 @@ import struct
 import torch
 
 from artist.geometry import coordinates
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the stral data loader."""
@@ -57,11 +57,9 @@ def extract_stral_deflectometry_data(
 
         # Calculate the number of facets.
         n_xy = surface_header_data[
-            index_mapping.stral_surface_header_start : index_mapping.stral_surface_header_end
+            indices.stral_surface_header_start : indices.stral_surface_header_end
         ]
-        number_of_facets = (
-            n_xy[index_mapping.stral_n_xy_start] * n_xy[index_mapping.stral_n_xy_end]
-        )
+        number_of_facets = n_xy[indices.stral_n_xy_start] * n_xy[indices.stral_n_xy_end]
 
         # Create empty tensors for storing data.
         facet_translation_vectors = torch.empty(number_of_facets, 3, device=device)
@@ -73,27 +71,25 @@ def extract_stral_deflectometry_data(
                 file.read(facet_header_struct.size)
             )
             facet_translation_vectors[facet] = torch.tensor(
+                facet_header_data[indices.stral_facet_start : indices.stral_facet_end],
+                dtype=torch.float,
+                device=device,
+            )
+            canting[facet, indices.stral_canting_1] = torch.tensor(
                 facet_header_data[
-                    index_mapping.stral_facet_start : index_mapping.stral_facet_end
+                    indices.stral_canting_1_start : indices.stral_canting_1_end
                 ],
                 dtype=torch.float,
                 device=device,
             )
-            canting[facet, index_mapping.stral_canting_1] = torch.tensor(
+            canting[facet, indices.stral_canting_2] = torch.tensor(
                 facet_header_data[
-                    index_mapping.stral_canting_1_start : index_mapping.stral_canting_1_end
+                    indices.stral_canting_2_start : indices.stral_canting_2_end
                 ],
                 dtype=torch.float,
                 device=device,
             )
-            canting[facet, index_mapping.stral_canting_2] = torch.tensor(
-                facet_header_data[
-                    index_mapping.stral_canting_2_start : index_mapping.stral_canting_2_end
-                ],
-                dtype=torch.float,
-                device=device,
-            )
-            number_of_points = facet_header_data[index_mapping.stral_number_of_points]
+            number_of_points = facet_header_data[indices.stral_number_of_points]
             single_facet_surface_points = torch.empty(
                 number_of_points, 3, device=device
             )
@@ -106,13 +102,13 @@ def extract_stral_deflectometry_data(
             )
             for i, point_data in enumerate(points_data):
                 single_facet_surface_points[i, :] = torch.tensor(
-                    point_data[: index_mapping.stral_surface_points_end],
+                    point_data[: indices.stral_surface_points_end],
                     dtype=torch.float,
                     device=device,
                 )
                 single_facet_surface_normals[i, :] = torch.tensor(
                     point_data[
-                        index_mapping.stral_surface_normals_start : index_mapping.stral_surface_normals_end
+                        indices.stral_surface_normals_start : indices.stral_surface_normals_end
                     ],
                     dtype=torch.float,
                     device=device,

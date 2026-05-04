@@ -6,13 +6,13 @@ from collections.abc import Generator
 import numpy as np
 import pytest
 
-from artist.util.environment_setup import DdpSetup
+from artist.util.environment import DdpSetup
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 import torch
 
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 @pytest.fixture(params=["cpu", "gpu"])
@@ -39,9 +39,9 @@ def device(request: pytest.FixtureRequest) -> torch.device:
             pytest.skip("Skipping GPU test in CI environment")
 
         os_name = platform.system()
-        if os_name in {config_dictionary.linux, config_dictionary.windows}:
+        if os_name in {constants.linux, constants.windows}:
             return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        elif os_name == config_dictionary.mac:
+        elif os_name == constants.mac:
             return torch.device("cpu")
         else:
             return torch.device("cpu")

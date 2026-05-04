@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from artist.field.actuators import Actuators
-from artist.util import type_mappings
+from artist.util import type_registry
 
 
 @pytest.mark.parametrize(
@@ -73,7 +73,7 @@ def test_actuators_forward(
     AssertionError
         If test does not complete as expected.
     """
-    actuators = type_mappings.actuator_type_mapping[
+    actuators = type_registry.actuator_type_mapping[
         non_optimizable_parameters[0, 0, 0].item()
     ](
         non_optimizable_parameters=non_optimizable_parameters.to(device),

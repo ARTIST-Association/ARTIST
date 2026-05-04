@@ -5,8 +5,8 @@ import torch
 
 from artist.geometry import rotations
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
-from artist.util import config_dictionary, index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import constants, indices
+from artist.util.environment import get_device
 
 
 def surface_config(
@@ -36,41 +36,37 @@ def surface_config(
     device = get_device(device=device)
 
     if prototype:
-        facet_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.surface_prototype_key
-        ][config_dictionary.facets_key]
+        facet_config = scenario_file[constants.prototype_key][
+            constants.surface_prototype_key
+        ][constants.facets_key]
     else:
-        facet_config = scenario_file[config_dictionary.heliostat_surface_key][
-            config_dictionary.facets_key
+        facet_config = scenario_file[constants.heliostat_surface_key][
+            constants.facets_key
         ]
 
     facet_list = [
         FacetConfig(
             facet_key="",
             control_points=torch.tensor(
-                facet_config[facet][config_dictionary.facet_control_points][()],
+                facet_config[facet][constants.facet_control_points][()],
                 dtype=torch.float,
                 device=device,
             ),
             degrees=torch.tensor(
                 [
-                    facet_config[facet][config_dictionary.facet_degrees][()][
-                        index_mapping.nurbs_u
-                    ],
-                    facet_config[facet][config_dictionary.facet_degrees][()][
-                        index_mapping.nurbs_v
-                    ],
+                    facet_config[facet][constants.facet_degrees][()][indices.nurbs_u],
+                    facet_config[facet][constants.facet_degrees][()][indices.nurbs_v],
                 ],
                 dtype=torch.int32,
                 device=device,
             ),
             translation_vector=torch.tensor(
-                facet_config[facet][config_dictionary.facets_translation_vector][()],
+                facet_config[facet][constants.facets_translation_vector][()],
                 dtype=torch.float,
                 device=device,
             ),
             canting=torch.tensor(
-                facet_config[facet][config_dictionary.facets_canting][()],
+                facet_config[facet][constants.facets_canting][()],
                 dtype=torch.float,
                 device=device,
             ),
@@ -125,20 +121,20 @@ def kinematics_deviations(
     device = get_device(device=device)
 
     if prototype:
-        kinematics_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.kinematics_prototype_key
+        kinematics_config = scenario_file[constants.prototype_key][
+            constants.kinematics_prototype_key
         ]
     else:
-        kinematics_config = scenario_file[config_dictionary.heliostat_kinematics_key]
+        kinematics_config = scenario_file[constants.heliostat_kinematics_key]
 
-    if kinematics_type == config_dictionary.rigid_body_key:
+    if kinematics_type == constants.rigid_body_key:
         translation_deviations, rotation_deviations = rigid_body_deviations(
             kinematics_config=kinematics_config,
             log=log,
             heliostat_name=heliostat_name,
             device=device,
         )
-        number_of_actuators = config_dictionary.rigid_body_number_of_actuators
+        number_of_actuators = constants.rigid_body_number_of_actuators
     else:
         raise ValueError(
             f"The kinematics type: {kinematics_type} is not yet implemented!"
@@ -181,68 +177,55 @@ def rigid_body_deviations(
     device = get_device(device=device)
 
     translation_deviations = torch.zeros(
-        config_dictionary.rigid_body_number_of_translation_deviation_parameters,
+        constants.rigid_body_number_of_translation_deviation_parameters,
         dtype=torch.float,
         device=device,
     )
 
     rotation_deviations = torch.zeros(
-        config_dictionary.rigid_body_number_of_rotation_deviation_parameters,
+        constants.rigid_body_number_of_rotation_deviation_parameters,
         dtype=torch.float,
         device=device,
     )
 
     first_joint_translation_e = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.first_joint_translation_e}"
+        f"{constants.kinematics_deviations}/{constants.first_joint_translation_e}"
     )
     first_joint_translation_n = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.first_joint_translation_n}"
+        f"{constants.kinematics_deviations}/{constants.first_joint_translation_n}"
     )
     first_joint_translation_u = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.first_joint_translation_u}"
+        f"{constants.kinematics_deviations}/{constants.first_joint_translation_u}"
     )
     first_joint_tilt_n = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.first_joint_tilt_n}"
+        f"{constants.kinematics_deviations}/{constants.first_joint_tilt_n}"
     )
     first_joint_tilt_u = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.first_joint_tilt_u}"
+        f"{constants.kinematics_deviations}/{constants.first_joint_tilt_u}"
     )
     second_joint_translation_e = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.second_joint_translation_e}"
+        f"{constants.kinematics_deviations}/{constants.second_joint_translation_e}"
     )
     second_joint_translation_n = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.second_joint_translation_n}"
+        f"{constants.kinematics_deviations}/{constants.second_joint_translation_n}"
     )
     second_joint_translation_u = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.second_joint_translation_u}"
+        f"{constants.kinematics_deviations}/{constants.second_joint_translation_u}"
     )
     second_joint_tilt_e = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.second_joint_tilt_e}"
+        f"{constants.kinematics_deviations}/{constants.second_joint_tilt_e}"
     )
     second_joint_tilt_n = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.second_joint_tilt_n}"
+        f"{constants.kinematics_deviations}/{constants.second_joint_tilt_n}"
     )
     concentrator_translation_e = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.concentrator_translation_e}"
+        f"{constants.kinematics_deviations}/{constants.concentrator_translation_e}"
     )
     concentrator_translation_n = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.concentrator_translation_n}"
+        f"{constants.kinematics_deviations}/{constants.concentrator_translation_n}"
     )
     concentrator_translation_u = kinematics_config.get(
-        f"{config_dictionary.kinematics_deviations}/"
-        f"{config_dictionary.concentrator_translation_u}"
+        f"{constants.kinematics_deviations}/{constants.concentrator_translation_u}"
     )
 
     rank = (
@@ -253,132 +236,132 @@ def rigid_body_deviations(
 
     if first_joint_translation_e is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.first_joint_translation_e} for {heliostat_name} set. "
+            f"No individual kinematics {constants.first_joint_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_translation_n is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.first_joint_translation_n} for {heliostat_name} set. "
+            f"No individual kinematics {constants.first_joint_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_translation_u is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.first_joint_translation_u} for {heliostat_name} set. "
+            f"No individual kinematics {constants.first_joint_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_tilt_n is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.first_joint_tilt_n} for {heliostat_name} set. "
+            f"No individual kinematics {constants.first_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if first_joint_tilt_u is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.first_joint_tilt_u} for {heliostat_name} set. "
+            f"No individual kinematics {constants.first_joint_tilt_u} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_translation_e is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.second_joint_translation_e} for {heliostat_name} set. "
+            f"No individual kinematics {constants.second_joint_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_translation_n is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.second_joint_translation_n} for {heliostat_name} set. "
+            f"No individual kinematics {constants.second_joint_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_translation_u is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.second_joint_translation_u} for {heliostat_name} set. "
+            f"No individual kinematics {constants.second_joint_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_tilt_e is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.second_joint_tilt_e} for {heliostat_name} set. "
+            f"No individual kinematics {constants.second_joint_tilt_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if second_joint_tilt_n is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.second_joint_tilt_n} for {heliostat_name} set. "
+            f"No individual kinematics {constants.second_joint_tilt_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if concentrator_translation_e is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.concentrator_translation_e} for {heliostat_name} set. "
+            f"No individual kinematics {constants.concentrator_translation_e} for {heliostat_name} set. "
             f"Using default values!"
         )
     if concentrator_translation_n is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.concentrator_translation_n} for {heliostat_name} set. "
+            f"No individual kinematics {constants.concentrator_translation_n} for {heliostat_name} set. "
             f"Using default values!"
         )
     if concentrator_translation_u is None and rank == 0:
         log.warning(
-            f"No individual kinematics {config_dictionary.concentrator_translation_u} for {heliostat_name} set. "
+            f"No individual kinematics {constants.concentrator_translation_u} for {heliostat_name} set. "
             f"Using default values!"
         )
 
-    translation_deviations[index_mapping.first_joint_translation_e] = (
+    translation_deviations[indices.first_joint_translation_e] = (
         torch.tensor(first_joint_translation_e[()], dtype=torch.float, device=device)
         if first_joint_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.first_joint_translation_n] = (
+    translation_deviations[indices.first_joint_translation_n] = (
         torch.tensor(first_joint_translation_n[()], dtype=torch.float, device=device)
         if first_joint_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.first_joint_translation_u] = (
+    translation_deviations[indices.first_joint_translation_u] = (
         torch.tensor(first_joint_translation_u[()], dtype=torch.float, device=device)
         if first_joint_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.second_joint_translation_e] = (
+    translation_deviations[indices.second_joint_translation_e] = (
         torch.tensor(second_joint_translation_e[()], dtype=torch.float, device=device)
         if second_joint_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.second_joint_translation_n] = (
+    translation_deviations[indices.second_joint_translation_n] = (
         torch.tensor(second_joint_translation_n[()], dtype=torch.float, device=device)
         if second_joint_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.second_joint_translation_u] = (
+    translation_deviations[indices.second_joint_translation_u] = (
         torch.tensor(second_joint_translation_u[()], dtype=torch.float, device=device)
         if second_joint_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.concentrator_translation_e] = (
+    translation_deviations[indices.concentrator_translation_e] = (
         torch.tensor(concentrator_translation_e[()], dtype=torch.float, device=device)
         if concentrator_translation_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.concentrator_translation_n] = (
+    translation_deviations[indices.concentrator_translation_n] = (
         torch.tensor(concentrator_translation_n[()], dtype=torch.float, device=device)
         if concentrator_translation_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    translation_deviations[index_mapping.concentrator_translation_u] = (
+    translation_deviations[indices.concentrator_translation_u] = (
         torch.tensor(concentrator_translation_u[()], dtype=torch.float, device=device)
         if concentrator_translation_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
 
-    rotation_deviations[index_mapping.first_joint_tilt_n] = (
+    rotation_deviations[indices.first_joint_tilt_n] = (
         torch.tensor(first_joint_tilt_n[()], dtype=torch.float, device=device)
         if first_joint_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    rotation_deviations[index_mapping.first_joint_tilt_u] = (
+    rotation_deviations[indices.first_joint_tilt_u] = (
         torch.tensor(first_joint_tilt_u[()], dtype=torch.float, device=device)
         if first_joint_tilt_u
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    rotation_deviations[index_mapping.second_joint_tilt_e] = (
+    rotation_deviations[indices.second_joint_tilt_e] = (
         torch.tensor(second_joint_tilt_e[()], dtype=torch.float, device=device)
         if second_joint_tilt_e
         else torch.tensor(0.0, dtype=torch.float, device=device)
     )
-    rotation_deviations[index_mapping.second_joint_tilt_n] = (
+    rotation_deviations[indices.second_joint_tilt_n] = (
         torch.tensor(second_joint_tilt_n[()], dtype=torch.float, device=device)
         if second_joint_tilt_n
         else torch.tensor(0.0, dtype=torch.float, device=device)
@@ -433,13 +416,13 @@ def actuator_parameters(
     device = get_device(device=device)
 
     if prototype:
-        actuator_config = scenario_file[config_dictionary.prototype_key][
-            config_dictionary.actuators_prototype_key
+        actuator_config = scenario_file[constants.prototype_key][
+            constants.actuators_prototype_key
         ]
     else:
-        actuator_config = scenario_file[config_dictionary.heliostat_actuator_key]
+        actuator_config = scenario_file[constants.heliostat_actuator_key]
 
-    if actuator_type == config_dictionary.linear_actuator_key:
+    if actuator_type == constants.linear_actuator_key:
         actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
             linear_actuators(
                 actuator_config=actuator_config,
@@ -449,7 +432,7 @@ def actuator_parameters(
                 device=device,
             )
         )
-    elif actuator_type == config_dictionary.ideal_actuator_key:
+    elif actuator_type == constants.ideal_actuator_key:
         actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
             ideal_actuators(
                 actuator_config=actuator_config,
@@ -519,44 +502,42 @@ def linear_actuators(
 
     for index, actuator in enumerate(actuator_config.keys()):
         clockwise_axis_movement = bool(
-            actuator_config[actuator][
-                config_dictionary.actuator_clockwise_axis_movement
-            ][()]
+            actuator_config[actuator][constants.actuator_clockwise_axis_movement][()]
         )
         minimum_motor_position = float(
-            actuator_config[actuator][
-                config_dictionary.actuator_min_max_motor_positions
-            ][()][index_mapping.data_actuator_min_motor_position]
+            actuator_config[actuator][constants.actuator_min_max_motor_positions][()][
+                indices.data_actuator_min_motor_position
+            ]
         )
         maximum_motor_position = float(
-            actuator_config[actuator][
-                config_dictionary.actuator_min_max_motor_positions
-            ][()][index_mapping.data_actuator_max_motor_position]
+            actuator_config[actuator][constants.actuator_min_max_motor_positions][()][
+                indices.data_actuator_max_motor_position
+            ]
         )
         increment = actuator_config.get(
             f"{actuator}/"
-            f"{config_dictionary.actuator_parameters_key}/"
-            f"{config_dictionary.actuator_increment}"
+            f"{constants.actuator_parameters_key}/"
+            f"{constants.actuator_increment}"
         )
         initial_stroke_length = actuator_config.get(
             f"{actuator}/"
-            f"{config_dictionary.actuator_parameters_key}/"
-            f"{config_dictionary.actuator_initial_stroke_length}"
+            f"{constants.actuator_parameters_key}/"
+            f"{constants.actuator_initial_stroke_length}"
         )
         offset = actuator_config.get(
             f"{actuator}/"
-            f"{config_dictionary.actuator_parameters_key}/"
-            f"{config_dictionary.actuator_offset}"
+            f"{constants.actuator_parameters_key}/"
+            f"{constants.actuator_offset}"
         )
         pivot_radius = actuator_config.get(
             f"{actuator}/"
-            f"{config_dictionary.actuator_parameters_key}/"
-            f"{config_dictionary.actuator_pivot_radius}"
+            f"{constants.actuator_parameters_key}/"
+            f"{constants.actuator_pivot_radius}"
         )
         initial_angle = actuator_config.get(
             f"{actuator}/"
-            f"{config_dictionary.actuator_parameters_key}/"
-            f"{config_dictionary.actuator_initial_angle}"
+            f"{constants.actuator_parameters_key}/"
+            f"{constants.actuator_initial_angle}"
         )
 
         rank = (
@@ -567,69 +548,67 @@ def linear_actuators(
 
         if increment is None and rank == 0:
             log.warning(
-                f"No individual {config_dictionary.actuator_increment} set for {actuator}. Using default values!"
+                f"No individual {constants.actuator_increment} set for {actuator}. Using default values!"
             )
         if initial_stroke_length is None and rank == 0:
             log.warning(
-                f"No individual {config_dictionary.actuator_initial_stroke_length} set for {actuator} on "
+                f"No individual {constants.actuator_initial_stroke_length} set for {actuator} on "
                 f"{heliostat_name}. "
                 f"Using default values!"
             )
         if offset is None and rank == 0:
             log.warning(
-                f"No individual {config_dictionary.actuator_offset} set for {actuator} on "
+                f"No individual {constants.actuator_offset} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
         if pivot_radius is None and rank == 0:
             log.warning(
-                f"No individual {config_dictionary.actuator_pivot_radius} set for {actuator} on "
+                f"No individual {constants.actuator_pivot_radius} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
         if initial_angle is None and rank == 0:
             log.warning(
-                f"No individual {config_dictionary.actuator_initial_angle} set for {actuator} on "
+                f"No individual {constants.actuator_initial_angle} set for {actuator} on "
                 f"{heliostat_name}. Using default values!"
             )
 
-        actuator_parameters_non_optimizable[index_mapping.actuator_type, index] = (
-            config_dictionary.linear_actuator_int
+        actuator_parameters_non_optimizable[indices.actuator_type, index] = (
+            constants.linear_actuator_int
         )
 
         actuator_parameters_non_optimizable[
-            index_mapping.actuator_clockwise_movement, index
+            indices.actuator_clockwise_movement, index
         ] = 0 if not clockwise_axis_movement else 1
 
         actuator_parameters_non_optimizable[
-            index_mapping.actuator_min_motor_position, index
+            indices.actuator_min_motor_position, index
         ] = minimum_motor_position
         actuator_parameters_non_optimizable[
-            index_mapping.actuator_max_motor_position, index
+            indices.actuator_max_motor_position, index
         ] = maximum_motor_position
 
-        actuator_parameters_non_optimizable[index_mapping.actuator_increment, index] = (
+        actuator_parameters_non_optimizable[indices.actuator_increment, index] = (
             torch.tensor(increment[()], dtype=torch.float, device=device)
             if increment
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters_non_optimizable[index_mapping.actuator_offset, index] = (
+        actuator_parameters_non_optimizable[indices.actuator_offset, index] = (
             torch.tensor(offset[()], dtype=torch.float, device=device)
             if offset
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters_non_optimizable[
-            index_mapping.actuator_pivot_radius, index
-        ] = (
+        actuator_parameters_non_optimizable[indices.actuator_pivot_radius, index] = (
             torch.tensor(pivot_radius[()], dtype=torch.float, device=device)
             if pivot_radius
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
-        actuator_parameters_optimizable[index_mapping.actuator_initial_angle, index] = (
+        actuator_parameters_optimizable[indices.actuator_initial_angle, index] = (
             torch.tensor(initial_angle[()], dtype=torch.float, device=device)
             if initial_angle
             else torch.tensor(0.0, dtype=torch.float, device=device)
         )
         actuator_parameters_optimizable[
-            index_mapping.actuator_initial_stroke_length, index
+            indices.actuator_initial_stroke_length, index
         ] = (
             torch.tensor(initial_stroke_length[()], dtype=torch.float, device=device)
             if initial_stroke_length
@@ -656,10 +635,10 @@ def linear_actuators(
         to_orientation=surface_orientation,
         device=device,
     )
-    delta_angle = axis[index_mapping.e] * angle
+    delta_angle = axis[indices.e] * angle
 
     actuator_parameters_optimizable[
-        index_mapping.actuator_initial_angle, index_mapping.actuator_one_index
+        indices.actuator_initial_angle, indices.actuator_one_index
     ] += delta_angle
 
     return actuator_parameters_non_optimizable, actuator_parameters_optimizable
@@ -712,35 +691,33 @@ def ideal_actuators(
 
     for index, actuator in enumerate(actuator_config.keys()):
         clockwise_axis_movement = bool(
-            actuator_config[actuator][
-                config_dictionary.actuator_clockwise_axis_movement
-            ][()]
+            actuator_config[actuator][constants.actuator_clockwise_axis_movement][()]
         )
 
         minimum_motor_position = float(
-            actuator_config[actuator][
-                config_dictionary.actuator_min_max_motor_positions
-            ][()][index_mapping.data_actuator_min_motor_position]
+            actuator_config[actuator][constants.actuator_min_max_motor_positions][()][
+                indices.data_actuator_min_motor_position
+            ]
         )
         maximum_motor_position = float(
-            actuator_config[actuator][
-                config_dictionary.actuator_min_max_motor_positions
-            ][()][index_mapping.data_actuator_max_motor_position]
+            actuator_config[actuator][constants.actuator_min_max_motor_positions][()][
+                indices.data_actuator_max_motor_position
+            ]
         )
 
-        actuator_parameters_non_optimizable[index_mapping.actuator_type, index] = (
-            config_dictionary.ideal_actuator_int
+        actuator_parameters_non_optimizable[indices.actuator_type, index] = (
+            constants.ideal_actuator_int
         )
 
         actuator_parameters_non_optimizable[
-            index_mapping.actuator_clockwise_movement, index
+            indices.actuator_clockwise_movement, index
         ] = 0 if not clockwise_axis_movement else 1
 
         actuator_parameters_non_optimizable[
-            index_mapping.actuator_min_motor_position, index
+            indices.actuator_min_motor_position, index
         ] = minimum_motor_position
         actuator_parameters_non_optimizable[
-            index_mapping.actuator_max_motor_position, index
+            indices.actuator_max_motor_position, index
         ] = maximum_motor_position
 
     return actuator_parameters_non_optimizable, actuator_parameters_optimizable

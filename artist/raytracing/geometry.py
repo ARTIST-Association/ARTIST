@@ -4,8 +4,8 @@ from torch import Tensor
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.scene.rays import Rays
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.environment import get_device
 
 
 def reflect(
@@ -92,7 +92,7 @@ def line_plane_intersections(
 
     if target_area_indices is None:
         target_area_indices = torch.zeros(
-            points_at_ray_origins.shape[index_mapping.heliostat_dimension],
+            points_at_ray_origins.shape[indices.heliostat_dimension],
             dtype=torch.int32,
             device=device,
         )
@@ -146,19 +146,15 @@ def line_plane_intersections(
     plane_centers = target_areas.centers[target_area_indices]
 
     target_intersections_e = (
-        intersections[..., index_mapping.e]
-        + (plane_dimensions[:, index_mapping.target_dimensions_width] / 2)[
-            :, None, None
-        ]
-        - plane_centers[:, index_mapping.e][:, None, None]
+        intersections[..., indices.e]
+        + (plane_dimensions[:, indices.target_dimensions_width] / 2)[:, None, None]
+        - plane_centers[:, indices.e][:, None, None]
     )
 
     target_intersections_u = (
-        intersections[..., index_mapping.u]
-        + (plane_dimensions[:, index_mapping.target_dimensions_height] / 2)[
-            :, None, None
-        ]
-        - plane_centers[:, index_mapping.u][:, None, None]
+        intersections[..., indices.u]
+        + (plane_dimensions[:, indices.target_dimensions_height] / 2)[:, None, None]
+        - plane_centers[:, indices.u][:, None, None]
     )
 
     # Scale target intersection coordinates into bitmap space.
@@ -168,28 +164,22 @@ def line_plane_intersections(
     # continuous coordinates map correctly to pixel centers when discretized.
     bitmap_intersections_e = (
         target_intersections_e
-        / plane_dimensions[:, index_mapping.target_dimensions_width, None, None]
-        * (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
+        / plane_dimensions[:, indices.target_dimensions_width, None, None]
+        * (bitmap_resolution[indices.unbatched_bitmap_e] - 1)
     )
     bitmap_intersections_u = (
         target_intersections_u
-        / plane_dimensions[:, index_mapping.target_dimensions_height, None, None]
-        * (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
+        / plane_dimensions[:, indices.target_dimensions_height, None, None]
+        * (bitmap_resolution[indices.unbatched_bitmap_u] - 1)
     )
 
     # Filter out rays that are out of bounds of the target plane dimensions. Previously an infinite plane was considered.
     # Also filter out rays that hit the backside of the target or rays that are parallel to the target.
     valid_mask = (
         (0 <= bitmap_intersections_e)
-        & (
-            bitmap_intersections_e
-            <= bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1
-        )
+        & (bitmap_intersections_e <= bitmap_resolution[indices.unbatched_bitmap_e] - 1)
         & (0 <= bitmap_intersections_u)
-        & (
-            bitmap_intersections_u
-            <= bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1
-        )
+        & (bitmap_intersections_u <= bitmap_resolution[indices.unbatched_bitmap_u] - 1)
         & front_facing_mask
     )
 
@@ -203,7 +193,7 @@ def line_plane_intersections(
     # This means that we look at the backside of the flux images. This corresponds to a flip of left and right,
     # i.e., subtracting the intersections from the total E-resolution to flip left and right.
     bitmap_intersections_e = (
-        bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1
+        bitmap_resolution[indices.unbatched_bitmap_e] - 1
     ) - bitmap_intersections_e
 
     return (
@@ -289,7 +279,7 @@ def line_cylinder_intersections(
 
     if target_area_indices is None:
         target_area_indices = torch.zeros(
-            points_at_ray_origins.shape[index_mapping.heliostat_dimension],
+            points_at_ray_origins.shape[indices.heliostat_dimension],
             dtype=torch.int32,
             device=device,
         )
@@ -317,12 +307,12 @@ def line_cylinder_intersections(
 
     # Cylinder intersection (aligned with z-axis).
     ox, oy = (
-        origins_local[:, :, :, index_mapping.cylinder_local_x],
-        origins_local[:, :, :, index_mapping.cylinder_local_y],
+        origins_local[:, :, :, indices.cylinder_local_x],
+        origins_local[:, :, :, indices.cylinder_local_y],
     )
     dx, dy = (
-        directions_local[:, :, :, index_mapping.cylinder_local_x],
-        directions_local[:, :, :, index_mapping.cylinder_local_y],
+        directions_local[:, :, :, indices.cylinder_local_x],
+        directions_local[:, :, :, indices.cylinder_local_y],
     )
 
     a = dx**2 + dy**2
@@ -350,10 +340,10 @@ def line_cylinder_intersections(
         (directions.shape[0], directions.shape[1], directions.shape[2], 2),
         device=device,
     )
-    distance_candidates[:, :, :, index_mapping.distance_candidate_near] = (
+    distance_candidates[:, :, :, indices.distance_candidate_near] = (
         -b - sqrt_discriminant
     ) / (2 * a)
-    distance_candidates[:, :, :, index_mapping.distance_candidate_far] = (
+    distance_candidates[:, :, :, indices.distance_candidate_far] = (
         -b + sqrt_discriminant
     ) / (2 * a)
 
@@ -385,9 +375,9 @@ def line_cylinder_intersections(
         origins_local + intersection_distances[:, :, :, None] * directions_local
     )
     x, y, z = (
-        intersections[:, :, :, index_mapping.cylinder_local_x],
-        intersections[:, :, :, index_mapping.cylinder_local_y],
-        intersections[:, :, :, index_mapping.cylinder_local_z],
+        intersections[:, :, :, indices.cylinder_local_x],
+        intersections[:, :, :, indices.cylinder_local_y],
+        intersections[:, :, :, indices.cylinder_local_z],
     )
 
     # Cylinder normals (local frame).
@@ -408,8 +398,8 @@ def line_cylinder_intersections(
     # Initially angles are defined 0° towards positive east axis, we want to define 0° as where the normal vector points towards.
     angles = torch.atan2(y, x) - (
         torch.atan2(
-            cylinder_normals[:, index_mapping.cylinder_local_y].view(-1, 1, 1),
-            cylinder_normals[:, index_mapping.cylinder_local_x].view(-1, 1, 1),
+            cylinder_normals[:, indices.cylinder_local_y].view(-1, 1, 1),
+            cylinder_normals[:, indices.cylinder_local_x].view(-1, 1, 1),
         )
         - (opening_angles.view(-1, 1, 1) / 2)
     )
@@ -422,14 +412,12 @@ def line_cylinder_intersections(
     )
 
     bitmap_intersections_u = (
-        z
-        / heights.view(-1, 1, 1)
-        * (bitmap_resolution[index_mapping.unbatched_bitmap_u] - 1)
+        z / heights.view(-1, 1, 1) * (bitmap_resolution[indices.unbatched_bitmap_u] - 1)
     )
     bitmap_intersections_e = (
         angles
         / opening_angles.view(-1, 1, 1)
-        * (bitmap_resolution[index_mapping.unbatched_bitmap_e] - 1)
+        * (bitmap_resolution[indices.unbatched_bitmap_e] - 1)
     )
 
     # Filter out rays that are out of bounds of the target dimensions. Previously, an infinite plane was considered.

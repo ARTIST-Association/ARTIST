@@ -7,7 +7,7 @@ from artist import ARTIST_ROOT
 from artist.io import paint_scenario_parser, stral_scenario_parser
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
 from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import config_dictionary
+from artist.util import constants
 
 
 def test_surface_generator(device: torch.device) -> None:
@@ -83,7 +83,7 @@ def test_surface_generator(device: torch.device) -> None:
         optimizer=optimizer,
         scheduler=scheduler,
         deflectometry_step_size=5000,
-        fit_method=config_dictionary.fit_nurbs_from_normals,
+        fit_method=constants.fit_nurbs_from_normals,
         max_epoch=1,
         device=device,
     )
@@ -106,7 +106,7 @@ def test_surface_generator(device: torch.device) -> None:
         optimizer=optimizer,
         scheduler=scheduler,
         deflectometry_step_size=5000,
-        fit_method=config_dictionary.fit_nurbs_from_normals,
+        fit_method=constants.fit_nurbs_from_normals,
         max_epoch=1,
         device=device,
     )
@@ -119,7 +119,7 @@ def test_surface_generator(device: torch.device) -> None:
         optimizer=optimizer,
         scheduler=scheduler,
         deflectometry_step_size=5000,
-        fit_method=config_dictionary.fit_nurbs_from_points,
+        fit_method=constants.fit_nurbs_from_points,
         max_epoch=1,
         device=device,
     )
