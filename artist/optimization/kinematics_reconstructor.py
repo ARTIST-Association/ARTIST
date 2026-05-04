@@ -3,9 +3,9 @@ import pathlib
 from typing import Any, cast
 
 import torch
+from optimization import loss_functions
 from torch.optim.lr_scheduler import LRScheduler
 
-from artist.core import core_utils
 from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
 from artist.geometry import coordinates
@@ -448,7 +448,7 @@ class KinematicsReconstructor:
                         / (heliostat_group.active_heliostats_mask > 0).sum()
                     )
 
-                    loss_per_heliostat = core_utils.mean_loss_per_heliostat(
+                    loss_per_heliostat = loss_functions.mean_loss_per_heliostat(
                         loss_per_sample=loss_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )

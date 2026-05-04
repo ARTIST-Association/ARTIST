@@ -3,10 +3,10 @@ import pathlib
 from typing import Any, cast
 
 import torch
+from optimization import loss_functions
 from torch.optim.lr_scheduler import LRScheduler
 
 import artist.nurbs.utils
-from artist.core import core_utils
 from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
 from artist.io.calibration_parser import CalibrationDataParser
@@ -436,7 +436,7 @@ class SurfaceReconstructor:
                         ),
                         device=device,
                     )
-                    flux_loss_per_heliostat = core_utils.mean_loss_per_heliostat(
+                    flux_loss_per_heliostat = loss_functions.mean_loss_per_heliostat(
                         loss_per_sample=flux_loss_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )
@@ -454,7 +454,7 @@ class SurfaceReconstructor:
                     flux_constraint_per_sample = torch.clamp(
                         -energy_tolerance - flux_integrals_relative_differences, min=0.0
                     )
-                    flux_constraint_per_heliostat = core_utils.mean_loss_per_heliostat(
+                    flux_constraint_per_heliostat = loss_functions.mean_loss_per_heliostat(
                         loss_per_sample=flux_constraint_per_sample,
                         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
                     )
