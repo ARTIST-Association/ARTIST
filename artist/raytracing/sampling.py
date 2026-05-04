@@ -1,9 +1,10 @@
 from typing import Iterator
 
 import torch
-from scene import LightSource
 from torch.utils.data import Dataset, Sampler
-from util import index_mapping
+
+from artist.scene import LightSource
+from artist.util import index_mapping
 
 
 class DistortionsDataset(Dataset):

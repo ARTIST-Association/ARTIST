@@ -3,7 +3,6 @@ import pathlib
 from typing import Any, cast
 
 import torch
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from torch.optim.lr_scheduler import LRScheduler
 
 import artist.nurbs.utils
@@ -14,6 +13,7 @@ from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegulari
 from artist.field.heliostat_group import HeliostatGroup
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import (
     config_dictionary,

@@ -5,9 +5,9 @@ import pathlib
 import h5py
 import pytest
 import torch
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
 from artist import ARTIST_ROOT
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 
 

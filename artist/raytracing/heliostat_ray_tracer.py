@@ -6,12 +6,12 @@ from torch.utils.data import DataLoader
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
-from raytracing import blocking, geometry
-from raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
-from scenario import Scenario
-from scene import Rays
-from util import index_mapping, utils
-from util.environment_setup import get_device
+from artist.raytracing import blocking, geometry
+from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
+from artist.scenario import Scenario
+from artist.scene import Rays
+from artist.util import index_mapping, utils
+from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat ray tracer."""

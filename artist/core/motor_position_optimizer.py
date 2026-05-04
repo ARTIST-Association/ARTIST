@@ -2,12 +2,12 @@ import logging
 from typing import Any
 
 import torch
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import learning_rate_schedulers
 from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.field.heliostat_group import HeliostatGroup
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import DdpSetup, get_device
