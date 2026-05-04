@@ -4,7 +4,9 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from artist.field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreasPlanar
+from artist.field.solar_tower import SolarTower
+from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
 from artist.geometry import coordinates
 
 inv_sqrt2 = 1.0 / math.sqrt(2)

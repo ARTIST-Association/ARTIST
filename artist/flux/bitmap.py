@@ -2,7 +2,11 @@ from typing import cast
 
 import torch
 
-from artist.field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreasPlanar
+from artist.field.solar_tower import (
+    SolarTower,
+    TowerTargetAreasCylindrical,
+    TowerTargetAreasPlanar,
+)
 from artist.util import constants, indices
 from artist.util.environment import get_device
 

@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
 from artist.raytracing import blocking, geometry
 from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
-from artist.scenario import Scenario
-from artist.scene import Rays
+from artist.scenario.scenario import Scenario
+from artist.scene.rays import Rays
 from artist.util import indices
 from artist.util.environment import get_device
 

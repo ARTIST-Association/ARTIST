@@ -14,7 +14,7 @@ from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
 from artist.optimization.loss_functions import FocalSpotLoss
-from artist.scenario import Scenario
+from artist.scenario.scenario import Scenario
 from artist.util import constants, set_logger_config
 from artist.util.environment import (
     DdpSetup,

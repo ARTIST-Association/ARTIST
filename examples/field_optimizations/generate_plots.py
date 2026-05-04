@@ -8,10 +8,10 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
-from optimization.loss_functions import KLDivergenceLoss
 from scipy.stats import gaussian_kde
 
 from artist.geometry import transforms
+from artist.optimization.loss_functions import KLDivergenceLoss
 from artist.util.environment import get_device
 
 plot_colors = {

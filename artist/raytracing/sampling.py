@@ -3,7 +3,7 @@ from typing import Iterator
 import torch
 from torch.utils.data import Dataset, Sampler
 
-from artist.scene import LightSource
+from artist.scene.light_source import LightSource
 from artist.util import indices
 
 

@@ -20,7 +20,7 @@ from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer
 from artist.optimization.surface_reconstructor import SurfaceReconstructor
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.scenario.scenario import Scenario
 from artist.util import (
     constants,
     indices,
