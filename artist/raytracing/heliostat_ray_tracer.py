@@ -6,11 +6,11 @@ from torch.utils.data import DataLoader
 
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
-from raytracing import blocking
+from raytracing import blocking, geometry
 from raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
 from scenario import Scenario
 from scene import Rays
-from util import index_mapping, raytracing_utils, utils
+from util import index_mapping, utils
 from util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -283,7 +283,7 @@ class HeliostatRayTracer:
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
 
-        self.heliostat_group.preferred_reflection_directions = raytracing_utils.reflect(
+        self.heliostat_group.preferred_reflection_directions = geometry.reflect(
             incident_ray_directions=incident_ray_directions.unsqueeze(
                 index_mapping.number_rays_per_point
             ),
@@ -394,7 +394,7 @@ class HeliostatRayTracer:
                     bitmap_intersections_u[planar_active_mask],
                     intersection_distances_target[planar_active_mask],
                     angle_reduced_intensities[planar_active_mask],
-                ) = raytracing_utils.line_plane_intersections(
+                ) = geometry.line_plane_intersections(
                     rays=rays_planar_targets,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
@@ -415,7 +415,7 @@ class HeliostatRayTracer:
                     bitmap_intersections_u[~planar_active_mask],
                     intersection_distances_target[~planar_active_mask],
                     angle_reduced_intensities[~planar_active_mask],
-                ) = raytracing_utils.line_cylinder_intersections(
+                ) = geometry.line_cylinder_intersections(
                     rays=rays_cylindrical_targets,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch

@@ -4,8 +4,8 @@ import torch
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+from artist.raytracing import geometry
 from artist.scene.rays import Rays
-from artist.util import raytracing_utils
 
 
 @pytest.mark.parametrize(
@@ -73,7 +73,7 @@ def test_reflect_function(
     AssertionError
         If test does not complete as expected.
     """
-    reflection = raytracing_utils.reflect(
+    reflection = geometry.reflect(
         incident_ray_directions=incident_ray_directions.to(device),
         reflection_surface_normals=surface_normals.to(device),
     )
@@ -306,7 +306,7 @@ def test_line_plane_intersection(
         bitmap_intersections_u,
         intersection_distances,
         intensities,
-    ) = raytracing_utils.line_plane_intersections(
+    ) = geometry.line_plane_intersections(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
@@ -437,7 +437,7 @@ def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
             torch.tensor([[[0.0]]]),
             torch.tensor([[[0.0]]]),
         ),
-        # Single ray outside of opening angle.
+        # Single ray outside opening angle.
         (
             (torch.tensor([[[[-1.0, 0.0, 0.0, 0.0]]]]), torch.tensor([[[1.0]]])),
             "target_area_2_cylindrical",
@@ -518,7 +518,7 @@ def test_line_cylinder_intersection(
         bitmap_intersections_u,
         intersection_distances,
         intensities,
-    ) = raytracing_utils.line_cylinder_intersections(
+    ) = geometry.line_cylinder_intersections(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
