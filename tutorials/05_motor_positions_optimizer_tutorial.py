@@ -4,13 +4,14 @@ import pathlib
 
 import h5py
 import torch
+from flux import bitmap
 from matplotlib import pyplot as plt
 from optimization.loss_functions import KLDivergenceLoss
 from optimization.motor_position_optimizer import MotorPositionsOptimizer
 from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, set_logger_config, utils
+from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -216,13 +217,13 @@ with setup_distributed_environment(
     # )
     # loss_definition = FocalSpotLoss(scenario=scenario)
     # For an optimization using a distribution as target use this loss function definition:
-    e_trapezoid = utils.trapezoid_distribution(
+    e_trapezoid = bitmap.trapezoid_distribution(
         total_width=bitmap_resolution[index_mapping.unbatched_bitmap_e],
         slope_width=30,
         plateau_width=110,
         device=device,
     )
-    u_trapezoid = utils.trapezoid_distribution(
+    u_trapezoid = bitmap.trapezoid_distribution(
         total_width=bitmap_resolution[index_mapping.unbatched_bitmap_u],
         slope_width=30,
         plateau_width=110,

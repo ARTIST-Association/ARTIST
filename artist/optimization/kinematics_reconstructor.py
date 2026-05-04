@@ -3,6 +3,7 @@ import pathlib
 from typing import Any, cast
 
 import torch
+from flux import bitmap
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import core_utils
@@ -13,7 +14,7 @@ from artist.optimization import training
 from artist.optimization.loss_functions import Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, utils
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
@@ -253,7 +254,7 @@ class KinematicsReconstructor:
 
             if active_heliostats_mask.sum() > 0:
                 # Calculate focal spot from measured flux.
-                focal_spots_bitmap_coordinates = utils.get_center_of_mass(
+                focal_spots_bitmap_coordinates = bitmap.get_center_of_mass(
                     bitmaps=flux_measured, device=device
                 )
                 focal_spots_measured = (

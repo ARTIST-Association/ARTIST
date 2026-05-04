@@ -1,10 +1,11 @@
 from typing import Any
 
 import torch
+from flux import bitmap
 
 from artist.geometry import coordinates
 from artist.scenario.scenario import Scenario
-from artist.util import index_mapping, utils
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -197,7 +198,7 @@ class FocalSpotLoss(Loss):
 
         target_area_indices = kwargs["target_area_indices"]
 
-        focal_spots_bitmap = utils.get_center_of_mass(
+        focal_spots_bitmap = bitmap.get_center_of_mass(
             bitmaps=prediction,
             device=device,
         )

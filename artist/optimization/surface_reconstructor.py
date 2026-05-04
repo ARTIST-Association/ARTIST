@@ -3,6 +3,7 @@ import pathlib
 from typing import Any, cast
 
 import torch
+from flux import bitmap
 from torch.optim.lr_scheduler import LRScheduler
 
 import artist.nurbs.utils
@@ -429,7 +430,7 @@ class SurfaceReconstructor:
 
                     # Crop predictions around center before comparing to measurements.
                     cropped_flux_distributions = (
-                        artist.util.utils.crop_flux_distributions_around_center(
+                        bitmap.crop_flux_distributions_around_center(
                             flux_distributions=flux_distributions,
                             solar_tower=self.scenario.solar_tower,
                             target_area_indices=target_area_indices,

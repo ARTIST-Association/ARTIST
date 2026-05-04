@@ -6,6 +6,7 @@ import pathlib
 import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
+from flux import bitmap
 from matplotlib import pyplot as plt
 from optimization.kinematics_reconstructor import KinematicsReconstructor
 from optimization.loss_functions import FocalSpotLoss
@@ -15,7 +16,7 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config, utils
+from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
@@ -136,13 +137,13 @@ def create_plots(
         zip(fluxes_before, fluxes_after, fluxes_measured)
     ):
         center_measured = (
-            utils.get_center_of_mass(flux_measured, device=device).cpu().detach()
+            bitmap.get_center_of_mass(flux_measured, device=device).cpu().detach()
         )
         center_before = (
-            utils.get_center_of_mass(flux_before, device=device).cpu().detach()
+            bitmap.get_center_of_mass(flux_before, device=device).cpu().detach()
         )
         center_after = (
-            utils.get_center_of_mass(flux_after, device=device).cpu().detach()
+            bitmap.get_center_of_mass(flux_after, device=device).cpu().detach()
         )
 
         for i in range(len(flux_before)):

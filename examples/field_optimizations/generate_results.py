@@ -10,6 +10,7 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
+from flux import bitmap
 from optimization.kinematics_reconstructor import KinematicsReconstructor
 from optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from optimization.motor_position_optimizer import MotorPositionsOptimizer
@@ -26,7 +27,6 @@ from artist.util import (
     runtime_log,
     set_logger_config,
     track_runtime,
-    utils,
 )
 from artist.util.environment_setup import (
     DdpSetup,
@@ -136,13 +136,13 @@ def create_distributions(
         results_dict["measured_flux"] = measured_flux
 
     if "homogeneous_distribution" not in results_dict.keys():
-        e_trapezoid = utils.trapezoid_distribution(
+        e_trapezoid = bitmap.trapezoid_distribution(
             total_width=resolution[index_mapping.unbatched_bitmap_e],
             slope_width=30,
             plateau_width=120,
             device=device,
         )
-        u_trapezoid = utils.trapezoid_distribution(
+        u_trapezoid = bitmap.trapezoid_distribution(
             total_width=resolution[index_mapping.unbatched_bitmap_u],
             slope_width=30,
             plateau_width=166,
@@ -566,7 +566,7 @@ def surface_evaluation(
                 target_area_indices=target_area_indices.detach(),
                 device=device,
             )
-            cropped_flux_distributions = utils.crop_flux_distributions_around_center(
+            cropped_flux_distributions = bitmap.crop_flux_distributions_around_center(
                 flux_distributions=bitmaps_per_heliostat.detach(),
                 solar_tower=scenario.solar_tower,
                 target_area_indices=target_area_indices.detach(),
