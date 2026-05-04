@@ -1,12 +1,16 @@
 import logging
 import pathlib
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import h5py
 import torch
 from typing_extensions import Self
 
-from artist.field.heliostat_field import HeliostatField
+if TYPE_CHECKING:
+    from artist.field.heliostat_field import (
+        HeliostatField,
+    )
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.solar_tower import SolarTower
 from artist.io import h5_scenario_parser
@@ -51,7 +55,7 @@ class Scenario:
         power_plant_position: torch.Tensor,
         solar_tower: SolarTower,
         light_sources: LightSourceArray,
-        heliostat_field: HeliostatField,
+        heliostat_field: "HeliostatField",
     ) -> None:
         """
         Initialize the scenario.
@@ -131,6 +135,8 @@ class Scenario:
         Scenario
             The ``ARTIST`` scenario loaded from the HDF5 file.
         """
+        from artist.field.heliostat_field import HeliostatField
+
         device = get_device(device=device)
 
         rank = (
