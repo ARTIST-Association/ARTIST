@@ -6,7 +6,6 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 import artist.nurbs.utils
-import artist.util.utils
 from artist.core import core_utils
 from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap

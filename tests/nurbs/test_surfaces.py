@@ -1,7 +1,6 @@
 import torch
 
 import artist.nurbs.utils
-import artist.util.utils
 from artist.geometry import coordinates, transforms
 from artist.nurbs.surfaces import NURBSSurfaces
 

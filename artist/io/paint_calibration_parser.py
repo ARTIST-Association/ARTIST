@@ -11,7 +11,6 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
-from artist.util import utils
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -286,14 +285,14 @@ class PaintCalibrationDataParser(CalibrationDataParser):
                 motor_positions[index] = torch.tensor(motor_pos, device=device)
                 index += 1
 
-        focal_spots_enu = utils.convert_wgs84_coordinates_to_local_enu(
+        focal_spots_enu = coordinates.convert_wgs84_coordinates_to_local_enu(
             focal_spots_global, power_plant_position, device=device
         )
         focal_spots = coordinates.convert_3d_points_to_4d_format(
             focal_spots_enu, device=device
         )
 
-        light_source_positions_enu = utils.azimuth_elevation_to_enu(
+        light_source_positions_enu = coordinates.azimuth_elevation_to_enu(
             azimuths, elevations, degree=True, device=device
         )
         light_source_positions = coordinates.convert_3d_points_to_4d_format(

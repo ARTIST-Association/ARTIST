@@ -3,7 +3,6 @@ import logging
 import torch
 
 import artist.nurbs.utils
-import artist.util.utils
 from artist.geometry import coordinates
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig

@@ -29,7 +29,7 @@ from artist.scenario.configuration_classes import (
     TargetAreaPlanarListConfig,
 )
 from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import config_dictionary, index_mapping, utils
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ def extract_paint_tower_measurements(
                 device=device,
             )
 
-            corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
+            corner_points_enu = coordinates.convert_wgs84_coordinates_to_local_enu(
                 target_area_corner_points_wgs84, power_plant_position, device=device
             )
 
@@ -119,7 +119,7 @@ def extract_paint_tower_measurements(
                 dtype=torch.float64,
                 device=device,
             )
-            center_enu = utils.convert_wgs84_coordinates_to_local_enu(
+            center_enu = coordinates.convert_wgs84_coordinates_to_local_enu(
                 center_lat_lon, power_plant_position, device=device
             )
             center = coordinates.convert_3d_points_to_4d_format(
@@ -169,7 +169,7 @@ def extract_paint_tower_measurements(
                 device=device,
             )
 
-            corner_points_enu = utils.convert_wgs84_coordinates_to_local_enu(
+            corner_points_enu = coordinates.convert_wgs84_coordinates_to_local_enu(
                 target_area_corner_points_wgs84, power_plant_position, device=device
             )
 
@@ -301,7 +301,7 @@ def extract_paint_heliostat_properties(
 
     log.info("Beginning extraction of heliostat properties data from PAINT file.")
 
-    heliostat_position_3d = utils.convert_wgs84_coordinates_to_local_enu(
+    heliostat_position_3d = coordinates.convert_wgs84_coordinates_to_local_enu(
         torch.tensor(
             [heliostat_dict[paint_mappings.HELIOSTAT_POSITION_KEY]],
             dtype=torch.float64,
