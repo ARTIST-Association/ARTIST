@@ -6,15 +6,15 @@ import pathlib
 import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
-from flux import bitmap
 from matplotlib import pyplot as plt
-from optimization.kinematics_reconstructor import KinematicsReconstructor
-from optimization.loss_functions import FocalSpotLoss
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
 from artist.field.heliostat_group import HeliostatGroup
+from artist.flux import bitmap
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
+from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
+from artist.optimization.loss_functions import FocalSpotLoss
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment

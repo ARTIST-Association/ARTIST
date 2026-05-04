@@ -2,8 +2,13 @@ from unittest.mock import MagicMock
 
 import pytest
 import torch
-from field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreasPlanar
-from flux import bitmap
+
+from artist.field.solar_tower import (
+    SolarTower,
+    TowerTargetAreasCylindrical,
+    TowerTargetAreasPlanar,
+)
+from artist.flux import bitmap
 
 
 @pytest.mark.parametrize(

@@ -4,12 +4,12 @@ import pathlib
 
 import h5py
 import torch
-from flux import bitmap
 from matplotlib import pyplot as plt
-from optimization.loss_functions import KLDivergenceLoss
-from optimization.motor_position_optimizer import MotorPositionsOptimizer
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
+from artist.flux import bitmap
+from artist.optimization.loss_functions import KLDivergenceLoss
+from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment

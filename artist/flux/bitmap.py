@@ -1,9 +1,10 @@
 from typing import cast
 
 import torch
-from field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreasPlanar
-from util import config_dictionary, index_mapping
-from util.environment_setup import get_device
+
+from artist.field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreasPlanar
+from artist.util import config_dictionary, index_mapping
+from artist.util.environment_setup import get_device
 
 
 def get_center_of_mass(

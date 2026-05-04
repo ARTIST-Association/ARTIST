@@ -5,9 +5,9 @@ import pathlib
 import h5py
 import torch
 from matplotlib import pyplot as plt
-from raytracing.heliostat_ray_tracer import HeliostatRayTracer
 
 from artist.field.heliostat_group import HeliostatGroup
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import config_dictionary, index_mapping, set_logger_config
 from artist.util.environment_setup import get_device, setup_distributed_environment

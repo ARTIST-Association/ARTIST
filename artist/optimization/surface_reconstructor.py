@@ -3,13 +3,13 @@ import pathlib
 from typing import Any, cast
 
 import torch
-from flux import bitmap
 from torch.optim.lr_scheduler import LRScheduler
 
 import artist.nurbs.utils
 import artist.util.utils
 from artist.core import core_utils
 from artist.field.heliostat_group import HeliostatGroup
+from artist.flux import bitmap
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.optimization import training

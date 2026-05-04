@@ -1,8 +1,8 @@
 from typing import Any
 
 import torch
-from flux import bitmap
 
+from artist.flux import bitmap
 from artist.geometry import coordinates
 from artist.scenario.scenario import Scenario
 from artist.util import index_mapping
