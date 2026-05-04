@@ -8,6 +8,7 @@ import torch
 
 import artist.util.index_mapping
 from artist.field.heliostat_group import HeliostatGroup
+from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import utils
@@ -288,14 +289,14 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         focal_spots_enu = utils.convert_wgs84_coordinates_to_local_enu(
             focal_spots_global, power_plant_position, device=device
         )
-        focal_spots = utils.convert_3d_points_to_4d_format(
+        focal_spots = coordinates.convert_3d_points_to_4d_format(
             focal_spots_enu, device=device
         )
 
         light_source_positions_enu = utils.azimuth_elevation_to_enu(
             azimuths, elevations, degree=True, device=device
         )
-        light_source_positions = utils.convert_3d_points_to_4d_format(
+        light_source_positions = coordinates.convert_3d_points_to_4d_format(
             light_source_positions_enu, device=device
         )
         incident_ray_directions = (

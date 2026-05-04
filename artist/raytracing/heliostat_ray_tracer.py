@@ -4,13 +4,15 @@ from typing import TYPE_CHECKING
 import torch
 from torch.utils.data import DataLoader
 
+from artist.geometry import transforms
+
 if TYPE_CHECKING:
     from artist.field.heliostat_group import HeliostatGroup
 from artist.raytracing import blocking, geometry
 from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
 from artist.scenario import Scenario
 from artist.scene import Rays
-from artist.util import index_mapping, utils
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -541,7 +543,7 @@ class HeliostatRayTracer:
         """
         device = get_device(device=device)
 
-        rotations = utils.rotate_distortions(
+        rotations = transforms.rotate_distortions(
             u=distortion_u, e=distortion_e, device=device
         )
 

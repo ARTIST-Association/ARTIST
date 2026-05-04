@@ -6,12 +6,12 @@ from typing import Any
 import numpy as np
 import torch
 import yaml
+from geometry import transforms
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 from optimization.loss_functions import KLDivergenceLoss
 from scipy.stats import gaussian_kde
 
-from artist.util import utils
 from artist.util.environment_setup import get_device
 
 plot_colors = {
@@ -136,7 +136,7 @@ def plot_surface_reconstruction_flux(
         deflectometry_original = torch.cat(
             (deflectometry_original, ones[..., 0, None]), dim=-1
         )
-        deflectometry_uncanted_original = utils.perform_canting(
+        deflectometry_uncanted_original = transforms.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=deflectometry_original,
             inverse=True,
@@ -189,13 +189,13 @@ def plot_surface_reconstruction_flux(
         cbar4.set_label("Angle (rad)")
 
         # Process reconstructed data.
-        points_uncanted = utils.perform_canting(
+        points_uncanted = transforms.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=heliostat_data["surface_points"].cpu().detach().reshape(2, 4, -1, 4),
             inverse=True,
             device=torch.device("cpu"),
         )
-        normals_uncanted = utils.perform_canting(
+        normals_uncanted = transforms.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=heliostat_data["surface_normals"].cpu().detach().reshape(2, 4, -1, 4),
             inverse=True,

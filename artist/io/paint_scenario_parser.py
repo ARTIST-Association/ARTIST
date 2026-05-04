@@ -8,6 +8,7 @@ import h5py
 import paint.util.paint_mappings as paint_mappings
 import torch
 
+from artist.geometry import coordinates
 from artist.scenario.configuration_classes import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -121,9 +122,11 @@ def extract_paint_tower_measurements(
             center_enu = utils.convert_wgs84_coordinates_to_local_enu(
                 center_lat_lon, power_plant_position, device=device
             )
-            center = utils.convert_3d_points_to_4d_format(center_enu[0], device=device)
+            center = coordinates.convert_3d_points_to_4d_format(
+                center_enu[0], device=device
+            )
 
-            normal_vector = utils.convert_3d_directions_to_4d_format(
+            normal_vector = coordinates.convert_3d_directions_to_4d_format(
                 torch.tensor(
                     [tower_dict[target_area][paint_mappings.TOWER_NORMAL_VECTOR_KEY]],
                     device=device,
@@ -210,10 +213,16 @@ def extract_paint_tower_measurements(
             tower_area_cylindrical_config = TargetAreaCylindricalConfig(
                 target_area_key=target_area,
                 radius=radius,
-                center=utils.convert_3d_points_to_4d_format(center, device=device),
+                center=coordinates.convert_3d_points_to_4d_format(
+                    center, device=device
+                ),
                 height=height,
-                axis=utils.convert_3d_directions_to_4d_format(axis, device=device),
-                normal=utils.convert_3d_directions_to_4d_format(normal, device=device),
+                axis=coordinates.convert_3d_directions_to_4d_format(
+                    axis, device=device
+                ),
+                normal=coordinates.convert_3d_directions_to_4d_format(
+                    normal, device=device
+                ),
                 opening_angle=opening_angle,
             )
 
@@ -301,7 +310,7 @@ def extract_paint_heliostat_properties(
         power_plant_position,
         device=device,
     )
-    heliostat_position = utils.convert_3d_points_to_4d_format(
+    heliostat_position = coordinates.convert_3d_points_to_4d_format(
         heliostat_position_3d[0], device=device
     )
 
@@ -333,10 +342,10 @@ def extract_paint_heliostat_properties(
         )
 
     # Convert to 4D format.
-    facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
+    facet_translation_vectors = coordinates.convert_3d_directions_to_4d_format(
         facet_translation_vectors, device=device
     )
-    canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
+    canting = coordinates.convert_3d_directions_to_4d_format(canting, device=device)
 
     kinematics_deviations = KinematicsDeviations(
         first_joint_translation_e=torch.tensor(
@@ -400,7 +409,7 @@ def extract_paint_heliostat_properties(
     )
 
     # Include the initial orientation for the kinematics.
-    initial_orientation = utils.convert_3d_directions_to_4d_format(
+    initial_orientation = coordinates.convert_3d_directions_to_4d_format(
         torch.tensor(
             heliostat_dict[paint_mappings.INITIAL_ORIENTATION_KEY],
             device=device,

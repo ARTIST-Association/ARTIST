@@ -2,6 +2,7 @@ from typing import Any
 
 import torch
 
+from artist.geometry import coordinates
 from artist.scenario.scenario import Scenario
 from artist.util import index_mapping, utils
 from artist.util.environment_setup import get_device
@@ -201,7 +202,7 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        focal_spot_coordinates = utils.bitmap_coordinates_to_target_coordinates(
+        focal_spot_coordinates = coordinates.bitmap_coordinates_to_target_coordinates(
             bitmap_coordinates=focal_spots_bitmap,
             bitmap_resolution=torch.tensor(
                 [

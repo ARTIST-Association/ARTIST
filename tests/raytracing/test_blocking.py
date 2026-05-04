@@ -5,10 +5,10 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
+from artist.geometry import transforms
 from artist.raytracing import blocking
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import utils
 
 
 @pytest.fixture
@@ -58,8 +58,8 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
         The surface.
     """
     device = surface_at_origin.device
-    rotation_e = utils.rotate_e(e=torch.tensor([0.5]), device=device)
-    rotation_n = utils.rotate_n(n=torch.tensor([0.2]), device=device)
+    rotation_e = transforms.rotate_e(e=torch.tensor([0.5]), device=device)
+    rotation_n = transforms.rotate_n(n=torch.tensor([0.2]), device=device)
 
     translation = torch.tensor(
         [
@@ -232,8 +232,8 @@ def surface_for_index_test_rotated_and_translated(
         The surface.
     """
     device = surface_for_index_test.device
-    rotation_e = utils.rotate_e(e=torch.tensor([0.5]), device=device)
-    rotation_n = utils.rotate_n(n=torch.tensor([0.2]), device=device)
+    rotation_e = transforms.rotate_e(e=torch.tensor([0.5]), device=device)
+    rotation_n = transforms.rotate_n(n=torch.tensor([0.2]), device=device)
 
     translation = torch.tensor(
         [

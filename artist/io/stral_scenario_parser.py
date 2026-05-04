@@ -4,7 +4,8 @@ import struct
 
 import torch
 
-from artist.util import index_mapping, utils
+from artist.geometry import coordinates
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -120,10 +121,10 @@ def extract_stral_deflectometry_data(
             surface_normals_with_facets_list.append(single_facet_surface_normals)
 
         # Convert to 4D format.
-        facet_translation_vectors = utils.convert_3d_directions_to_4d_format(
+        facet_translation_vectors = coordinates.convert_3d_directions_to_4d_format(
             facet_translation_vectors, device=device
         )
-        canting = utils.convert_3d_directions_to_4d_format(canting, device=device)
+        canting = coordinates.convert_3d_directions_to_4d_format(canting, device=device)
 
     log.info("Loading STRAL data complete.")
 

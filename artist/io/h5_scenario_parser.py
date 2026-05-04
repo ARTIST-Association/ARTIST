@@ -3,8 +3,9 @@ import logging
 import h5py
 import torch
 
+from artist.geometry import rotations
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
-from artist.util import config_dictionary, index_mapping, utils
+from artist.util import config_dictionary, index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -650,7 +651,7 @@ def linear_actuators(
     #   surfaces and the relative turning axis of the first actuator.
     surface_orientation = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
     artist_standard_orientation = torch.tensor([0.0, -1.0, 0.0, 0.0], device=device)
-    axis, angle = utils.rotation_angle_and_axis(
+    axis, angle = rotations.rotation_angle_and_axis(
         from_orientation=artist_standard_orientation,
         to_orientation=surface_orientation,
         device=device,

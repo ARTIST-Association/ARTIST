@@ -7,6 +7,7 @@ from torch.optim.lr_scheduler import LRScheduler
 
 from artist.core import core_utils
 from artist.field.heliostat_group import HeliostatGroup
+from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.optimization import training
 from artist.optimization.loss_functions import Loss
@@ -255,12 +256,14 @@ class KinematicsReconstructor:
                 focal_spots_bitmap_coordinates = utils.get_center_of_mass(
                     bitmaps=flux_measured, device=device
                 )
-                focal_spots_measured = utils.bitmap_coordinates_to_target_coordinates(
-                    bitmap_coordinates=focal_spots_bitmap_coordinates,
-                    bitmap_resolution=self.bitmap_resolution,
-                    solar_tower=self.scenario.solar_tower,
-                    target_area_indices=target_area_indices,
-                    device=device,
+                focal_spots_measured = (
+                    coordinates.bitmap_coordinates_to_target_coordinates(
+                        bitmap_coordinates=focal_spots_bitmap_coordinates,
+                        bitmap_resolution=self.bitmap_resolution,
+                        solar_tower=self.scenario.solar_tower,
+                        target_area_indices=target_area_indices,
+                        device=device,
+                    )
                 )
 
                 # Reparametrize optimizable actuator parameters.

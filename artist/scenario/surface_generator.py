@@ -4,6 +4,7 @@ import torch
 
 import artist.nurbs.utils
 import artist.util.utils
+from artist.geometry import coordinates
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
 from artist.util import config_dictionary, index_mapping
@@ -174,7 +175,7 @@ class SurfaceGenerator:
         control_points[:, :, :, :, index_mapping.u] = 0
 
         # Since NURBS are only defined between (0,1), we need to normalize the evaluation points and remove the boundary points.
-        evaluation_points[:, : index_mapping.u] = artist.util.utils.normalize_points(
+        evaluation_points[:, : index_mapping.u] = coordinates.normalize_points(
             evaluation_points[:, : index_mapping.u]
         )
         evaluation_points = evaluation_points.unsqueeze(0).unsqueeze(0)
@@ -327,13 +328,11 @@ class SurfaceGenerator:
             )
 
         # Convert to 4D format.
-        surface_points_with_facets = artist.util.utils.convert_3d_points_to_4d_format(
+        surface_points_with_facets = coordinates.convert_3d_points_to_4d_format(
             surface_points_with_facets, device=device
         )
-        surface_normals_with_facets = (
-            artist.util.utils.convert_3d_directions_to_4d_format(
-                surface_normals_with_facets, device=device
-            )
+        surface_normals_with_facets = coordinates.convert_3d_directions_to_4d_format(
+            surface_normals_with_facets, device=device
         )
 
         # Generate NURBS surface from multiple facets.

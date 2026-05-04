@@ -1,6 +1,7 @@
 import torch
 
-from artist.util import index_mapping, utils
+from artist.geometry import transforms
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
 
 
@@ -685,7 +686,7 @@ class NURBSSurfaces(torch.nn.Module):
         )
 
         if canting is not None:
-            canted_surface_points = utils.perform_canting(
+            canted_surface_points = transforms.perform_canting(
                 canting_angles=canting, data=surface_points, device=device
             )
             transformed_surface_points = (
@@ -694,7 +695,7 @@ class NURBSSurfaces(torch.nn.Module):
                     self.number_of_surfaces, self.number_of_facets_per_surface, 1, 4
                 )
             )
-            transformed_surface_normals = utils.perform_canting(
+            transformed_surface_normals = transforms.perform_canting(
                 canting_angles=canting, data=surface_normals, device=device
             )
             return transformed_surface_points, transformed_surface_normals

@@ -2,7 +2,8 @@ import torch
 
 import artist.util.index_mapping
 from artist.field.kinematics import Kinematics
-from artist.util import config_dictionary, index_mapping, type_mappings, utils
+from artist.geometry import rotations, transforms
+from artist.util import config_dictionary, index_mapping, type_mappings
 from artist.util.environment_setup import get_device
 
 
@@ -193,7 +194,7 @@ class RigidBody(Kinematics):
         initial_orientations = torch.eye(4, device=device).unsqueeze(0)
 
         # Account for positions.
-        initial_orientations = initial_orientations @ utils.translate_enu(
+        initial_orientations = initial_orientations @ transforms.translate_enu(
             e=self.active_heliostat_positions[:, index_mapping.e],
             n=self.active_heliostat_positions[:, index_mapping.n],
             u=self.active_heliostat_positions[:, index_mapping.u],
@@ -211,19 +212,19 @@ class RigidBody(Kinematics):
         )
 
         joint_rotations[:, index_mapping.first_joint_index] = (
-            utils.rotate_n(
+            transforms.rotate_n(
                 n=self.active_rotation_deviation_parameters[
                     :, index_mapping.first_joint_tilt_n
                 ],
                 device=device,
             )
-            @ utils.rotate_u(
+            @ transforms.rotate_u(
                 u=self.active_rotation_deviation_parameters[
                     :, index_mapping.first_joint_tilt_u
                 ],
                 device=device,
             )
-            @ utils.translate_enu(
+            @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
                     :, index_mapping.first_joint_translation_e
                 ],
@@ -235,24 +236,24 @@ class RigidBody(Kinematics):
                 ],
                 device=device,
             )
-            @ utils.rotate_e(
+            @ transforms.rotate_e(
                 e=joint_angles[:, index_mapping.joint_angles_e], device=device
             )
         )
         joint_rotations[:, index_mapping.second_joint_index] = (
-            utils.rotate_e(
+            transforms.rotate_e(
                 e=self.active_rotation_deviation_parameters[
                     :, index_mapping.second_joint_tilt_e
                 ],
                 device=device,
             )
-            @ utils.rotate_n(
+            @ transforms.rotate_n(
                 n=self.active_rotation_deviation_parameters[
                     :, index_mapping.second_joint_tilt_n
                 ],
                 device=device,
             )
-            @ utils.translate_enu(
+            @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
                     :, index_mapping.second_joint_translation_e
                 ],
@@ -264,7 +265,7 @@ class RigidBody(Kinematics):
                 ],
                 device=device,
             )
-            @ utils.rotate_u(
+            @ transforms.rotate_u(
                 u=joint_angles[:, index_mapping.joint_angles_u], device=device
             )
         )
@@ -273,7 +274,7 @@ class RigidBody(Kinematics):
             initial_orientations
             @ joint_rotations[:, index_mapping.first_joint_index]
             @ joint_rotations[:, index_mapping.second_joint_index]
-            @ utils.translate_enu(
+            @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
                     :, index_mapping.concentrator_translation_e
                 ],
@@ -317,16 +318,16 @@ class RigidBody(Kinematics):
         sampled_surface_model_orientation = torch.tensor(
             [[0.0, 0.0, 1.0, 0.0]], device=device
         ).expand(self.number_of_active_heliostats, 4)
-        east_angles, north_angles, up_angles = utils.decompose_rotations(
+        east_angles, north_angles, up_angles = rotations.decompose_rotations(
             initial_vector=sampled_surface_model_orientation,
             target_vector=self.artist_standard_orientation,
         )
 
         orientations_with_initial_orientation_offsets = (
             orientations
-            @ utils.rotate_e(e=east_angles, device=device)
-            @ utils.rotate_n(n=north_angles, device=device)
-            @ utils.rotate_u(u=up_angles, device=device)
+            @ transforms.rotate_e(e=east_angles, device=device)
+            @ transforms.rotate_n(n=north_angles, device=device)
+            @ transforms.rotate_u(u=up_angles, device=device)
         )
 
         return orientations_with_initial_orientation_offsets
