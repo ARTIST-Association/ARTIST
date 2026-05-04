@@ -17,6 +17,10 @@ from artist.scenario.configuration_classes import (
     PrototypeConfig,
     SurfaceConfig,
     SurfacePrototypeConfig,
+    TargetAreaCylindricalConfig,
+    TargetAreaCylindricalListConfig,
+    TargetAreaPlanarConfig,
+    TargetAreaPlanarListConfig,
 )
 from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
 from artist.scenario.scenario import Scenario
@@ -24,8 +28,10 @@ from artist.scenario.surface_generator import SurfaceGenerator
 
 __all__ = [
     "PowerPlantConfig",
-    "TargetAreaConfig",
-    "TargetAreaListConfig",
+    "TargetAreaPlanarConfig",
+    "TargetAreaPlanarListConfig",
+    "TargetAreaCylindricalConfig",
+    "TargetAreaCylindricalListConfig",
     "LightSourceConfig",
     "LightSourceListConfig",
     "FacetConfig",
