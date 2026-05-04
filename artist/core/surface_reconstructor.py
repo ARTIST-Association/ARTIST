@@ -10,7 +10,7 @@ from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.field.heliostat_group import HeliostatGroup
-from artist.io.calibration_data_parser import CalibrationDataParser
+from artist.io.calibration_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import (
     config_dictionary,

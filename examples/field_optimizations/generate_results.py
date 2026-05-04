@@ -17,7 +17,7 @@ from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
 from artist.core.motor_position_optimizer import MotorPositionsOptimizer
 from artist.core.surface_reconstructor import SurfaceReconstructor
 from artist.field.heliostat_group import HeliostatGroup
-from artist.io.calibration_data_parser import CalibrationDataParser
+from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.scenario import Scenario
 from artist.util import (

@@ -8,7 +8,7 @@ import torch
 
 import artist.util.index_mapping
 from artist.field.heliostat_group import HeliostatGroup
-from artist.io.calibration_data_parser import CalibrationDataParser
+from artist.io.calibration_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
 from artist.util import utils
 from artist.util.environment_setup import get_device
