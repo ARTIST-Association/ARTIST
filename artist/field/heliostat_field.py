@@ -8,17 +8,18 @@ import h5py
 import torch
 from typing_extensions import Self
 
+import artist.nurbs.utils
 import artist.util.index_mapping
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
 from artist.io import h5_scenario_parser
-from artist.util.nurbs import NURBSSurfaces
+from artist.nurbs.surfaces import NURBSSurfaces
 
 if TYPE_CHECKING:
     from artist.scenario.configuration_classes import (
         SurfaceConfig,
     )
-from artist.util import config_dictionary, index_mapping, type_mappings, utils
+from artist.util import config_dictionary, index_mapping, type_mappings
 from artist.util.environment_setup import get_device
 
 log = logging.getLogger(__name__)
@@ -319,7 +320,7 @@ class HeliostatField:
                 ].translation_vector
 
             if change_number_of_control_points_per_facet is not None:
-                control_points = utils.create_planar_nurbs_control_points(
+                control_points = artist.nurbs.utils.create_planar_nurbs_control_points(
                     number_of_control_points=change_number_of_control_points_per_facet,
                     canting=canting,
                     device=device,
@@ -481,7 +482,7 @@ class HeliostatField:
                 )
             )
             evaluation_points = (
-                utils.create_nurbs_evaluation_grid(
+                artist.nurbs.utils.create_nurbs_evaluation_grid(
                     number_of_evaluation_points=torch.tensor(
                         [
                             number_of_surface_points_per_facet,

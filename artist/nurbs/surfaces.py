@@ -70,7 +70,7 @@ class NURBSSurfaces(torch.nn.Module):
             The control points.
             Tensor of shape [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
         uniform : bool
-            Indicates wether the NURBS are uniform or not (default is True (uniform)).
+            Indicates whether the NURBS are uniform or not (default is True (uniform)).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate

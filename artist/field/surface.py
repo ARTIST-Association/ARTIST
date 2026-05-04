@@ -1,9 +1,10 @@
 import torch
 
+import artist.nurbs.utils
+from artist.nurbs.surfaces import NURBSSurfaces
 from artist.scenario.configuration_classes import SurfaceConfig
-from artist.util import index_mapping, utils
+from artist.util import index_mapping
 from artist.util.environment_setup import get_device
-from artist.util.nurbs import NURBSSurfaces
 
 
 class Surface:
@@ -90,7 +91,7 @@ class Surface:
         device = get_device(device=device)
 
         evaluation_points = (
-            utils.create_nurbs_evaluation_grid(
+            artist.nurbs.utils.create_nurbs_evaluation_grid(
                 number_of_evaluation_points=number_of_points_per_facet, device=device
             )
             .unsqueeze(index_mapping.heliostat_dimension)

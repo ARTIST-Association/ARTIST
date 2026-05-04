@@ -5,20 +5,21 @@ from typing import Any, cast
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
+import artist.nurbs.utils
+import artist.util.utils
 from artist.core import core_utils, learning_rate_schedulers
 from artist.core.heliostat_ray_tracer import HeliostatRayTracer
 from artist.core.loss_functions import Loss
 from artist.core.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.field.heliostat_group import HeliostatGroup
 from artist.io.calibration_parser import CalibrationDataParser
+from artist.nurbs.surfaces import NURBSSurfaces
 from artist.scenario.scenario import Scenario
 from artist.util import (
     config_dictionary,
     index_mapping,
-    utils,
 )
 from artist.util.environment_setup import DdpSetup, get_device
-from artist.util.nurbs import NURBSSurfaces
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""
@@ -235,7 +236,7 @@ class SurfaceReconstructor:
             if active_heliostats_mask.sum() > 0:
                 # Create NURBS evaluation points: Build a UV grid for NURBS sampling and expand to required shape.
                 evaluation_points = (
-                    utils.create_nurbs_evaluation_grid(
+                    artist.nurbs.utils.create_nurbs_evaluation_grid(
                         number_of_evaluation_points=self.number_of_surface_points,
                         device=device,
                     )
@@ -424,7 +425,7 @@ class SurfaceReconstructor:
 
                     # Crop predictions around center before comparing to measurements.
                     cropped_flux_distributions = (
-                        utils.crop_flux_distributions_around_center(
+                        artist.util.utils.crop_flux_distributions_around_center(
                             flux_distributions=flux_distributions,
                             solar_tower=self.scenario.solar_tower,
                             target_area_indices=target_area_indices,

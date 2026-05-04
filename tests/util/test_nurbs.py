@@ -1,7 +1,8 @@
 import torch
 
-from artist.util import utils
-from artist.util.nurbs import NURBSSurfaces
+import artist.nurbs.utils
+import artist.util.utils
+from artist.nurbs.surfaces import NURBSSurfaces
 
 
 def random_surface(
@@ -89,7 +90,7 @@ def test_nurbs(device: torch.device) -> None:
     )
     facet_translation = torch.tensor([[[[0.5, 0.0, 0.0, 0.0]]]], device=device)
 
-    canted_surface_points = utils.perform_canting(
+    canted_surface_points = artist.util.utils.perform_canting(
         canting_angles=canting, data=surface_points, device=device
     )
 
@@ -97,7 +98,7 @@ def test_nurbs(device: torch.device) -> None:
         1, 1, 1, 4
     )
 
-    evaluation_points = utils.create_nurbs_evaluation_grid(
+    evaluation_points = artist.nurbs.utils.create_nurbs_evaluation_grid(
         number_of_evaluation_points=torch.tensor([40, 40], device=device), device=device
     )
 
@@ -159,10 +160,10 @@ def test_find_span(device: torch.device) -> None:
     """
     degrees = torch.tensor([3, 3], device=device)
 
-    evaluation_points = utils.create_nurbs_evaluation_grid(
+    evaluation_points = artist.nurbs.utils.create_nurbs_evaluation_grid(
         torch.tensor([4, 5], device=device), device=device
     )
-    evaluation_points = utils.normalize_points(evaluation_points)
+    evaluation_points = artist.util.utils.normalize_points(evaluation_points)
 
     x, y = torch.meshgrid(
         torch.linspace(1e-2, 1 - 1e-2, 6),
@@ -230,7 +231,7 @@ def test_nurbs_forward(device: torch.device) -> None:
         .unsqueeze(0)
         .unsqueeze(0)
     )
-    control_points = utils.create_planar_nurbs_control_points(
+    control_points = artist.nurbs.utils.create_planar_nurbs_control_points(
         torch.tensor([4, 4], device=device), canting[0], device=device
     )[None, ...]
 
