@@ -50,7 +50,7 @@ def rotate_distortions(
         )
 
     cos_e = torch.cos(e)
-    sin_e = -torch.sin(e)  # Heliostat convention.
+    sin_e = torch.sin(e)
     cos_u = torch.cos(u)
     sin_u = torch.sin(u)
     ones = torch.ones_like(e, device=device)
@@ -68,9 +68,9 @@ def rotate_distortions(
     matrix[:, :, :, indices.e, indices.n] = -sin_u
     matrix[:, :, :, indices.n, indices.e] = cos_e * sin_u
     matrix[:, :, :, indices.n, indices.n] = cos_e * cos_u
-    matrix[:, :, :, indices.n, indices.u] = sin_e
-    matrix[:, :, :, indices.u, indices.e] = -sin_e * sin_u
-    matrix[:, :, :, indices.u, indices.n] = -sin_e * cos_u
+    matrix[:, :, :, indices.n, indices.u] = -sin_e
+    matrix[:, :, :, indices.u, indices.e] = sin_e * sin_u
+    matrix[:, :, :, indices.u, indices.n] = sin_e * cos_u
     matrix[:, :, :, indices.u, indices.u] = cos_e
     matrix[
         :,
