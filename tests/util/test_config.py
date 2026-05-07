@@ -3,6 +3,7 @@ from collections.abc import Callable
 import pytest
 import torch
 
+from artist.util import constants
 from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -25,7 +26,6 @@ from artist.util.config import (
     TargetAreaPlanarConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.util import constants
 
 
 @pytest.fixture
