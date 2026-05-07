@@ -16,7 +16,7 @@ from artist.field.solar_tower import SolarTower
 from artist.io import h5_scenario_parser
 from artist.scene.light_source_array import LightSourceArray
 from artist.util import constants
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the scenario."""

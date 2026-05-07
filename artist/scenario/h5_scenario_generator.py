@@ -6,7 +6,7 @@ from typing import Any
 import h5py
 import torch
 
-from artist.scenario.configuration_classes import (
+from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
     HeliostatListConfig,

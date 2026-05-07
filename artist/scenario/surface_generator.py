@@ -5,9 +5,9 @@ import torch
 import artist.nurbs.utils
 from artist.geometry import coordinates
 from artist.nurbs.surfaces import NURBSSurfaces
-from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
+from artist.util.config import FacetConfig, SurfaceConfig
 from artist.util import constants, indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the surface generator."""
