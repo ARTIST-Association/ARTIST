@@ -5,12 +5,12 @@ import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
-from artist.optimization import training
-from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
+from artist.optim import training
+from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.scenario.scenario import Scenario
 from artist.util import constants, indices
-from artist.util.environment import DdpSetup, get_device
+from artist.util.env import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the motor positions optimizer."""
@@ -74,7 +74,7 @@ class MotorPositionsOptimizer:
         device: torch.device | None = None,
     ) -> None:
         """
-        Initialize the motor positions optimizer.
+        Initialize the motor-positions optimizer.
 
         Parameters
         ----------

@@ -7,23 +7,19 @@ from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
-from artist.io import CalibrationDataParser
-from artist.nurbs import NURBSSurfaces, create_nurbs_evaluation_grid
-from artist.optimization import (
-    training,
-    Loss,
-    mean_loss_per_heliostat,
-    IdealSurfaceRegularizer,
-    SmoothnessRegularizer
-)
-
+from artist.io.calibration_parser import CalibrationDataParser
+from artist.nurbs.surfaces import NURBSSurfaces
+from artist.nurbs.utils import create_nurbs_evaluation_grid
+from artist.optim import training
+from artist.optim.loss import Loss, mean_loss_per_heliostat
+from artist.optim.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario import Scenario
+from artist.scenario.scenario import Scenario
 from artist.util import (
     constants,
     indices,
 )
-from artist.util.environment import DdpSetup, get_device
+from artist.util.env import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the surface reconstructor."""

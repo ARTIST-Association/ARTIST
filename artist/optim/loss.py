@@ -4,8 +4,9 @@ import torch
 
 from artist.flux import bitmap
 from artist.geometry import coordinates
-from artist.scenario import Scenario
-from artist.util import indices, get_device
+from artist.scenario.scenario import Scenario
+from artist.util import indices
+from artist.util.env import get_device
 
 
 class Loss:
@@ -280,7 +281,7 @@ class PixelLoss(Loss):
         -------
         torch.Tensor
             The summed MSE pixel loss reduced along the specified dimensions.
-            Tensor of shape [number_of_samples].
+            Shape is ``[number_of_samples]``.
         """
         expected_kwargs = ["reduction_dimensions", "device", "target_area_indices"]
         errors = []

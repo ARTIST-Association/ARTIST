@@ -38,10 +38,10 @@ class Regularizer:
         ----------
         current_control_points : torch.Tensor
             The current control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
         original_control_points : torch.Tensor
             The current control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -97,10 +97,10 @@ class SmoothnessRegularizer(Regularizer):
         ----------
         current_control_points : torch.Tensor
             The current control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
         original_control_points : torch.Tensor
             The original control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -128,9 +128,7 @@ class SmoothnessRegularizer(Regularizer):
         )
 
         laplacian_loss = (laplace**2).mean(dim=(2, 3, 4))
-        laplacian_loss = laplacian_loss.sum(dim=self.reduction_dimensions)
-
-        return laplacian_loss
+        return laplacian_loss.sum(dim=self.reduction_dimensions)
 
 
 class IdealSurfaceRegularizer(Regularizer):
@@ -167,10 +165,10 @@ class IdealSurfaceRegularizer(Regularizer):
         ----------
         current_control_points : torch.Tensor
             The current control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
         original_control_points : torch.Tensor
             The current control points.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -185,6 +183,4 @@ class IdealSurfaceRegularizer(Regularizer):
         delta_squared = delta**2
 
         per_facet_loss = delta_squared.mean(dim=(2, 3, 4))
-        loss = per_facet_loss.sum(dim=self.reduction_dimensions)
-
-        return loss
+        return per_facet_loss.sum(dim=self.reduction_dimensions)
