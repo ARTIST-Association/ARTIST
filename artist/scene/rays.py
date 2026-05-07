@@ -9,10 +9,10 @@ class Rays:
     ----------
     ray_directions : torch.Tensor
         The direction of the rays.
-        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
     ray_magnitudes : torch.Tensor
         The magnitudes of the rays.
-        Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+        Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
     """
 
     def __init__(
@@ -30,10 +30,10 @@ class Rays:
         ----------
         ray_directions : torch.Tensor
             The direction of the rays.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
         ray_magnitudes : torch.Tensor
             The magnitudes of the rays.
-            Tensor of shape [number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets].
+            Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
 
         Raises
         ------

@@ -7,7 +7,7 @@ from typing_extensions import Self
 
 from artist.scene.light_source import LightSource
 from artist.util import constants
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the sun."""
