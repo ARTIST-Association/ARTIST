@@ -1,23 +1,20 @@
 import torch
 
-import artist.nurbs.utils
 from artist.nurbs.surfaces import NURBSSurfaces
-from artist.scenario.configuration_classes import SurfaceConfig
+from artist.nurbs.utils import create_nurbs_evaluation_grid
+from artist.util.config import SurfaceConfig
 from artist.util import indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 
 class Surface:
     """
-    Implement the surface module which contains a list of facets.
+    Implement the surface module from a list of facets.
 
     Attributes
     ----------
-    nurbs_facets : list[NURBSSurface]
-        A list of one nurbs surface for each facet.
-    facet_translation_vectors : torch.Tensor
-        The facet translation vectors for all facets.
-        Tensor of shape [number_of_facets, 4].
+    nurbs_surface : NURBSSurface
+        The NURBS surface.
 
     Methods
     -------
@@ -91,7 +88,7 @@ class Surface:
         device = get_device(device=device)
 
         evaluation_points = (
-            artist.nurbs.utils.create_nurbs_evaluation_grid(
+            create_nurbs_evaluation_grid(
                 number_of_evaluation_points=number_of_points_per_facet, device=device
             )
             .unsqueeze(indices.heliostat_dimension)

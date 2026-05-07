@@ -5,19 +5,20 @@ from typing import Any, cast
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
-import artist.nurbs.utils
 from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
-from artist.io.calibration_parser import CalibrationDataParser
-from artist.nurbs.surfaces import NURBSSurfaces
-from artist.optimization import training
-from artist.optimization.loss_functions import Loss, mean_loss_per_heliostat
-from artist.optimization.regularizers import (
+from artist.io import CalibrationDataParser
+from artist.nurbs import NURBSSurfaces, create_nurbs_evaluation_grid
+from artist.optimization import (
+    training,
+    Loss,
+    mean_loss_per_heliostat,
     IdealSurfaceRegularizer,
-    SmoothnessRegularizer,
+    SmoothnessRegularizer
 )
+
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.scenario import Scenario
 from artist.util import (
     constants,
     indices,
@@ -237,7 +238,7 @@ class SurfaceReconstructor:
             if active_heliostats_mask.sum() > 0:
                 # Create NURBS evaluation points: Build a UV grid for NURBS sampling and expand to required shape.
                 evaluation_points = (
-                    artist.nurbs.utils.create_nurbs_evaluation_grid(
+                    create_nurbs_evaluation_grid(
                         number_of_evaluation_points=self.number_of_surface_points,
                         device=device,
                     )

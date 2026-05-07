@@ -5,13 +5,10 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.io.calibration_parser import CalibrationDataParser
-from artist.io.paint_calibration_parser import PaintCalibrationDataParser
-from artist.optimization.loss_functions import KLDivergenceLoss, Loss, PixelLoss
-from artist.optimization.surface_reconstructor import SurfaceReconstructor
-from artist.scenario.scenario import Scenario
-from artist.util import constants
-from artist.util.environment import DdpSetup
+from artist.io import CalibrationDataParser, PaintCalibrationDataParser
+from artist.optim import KLDivergenceLoss, Loss, PixelLoss, SurfaceReconstructor
+from artist.scenario import Scenario
+from artist.util import constants, DdpSetup
 
 
 @pytest.mark.parametrize(

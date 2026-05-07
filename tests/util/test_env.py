@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from artist.util.environment import (
+from artist.util.env import (
     create_subgroups_for_nested_ddp,
     distribute_groups_among_ranks,
     get_device,

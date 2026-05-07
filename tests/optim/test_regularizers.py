@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from artist.optimization.regularizers import (
+from artist.optim.regularizers import (
     IdealSurfaceRegularizer,
     Regularizer,
     SmoothnessRegularizer,

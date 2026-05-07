@@ -4,9 +4,8 @@ import torch
 
 from artist.flux import bitmap
 from artist.geometry import coordinates
-from artist.scenario.scenario import Scenario
-from artist.util import indices
-from artist.util.environment import get_device
+from artist.scenario import Scenario
+from artist.util import indices, get_device
 
 
 class Loss:
@@ -447,7 +446,7 @@ def mean_loss_per_heliostat(
     ----------
     loss_per_sample : torch.Tensor
         Loss per sample.
-        Tensor of shape [number_of_samples].
+        Shape is ``[number_of_samples]``.
     number_of_samples_per_heliostat : int
         Number of samples per heliostat.
 
@@ -455,7 +454,7 @@ def mean_loss_per_heliostat(
     -------
     torch.Tensor
         Loss per heliostat.
-        Tensor of shape [number_of_heliostats].
+        Shape is ``[number_of_heliostats]``.
     """
     number_of_heliostats = int(
         loss_per_sample.numel() // number_of_samples_per_heliostat

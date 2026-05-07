@@ -6,7 +6,7 @@ from typing_extensions import Self
 
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.util import constants, indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the planar tower target areas."""

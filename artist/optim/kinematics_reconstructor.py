@@ -8,11 +8,11 @@ from torch.optim.lr_scheduler import LRScheduler
 from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
 from artist.geometry import coordinates
-from artist.io.calibration_parser import CalibrationDataParser
+from artist.io import CalibrationDataParser
 from artist.optimization import training
 from artist.optimization.loss_functions import Loss, mean_loss_per_heliostat
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.scenario import Scenario
 from artist.util import constants, indices
 from artist.util.environment import DdpSetup, get_device
 

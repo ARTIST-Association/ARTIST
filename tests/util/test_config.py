@@ -3,7 +3,7 @@ from collections.abc import Callable
 import pytest
 import torch
 
-from artist.scenario.configuration_classes import (
+from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
     ActuatorParameters,

@@ -2,25 +2,21 @@ import logging
 import math
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import h5py
 import torch
 from typing_extensions import Self
 
-import artist.nurbs.utils
-import artist.util.indices
 from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
 from artist.io import h5_scenario_parser
 from artist.nurbs.surfaces import NURBSSurfaces
+from artist.nurbs.utils import create_nurbs_evaluation_grid, create_planar_nurbs_control_points
 
-if TYPE_CHECKING:
-    from artist.scenario.configuration_classes import (
-        SurfaceConfig,
-    )
+from artist.util.config import SurfaceConfig
 from artist.util import constants, indices, type_registry
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
@@ -261,12 +257,12 @@ class HeliostatField:
 
             number_of_facets = len(surface_config.facet_list)
             degrees = torch.empty(
-                artist.util.indices.nurbs_degrees,
+                indices.nurbs_degrees,
                 dtype=torch.int32,
                 device=device,
             )
             # Each facet automatically has the same control points dimensions. This is required in ARTIST.
-            # control_points: Tensor of shape
+            # control_points: Shape is
             # [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
             control_points = torch.empty(
                 (
@@ -277,14 +273,14 @@ class HeliostatField:
                     surface_config.facet_list[indices.first_facet].control_points.shape[
                         indices.h5_control_points_v
                     ],
-                    artist.util.indices.control_point_dimension,
+                    indices.control_point_dimension,
                 ),
                 device=device,
             )
             canting = torch.empty(
                 (
                     number_of_facets,
-                    artist.util.indices.canting_direction_dimension,
+                    indices.canting_direction_dimension,
                     4,
                 ),
                 device=device,
@@ -303,7 +299,7 @@ class HeliostatField:
                 ].translation_vector
 
             if change_number_of_control_points_per_facet is not None:
-                control_points = artist.nurbs.utils.create_planar_nurbs_control_points(
+                control_points = create_planar_nurbs_control_points(
                     number_of_control_points=change_number_of_control_points_per_facet,
                     canting=canting,
                     device=device,
@@ -460,7 +456,7 @@ class HeliostatField:
                 )
             )
             evaluation_points = (
-                artist.nurbs.utils.create_nurbs_evaluation_grid(
+                create_nurbs_evaluation_grid(
                     number_of_evaluation_points=torch.tensor(
                         [
                             number_of_surface_points_per_facet,

@@ -8,7 +8,7 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.optimization import training
 from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.scenario import Scenario
 from artist.util import constants, indices
 from artist.util.environment import DdpSetup, get_device
 
