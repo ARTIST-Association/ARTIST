@@ -8,7 +8,7 @@ from artist.field.solar_tower import (
     TowerTargetAreasPlanar,
 )
 from artist.util import constants, indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 
 def get_center_of_mass(
@@ -106,12 +106,12 @@ def trapezoid_distribution(
         Shape is ``[total_width]``.
     """
     device = get_device(device=device)
-    indices = torch.arange(total_width, device=device)
+    index_range = torch.arange(total_width, device=device)
     center = (total_width - 1) / 2.0
     half_plateau = plateau_width / 2.0
 
     # Distances from the plateau edge.
-    distances = torch.abs(indices - center) - half_plateau
+    distances = torch.abs(index_range - center) - half_plateau
 
     # Special case: no slope -> hard plateau/rectangle.
     if slope_width == 0:
