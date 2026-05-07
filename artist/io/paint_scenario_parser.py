@@ -9,6 +9,8 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 
 from artist.geometry import coordinates
+from artist.scenario.surface_generator import SurfaceGenerator
+from artist.util import constants, indices
 from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -28,8 +30,6 @@ from artist.util.config import (
     TargetAreaPlanarConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import constants, indices
 from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
@@ -543,10 +543,12 @@ def extract_paint_deflectometry_data(
 
 
 def _ideal_surface_generator(
+    file_tuple: tuple[str, pathlib.Path],
     facet_translation_vectors: torch.Tensor,
     canting: torch.Tensor,
     number_of_nurbs_control_points: torch.Tensor,
     device: torch.device | None,
+    **kwargs: Any,
 ) -> SurfaceConfig:
     r"""
     Generate a surface configuration for an ideal heliostat.
@@ -556,6 +558,9 @@ def _ideal_surface_generator(
 
     Parameters
     ----------
+    file_tuple : tuple[str, pathlib.Path]
+        A tuple containing the heliostat name and path to the properties file, not used in this function but required
+        for API compatibility.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
         Shape is ``[number_of_facets, 4]``.
@@ -567,6 +572,8 @@ def _ideal_surface_generator(
         Shape is ``[2]``.
     device : torch.device | None
         The device to use.
+    \*\*kwargs : Any
+        Additional keyword arguments, not used by this function but accepted for API compatibility.
 
     Returns
     -------
