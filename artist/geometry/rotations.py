@@ -1,7 +1,7 @@
 import torch
 
 from artist.util import indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 
 def decompose_rotations(

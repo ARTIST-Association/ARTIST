@@ -6,7 +6,7 @@ import torch
 
 from artist.geometry import coordinates
 from artist.util import indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the stral data loader."""
@@ -32,10 +32,10 @@ def extract_stral_deflectometry_data(
     -------
     torch.Tensor
         The facet translation vectors.
-        Tensor of shape [number_of_facets, 4].
+        Shape is ``[number_of_facets, 4]``.
     torch.Tensor
         The facet canting vectors.
-        Tensor of shape [number_of_facets, 2, 4].
+        Shape is ``[number_of_facets, 2, 4]``.
     list[torch.Tensor]
         The surface points per facet.
     list[torch.Tensor]

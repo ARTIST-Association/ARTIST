@@ -6,12 +6,12 @@ from collections import Counter, defaultdict
 import paint.util.paint_mappings as paint_mappings
 import torch
 
-import artist.util.indices
 from artist.field.heliostat_group import HeliostatGroup
 from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.scenario.scenario import Scenario
-from artist.util.environment import get_device
+from artist.util import indices
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the paint calibration data parser."""
@@ -76,8 +76,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
         scenario: Scenario,
         bitmap_resolution: torch.Tensor = torch.tensor(
             [
-                artist.util.indices.bitmap_resolution,
-                artist.util.indices.bitmap_resolution,
+                indices.bitmap_resolution,
+                indices.bitmap_resolution,
             ]
         ),
         device: torch.device | None = None,
@@ -189,8 +189,8 @@ class PaintCalibrationDataParser(CalibrationDataParser):
             Shape is ``[3]``.
         heliostat_names : list[str]
             All possible heliostat names.
-        target_area_names : list[str]
-            All possible target area names.
+        target_name_to_index : dict[str, int]
+            A mapping from target name to its index.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate

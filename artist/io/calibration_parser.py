@@ -6,10 +6,10 @@ import torch
 import torchvision
 from PIL import Image
 
-import artist.util.indices
 from artist.field.heliostat_group import HeliostatGroup
 from artist.scenario.scenario import Scenario
-from artist.util.environment import get_device
+from artist.util import indices
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the calibration data parser."""
@@ -55,8 +55,8 @@ class CalibrationDataParser:
         scenario: Scenario,
         bitmap_resolution: torch.Tensor = torch.tensor(
             [
-                artist.util.indices.bitmap_resolution,
-                artist.util.indices.bitmap_resolution,
+                indices.bitmap_resolution,
+                indices.bitmap_resolution,
             ]
         ),
         device: torch.device | None = None,
@@ -81,7 +81,7 @@ class CalibrationDataParser:
             The scenario.
         bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during reconstruction (default is torch.tensor([256,256])).
-            Tensor of shape [2].
+            Shape is ``[2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -90,22 +90,22 @@ class CalibrationDataParser:
         Returns
         -------
         The measured flux density distributions.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         torch.Tensor
             The calibration focal spots.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The incident ray directions.
-            Tensor of shape [number_of_calibration_data_points, 4].
+            Shape is ``[number_of_calibration_data_points, 4]``.
         torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_calibration_data_points, 2].
+            Shape is ``[number_of_calibration_data_points, 2]``.
         torch.Tensor
             A mask with active heliostats and their replications.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         torch.Tensor
             The target area mapping for the heliostats.
-            Tensor of shape [number_of_active_heliostats].
+            Shape is ``[number_of_active_heliostats]``.
         """
         raise NotImplementedError("Must be overridden!")
 
@@ -115,8 +115,8 @@ class CalibrationDataParser:
         heliostat_names: list[str],
         resolution: torch.Tensor = torch.tensor(
             [
-                artist.util.indices.bitmap_resolution,
-                artist.util.indices.bitmap_resolution,
+                indices.bitmap_resolution,
+                indices.bitmap_resolution,
             ]
         ),
         device: torch.device | None = None,
@@ -135,7 +135,7 @@ class CalibrationDataParser:
             All possible heliostat names.
         resolution : torch.Tensor
             The resolution of the loaded png files (default is torch.tensor([256,256])).
-            Tensor of shape [2].
+            Shape is ``[2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -145,7 +145,7 @@ class CalibrationDataParser:
         -------
         torch.Tensor
             The measured flux density distributions.
-            Tensor of shape [number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u].
+            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         """
         device = get_device(device=device)
         rank = (
@@ -203,7 +203,7 @@ class CalibrationDataParser:
                         np.asarray(bitmap_data, dtype=np.float32)
                     ).to(device)
 
-                bitmap_tensor /= artist.util.indices.bitmap_normalizer
+                bitmap_tensor /= indices.bitmap_normalizer
 
                 measured_fluxes[index] = bitmap_tensor
                 index += 1

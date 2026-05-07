@@ -9,7 +9,7 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 
 from artist.geometry import coordinates
-from artist.scenario.configuration_classes import (
+from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
     ActuatorParameters,
@@ -30,7 +30,7 @@ from artist.scenario.configuration_classes import (
 )
 from artist.scenario.surface_generator import SurfaceGenerator
 from artist.util import constants, indices
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the paint data loader."""
@@ -268,7 +268,7 @@ def extract_paint_heliostat_properties(
     heliostat_properties_path : pathlib.Path
         The path to the heliostat properties file.
     power_plant_position : torch.Tensor
-        Tensor of shape [3].
+        Shape is ``[3]``.
         The power plant position.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
@@ -279,18 +279,18 @@ def extract_paint_heliostat_properties(
     -------
     torch.Tensor
         The heliostat position.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     torch.Tensor
         The facet translation vectors.
-        Tensor of shape [number_of_facets, 4].
+        Shape is ``[number_of_facets, 4]``.
     torch.Tensor
         The facet canting vectors in east and north direction.
-        Tensor of shape [number_of_facets, 2, 4].
+        Shape is ``[number_of_facets, 2, 4]``.
     KinematicsDeviations
         The kinematics deviation parameters.
     torch.Tensor
         The initial orientation.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     list[tuple[str, bool, list[float], ActuatorParameters]]
         The actuator parameter list.
     """
@@ -543,12 +543,10 @@ def extract_paint_deflectometry_data(
 
 
 def _ideal_surface_generator(
-    file_tuple: tuple[str, pathlib.Path],
     facet_translation_vectors: torch.Tensor,
     canting: torch.Tensor,
     number_of_nurbs_control_points: torch.Tensor,
     device: torch.device | None,
-    **kwargs: Any,
 ) -> SurfaceConfig:
     r"""
     Generate a surface configuration for an ideal heliostat.
@@ -558,22 +556,17 @@ def _ideal_surface_generator(
 
     Parameters
     ----------
-    file_tuple : tuple[str, pathlib.Path]
-        A tuple containing the heliostat name and path to the properties file, not used in this function but required
-        for API compatibility.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
-        Tensor of shape [number_of_facets, 4].
+        Shape is ``[number_of_facets, 4]``.
     canting : torch.Tensor
         The canting vectors for each facet.
-        Tensor of shape [number_of_facets, 2, 4].
+        Shape is ``[number_of_facets, 2, 4]``.
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points.
-        Tensor of shape [2].
+        Shape is ``[2]``.
     device : torch.device | None
         The device to use.
-    \*\*kwargs : Any
-        Additional keyword arguments, not used by this function but accepted for API compatibility.
 
     Returns
     -------
@@ -613,23 +606,23 @@ def _fitted_surface_generator(
         A tuple containing the heliostat name, path to the properties file, and path to deflectometry data file.
     facet_translation_vectors : torch.Tensor
         The translation vectors for each facet.
-        Tensor of shape [number_of_facets, 4].
+        Shape is ``[number_of_facets, 4]``.
     canting : torch.Tensor
         The canting vectors for each facet.
-        Tensor of shape [number_of_facets, 2, 4].
+        Shape is ``[number_of_facets, 2, 4]``.
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points.
-        Tensor of shape [2].
+        Shape is ``[2]``.
     device : torch.device | None
         The device to use.
     \*\*kwargs : Any
         Additional keyword arguments used for the fitting process, including:
-        - `nurbs_fit_optimizer`: The PyTorch optimizer for the NURBS fit.
-        - `nurbs_fit_scheduler`: The PyTorch learning rate scheduler for the fit.
-        - `deflectometry_step_size`: Step size to reduce data points for efficiency.
-        - `nurbs_fit_method`: The fitting method to use.
-        - `nurbs_fit_tolerance`: The tolerance for the fitting convergence.
-        - `nurbs_fit_max_epoch`: The maximum number of epochs for the fit.
+        - ``nurbs_fit_optimizer``: The PyTorch optimizer for the NURBS fit.
+        - ``nurbs_fit_scheduler``: The PyTorch learning rate scheduler for the fit.
+        - ``deflectometry_step_size``: Step size to reduce data points for efficiency.
+        - ``nurbs_fit_method``: The fitting method to use.
+        - ``nurbs_fit_tolerance``: The tolerance for the fitting convergence.
+        - ``nurbs_fit_max_epoch``: The maximum number of epochs for the fit.
 
     Returns
     -------
@@ -704,9 +697,6 @@ def _process_heliostats_from_paths(
     """
     device = get_device(device=device)
 
-    prototype_surface = None
-    prototype_kinematics = None
-    prototype_actuator_list = None
     heliostat_config_list = []
 
     for heliostat_index, file_tuple in enumerate(paths):
@@ -820,10 +810,10 @@ def extract_paint_heliostats_ideal_surface(
         Name of the heliostat and path to the heliostat properties file
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
-        Tensor of shape [2].
+        Shape is ``[2]``.
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ``ARTIST`` will automatically select the most appropriate
@@ -868,14 +858,14 @@ def extract_paint_heliostats_fitted_surface(
         Name of the heliostat and a pair of heliostat properties and deflectometry file paths.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude and elevation.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     nurbs_fit_optimizer : torch.optim.Optimizer
         The NURBS fit optimizer.
     nurbs_fit_scheduler : torch.optim.lr_scheduler.LRScheduler
         The NURBS fit learning rate scheduler.
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
-        Tensor of shape [2].
+        Shape is ``[2]``.
     deflectometry_step_size : int
         The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
     nurbs_fit_method : str
@@ -940,14 +930,14 @@ def extract_paint_heliostats_mixed_surface(
         deflectometry file.
     power_plant_position : torch.Tensor
         The position of the power plant in latitude, longitude, and elevation.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     nurbs_fit_optimizer : torch.optim.Optimizer
         The NURBS fit optimizer.
     nurbs_fit_scheduler : torch.optim.lr_scheduler.LRScheduler
         The NURBS fit learning rate scheduler.
     number_of_nurbs_control_points : torch.Tensor
         The number of NURBS control points in both dimensions (default is torch.tensor([10,10])).
-        Tensor of shape [2].
+        Shape is ``[2]``.
     deflectometry_step_size : int
         The step size used to reduce the number of deflectometry points and normals for compute efficiency (default is 100).
     nurbs_fit_method : str
@@ -1028,16 +1018,16 @@ def corner_points_to_plane(
     ----------
     upper_left : torch.Tensor
         The upper left corner coordinate.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     upper_right : torch.Tensor
         The upper right corner coordinate.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     lower_left : torch.Tensor
         The lower left corner coordinate.
-        Tensor of shape [3].
+        Shape is ``[3]``.
     lower_right : torch.Tensor
         The lower right corner coordinate.
-        Tensor of shape [3].
+        Shape is ``[3]``.
 
     Returns
     -------
