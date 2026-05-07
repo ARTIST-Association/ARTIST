@@ -2,8 +2,8 @@ import torch
 
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.nurbs.utils import create_nurbs_evaluation_grid
-from artist.util.config import SurfaceConfig
 from artist.util import indices
+from artist.util.config import SurfaceConfig
 from artist.util.env import get_device
 
 

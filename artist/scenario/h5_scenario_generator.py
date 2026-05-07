@@ -6,6 +6,7 @@ from typing import Any
 import h5py
 import torch
 
+from artist.util import constants
 from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -17,7 +18,6 @@ from artist.util.config import (
     TargetAreaCylindricalListConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.util import constants
 
 log = logging.getLogger(__name__)
 """A logger for the scenario generator."""

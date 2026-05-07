@@ -3,9 +3,8 @@ import logging
 import torch
 from torch.utils.data import DataLoader
 
-from artist.geometry import transforms
-
 from artist.field.heliostat_group import HeliostatGroup
+from artist.geometry import transforms
 from artist.raytracing import blocking, geometry
 from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
 from artist.scenario.scenario import Scenario

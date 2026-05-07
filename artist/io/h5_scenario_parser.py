@@ -4,8 +4,8 @@ import h5py
 import torch
 
 from artist.geometry import rotations
-from artist.util.config import FacetConfig, SurfaceConfig
 from artist.util import constants, indices
+from artist.util.config import FacetConfig, SurfaceConfig
 from artist.util.env import get_device
 
 

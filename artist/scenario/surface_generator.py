@@ -5,8 +5,8 @@ import torch
 import artist.nurbs.utils
 from artist.geometry import coordinates
 from artist.nurbs.surfaces import NURBSSurfaces
-from artist.util.config import FacetConfig, SurfaceConfig
 from artist.util import constants, indices
+from artist.util.config import FacetConfig, SurfaceConfig
 from artist.util.env import get_device
 
 log = logging.getLogger(__name__)

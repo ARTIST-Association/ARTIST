@@ -12,10 +12,12 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.field.surface import Surface
 from artist.io import h5_scenario_parser
 from artist.nurbs.surfaces import NURBSSurfaces
-from artist.nurbs.utils import create_nurbs_evaluation_grid, create_planar_nurbs_control_points
-
-from artist.util.config import SurfaceConfig
+from artist.nurbs.utils import (
+    create_nurbs_evaluation_grid,
+    create_planar_nurbs_control_points,
+)
 from artist.util import constants, indices, type_registry
+from artist.util.config import SurfaceConfig
 from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
