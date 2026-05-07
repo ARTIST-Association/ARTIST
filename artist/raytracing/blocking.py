@@ -4,7 +4,7 @@ import math
 import torch
 
 from artist.util import constants
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for blocking."""
