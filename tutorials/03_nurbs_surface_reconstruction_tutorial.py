@@ -12,12 +12,12 @@ from artist.io import paint_scenario_parser
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
-from artist.optimization.loss_functions import KLDivergenceLoss
-from artist.optimization.surface_reconstructor import SurfaceReconstructor
+from artist.optim.loss import KLDivergenceLoss
+from artist.optim.surface_reconstructor import SurfaceReconstructor
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import constants, indices, set_logger_config
-from artist.util.environment import get_device, setup_distributed_environment
+from artist.util.env import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)

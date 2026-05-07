@@ -4,7 +4,7 @@ import h5py
 import pytest
 import torch
 
-from artist.scene.light_source_array import LightSourceArray
+from artist.scene import LightSourceArray
 from artist.util import constants
 
 

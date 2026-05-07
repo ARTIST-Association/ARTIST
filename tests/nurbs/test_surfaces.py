@@ -1,8 +1,11 @@
 import torch
 
-import artist.nurbs.utils
 from artist.geometry import coordinates, transforms
-from artist.nurbs.surfaces import NURBSSurfaces
+from artist.nurbs import (
+    NURBSSurfaces,
+    create_nurbs_evaluation_grid,
+    create_planar_nurbs_control_points,
+)
 
 
 def random_surface(
@@ -98,7 +101,7 @@ def test_nurbs(device: torch.device) -> None:
         1, 1, 1, 4
     )
 
-    evaluation_points = artist.nurbs.utils.create_nurbs_evaluation_grid(
+    evaluation_points = create_nurbs_evaluation_grid(
         number_of_evaluation_points=torch.tensor([40, 40], device=device), device=device
     )
 
@@ -160,7 +163,7 @@ def test_find_span(device: torch.device) -> None:
     """
     degrees = torch.tensor([3, 3], device=device)
 
-    evaluation_points = artist.nurbs.utils.create_nurbs_evaluation_grid(
+    evaluation_points = create_nurbs_evaluation_grid(
         torch.tensor([4, 5], device=device), device=device
     )
     evaluation_points = coordinates.normalize_points(evaluation_points)
@@ -231,7 +234,7 @@ def test_nurbs_forward(device: torch.device) -> None:
         .unsqueeze(0)
         .unsqueeze(0)
     )
-    control_points = artist.nurbs.utils.create_planar_nurbs_control_points(
+    control_points = create_planar_nurbs_control_points(
         torch.tensor([4, 4], device=device), canting[0], device=device
     )[None, ...]
 

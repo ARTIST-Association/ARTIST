@@ -6,9 +6,11 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.io import CalibrationDataParser, PaintCalibrationDataParser
-from artist.optim import KLDivergenceLoss, Loss, PixelLoss, SurfaceReconstructor
+from artist.optim import SurfaceReconstructor
+from artist.optim.loss import KLDivergenceLoss, Loss, PixelLoss
 from artist.scenario import Scenario
-from artist.util import constants, DdpSetup
+from artist.util import constants
+from artist.util.env import DdpSetup
 
 
 @pytest.mark.parametrize(

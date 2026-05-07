@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from artist.field.solar_tower import (
+from artist.field import (
     SolarTower,
     TowerTargetAreasCylindrical,
     TowerTargetAreasPlanar,

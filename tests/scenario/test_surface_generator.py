@@ -5,9 +5,9 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.io import paint_scenario_parser, stral_scenario_parser
-from artist.scenario.configuration_classes import FacetConfig, SurfaceConfig
-from artist.scenario.surface_generator import SurfaceGenerator
+from artist.scenario import SurfaceGenerator
 from artist.util import constants
+from artist.util.config import FacetConfig, SurfaceConfig
 
 
 def test_surface_generator(device: torch.device) -> None:

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from artist.field.actuators import Actuators
+from artist.field import Actuators
 from artist.util import type_registry
 
 

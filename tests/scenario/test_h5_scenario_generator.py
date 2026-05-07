@@ -4,7 +4,9 @@ import h5py
 import pytest
 from pytest_mock import MockerFixture
 
-from artist.scenario.configuration_classes import (
+from artist.scenario import H5ScenarioGenerator
+from artist.util import constants
+from artist.util.config import (
     HeliostatListConfig,
     LightSourceListConfig,
     PowerPlantConfig,
@@ -12,8 +14,6 @@ from artist.scenario.configuration_classes import (
     TargetAreaCylindricalListConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.util import constants
 
 
 @pytest.fixture

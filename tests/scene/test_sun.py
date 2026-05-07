@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 import torch
 
-from artist.scene.sun import Sun
+from artist.scene import Sun
 from artist.util import constants
 
 

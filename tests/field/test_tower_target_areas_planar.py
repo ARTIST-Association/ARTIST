@@ -3,7 +3,7 @@ from unittest import mock
 import h5py
 import torch
 
-from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+from artist.field import TowerTargetAreasPlanar
 from artist.util import constants
 
 

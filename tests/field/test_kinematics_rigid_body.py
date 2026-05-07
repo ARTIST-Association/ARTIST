@@ -1,9 +1,7 @@
 import pytest
 import torch
 
-from artist.field.kinematics_rigid_body import (
-    RigidBody,
-)
+from artist.field import RigidBody
 
 
 def _activate_all_heliostats_for_test(

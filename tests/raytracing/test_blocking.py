@@ -6,9 +6,8 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.geometry import transforms
-from artist.raytracing import blocking
-from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.raytracing import HeliostatRayTracer, blocking
+from artist.scenario import Scenario
 
 
 @pytest.fixture

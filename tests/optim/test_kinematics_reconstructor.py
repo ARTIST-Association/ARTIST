@@ -6,10 +6,9 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.io import CalibrationDataParser
-from artist.io import PaintCalibrationDataParser
-from artist.optim.kinematics_reconstructor import KinematicsReconstructor
-from artist.optim.loss_functions import FocalSpotLoss
+from artist.io import CalibrationDataParser, PaintCalibrationDataParser
+from artist.optim import KinematicsReconstructor
+from artist.optim.loss import FocalSpotLoss
 from artist.scenario import Scenario
 from artist.util import constants
 from artist.util.env import DdpSetup

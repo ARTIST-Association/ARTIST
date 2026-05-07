@@ -3,8 +3,13 @@ from unittest import mock
 import pytest
 import torch
 
-from artist.field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAreas, TowerTargetAreasPlanar
-from artist.optim.loss_functions import (
+from artist.field import (
+    SolarTower,
+    TowerTargetAreas,
+    TowerTargetAreasCylindrical,
+    TowerTargetAreasPlanar,
+)
+from artist.optim.loss import (
     AngleLoss,
     FocalSpotLoss,
     KLDivergenceLoss,
@@ -12,9 +17,8 @@ from artist.optim.loss_functions import (
     PixelLoss,
     VectorLoss,
 )
-from artist.scenario.scenario import Scenario
-from artist.scene.light_source import LightSource
-from artist.scene.light_source_array import LightSourceArray
+from artist.scenario import Scenario
+from artist.scene import LightSource, LightSourceArray
 
 
 def test_base_loss(

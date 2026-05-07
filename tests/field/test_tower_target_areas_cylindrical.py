@@ -3,7 +3,7 @@ from unittest import mock
 import h5py
 import torch
 
-from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
+from artist.field import TowerTargetAreasCylindrical
 from artist.util import constants
 
 

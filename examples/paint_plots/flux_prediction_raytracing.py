@@ -15,7 +15,7 @@ from artist.io.paint_scenario_parser import extract_paint_heliostat_properties
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import set_logger_config
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 set_logger_config()
 

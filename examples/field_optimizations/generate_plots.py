@@ -11,8 +11,8 @@ from matplotlib.gridspec import GridSpec
 from scipy.stats import gaussian_kde
 
 from artist.geometry import transforms
-from artist.optimization.loss_functions import KLDivergenceLoss
-from artist.util.environment import get_device
+from artist.optim.loss import KLDivergenceLoss
+from artist.util.env import get_device
 
 plot_colors = {
     "darkblue": "#002864",

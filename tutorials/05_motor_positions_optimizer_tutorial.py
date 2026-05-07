@@ -7,12 +7,12 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.flux import bitmap
-from artist.optimization.loss_functions import KLDivergenceLoss
-from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer
+from artist.optim.loss import KLDivergenceLoss
+from artist.optim.motor_position_optimizer import MotorPositionsOptimizer
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import constants, indices, set_logger_config
-from artist.util.environment import get_device, setup_distributed_environment
+from artist.util.env import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)

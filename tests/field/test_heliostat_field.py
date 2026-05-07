@@ -4,9 +4,9 @@ import h5py
 import pytest
 import torch
 
-from artist.field.heliostat_field import HeliostatField
-from artist.scenario.configuration_classes import SurfaceConfig
+from artist.field import HeliostatField
 from artist.util import constants
+from artist.util.config import SurfaceConfig
 
 
 @pytest.mark.parametrize(

@@ -4,7 +4,7 @@ import h5py
 import pytest
 import torch
 
-from artist.field.tower_target_areas import TowerTargetAreas
+from artist.field import TowerTargetAreas
 
 
 def test_abstract_tower_target_areas(

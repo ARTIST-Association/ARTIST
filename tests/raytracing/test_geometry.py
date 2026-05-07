@@ -1,11 +1,13 @@
 import pytest
 import torch
 
-from artist.field.tower_target_areas import TowerTargetAreas
-from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
+from artist.field import (
+    TowerTargetAreas,
+    TowerTargetAreasCylindrical,
+    TowerTargetAreasPlanar,
+)
 from artist.raytracing import geometry
-from artist.scene.rays import Rays
+from artist.scene import Rays
 
 
 @pytest.mark.parametrize(

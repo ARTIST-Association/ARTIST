@@ -7,7 +7,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.io import paint_scenario_parser
-from artist.scenario.configuration_classes import (
+from artist.util.config import (
     HeliostatListConfig,
     PowerPlantConfig,
     PrototypeConfig,

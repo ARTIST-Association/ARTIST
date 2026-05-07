@@ -12,11 +12,11 @@ import yaml
 
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
-from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
-from artist.optimization.loss_functions import FocalSpotLoss
+from artist.optim.kinematics_reconstructor import KinematicsReconstructor
+from artist.optim.loss import FocalSpotLoss
 from artist.scenario.scenario import Scenario
 from artist.util import constants, set_logger_config
-from artist.util.environment import (
+from artist.util.env import (
     DdpSetup,
     get_device,
     setup_distributed_environment,

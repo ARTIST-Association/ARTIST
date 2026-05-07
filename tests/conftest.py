@@ -6,7 +6,7 @@ from collections.abc import Generator
 import numpy as np
 import pytest
 
-from artist.util.environment import DdpSetup
+from artist.util.env import DdpSetup
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 

@@ -5,13 +5,13 @@ import pathlib
 import torch
 
 from artist.io import paint_scenario_parser
-from artist.scenario.configuration_classes import (
+from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
+from artist.util import constants, set_logger_config
+from artist.util.config import (
     LightSourceConfig,
     LightSourceListConfig,
 )
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.util import constants, set_logger_config
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 # Set up logger.
 set_logger_config()

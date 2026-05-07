@@ -15,10 +15,10 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
-from artist.optimization.kinematics_reconstructor import KinematicsReconstructor
-from artist.optimization.loss_functions import FocalSpotLoss, KLDivergenceLoss
-from artist.optimization.motor_position_optimizer import MotorPositionsOptimizer
-from artist.optimization.surface_reconstructor import SurfaceReconstructor
+from artist.optim.kinematics_reconstructor import KinematicsReconstructor
+from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss
+from artist.optim.motor_position_optimizer import MotorPositionsOptimizer
+from artist.optim.surface_reconstructor import SurfaceReconstructor
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import (
@@ -28,7 +28,7 @@ from artist.util import (
     set_logger_config,
     track_runtime,
 )
-from artist.util.environment import (
+from artist.util.env import (
     DdpSetup,
     get_device,
     setup_distributed_environment,

@@ -11,7 +11,7 @@ from matplotlib.pyplot import tight_layout
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import indices, set_logger_config
-from artist.util.environment import get_device
+from artist.util.env import get_device
 
 # This is an introductory tutorial to look at some of the basic elements of ARTIST. Therefore, it is designed to only
 # work with a scenario containing a single heliostat. Please use the "single_heliostat_scenario.h5" provided in the
