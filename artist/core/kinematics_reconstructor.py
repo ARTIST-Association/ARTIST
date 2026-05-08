@@ -266,70 +266,79 @@ class KinematicsReconstructor:
                 initial_actuator_params = (
                     heliostat_group.kinematics.actuators.optimizable_parameters.detach()
                 )
-
-                angle_mean = initial_actuator_params[
-                    :, index_mapping.actuator_params_initial_angle
-                ].mean()
-                angle_std = (
-                    initial_actuator_params[
+                if initial_actuator_params is not None:
+                    angle_mean = initial_actuator_params[
                         :, index_mapping.actuator_params_initial_angle
-                    ]
-                    .std()
-                    .clamp(min=1e-3)
-                )
+                    ].mean()
+                    angle_std = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_angle
+                        ]
+                        .std()
+                        .clamp(min=1e-3)
+                    )
 
-                stroke_mean = initial_actuator_params[
-                    :, index_mapping.actuator_params_initial_stroke_length
-                ].mean()
-                stroke_std = (
-                    initial_actuator_params[
+                    stroke_mean = initial_actuator_params[
                         :, index_mapping.actuator_params_initial_stroke_length
-                    ]
-                    .std()
-                    .clamp(min=1e-3)
-                )
+                    ].mean()
+                    stroke_std = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_stroke_length
+                        ]
+                        .std()
+                        .clamp(min=1e-3)
+                    )
 
-                angle_normalized = (
-                    initial_actuator_params[
-                        :, index_mapping.actuator_params_initial_angle
-                    ]
-                    - angle_mean
-                ) / angle_std
-                stroke_length_normalized = (
-                    initial_actuator_params[
-                        :, index_mapping.actuator_params_initial_stroke_length
-                    ]
-                    - stroke_mean
-                ) / stroke_std
+                    angle_normalized = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_angle
+                        ]
+                        - angle_mean
+                    ) / angle_std
+                    stroke_length_normalized = (
+                        initial_actuator_params[
+                            :, index_mapping.actuator_params_initial_stroke_length
+                        ]
+                        - stroke_mean
+                    ) / stroke_std
 
-                delta_angle = torch.zeros_like(angle_normalized, requires_grad=True)
-                delta_stroke = torch.zeros_like(
-                    stroke_length_normalized, requires_grad=True
-                )
+                    delta_angle = torch.zeros_like(angle_normalized, requires_grad=True)
+                    delta_stroke = torch.zeros_like(
+                        stroke_length_normalized, requires_grad=True
+                    )
+                else:
+                    delta_angle = None
+                    delta_stroke = None
 
                 # Set up optimizer, scheduler, and early stopping.
-                optimizer = torch.optim.Adam(
-                    [
-                        {
-                            "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-                            "lr": self.optimizer_dict[
-                                config_dictionary.initial_learning_rate_rotation_deviation
-                            ],
-                        },
-                        {
-                            "params": delta_angle,
-                            "lr": self.optimizer_dict[
-                                config_dictionary.initial_learning_rate_initial_angles
-                            ],
-                        },
-                        {
-                            "params": delta_stroke,
-                            "lr": self.optimizer_dict[
-                                config_dictionary.initial_learning_rate_initial_stroke_length
-                            ],
-                        },
-                    ]
-                )
+                optimizer_params = [
+                    {
+                        "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+                        "lr": self.optimizer_dict[
+                            config_dictionary.initial_learning_rate_rotation_deviation
+                        ],
+                    }
+                ]
+
+                if initial_actuator_params is not None:
+                    optimizer_params.extend(
+                        [
+                            {
+                                "params": delta_angle,
+                                "lr": self.optimizer_dict[
+                                    config_dictionary.initial_learning_rate_initial_angles
+                                ],
+                            },
+                            {
+                                "params": delta_stroke,
+                                "lr": self.optimizer_dict[
+                                    config_dictionary.initial_learning_rate_initial_stroke_length
+                                ],
+                            },
+                        ]
+                    )
+
+                optimizer = torch.optim.Adam(optimizer_params)
 
                 # Create a learning rate scheduler.
                 scheduler_fn = getattr(
