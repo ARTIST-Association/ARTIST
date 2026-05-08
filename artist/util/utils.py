@@ -1018,7 +1018,6 @@ def perform_canting(
     rotation_matrix = torch.zeros(
         (number_of_surfaces, number_of_facets_per_surface, 4, 4),
         device=device,
-        dtype=data.dtype,
     )
 
     # Extract ENU basis candidates from canting tensor (drop homogeneous component).
