@@ -56,6 +56,8 @@ def cyclic(
         base_lr=float(parameters[config_dictionary.lr_min]),
         max_lr=float(parameters[config_dictionary.lr_max]),
         step_size_up=int(parameters[config_dictionary.step_size_up]),
+        mode='triangular2',
+        cycle_momentum=False
     )
 
 
