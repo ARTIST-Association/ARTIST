@@ -10,11 +10,10 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.io.calibration_parser import CalibrationDataParser
-from artist.io.paint_calibration_parser import PaintCalibrationDataParser
-from artist.optim.kinematics_reconstructor import KinematicsReconstructor
+from artist.io import CalibrationDataParser, PaintCalibrationDataParser
+from artist.optim import KinematicsReconstructor
 from artist.optim.loss import FocalSpotLoss
-from artist.scenario.scenario import Scenario
+from artist.scenario import Scenario
 from artist.util import constants, set_logger_config
 from artist.util.env import (
     DdpSetup,

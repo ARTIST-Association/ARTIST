@@ -5,8 +5,7 @@ import pathlib
 import torch
 
 from artist.io import stral_scenario_parser
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.scenario.surface_generator import SurfaceGenerator
+from artist.scenario import H5ScenarioGenerator, SurfaceGenerator
 from artist.util import constants, set_logger_config
 from artist.util.config import (
     ActuatorConfig,

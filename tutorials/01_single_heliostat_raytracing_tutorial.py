@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import torch
 from matplotlib.pyplot import tight_layout
 
-from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.raytracing import HeliostatRayTracer
+from artist.scenario import Scenario
 from artist.util import indices, set_logger_config
 from artist.util.env import get_device
 

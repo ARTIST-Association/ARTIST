@@ -10,10 +10,9 @@ import torch
 import yaml
 from PIL import Image
 
-from artist.io.paint_calibration_parser import PaintCalibrationDataParser
-from artist.io.paint_scenario_parser import extract_paint_heliostat_properties
-from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.io import PaintCalibrationDataParser, paint_scenario_parser
+from artist.raytracing import HeliostatRayTracer
+from artist.scenario import Scenario
 from artist.util import set_logger_config
 from artist.util.env import get_device
 
@@ -127,7 +126,7 @@ def extract_canting_and_translation_from_properties(
                 _,
                 _,
                 _,
-            ) = extract_paint_heliostat_properties(
+            ) = paint_scenario_parser.extract_paint_heliostat_properties(
                 heliostat_properties_path=properties_path,
                 power_plant_position=torch.tensor(
                     [

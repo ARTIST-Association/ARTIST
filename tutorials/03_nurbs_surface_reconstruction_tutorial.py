@@ -7,15 +7,16 @@ import h5py
 import torch
 from matplotlib import pyplot as plt
 
-import artist.nurbs.utils
-from artist.io import paint_scenario_parser
-from artist.io.calibration_parser import CalibrationDataParser
-from artist.io.paint_calibration_parser import PaintCalibrationDataParser
-from artist.nurbs.surfaces import NURBSSurfaces
+from artist.io import (
+    CalibrationDataParser,
+    PaintCalibrationDataParser,
+    paint_scenario_parser,
+)
+from artist.nurbs import NURBSSurfaces, create_nurbs_evaluation_grid
+from artist.optim import SurfaceReconstructor
 from artist.optim.loss import KLDivergenceLoss
-from artist.optim.surface_reconstructor import SurfaceReconstructor
-from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
-from artist.scenario.scenario import Scenario
+from artist.raytracing import HeliostatRayTracer
+from artist.scenario import Scenario
 from artist.util import constants, indices, set_logger_config
 from artist.util.env import get_device, setup_distributed_environment
 
@@ -161,7 +162,7 @@ def create_surface_plots(name: str) -> None:
         for heliostat_index in range(heliostat_group.number_of_heliostats):
             # Create evaluation points.
             evaluation_points = (
-                artist.nurbs.utils.create_nurbs_evaluation_grid(
+                create_nurbs_evaluation_grid(
                     number_of_evaluation_points=torch.tensor([50, 50], device=device),
                     device=device,
                 )
@@ -279,7 +280,7 @@ def create_flux_plots(
 
             # Create evaluation points for all samples.
             validation_evaluation_points = (
-                artist.nurbs.utils.create_nurbs_evaluation_grid(
+                create_nurbs_evaluation_grid(
                     number_of_evaluation_points=torch.tensor([50, 50], device=device),
                     device=device,
                 )
