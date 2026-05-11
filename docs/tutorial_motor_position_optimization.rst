@@ -104,7 +104,7 @@ settings:
     optimizer_dict = {
         config_dictionary.initial_learning_rate: 3e-4,
         config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 30,
+        config_dictionary.max_epoch: 100,
         config_dictionary.batch_size: 50,
         config_dictionary.log_step: 3,
         config_dictionary.early_stopping_delta: 1e-4,
