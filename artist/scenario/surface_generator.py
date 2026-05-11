@@ -2,9 +2,9 @@ import logging
 
 import torch
 
-import artist.nurbs.utils
 from artist.geometry import coordinates
 from artist.nurbs.surfaces import NURBSSurfaces
+from artist.nurbs.utils import create_planar_nurbs_control_points
 from artist.util import constants, indices
 from artist.util.config import FacetConfig, SurfaceConfig
 from artist.util.env import get_device
@@ -413,7 +413,7 @@ class SurfaceGenerator:
         log.info("Beginning generation of the ideal surface configuration.")
         facet_config_list = []
 
-        control_points = artist.nurbs.utils.create_planar_nurbs_control_points(
+        control_points = create_planar_nurbs_control_points(
             number_of_control_points=self.number_of_control_points,
             canting=canting,
             device=device,

@@ -1,6 +1,5 @@
 import torch
 
-import artist.util.indices
 from artist.field.kinematics import Kinematics
 from artist.geometry import rotations, transforms
 from artist.util import constants, indices, type_registry
@@ -125,7 +124,7 @@ class RigidBody(Kinematics):
         self.motor_positions = torch.zeros(
             (
                 number_of_heliostats,
-                artist.util.indices.rigid_body_motor_position_dimension,
+                indices.rigid_body_motor_position_dimension,
             ),
             device=device,
         )
