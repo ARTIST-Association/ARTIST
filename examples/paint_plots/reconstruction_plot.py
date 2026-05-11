@@ -214,7 +214,7 @@ def plot_error_against_distance(
         alpha=0.7,
     )
 
-    # Trendlines.
+    # Trend lines
     helios_fit = np.poly1d(np.polyfit(distances, helios_losses, 1))
     utis_fit = np.poly1d(np.polyfit(distances, utis_losses, 1))
     x_vals = np.linspace(distances.min(), distances.max(), 200)
@@ -270,13 +270,13 @@ if __name__ == "__main__":
     """
 
     # ------------------------------------------------------------------
-    # 1️⃣  Determine the *script* directory – this is the location of the
+    # Determine the *script* directory – this is the location of the
     # script **and** of the default YAML file.
     # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
     # ------------------------------------------------------------------
-    # 2️⃣  Repository root (two levels up from this file).  All paths that
+    # Repository root (two levels up from this file).  All paths that
     # appear in the YAML are relative to the repository root, not to the
     # current working directory.
     # ------------------------------------------------------------------
