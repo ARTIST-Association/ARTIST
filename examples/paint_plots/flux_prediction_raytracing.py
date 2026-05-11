@@ -128,13 +128,9 @@ def extract_canting_and_translation_from_properties(
                 _,
             ) = paint_scenario_parser.extract_paint_heliostat_properties(
                 heliostat_properties_path=properties_path,
-                power_plant_position=torch.tensor(
-                    [
-                        paint_mappings.POWER_PLANT_LAT,
-                        paint_mappings.POWER_PLANT_LON,
-                        paint_mappings.POWER_PLANT_ALT,
-                    ]
-                ),
+                power_plant_position=torch.zeros(
+                    3
+                ),  # Zeros because to extract only facet translations and canting no global position is needed.
                 device=device,
             )
 
