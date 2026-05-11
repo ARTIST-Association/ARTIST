@@ -1247,19 +1247,13 @@ if __name__ == "__main__":
     plots_dir : str
         Path to the directory where the plots are saved.
     """
-    # ------------------------------------------------------------------
     # Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
-
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -1326,10 +1320,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may be relative) to absolute
-    # ones using the same helper.
-    # ------------------------------------------------------------------
+    # Convert CLI‑provided paths (which may be relative) to absolute ones.
     results_dir = _make_abs(args.results_dir)
     plots_dir = _make_abs(args.plots_dir)
 

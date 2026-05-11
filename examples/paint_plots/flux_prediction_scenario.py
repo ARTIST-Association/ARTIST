@@ -1,3 +1,27 @@
+"""
+Generate two scenarios for the flux prediction plots.
+
+One of these scenarios uses ideal surfaces whilst one includes surfaces fitted with deflectometry data.
+If a configuration file is provided the values will be loaded from this file. It is also possible to override
+the configuration file using command line arguments. If no command line arguments and no configuration file
+is provided, default values will be used which may fail.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+tower_file_name : str
+    Name of the file containing the tower measurements.
+heliostats : dict[str, int]
+    The heliostats and associated calibration measurement required in the scenario.
+scenarios_dir : str
+    Path to the directory for saving the generated scenarios.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -190,42 +214,13 @@ def generate_flux_prediction_scenario(
 
 
 if __name__ == "__main__":
-    """
-    Generate two scenarios for the flux prediction plots.
-
-    One of these scenarios uses ideal surfaces whilst one includes surfaces fitted with deflectometry data.
-    If a configuration file is provided the values will be loaded from this file. It is also possible to override
-    the configuration file using command line arguments. If no command line arguments and no configuration file
-    is provided, default values will be used which may fail.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    tower_file_name : str
-        Name of the file containing the tower measurements.
-    heliostats : dict[str, int]
-        The heliostats and associated calibration measurement required in the scenario.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
-    # ------------------------------------------------------------------
     # Locate the script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
-
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -302,10 +297,7 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may still be relative) to
-    # absolute paths using the same helper.
-    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to absolute paths.
     data_dir = _make_abs(args.data_dir)
     tower_file = data_dir / args.tower_file_name
 

@@ -1,3 +1,23 @@
+"""
+Generate reconstruction results and save them.
+
+This script performs kinematics reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
+plots.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+data_dir : str
+    Path to the data directory.
+device : str
+    Device to use for the computation.
+results_dir : str
+    Path to the directory for the results.
+scenarios_dir : str
+    Path to the directory for saving the generated scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -153,37 +173,13 @@ def generate_reconstruction_results(
 
 
 if __name__ == "__main__":
-    """
-    Generate reconstruction results and save them.
-
-    This script performs kinematics reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
-    plots.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    data_dir : str
-        Path to the data directory.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to the directory for the results.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
-    # ------------------------------------------------------------------
     # Locate the script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -243,10 +239,7 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may be relative) to absolute
-    # ones using the same helper.
-    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may be relative) to absolute ones.
     results_dir = _make_abs(args.results_dir)
     scenarios_dir = _make_abs(args.scenarios_dir)
 

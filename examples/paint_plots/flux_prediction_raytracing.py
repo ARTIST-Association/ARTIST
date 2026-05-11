@@ -1,3 +1,25 @@
+"""
+Perform raytracing and save the results.
+
+This script executes the raytracing in ``ARTIST`` for the two previously generated scenarios. The resulting bitmaps
+representing flux images are saved for plotting later.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+heliostats : dict[str, int]
+    Heliostats and calibration measurements required for raytracing.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -301,12 +323,7 @@ def generate_flux_images(
 
     results_dict: dict[str, dict[str, np.ndarray | torch.Tensor]] = {}
 
-    # ------------------------------------------------------------------
-    # Load any existing results **onto the CPU** – this avoids the
-    # ``torch.mps.current_device`` issue that appears when a CUDA/MPS
-    # device is requested on a machine that does not have it.
-    # ------------------------------------------------------------------
-
+    # Load any existing results onto the CPU.
     try:
         loaded = torch.load(
             results_file, weights_only=False, map_location=torch.device("cpu")
@@ -461,39 +478,13 @@ def generate_flux_images(
 
 
 if __name__ == "__main__":
-    """
-    Perform raytracing and save the results.
-
-    This script executes the raytracing in ``ARTIST`` for the two previously generated scenarios. The resulting bitmaps
-    representing flux images are saved for plotting later.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    heliostats : dict[str, int]
-        Heliostats and calibration measurements required for raytracing.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    """
     # Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
-
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -570,10 +561,7 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert command‑line paths (which may still be relative) to absolute
-    # ones using the same helper.
-    # ------------------------------------------------------------------
+    # Convert command‑line paths (which may still be relative) to absolute ones.
     data_dir = _make_abs(args.data_dir)
     results_path = _make_abs(args.results_dir) / "flux_prediction_results.pt"
     deflectometry_scenario_file = (

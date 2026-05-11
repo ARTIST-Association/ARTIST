@@ -1,3 +1,29 @@
+"""
+Generate list of viable heliostats for kinematics reconstruction.
+
+This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
+the reconstruction process.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+minimum_number_of_measurements : int
+    Minimum number of calibration measurements per heliostat required.
+maximum_number_of_heliostats_for_reconstruction : int
+    Maximum number of heliostats to include.
+excluded_heliostats_for_reconstruction : list[str]
+    List of heliostats to exclude.
+calibration_image_type : str
+    Type of calibration image to use, either flux or flux-centered.
+"""
+
 import argparse
 import json
 import pathlib
@@ -132,44 +158,13 @@ def find_viable_heliostats(
 
 
 if __name__ == "__main__":
-    """
-    Generate list of viable heliostats for kinematics reconstruction.
-
-    This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the reconstruction process.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    minimum_number_of_measurements : int
-        Minimum number of calibration measurements per heliostat required.
-    maximum_number_of_heliostats_for_reconstruction : int
-        Maximum number of heliostats to include.
-    excluded_heliostats_for_reconstruction : list[str]
-        List of heliostats to exclude.
-    calibration_image_type : str
-        Type of calibration image to use, either flux or flux-centered.
-    """
-    # ------------------------------------------------------------------
     # Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative string/path to an **absolute**
-    # path anchored at the repository root (the place where the YAML paths
-    # were written).
-    # ------------------------------------------------------------------
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -263,10 +258,7 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may be relative) to absolute
-    # paths using the same helper.
-    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may be relative) to absolute paths.
     data_dir = _make_abs(args.data_dir)
     results_dir = _make_abs(args.results_dir)
 

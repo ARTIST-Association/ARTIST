@@ -1,3 +1,16 @@
+"""
+Generate .binp files to be used in the ``STRAL`` software comparison.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_for_stral_dir : str
+    Path to the directory for the generated ``STRAL`` files.
+"""
+
 import argparse
 import os
 import pathlib
@@ -150,30 +163,13 @@ def save_binp_from_artist_data(
 
 
 if __name__ == "__main__":
-    """
-    Generate .binp files to be used in the ``STRAL`` software comparison.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_for_stral_dir : str
-        Path to the directory for the generated ``STRAL`` files.
-    """
-    # ------------------------------------------------------------------
-    # 1️⃣  Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -224,10 +220,7 @@ if __name__ == "__main__":
     args = parser.parse_args(args=unknown)
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert the CLI‑provided path (which may still be relative) to an
-    # absolute path using the same helper.
-    # ------------------------------------------------------------------
+    # Convert the CLI‑provided path (which may still be relative) to an absolute path.
     data_for_stral_dir = _make_abs(args.data_for_stral_dir)
     heliostats_data_path = (
         data_for_stral_dir / "baseline" / "reconstructed_heliostats_data_0.pt"

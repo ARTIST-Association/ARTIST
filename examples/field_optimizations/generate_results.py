@@ -1466,18 +1466,13 @@ def parse_runtimes(filepath: pathlib.Path) -> dict[str, Any]:
 @track_runtime(runtime_log)
 def main() -> None:
     """Generate field optimization results and save them."""
-    # ------------------------------------------------------------------
     # Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -1600,10 +1595,7 @@ def main() -> None:
     args = parser.parse_args()
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may still be relative) to
-    # absolute paths using the same helper.
-    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to absolute paths.
     results_dir = _make_abs(args.results_dir)
     scenarios_dir = _make_abs(args.scenarios_dir)
     measured_data_dir = _make_abs(args.measured_data_dir)

@@ -19,11 +19,8 @@ from artist.util.env import get_device
 set_logger_config()
 
 
-# ------------------------------------------------------------------
-# Helper that resolves a possibly‑relative path **relative to the
-# repository root** (the place where the YAML paths were written).
-# ------------------------------------------------------------------
 def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+    """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
     p = pathlib.Path(p).expanduser()
     return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -265,9 +262,7 @@ if __name__ == "__main__":
     heliostat_list_baseline : list[str]
         List of all heliostat names included in the baseline measurement.
     """
-    # ------------------------------------------------------------------
     # Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     project_root = script_dir.parent.parent
 
@@ -355,10 +350,7 @@ if __name__ == "__main__":
     args = parser.parse_args(args=unknown)
     device = get_device(torch.device(args.device))
 
-    # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may still be relative) to
-    # absolute ones using the same helper.
-    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to absolute ones.
     data_dir = _make_abs(args.data_dir)
     results_dir = _make_abs(args.results_dir)
     scenarios_dir = _make_abs(args.scenarios_dir)

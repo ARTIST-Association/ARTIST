@@ -143,18 +143,13 @@ if __name__ == "__main__":
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
 
-    # ------------------------------------------------------------------
     # Repository root (two levels up from this file).  All paths that
     # appear in the YAML are relative to the repository root, not to the
     # current working directory.
-    # ------------------------------------------------------------------
     project_root = script_dir.parent.parent
-    # ------------------------------------------------------------------
-    # Helper that converts a possibly‑relative string into an absolute Path
-    # using ``project_root`` as the base directory.
-    # ------------------------------------------------------------------
 
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 

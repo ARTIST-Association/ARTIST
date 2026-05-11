@@ -1,3 +1,32 @@
+"""
+Generate list of viable heliostats for the field optimizations.
+
+This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, forthe optimization process. It will create one list for the baseline case, including the 96 heliostats specified in
+the `config.yaml`, and one list for the full-field case, including all heliostats with the minimum amount of calibration
+files available.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+minimum_number_of_measurements : int
+    Minimum number of calibration measurements per heliostat required.
+kinematics_reconstruction_image_type : str
+    Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
+surface_reconstruction_image_type : str
+    Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
+excluded_heliostats_for_reconstruction : list[str]
+    Heliostat names to exclude from the reconstruction process.
+heliostat_list_baseline : list[str]
+    List of all heliostat names included in the baseline measurement.
+"""
+
 import argparse
 import json
 import pathlib
@@ -295,47 +324,13 @@ def create_heliostat_data_mappings(
 
 
 if __name__ == "__main__":
-    """
-    Generate list of viable heliostats for the field optimizations.
-
-    This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the optimization process. It will create one list for the baseline case, including the 96 heliostats specified in
-    the `config.yaml`, and one list for the full-field case, including all heliostats with the minimum amount of calibration
-    files available.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    minimum_number_of_measurements : int
-        Minimum number of calibration measurements per heliostat required.
-    kinematics_reconstruction_image_type : str
-        Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
-    surface_reconstruction_image_type : str
-        Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
-    excluded_heliostats_for_reconstruction : list[str]
-        Heliostat names to exclude from the reconstruction process.
-    heliostat_list_baseline : list[str]
-        List of all heliostat names included in the baseline measurement.
-    """
-    # ------------------------------------------------------------------
     # Locate this script and the repository root (two levels up).
-    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
     project_root = script_dir.parent.parent
 
-    # ------------------------------------------------------------------
-    # Helper that resolves a possibly‑relative path **relative to the
-    # repository root** (the place where the YAML paths were written).
-    # ------------------------------------------------------------------
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -462,9 +457,7 @@ if __name__ == "__main__":
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
     # ------------------------------------------------------------------
-    # Convert any CLI‑provided paths (which may still be relative) to
-    # absolute ones using the same helper.
-    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to absolute ones.
     data_dir = _make_abs(args.data_dir)
     results_dir = _make_abs(args.results_dir)
 

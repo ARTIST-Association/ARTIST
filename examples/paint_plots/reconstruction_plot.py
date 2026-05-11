@@ -1,3 +1,25 @@
+"""
+Generate plots based on the kinematics reconstruction results.
+
+This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
+using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+results_dir : str
+    Path to directory where the results are saved.
+plots_dir : str
+    Path to the directory where the plots are saved.
+number_of_points_to_plot : int
+    Number of data points to plot in the distance error plot.
+random_seed : int
+    Random seed for the selection of points to plot.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -247,45 +269,16 @@ def plot_error_against_distance(
 
 
 if __name__ == "__main__":
-    """
-    Generate plots based on the kinematics reconstruction results.
-
-    This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
-    using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to directory where the results are saved.
-    plots_dir : str
-        Path to the directory where the plots are saved.
-    number_of_points_to_plot : int
-        Number of data points to plot in the distance error plot.
-    random_seed : int
-        Random seed for the selection of points to plot.
-    """
-
-    # ------------------------------------------------------------------
-    # Determine the *script* directory – this is the location of the
-    # script **and** of the default YAML file.
-    # ------------------------------------------------------------------
+    # Determine the script directory as the location of the script and the default YAML file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
-    # ------------------------------------------------------------------
     # Repository root (two levels up from this file).  All paths that
     # appear in the YAML are relative to the repository root, not to the
     # current working directory.
-    # ------------------------------------------------------------------
     project_root = script_dir.parent.parent
-    # ------------------------------------------------------------------
-    # Helper that turns a possibly‑relative string into an absolute Path.
-    # ------------------------------------------------------------------
 
     def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
         p = pathlib.Path(p).expanduser()
         return p if p.is_absolute() else (project_root / p).resolve()
 
@@ -360,7 +353,6 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    # ``args.results_dir`` is already absolute (thanks to the logic above).
     results_path = (
         pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
