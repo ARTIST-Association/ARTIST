@@ -58,6 +58,10 @@ __all__ = [
     "setup_distributed_environment",
     "distribute_groups_among_ranks",
     "get_device",
+    "set_logger_config",
+    "set_runtime_logger",
+    "runtime_log",
+    "track_runtime",
 ]
 
 import logging
