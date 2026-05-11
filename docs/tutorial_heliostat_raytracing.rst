@@ -100,16 +100,16 @@ which type of light source and target area is included:
     # Inspect the scenario.
     print(scenario)
     print(
-        f"The light source is a {scenario.light_sources.light_source_list[index_mapping.first_light_source].__class__.__name__}."
+        f"The light source is a {scenario.light_sources.light_source_list[indices.first_light_source].__class__.__name__}."
     )
     print(
         f"The target areas have the following index mapping: {scenario.solar_tower.target_name_to_index}."
     )
     print(
-        f"The first heliostat in the first group in the field is {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].names[index_mapping.first_heliostat]}."
+        f"The first heliostat in the first group in the field is {scenario.heliostat_field.heliostat_groups[indices.first_heliostat_group].names[indices.first_heliostat]}."
     )
     print(
-        f"The location of {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].names[index_mapping.first_heliostat]} is: {scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].positions[index_mapping.first_heliostat].tolist()}."
+        f"The location of {scenario.heliostat_field.heliostat_groups[indices.first_heliostat_group].names[indices.first_heliostat]} is: {scenario.heliostat_field.heliostat_groups[indices.first_heliostat_group].positions[indices.first_heliostat].tolist()}."
     )
 
 This code generates the following output:
@@ -142,7 +142,7 @@ Then we activate these heliostats by calling the ``activate_heliostats()`` metho
 .. code-block:: python
 
     # Activate the heliostat. Only activated heliostats will be aligned or ray-traced.
-    scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group].activate_heliostats(
+    scenario.heliostat_field.heliostat_groups[indices.first_heliostat_group].activate_heliostats(
         active_heliostats_mask=active_heliostats_mask,
         device=device,
     )
@@ -204,7 +204,7 @@ Given this incident ray direction, we can align the heliostats with the followin
 
     # Align the heliostat(s).
     scenario.heliostat_field.heliostat_groups[
-        index_mapping.first_heliostat_group
+        indices.first_heliostat_group
     ].align_surfaces_with_incident_ray_directions(
         aim_points=aim_point,
         incident_ray_directions=incident_ray_directions,
@@ -253,7 +253,7 @@ tracing with ``ARTIST`` involves only two simple lines of code. First, we define
     # Create a ray tracer.
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
-        heliostat_group=scenario.heliostat_field.heliostat_groups[index_mapping.first_heliostat_group],
+        heliostat_group=scenario.heliostat_field.heliostat_groups[indices.first_heliostat_group],
     )
 
 Internally, a ``HeliostatRayTracer`` uses a ``torch.Dataset`` to generate rays, apply distortions to the preferred
