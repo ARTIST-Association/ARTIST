@@ -180,7 +180,7 @@ def plot_error_against_distance(
     distances = np.linalg.norm(positions[:, :2], axis=1)
 
     # Randomly select indices to plot.
-    np.random.seed(42)
+    np.random.seed(random_seed)
     total_data_points = len(distances)
     if number_of_points_to_plot >= total_data_points:
         selected_indices = np.arange(total_data_points)
@@ -269,9 +269,25 @@ if __name__ == "__main__":
         Random seed for the selection of points to plot.
     """
 
-    # Set default location for configuration file.
+    # ------------------------------------------------------------------
+    # 1️⃣  Determine the *script* directory – this is the location of the
+    # script **and** of the default YAML file.
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    # ------------------------------------------------------------------
+    # 2️⃣  Repository root (two levels up from this file).  All paths that
+    # appear in the YAML are relative to the repository root, not to the
+    # current working directory.
+    # ------------------------------------------------------------------
+    project_root = script_dir.parent.parent
+    # ------------------------------------------------------------------
+    # Helper that turns a possibly‑relative string into an absolute Path.
+    # ------------------------------------------------------------------
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -298,8 +314,13 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
-    plots_dir_default = config.get("plots_dir", "./examples/paint_plots/plots")
+    # Resolve the defaults coming from the YAML *relative to the repo root*.
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
+    plots_dir_default = _make_abs(
+        config.get("plots_dir", "./examples/paint_plots/plots")
+    )
     number_of_points_to_plot_default = config.get("number_of_points_to_plot", 100)
     random_seed_default = config.get("random_seed", 7)
 
@@ -339,9 +360,11 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
+    # ``args.results_dir`` is already absolute (thanks to the logic above).
     results_path = (
         pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
+
     if not results_path.exists():
         raise FileNotFoundError(
             f"Results file not found: {results_path}. Please run ``reconstruction_generate_results.py``"
