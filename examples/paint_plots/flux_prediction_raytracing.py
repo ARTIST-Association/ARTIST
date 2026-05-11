@@ -301,8 +301,16 @@ def generate_flux_images(
 
     results_dict: dict[str, dict[str, np.ndarray | torch.Tensor]] = {}
 
+    # ------------------------------------------------------------------
+    # Load any existing results **onto the CPU** – this avoids the
+    # ``torch.mps.current_device`` issue that appears when a CUDA/MPS
+    # device is requested on a machine that does not have it.
+    # ------------------------------------------------------------------
+
     try:
-        loaded = torch.load(results_file, weights_only=False)
+        loaded = torch.load(
+            results_file, weights_only=False, map_location=torch.device("cpu")
+        )
         results_dict = cast(dict[str, dict[str, np.ndarray | torch.Tensor]], loaded)
     except FileNotFoundError:
         print(f"File not found: {results_file}. Initializing with an empty dictionary.")
@@ -421,13 +429,13 @@ def generate_flux_images(
             ]
             facet_points_decanted_tensor = perform_inverse_canting_and_translation(
                 canted_points=facet_points_canted,
-                translation=torch.zeros(4, 4),
+                translation=torch.zeros(4, 4, device=device),
                 canting=facet_canting_vectors,
                 device=device,
             )
             facet_normals_decanted_tensor = perform_inverse_canting_and_translation(
                 canted_points=facet_normals_canted,
-                translation=torch.zeros(4, 4),
+                translation=torch.zeros(4, 4, device=device),
                 canting=facet_canting_vectors,
                 device=device,
             )
@@ -474,9 +482,20 @@ if __name__ == "__main__":
     scenarios_dir : str
         Path to the directory containing the scenarios.
     """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    # ------------------------------------------------------------------
+    # Helper that resolves a possibly‑relative path **relative to the
+    # repository root** (the place where the YAML paths were written).
+    # ------------------------------------------------------------------
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -502,15 +521,17 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
     device_default = config.get("device", "cuda")
     heliostats_default = config.get(
         "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
 
     parser.add_argument(
         "--device",
@@ -548,13 +569,17 @@ if __name__ == "__main__":
     args = parser.parse_args(args=unknown)
 
     device = get_device(torch.device(args.device))
-    data_dir = pathlib.Path(args.data_dir)
-    results_path = pathlib.Path(args.results_dir) / "flux_prediction_results.pt"
 
+    # ------------------------------------------------------------------
+    # Convert command‑line paths (which may still be relative) to absolute
+    # ones using the same helper.
+    # ------------------------------------------------------------------
+    data_dir = _make_abs(args.data_dir)
+    results_path = _make_abs(args.results_dir) / "flux_prediction_results.pt"
     deflectometry_scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
+        _make_abs(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
     )
-    ideal_scenario_file = pathlib.Path(args.scenarios_dir) / "flux_prediction_ideal.h5"
+    ideal_scenario_file = _make_abs(args.scenarios_dir) / "flux_prediction_ideal.h5"
 
     # Generate and merge flux images for both scenarios into one results file.
     generate_flux_images(

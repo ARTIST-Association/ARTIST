@@ -172,9 +172,20 @@ if __name__ == "__main__":
     scenarios_dir : str
         Path to the directory for saving the generated scenarios.
     """
-    # Set default location for configuration file.
+    # ------------------------------------------------------------------
+    # Locate the script and the repository root (two levels up).
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    # ------------------------------------------------------------------
+    # Helper that resolves a possibly‑relative path **relative to the
+    # repository root** (the place where the YAML paths were written).
+    # ------------------------------------------------------------------
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -201,9 +212,11 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
 
     parser.add_argument(
@@ -230,14 +243,23 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may be relative) to absolute
+    # ones using the same helper.
+    # ------------------------------------------------------------------
+    results_dir = _make_abs(args.results_dir)
+    scenarios_dir = _make_abs(args.scenarios_dir)
+
+    viable_heliostats_data = results_dir / "viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
-            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
+            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! "
+            f"Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, "
+            f"or adjust the file path and try again."
         )
 
     # Define scenario path.
-    scenario_path = pathlib.Path(args.scenarios_dir) / "reconstruction.h5"
+    scenario_path = scenarios_dir / "reconstruction.h5"
     if not scenario_path.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_path} could not be found! Please run the ``reconstruction_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -262,9 +284,8 @@ if __name__ == "__main__":
         device=device,
     )
 
-    results_path = (
-        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
-    )
+    results_path = results_dir / "kinematics_reconstruction_results.pt"
+
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)
 

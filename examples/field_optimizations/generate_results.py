@@ -1466,9 +1466,20 @@ def parse_runtimes(filepath: pathlib.Path) -> dict[str, Any]:
 @track_runtime(runtime_log)
 def main() -> None:
     """Generate field optimization results and save them."""
-    # Set default location for configuration file.
+    # ------------------------------------------------------------------
+    # Locate this script and the repository root (two levels up).
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
+    project_root = script_dir.parent.parent
+
+    # ------------------------------------------------------------------
+    # Helper that resolves a possibly‑relative path **relative to the
+    # repository root** (the place where the YAML paths were written).
+    # ------------------------------------------------------------------
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1495,17 +1506,24 @@ def main() -> None:
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get(
-        "results_dir", "./examples/field_optimizations/results"
+    # Resolve directory defaults relative to the repo root.
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/field_optimizations/results")
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/field_optimizations/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/field_optimizations/scenarios")
     )
-    measured_data_dir_default = config.get(
-        "measured_data_dir", "./examples/field_optimizations/measured_data"
+    measured_data_dir_default = _make_abs(
+        config.get(
+            "measured_data_dir",
+            "./examples/field_optimizations/measured_data",
+        )
     )
-    data_for_stral_dir_default = config.get(
-        "data_for_stral_dir", "./examples/field_optimizations/data_for_stral"
+    data_for_stral_dir_default = _make_abs(
+        config.get(
+            "data_for_stral_dir",
+            "./examples/field_optimizations/data_for_stral",
+        )
     )
     heliostats_for_plots_default = config.get(
         "heliostats_for_plots", ["AK54", "AM55", "AM56"]
@@ -1531,25 +1549,25 @@ def main() -> None:
         "--results_dir",
         type=str,
         help="Path to the results directory containing the viable heliostats list.",
-        default=results_dir_default,
+        default=str(results_dir_default),
     )
     parser.add_argument(
         "--scenarios_dir",
         type=str,
         help="Path to the directory for saving the generated scenarios.",
-        default=scenarios_dir_default,
+        default=str(scenarios_dir_default),
     )
     parser.add_argument(
         "--measured_data_dir",
         type=str,
         help="Path to the directory containing measured data.",
-        default=measured_data_dir_default,
+        default=str(measured_data_dir_default),
     )
     parser.add_argument(
         "--data_for_stral_dir",
         type=str,
         help="Path to the directory where the data for the STRAL comparison will be saved.",
-        default=data_for_stral_dir_default,
+        default=str(data_for_stral_dir_default),
     )
     parser.add_argument(
         "--heliostats_for_plots",
@@ -1582,20 +1600,28 @@ def main() -> None:
     args = parser.parse_args()
     device = get_device(torch.device(args.device))
 
+    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to
+    # absolute paths using the same helper.
+    # ------------------------------------------------------------------
+    results_dir = _make_abs(args.results_dir)
+    scenarios_dir = _make_abs(args.scenarios_dir)
+    measured_data_dir = _make_abs(args.measured_data_dir)
+    data_for_stral_dir = _make_abs(args.data_for_stral_dir)
+
     for case in ["baseline"]:
         # for case in ["baseline", "full_field"]:
         # Set directory paths.
-        results_dir = pathlib.Path(args.results_dir) / f"{case}"
+        results_dir = results_dir / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)
         results_number = get_incremented_path_number(
             base_path=results_dir / "results.pt"
         )
         results_path = results_dir / f"results_{results_number}.pt"
 
-        measured_data_dir = pathlib.Path(args.measured_data_dir)
         measured_data_dir.mkdir(parents=True, exist_ok=True)
 
-        data_for_stral_dir = pathlib.Path(args.data_for_stral_dir) / case
+        data_for_stral_dir = data_for_stral_dir / case
         data_for_stral_dir.mkdir(parents=True, exist_ok=True)
 
         surface_optimization_config = (
@@ -1608,23 +1634,21 @@ def main() -> None:
         basic_config = args.basic_config
 
         # Define scenario paths and viable heliostat data paths.
-        scenario_path_ideal = (
-            pathlib.Path(args.scenarios_dir) / f"ideal_{case}_scenario.h5"
-        )
+        scenario_path_ideal = scenarios_dir / f"ideal_{case}_scenario.h5"
+
         if not scenario_path_ideal.exists():
             raise FileNotFoundError(
                 f"The ideal scenario located at {scenario_path_ideal} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
             )
         scenario_path_deflectometry = (
-            pathlib.Path(args.scenarios_dir)
-            / "deflectometry_scenario_for_comparison.h5"
+            scenarios_dir / "deflectometry_scenario_for_comparison.h5"
         )
         if not scenario_path_deflectometry.exists():
             raise FileNotFoundError(
                 f"The deflectometry scenario located at {scenario_path_deflectometry} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
             )
 
-        dataset_splits = pathlib.Path(args.results_dir) / case / "dataset_splits.json"
+        dataset_splits = results_dir / "dataset_splits.json"
         if not dataset_splits.exists():
             raise FileNotFoundError(
                 f"The viable heliostat list located at {dataset_splits} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."

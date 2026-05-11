@@ -213,9 +213,21 @@ if __name__ == "__main__":
     scenarios_dir : str
         Path to the directory for saving the generated scenarios.
     """
-    # Set default location for configuration file.
+    # ------------------------------------------------------------------
+    # Locate the script and the repository root (two levels up).
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    # ------------------------------------------------------------------
+    # Helper that resolves a possibly‑relative path **relative to the
+    # repository root** (the place where the YAML paths were written).
+    # ------------------------------------------------------------------
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -241,7 +253,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
     device_default = config.get("device", "cuda")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
@@ -249,8 +261,8 @@ if __name__ == "__main__":
     heliostats_default = config.get(
         "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
 
     parser.add_argument(
@@ -290,14 +302,18 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    data_dir = pathlib.Path(args.data_dir)
+    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to
+    # absolute paths using the same helper.
+    # ------------------------------------------------------------------
+    data_dir = _make_abs(args.data_dir)
     tower_file = data_dir / args.tower_file_name
 
     # Generate two scenarios: deflectometry and ideal (no deflectometry).
     deflectometry_scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
+        _make_abs(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
     )
-    ideal_scenario_file = pathlib.Path(args.scenarios_dir) / "flux_prediction_ideal.h5"
+    ideal_scenario_file = _make_abs(args.scenarios_dir) / "flux_prediction_ideal.h5"
 
     for scenario_path, use_deflectometry in [
         (deflectometry_scenario_file, True),

@@ -162,9 +162,20 @@ if __name__ == "__main__":
     data_for_stral_dir : str
         Path to the directory for the generated ``STRAL`` files.
     """
-    # Set default location for configuration file.
+    # ------------------------------------------------------------------
+    # 1️⃣  Locate this script and the repository root (two levels up).
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
+    project_root = script_dir.parent.parent
+
+    # ------------------------------------------------------------------
+    # Helper that resolves a possibly‑relative path **relative to the
+    # repository root** (the place where the YAML paths were written).
+    # ------------------------------------------------------------------
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -191,7 +202,10 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_for_stral_dir_default = config.get("data_for_stral_dir", "./data_for_stral")
+    # Resolve the default data‑for‑STRAL directory relative to the repo root.
+    data_for_stral_dir_default = _make_abs(
+        config.get("data_for_stral_dir", "./data_for_stral")
+    )
 
     parser.add_argument(
         "--device",
@@ -203,18 +217,20 @@ if __name__ == "__main__":
         "--data_for_stral_dir",
         type=str,
         help="Path to JSON file containing a list of heliostat names to restrict to.",
-        default=data_for_stral_dir_default,
+        default=str(data_for_stral_dir_default),
     )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-
     device = get_device(torch.device(args.device))
 
+    # ------------------------------------------------------------------
+    # Convert the CLI‑provided path (which may still be relative) to an
+    # absolute path using the same helper.
+    # ------------------------------------------------------------------
+    data_for_stral_dir = _make_abs(args.data_for_stral_dir)
     heliostats_data_path = (
-        pathlib.Path(args.data_for_stral_dir)
-        / "baseline"
-        / "reconstructed_heliostats_data_0.pt"
+        data_for_stral_dir / "baseline" / "reconstructed_heliostats_data_0.pt"
     )
 
     heliostats_data = torch.load(heliostats_data_path, weights_only=False)

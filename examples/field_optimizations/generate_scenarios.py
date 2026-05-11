@@ -19,6 +19,15 @@ from artist.util.env import get_device
 set_logger_config()
 
 
+# ------------------------------------------------------------------
+# Helper that resolves a possibly‑relative path **relative to the
+# repository root** (the place where the YAML paths were written).
+# ------------------------------------------------------------------
+def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+    p = pathlib.Path(p).expanduser()
+    return p if p.is_absolute() else (project_root / p).resolve()
+
+
 def find_latest_deflectometry_file(
     heliostat_name: str, data_directory: pathlib.Path
 ) -> pathlib.Path | None:
@@ -256,8 +265,13 @@ if __name__ == "__main__":
     heliostat_list_baseline : list[str]
         List of all heliostat names included in the baseline measurement.
     """
-    # Set default location for configuration file.
+    # ------------------------------------------------------------------
+    # Locate this script and the repository root (two levels up).
+    # ------------------------------------------------------------------
     script_dir = pathlib.Path(__file__).resolve().parent
+    project_root = script_dir.parent.parent
+
+    # Set default location for configuration file.
     default_config_path = script_dir / "config.yaml"
 
     parser = argparse.ArgumentParser()
@@ -285,17 +299,18 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_dir_default = config.get(
-        "data_dir", "./examples/field_optimizations/field_data"
+    # Resolve directory defaults relative to the repository root.
+    data_dir_default = _make_abs(
+        config.get("data_dir", "./examples/field_optimizations/field_data")
     )
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
-    results_dir_default = config.get(
-        "results_dir", "./examples/field_optimizations/results"
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/field_optimizations/results")
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/field_optimizations/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/field_optimizations/scenarios")
     )
     heliostat_list_baseline_default = config.get("heliostat_list_baseline", None)
 
@@ -309,7 +324,7 @@ if __name__ == "__main__":
         "--data_dir",
         type=str,
         help="Path to the data directory.",
-        default=data_dir_default,
+        default=str(data_dir_default),
     )
     parser.add_argument(
         "--tower_file_name",
@@ -321,13 +336,13 @@ if __name__ == "__main__":
         "--results_dir",
         type=str,
         help="Path to the results directory containing the viable heliostats list.",
-        default=results_dir_default,
+        default=str(results_dir_default),
     )
     parser.add_argument(
         "--scenarios_dir",
         type=str,
         help="Path to the directory for saving the generated scenarios.",
-        default=scenarios_dir_default,
+        default=str(scenarios_dir_default),
     )
     parser.add_argument(
         "--heliostat_list_baseline",
@@ -338,22 +353,26 @@ if __name__ == "__main__":
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-
     device = get_device(torch.device(args.device))
-    data_dir = pathlib.Path(args.data_dir)
+
+    # ------------------------------------------------------------------
+    # Convert any CLI‑provided paths (which may still be relative) to
+    # absolute ones using the same helper.
+    # ------------------------------------------------------------------
+    data_dir = _make_abs(args.data_dir)
+    results_dir = _make_abs(args.results_dir)
+    scenarios_dir = _make_abs(args.scenarios_dir)
     tower_file = data_dir / args.tower_file_name
 
     for case in ["baseline", "full_field"]:
-        viable_heliostats_data = (
-            pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
-        )
+        viable_heliostats_data = results_dir / case / "viable_heliostats.json"
         if not viable_heliostats_data.exists():
             raise FileNotFoundError(
                 f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
             )
 
         # Define scenario path.
-        scenario_path = pathlib.Path(args.scenarios_dir) / f"ideal_{case}_scenario.h5"
+        scenario_path = scenarios_dir / f"ideal_{case}_scenario.h5"
         if not scenario_path.parent.exists():
             scenario_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -383,7 +402,7 @@ if __name__ == "__main__":
             )
 
     deflectometry_scenario_path = (
-        pathlib.Path(args.scenarios_dir) / "deflectometry_scenario_for_comparison.h5"
+        scenarios_dir / "deflectometry_scenario_for_comparison.h5"
     )
     if deflectometry_scenario_path.exists():
         print(
