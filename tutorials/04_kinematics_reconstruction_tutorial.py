@@ -1,4 +1,4 @@
-"""Kinematic reconstruction tutorial."""
+"""Kinematics reconstruction tutorial."""
 
 import logging
 import pathlib
@@ -10,7 +10,11 @@ from matplotlib import pyplot as plt
 
 from artist.field import HeliostatGroup
 from artist.flux import bitmap
-from artist.io import CalibrationDataParser, PaintCalibrationDataParser
+from artist.io import (
+    CalibrationDataParser,
+    PaintCalibrationDataParser,
+    paint_scenario_parser,
+)
 from artist.optim import KinematicsReconstructor
 from artist.optim.loss import FocalSpotLoss
 from artist.raytracing import HeliostatRayTracer
@@ -215,13 +219,13 @@ heliostat_data_mapping = [
 ]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
-# heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-#     base_path="base/path/data",
-#     heliostat_names=["heliostat_1", "..."],
-#     number_of_measurements=5,
-#     image_variant="flux",
-#     randomize=True,
-# )
+heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
+    base_path="base/path/data",
+    heliostat_names=["heliostat_1", "..."],
+    number_of_measurements=5,
+    image_variant="flux",
+    randomize=True,
+)
 
 # Configure the optimization.
 optimizer_dict = {

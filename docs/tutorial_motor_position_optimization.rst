@@ -104,7 +104,7 @@ settings:
     optimizer_dict = {
         constants.initial_learning_rate: 3e-4,
         constants.tolerance: 0.0005,
-        constants.max_epoch: 30,
+        constants.max_epoch: 100,
         constants.batch_size: 50,
         constants.log_step: 3,
         constants.early_stopping_delta: 1e-4,
