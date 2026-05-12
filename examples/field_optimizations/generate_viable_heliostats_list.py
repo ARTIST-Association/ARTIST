@@ -456,7 +456,7 @@ if __name__ == "__main__":
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-    
+
     # Convert any CLI‑provided paths (which may still be relative) to absolute ones.
     data_dir = _make_abs(args.data_dir)
     results_dir = _make_abs(args.results_dir)
