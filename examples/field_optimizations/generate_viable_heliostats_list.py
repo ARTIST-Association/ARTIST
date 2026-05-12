@@ -1,7 +1,7 @@
 """
 Generate list of viable heliostats for the field optimizations.
 
-This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, forthe optimization process. It will create one list for the baseline case, including the 96 heliostats specified in
+This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for the optimization process. It will create one list for the baseline case, including the 96 heliostats specified in
 the `config.yaml`, and one list for the full-field case, including all heliostats with the minimum amount of calibration
 files available.
 
@@ -460,10 +460,9 @@ if __name__ == "__main__":
     # Convert any CLI‑provided paths (which may still be relative) to absolute ones.
     data_dir = _make_abs(args.data_dir)
     results_dir = _make_abs(args.results_dir)
+    metadata_dir = _make_abs(pathlib.Path("./examples/field_optimizations/metadata/"))
+    metadata_file = metadata_dir / args.metadata_file_name
 
-    metadata_file = pathlib.Path(
-        "./examples/field_optimizations/metadata/", args.metadata_file_name
-    )
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
     for case in ["baseline", "full_field"]:
