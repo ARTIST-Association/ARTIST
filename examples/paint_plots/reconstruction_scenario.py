@@ -1,3 +1,24 @@
+"""
+Generate a scenario for the kinematics reconstruction plots.
+
+This script generates a scenario based on the viable heliostats list previously generated.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+data_dir : str
+    Path to the data directory.
+device : str
+    Device to use for the computation.
+tower_file_name : str
+    Name of the file containing the tower measurements.
+results_dir : str
+    Path to the directory containing the viable heliostat list required for scenario generation.
+scenarios_dir : str
+    Path to the directory for saving the generated scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -6,14 +27,14 @@ import warnings
 import torch
 import yaml
 
-from artist.data_parser import paint_scenario_parser
-from artist.scenario import (
-    H5ScenarioGenerator,
+from artist.io import paint_scenario_parser
+from artist.scenario import H5ScenarioGenerator
+from artist.util import constants, set_logger_config
+from artist.util.config import (
     LightSourceConfig,
     LightSourceListConfig,
 )
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 set_logger_config()
 
@@ -54,9 +75,9 @@ def generate_reconstruction_scenario(
     # Set up light source configuration.
     light_source_config = LightSourceConfig(
         light_source_key="sun",
-        light_source_type=config_dictionary.sun_key,
+        light_source_type=constants.sun_key,
         number_of_rays=10,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )
@@ -88,29 +109,15 @@ def generate_reconstruction_scenario(
 
 
 if __name__ == "__main__":
-    """
-    Generate a scenario for the kinematics reconstruction plots.
-
-    This script generates a scenario based on the viable heliostats list previously generated.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    data_dir : str
-        Path to the data directory.
-    device : str
-        Device to use for the computation.
-    tower_file_name : str
-        Name of the file containing the tower measurements.
-    results_dir : str
-        Path to the directory containing the viable heliostat list required for scenario generation.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -136,14 +143,16 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
     device_default = config.get("device", "cuda")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
     )
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
 
     parser.add_argument(
@@ -179,20 +188,21 @@ if __name__ == "__main__":
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-
     device = get_device(torch.device(args.device))
 
-    data_dir = pathlib.Path(args.data_dir)
+    # Convert any CLI‑provided paths (which may still be relative) to absolute ones.
+    data_dir = _make_abs(args.data_dir)
+    results_dir = _make_abs(args.results_dir)
+    scenarios_dir = _make_abs(args.scenarios_dir)
     tower_file = data_dir / args.tower_file_name
-
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    viable_heliostats_data = results_dir / "viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
             f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
         )
 
     # Define scenario path.
-    scenario_path = pathlib.Path(args.scenarios_dir) / "reconstruction.h5"
+    scenario_path = scenarios_dir / "reconstruction.h5"
     if not scenario_path.parent.exists():
         scenario_path.parent.mkdir(parents=True, exist_ok=True)
 

@@ -4,8 +4,8 @@ import h5py
 import pytest
 import torch
 
-from artist.scene.light_source_array import LightSourceArray
-from artist.util import config_dictionary
+from artist.scene import LightSourceArray
+from artist.util import constants
 
 
 def test_light_source_array_load_from_hdf5_errors(
@@ -31,18 +31,18 @@ def test_light_source_array_load_from_hdf5_errors(
 
     mock_level_2 = mock.MagicMock()
     mock_level_2.__getitem__.side_effect = lambda key: {
-        config_dictionary.light_source_type: mock_level_3
+        constants.light_source_type: mock_level_3
     }[key]
-    mock_level_2.keys.return_value = [config_dictionary.light_source_type]
+    mock_level_2.keys.return_value = [constants.light_source_type]
 
     mock_level_1 = mock.MagicMock()
     mock_level_1.__getitem__.side_effect = lambda key: {
-        config_dictionary.sun_key: mock_level_2
+        constants.sun_key: mock_level_2
     }[key]
-    mock_level_1.keys.return_value = [config_dictionary.sun_key]
+    mock_level_1.keys.return_value = [constants.sun_key]
 
     mock_h5_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.light_source_key: mock_level_1
+        constants.light_source_key: mock_level_1
     }[key]
 
     with pytest.raises(KeyError) as exc_info:

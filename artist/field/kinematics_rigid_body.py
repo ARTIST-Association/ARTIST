@@ -1,9 +1,9 @@
 import torch
 
-import artist.util.index_mapping
 from artist.field.kinematics import Kinematics
-from artist.util import config_dictionary, index_mapping, type_mappings, utils
-from artist.util.environment_setup import get_device
+from artist.geometry import rotations, transforms
+from artist.util import constants, indices, type_registry
+from artist.util.env import get_device
 
 
 class RigidBody(Kinematics):
@@ -16,36 +16,36 @@ class RigidBody(Kinematics):
         The number of total heliostats using this rigid body kinematics.
     heliostat_positions : torch.Tensor
         The positions of all heliostats.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     initial_orientations : torch.Tensor
         The initial orientation offsets of all heliostats.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     translation_deviation_parameters : torch.Tensor
         Kinematics translation deviation parameter.
-        Tensor of shape [number_of_heliostats, 9].
+        Shape is ``[number_of_heliostats, 9]``.
     rotation_deviation_parameters : torch.Tensor
         Kinematics rotation deviation parameter.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostat_positions : torch.Tensor
         The positions of all active heliostats.
-        Tensor of shape [number_of_active_heliostats, 4].
+        Shape is ``[number_of_active_heliostats, 4]``.
     active_initial_orientations : torch.Tensor
         The initial orientations of all active heliostats.
-        Tensor of shape [number_of_active_heliostats, 4].
+        Shape is ``[number_of_active_heliostats, 4]``.
     translation_deviation_parameters : torch.Tensor
         Kinematics translation deviation parameter of all active heliostats.
-        Tensor of shape [number_of_active_heliostats, 9].
+        Shape is ``[number_of_active_heliostats, 9]``.
     rotation_deviation_parameters : torch.Tensor
         Kinematics rotation deviation parameter of all active heliostats.
-        Tensor of shape [number_of_active_heliostats, 4].
+        Shape is ``[number_of_active_heliostats, 4]``.
     active_motor_positions : torch.Tensor
         The motor positions of active heliostats.
-        Tensor of shape [number_of_active_heliostats, 2].
+        Shape is ``[number_of_active_heliostats, 2]``.
     artist_standard_orientation : torch.Tensor
         The standard orientation of the kinematics.
-        Tensor of shape [4].
+        Shape is ``[4]``.
     actuators : Actuators
         The actuators used in the kinematics.
 
@@ -91,22 +91,24 @@ class RigidBody(Kinematics):
             The number of heliostats using this rigid body kinematics.
         heliostat_positions : torch.Tensor
             The positions of all heliostats.
-            Tensor of shape [number_of_heliostats, 4].
+            Shape is ``[number_of_heliostats, 4]``.
         initial_orientations : torch.Tensor
             The initial orientation offsets of all heliostats.
-            Tensor of shape [number_of_heliostats, 4].
+            Shape is ``[number_of_heliostats, 4]``.
         translation_deviation_parameters : torch.Tensor
             Kinematics translation deviation parameter.
-            Tensor of shape [number_of_heliostats, 9].
+            Shape is ``[number_of_heliostats, 9]``.
         rotation_deviation_parameters : torch.Tensor
             Kinematics rotation deviation parameter.
-            Tensor of shape [number_of_heliostats, 4].
+            Shape is ``[number_of_heliostats, 4]``.
         actuator_parameters_non_optimizable : torch.Tensor
             The non-optimizable actuator parameters.
-            Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+            Shape is ``[number_of_heliostats, 7, 2]`` for linear actuators
+            or ``[number_of_heliostats, 4, 2]`` for ideal actuators.
         actuator_parameters_optimizable : torch.Tensor
             The optimizable actuator parameters.
-            Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators (default is torch.tensor([])).
+            Shape is ``[number_of_heliostats, 2, 2]`` for linear actuators
+            or ``[]`` for ideal actuators (default is ``torch.tensor([])``).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -122,7 +124,7 @@ class RigidBody(Kinematics):
         self.motor_positions = torch.zeros(
             (
                 number_of_heliostats,
-                artist.util.index_mapping.rigid_body_motor_position_dimension,
+                indices.rigid_body_motor_position_dimension,
             ),
             device=device,
         )
@@ -151,9 +153,9 @@ class RigidBody(Kinematics):
             [0.0, -1.0, 0.0, 0.0], device=device
         )
 
-        self.actuators = type_mappings.actuator_type_mapping[
+        self.actuators = type_registry.actuator_type_mapping[
             actuator_parameters_non_optimizable[
-                0, index_mapping.actuator_type, index_mapping.actuator_one_index
+                0, indices.actuator_type, indices.actuator_one_index
             ].item()
         ](
             non_optimizable_parameters=actuator_parameters_non_optimizable,
@@ -173,7 +175,7 @@ class RigidBody(Kinematics):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -183,7 +185,7 @@ class RigidBody(Kinematics):
         -------
         torch.Tensor
             The orientation matrices.
-            Tensor of shape [number_of_active_heliostats, 4, 4].
+            Shape is ``[number_of_active_heliostats, 4, 4]``.
         """
         joint_angles = self.actuators.motor_positions_to_angles(
             motor_positions=motor_positions,
@@ -193,95 +195,95 @@ class RigidBody(Kinematics):
         initial_orientations = torch.eye(4, device=device).unsqueeze(0)
 
         # Account for positions.
-        initial_orientations = initial_orientations @ utils.translate_enu(
-            e=self.active_heliostat_positions[:, index_mapping.e],
-            n=self.active_heliostat_positions[:, index_mapping.n],
-            u=self.active_heliostat_positions[:, index_mapping.u],
+        initial_orientations = initial_orientations @ transforms.translate_enu(
+            e=self.active_heliostat_positions[:, indices.e],
+            n=self.active_heliostat_positions[:, indices.n],
+            u=self.active_heliostat_positions[:, indices.u],
             device=device,
         )
 
         joint_rotations = torch.zeros(
             (
                 self.number_of_active_heliostats,
-                config_dictionary.rigid_body_number_of_actuators,
+                constants.rigid_body_number_of_actuators,
                 4,
                 4,
             ),
             device=device,
         )
 
-        joint_rotations[:, index_mapping.first_joint_index] = (
-            utils.rotate_n(
+        joint_rotations[:, indices.first_joint_index] = (
+            transforms.rotate_n(
                 n=self.active_rotation_deviation_parameters[
-                    :, index_mapping.first_joint_tilt_n
+                    :, indices.first_joint_tilt_n
                 ],
                 device=device,
             )
-            @ utils.rotate_u(
+            @ transforms.rotate_u(
                 u=self.active_rotation_deviation_parameters[
-                    :, index_mapping.first_joint_tilt_u
+                    :, indices.first_joint_tilt_u
                 ],
                 device=device,
             )
-            @ utils.translate_enu(
+            @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
-                    :, index_mapping.first_joint_translation_e
+                    :, indices.first_joint_translation_e
                 ],
                 n=self.active_translation_deviation_parameters[
-                    :, index_mapping.first_joint_translation_n
+                    :, indices.first_joint_translation_n
                 ],
                 u=self.active_translation_deviation_parameters[
-                    :, index_mapping.first_joint_translation_u
+                    :, indices.first_joint_translation_u
                 ],
                 device=device,
             )
-            @ utils.rotate_e(
-                e=joint_angles[:, index_mapping.joint_angles_e], device=device
+            @ transforms.rotate_e(
+                e=joint_angles[:, indices.joint_angles_e], device=device
             )
         )
-        joint_rotations[:, index_mapping.second_joint_index] = (
-            utils.rotate_e(
+        joint_rotations[:, indices.second_joint_index] = (
+            transforms.rotate_e(
                 e=self.active_rotation_deviation_parameters[
-                    :, index_mapping.second_joint_tilt_e
+                    :, indices.second_joint_tilt_e
                 ],
                 device=device,
             )
-            @ utils.rotate_n(
+            @ transforms.rotate_n(
                 n=self.active_rotation_deviation_parameters[
-                    :, index_mapping.second_joint_tilt_n
+                    :, indices.second_joint_tilt_n
                 ],
                 device=device,
             )
-            @ utils.translate_enu(
+            @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ],
                 n=self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_n
+                    :, indices.second_joint_translation_n
                 ],
                 u=self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_u
+                    :, indices.second_joint_translation_u
                 ],
                 device=device,
             )
-            @ utils.rotate_u(
-                u=joint_angles[:, index_mapping.joint_angles_u], device=device
+            @ transforms.rotate_u(
+                u=joint_angles[:, indices.joint_angles_u], device=device
             )
         )
 
         orientations = (
             initial_orientations
-            @ joint_rotations[:, index_mapping.first_joint_index]
-            @ joint_rotations[:, index_mapping.second_joint_index]
-            @ utils.translate_enu(
+            @ joint_rotations[:, indices.first_joint_index]
+            @ joint_rotations[:, indices.second_joint_index]
+            @ transforms.translate_enu(
                 e=self.active_translation_deviation_parameters[
-                    :, index_mapping.concentrator_translation_e
+                    :, indices.concentrator_translation_e
                 ],
                 n=self.active_translation_deviation_parameters[
-                    :, index_mapping.concentrator_translation_n
+                    :, indices.concentrator_translation_n
                 ],
                 u=self.active_translation_deviation_parameters[
-                    :, index_mapping.concentrator_translation_u
+                    :, indices.concentrator_translation_u
                 ],
                 device=device,
             )
@@ -299,7 +301,7 @@ class RigidBody(Kinematics):
         ----------
         orientations : torch.Tensor
             The orientation matrices.
-            Tensor of shape [number_of_active_heliostats, 4, 4].
+            Shape is ``[number_of_active_heliostats, 4, 4]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -309,7 +311,7 @@ class RigidBody(Kinematics):
         -------
         torch.Tensor
             The orientation matrices with the initial orientation offset.
-            Tensor of shape [number_of_active_heliostats, 4, 4].
+            Shape is ``[number_of_active_heliostats, 4, 4]``.
         """
         # The surface points and normals are always sampled from a model (converted NURBS from deflectometry or ideal NURBS) that lays
         # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since ARTIST expects the points and normals
@@ -317,16 +319,16 @@ class RigidBody(Kinematics):
         sampled_surface_model_orientation = torch.tensor(
             [[0.0, 0.0, 1.0, 0.0]], device=device
         ).expand(self.number_of_active_heliostats, 4)
-        east_angles, north_angles, up_angles = utils.decompose_rotations(
+        east_angles, north_angles, up_angles = rotations.decompose_rotations(
             initial_vector=sampled_surface_model_orientation,
             target_vector=self.artist_standard_orientation,
         )
 
         orientations_with_initial_orientation_offsets = (
             orientations
-            @ utils.rotate_e(e=east_angles, device=device)
-            @ utils.rotate_n(n=north_angles, device=device)
-            @ utils.rotate_u(u=up_angles, device=device)
+            @ transforms.rotate_e(e=east_angles, device=device)
+            @ transforms.rotate_n(n=north_angles, device=device)
+            @ transforms.rotate_u(u=up_angles, device=device)
         )
 
         return orientations_with_initial_orientation_offsets
@@ -346,10 +348,10 @@ class RigidBody(Kinematics):
         ----------
         incident_ray_directions : torch.Tensor
             The directions of the incident rays as seen from the heliostats.
-            Tensor of shape [number_of_active_heliostats, 4].
+            Shape is ``[number_of_active_heliostats, 4]``.
         aim_points : torch.Tensor
             The aim points for the active heliostats.
-            Tensor of shape [number_of_active_heliostats, 4].
+            Shape is ``[number_of_active_heliostats, 4]``.
         max_num_iterations : int
             Maximum number of iterations (default is 2).
         min_eps : float
@@ -363,14 +365,14 @@ class RigidBody(Kinematics):
         -------
         torch.Tensor
             The orientation matrices.
-            Tensor of shape [number_of_active_heliostats, 4, 4].
+            Shape is ``[number_of_active_heliostats, 4, 4]``.
         """
         device = get_device(device=device)
 
         motor_positions = torch.zeros(
             (
                 self.number_of_active_heliostats,
-                config_dictionary.rigid_body_number_of_actuators,
+                constants.rigid_body_number_of_actuators,
             ),
             device=device,
         )
@@ -411,10 +413,10 @@ class RigidBody(Kinematics):
             # Analytical solution for joint angles.
             joint_angles_1 = -torch.arcsin(
                 torch.clamp(
-                    -desired_concentrator_normals[:, index_mapping.e]
+                    -desired_concentrator_normals[:, indices.e]
                     / torch.cos(
                         self.active_translation_deviation_parameters[
-                            :, index_mapping.second_joint_translation_n
+                            :, indices.second_joint_translation_n
                         ]
                     ),
                     min=-1,
@@ -424,37 +426,37 @@ class RigidBody(Kinematics):
 
             a = -torch.cos(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.cos(joint_angles_1) + torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_n
+                    :, indices.second_joint_translation_n
                 ]
             ) * torch.sin(joint_angles_1)
             b = -torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.cos(joint_angles_1) - torch.cos(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_e
+                    :, indices.second_joint_translation_e
                 ]
             ) * torch.sin(
                 self.active_translation_deviation_parameters[
-                    :, index_mapping.second_joint_translation_n
+                    :, indices.second_joint_translation_n
                 ]
             ) * torch.sin(joint_angles_1)
 
             joint_angles_0 = (
                 torch.arctan2(
-                    a * -desired_concentrator_normals[:, index_mapping.u]
-                    - b * -desired_concentrator_normals[:, index_mapping.n],
-                    a * -desired_concentrator_normals[:, index_mapping.n]
-                    + b * -desired_concentrator_normals[:, index_mapping.u],
+                    a * -desired_concentrator_normals[:, indices.u]
+                    - b * -desired_concentrator_normals[:, indices.n],
+                    a * -desired_concentrator_normals[:, indices.n]
+                    + b * -desired_concentrator_normals[:, indices.u],
                 )
                 - torch.pi
             )
@@ -491,7 +493,7 @@ class RigidBody(Kinematics):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -501,7 +503,7 @@ class RigidBody(Kinematics):
         -------
         torch.Tensor
             The orientation matrices.
-            Tensor of shape [number_of_active_heliostats, 4, 4].
+            Shape is ``[number_of_active_heliostats, 4, 4]``.
         """
         device = get_device(device=device)
 

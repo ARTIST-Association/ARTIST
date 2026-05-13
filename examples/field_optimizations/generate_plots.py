@@ -10,9 +10,9 @@ from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 from scipy.stats import gaussian_kde
 
-from artist.core.loss_functions import KLDivergenceLoss
-from artist.util import utils
-from artist.util.environment_setup import get_device
+from artist.geometry import transforms
+from artist.optim.loss import KLDivergenceLoss
+from artist.util.env import get_device
 
 plot_colors = {
     "darkblue": "#002864",
@@ -136,7 +136,7 @@ def plot_surface_reconstruction_flux(
         deflectometry_original = torch.cat(
             (deflectometry_original, ones[..., 0, None]), dim=-1
         )
-        deflectometry_uncanted_original = utils.perform_canting(
+        deflectometry_uncanted_original = transforms.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=deflectometry_original,
             inverse=True,
@@ -189,13 +189,13 @@ def plot_surface_reconstruction_flux(
         cbar4.set_label("Angle (rad)")
 
         # Process reconstructed data.
-        points_uncanted = utils.perform_canting(
+        points_uncanted = transforms.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=heliostat_data["surface_points"].cpu().detach().reshape(2, 4, -1, 4),
             inverse=True,
             device=torch.device("cpu"),
         )
-        normals_uncanted = utils.perform_canting(
+        normals_uncanted = transforms.perform_canting(
             canting_angles=canting.expand(2, -1, -1, -1),
             data=heliostat_data["surface_normals"].cpu().detach().reshape(2, 4, -1, 4),
             inverse=True,
@@ -1247,9 +1247,15 @@ if __name__ == "__main__":
     plots_dir : str
         Path to the directory where the plots are saved.
     """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1274,8 +1280,22 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./results")
-    plots_dir_default = config.get("plots_dir", "./plots")
+    # Resolve any directory defaults that are stored in the YAML relative to the repo root.
+    results_dir_default = _make_abs(config.get("results_dir", "./results"))
+    plots_dir_default = _make_abs(config.get("plots_dir", "./plots"))
+    # The following entries are not used directly in this script, but we resolve them
+    # here for completeness – they may be needed by other parts of the project.
+    _ = _make_abs(
+        config.get("scenarios_dir", "./examples/field_optimizations/scenarios")
+    )
+    _ = _make_abs(
+        config.get("measured_data_dir", "./examples/field_optimizations/measured_data")
+    )
+    _ = _make_abs(
+        config.get(
+            "data_for_stral_dir", "./examples/field_optimizations/data_for_stral"
+        )
+    )
 
     parser.add_argument(
         "--device",
@@ -1287,27 +1307,27 @@ if __name__ == "__main__":
         "--results_dir",
         type=str,
         help="Path to load the results.",
-        default=results_dir_default,
+        default=str(results_dir_default),
     )
     parser.add_argument(
         "--plots_dir",
         type=str,
         help="Path to save the plots.",
-        default=plots_dir_default,
+        default=str(plots_dir_default),
     )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args()
-
     device = get_device(torch.device(args.device))
+
+    # Convert CLI‑provided paths (which may be relative) to absolute ones.
+    results_dir = _make_abs(args.results_dir)
+    plots_dir = _make_abs(args.plots_dir)
 
     for case in ["baseline", "full_field"]:
         results_number = 10
-        results_path = (
-            pathlib.Path(args.results_dir) / case / f"results_{results_number}.pt"
-        )
-
-        plots_path = pathlib.Path(args.plots_dir) / case
+        results_path = results_dir / case / f"results_{results_number}.pt"
+        plots_path = plots_dir / case
         (plots_path / f"run_{results_number}").mkdir(parents=True, exist_ok=True)
 
         if not results_path.exists():

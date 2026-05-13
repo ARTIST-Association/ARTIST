@@ -1,3 +1,25 @@
+"""
+Generate plots based on the kinematics reconstruction results.
+
+This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
+using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+results_dir : str
+    Path to directory where the results are saved.
+plots_dir : str
+    Path to the directory where the plots are saved.
+number_of_points_to_plot : int
+    Number of data points to plot in the distance error plot.
+random_seed : int
+    Random seed for the selection of points to plot.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -10,7 +32,7 @@ import yaml
 from matplotlib import pyplot as plt
 from scipy.stats import gaussian_kde
 
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 plot_colors = {
     paint_mappings.HELIOS_KEY: "#002864",
@@ -180,7 +202,7 @@ def plot_error_against_distance(
     distances = np.linalg.norm(positions[:, :2], axis=1)
 
     # Randomly select indices to plot.
-    np.random.seed(42)
+    np.random.seed(random_seed)
     total_data_points = len(distances)
     if number_of_points_to_plot >= total_data_points:
         selected_indices = np.arange(total_data_points)
@@ -214,7 +236,7 @@ def plot_error_against_distance(
         alpha=0.7,
     )
 
-    # Trendlines.
+    # Trend lines
     helios_fit = np.poly1d(np.polyfit(distances, helios_losses, 1))
     utis_fit = np.poly1d(np.polyfit(distances, utis_losses, 1))
     x_vals = np.linspace(distances.min(), distances.max(), 200)
@@ -247,31 +269,18 @@ def plot_error_against_distance(
 
 
 if __name__ == "__main__":
-    """
-    Generate plots based on the kinematics reconstruction results.
-
-    This script loads the results from the ``ARTIST`` reconstruction and generates two plots, one comparing the loss when
-    using different centroid extraction methods and one comparing the loss as a function of distance from the tower.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to directory where the results are saved.
-    plots_dir : str
-        Path to the directory where the plots are saved.
-    number_of_points_to_plot : int
-        Number of data points to plot in the distance error plot.
-    random_seed : int
-        Random seed for the selection of points to plot.
-    """
-
-    # Set default location for configuration file.
+    # Determine the script directory as the location of the script and the default YAML file.
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    # Repository root (two levels up from this file).  All paths that
+    # appear in the YAML are relative to the repository root, not to the
+    # current working directory.
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -298,8 +307,13 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
-    plots_dir_default = config.get("plots_dir", "./examples/paint_plots/plots")
+    # Resolve the defaults coming from the YAML *relative to the repo root*.
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
+    plots_dir_default = _make_abs(
+        config.get("plots_dir", "./examples/paint_plots/plots")
+    )
     number_of_points_to_plot_default = config.get("number_of_points_to_plot", 100)
     random_seed_default = config.get("random_seed", 7)
 
@@ -342,6 +356,7 @@ if __name__ == "__main__":
     results_path = (
         pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
     )
+
     if not results_path.exists():
         raise FileNotFoundError(
             f"Results file not found: {results_path}. Please run ``reconstruction_generate_results.py``"

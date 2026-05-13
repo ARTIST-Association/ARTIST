@@ -4,8 +4,10 @@ import pathlib
 
 import torch
 
-from artist.data_parser import stral_scenario_parser
-from artist.scenario.configuration_classes import (
+from artist.io import stral_scenario_parser
+from artist.scenario import H5ScenarioGenerator, SurfaceGenerator
+from artist.util import constants, set_logger_config
+from artist.util.config import (
     ActuatorConfig,
     ActuatorPrototypeConfig,
     HeliostatConfig,
@@ -21,10 +23,7 @@ from artist.scenario.configuration_classes import (
     TargetAreaPlanarConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.scenario.surface_generator import SurfaceGenerator
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 # Set up logger.
 set_logger_config()
@@ -84,9 +83,9 @@ target_area_cylindrical_list_config = TargetAreaCylindricalListConfig(
 # Include the light source configuration.
 light_source_config = LightSourceConfig(
     light_source_key="sun",
-    light_source_type=config_dictionary.sun_key,
+    light_source_type=constants.sun_key,
     number_of_rays=10,
-    distribution_type=config_dictionary.light_source_distribution_is_normal,
+    distribution_type=constants.light_source_distribution_is_normal,
     mean=0.0,
     covariance=4.3681e-06,
 )
@@ -144,7 +143,7 @@ surface_prototype_config = SurfacePrototypeConfig(facet_list=surface_config.face
 
 # Include the kinematics prototype configuration.
 kinematics_prototype_config = KinematicsPrototypeConfig(
-    kinematics_type=config_dictionary.rigid_body_key,
+    kinematics_type=constants.rigid_body_key,
     initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0]),
 )
 
@@ -156,13 +155,13 @@ min_max_motor_positions_actuator_2 = [0.0, 80000.0]
 # Include two ideal actuators.
 actuator1_prototype = ActuatorConfig(
     key="actuator_1",
-    actuator_type=config_dictionary.ideal_actuator_key,
+    actuator_type=constants.ideal_actuator_key,
     clockwise_axis_movement=False,
     min_max_motor_positions=min_max_motor_positions_actuator_1,
 )
 actuator2_prototype = ActuatorConfig(
     key="actuator_2",
-    actuator_type=config_dictionary.ideal_actuator_key,
+    actuator_type=constants.ideal_actuator_key,
     clockwise_axis_movement=True,
     min_max_motor_positions=min_max_motor_positions_actuator_2,
 )

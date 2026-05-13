@@ -6,14 +6,14 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.field.heliostat_field import HeliostatField
-from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
-from artist.field.solar_tower import SolarTower
-from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.field.tower_target_areas_planar import (
+from artist.field import (
+    HeliostatField,
+    HeliostatGroupRigidBody,
+    SolarTower,
+    TowerTargetAreasCylindrical,
     TowerTargetAreasPlanar,
 )
-from artist.scenario.scenario import Scenario
+from artist.scenario import Scenario
 
 
 def test_get_number_of_heliostat_groups_from_hdf5() -> None:

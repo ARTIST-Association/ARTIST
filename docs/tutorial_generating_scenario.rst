@@ -176,9 +176,9 @@ We define the light source by creating a ``LightSourceConfig`` object as shown b
     # Include the light source configuration.
     light_source_config = LightSourceConfig(
         light_source_key="sun",
-        light_source_type=config_dictionary.sun_key,
+        light_source_type=constants.sun_key,
         number_of_rays=10,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )
@@ -224,7 +224,7 @@ receiver:
     target_area = [
         target_area
         for target_area in target_area_list_config.target_area_list
-        if target_area.target_area_key == config_dictionary.target_area_receiver
+        if target_area.target_area_key == constants.target_area_receiver
     ]
 
 Before loading the heliostats, we need to do some configuration. ``ARTIST`` internally models all heliostat surfaces
@@ -241,7 +241,7 @@ This is shown below:
 .. code-block:: python
 
     number_of_nurbs_control_points = torch.tensor([20, 20], device=device)
-    nurbs_fit_method = config_dictionary.fit_nurbs_from_normals
+    nurbs_fit_method = constants.fit_nurbs_from_normals
     nurbs_deflectometry_step_size = 100
     nurbs_fit_tolerance = 1e-10
     nurbs_fit_max_epoch = 400
@@ -380,7 +380,7 @@ scenario by running the ``main`` function shown below:
 
     if __name__ == "__main__":
         # Generate the scenario given the defined parameters.
-        scenario_generator = ScenarioGenerator(
+        scenario_generator = H5ScenarioGenerator(
             file_path=scenario_path,
             power_plant_config=power_plant_config,
             target_area_list_planar_config=target_area_list_planar_config,
@@ -392,7 +392,7 @@ scenario by running the ``main`` function shown below:
         scenario_generator.generate_scenario()
 
 Based on the previously defined ``scenario_path`` and our configurations for the receiver(s), light source(s),
-prototype, and heliostat(s), a ``ScenarioGenerator`` object is instantiated. This object is then used to generate the
+prototype, and heliostat(s), an ``H5ScenarioGenerator`` object is instantiated. This object is then used to generate the
 actual HDF5 file.
 
 After running this script, a new HDF5 file will appear at the location you specified at the very beginning – and that is
@@ -548,7 +548,7 @@ create the kinematics prototype by generating a ``KinematicsPrototypeConfig`` ob
 .. code-block:: python
 
     kinematics_prototype_config = KinematicsPrototypeConfig(
-        type=config_dictionary.rigid_body_key,
+        type=constants.rigid_body_key,
         initial_orientation=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
     )
 
@@ -577,13 +577,13 @@ We can now define the actuators using ``ActuatorConfig`` objects as shown below:
     # Include two ideal actuators.
     actuator1_prototype = ActuatorConfig(
         key="actuator_1",
-        type=config_dictionary.ideal_actuator_key,
+        type=constants.ideal_actuator_key,
         clockwise_axis_movement=False,
         min_max_motor_positions=min_max_motor_positions_actuator_1,
     )
    actuator2_prototype = ActuatorConfig(
         key="actuator_2",
-        type=config_dictionary.ideal_actuator_key,
+        type=constants.ideal_actuator_key,
         clockwise_axis_movement=True,
         min_max_motor_positions=min_max_motor_positions_actuator_2,
     )

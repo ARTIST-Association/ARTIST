@@ -6,12 +6,13 @@ import h5py
 import torch
 from matplotlib import pyplot as plt
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.loss_functions import KLDivergenceLoss
-from artist.core.motor_position_optimizer import MotorPositionsOptimizer
-from artist.scenario.scenario import Scenario
-from artist.util import config_dictionary, index_mapping, set_logger_config, utils
-from artist.util.environment_setup import get_device, setup_distributed_environment
+from artist.flux import bitmap
+from artist.optim import MotorPositionsOptimizer
+from artist.optim.loss import KLDivergenceLoss
+from artist.raytracing import HeliostatRayTracer
+from artist.scenario import Scenario
+from artist.util import constants, indices, set_logger_config
+from artist.util.env import get_device, setup_distributed_environment
 
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
@@ -35,8 +36,8 @@ def create_flux_plot(label: str, resolution: torch.Tensor) -> None:
     """
     total_flux = torch.zeros(
         (
-            resolution[index_mapping.unbatched_bitmap_u],
-            resolution[index_mapping.unbatched_bitmap_e],
+            resolution[indices.unbatched_bitmap_u],
+            resolution[indices.unbatched_bitmap_e],
         ),
         device=device,
     )
@@ -134,39 +135,39 @@ scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenar
 
 # Set optimizer parameters.
 optimizer_dict = {
-    config_dictionary.initial_learning_rate: 3e-4,
-    config_dictionary.tolerance: 0.0005,
-    config_dictionary.max_epoch: 100,
-    config_dictionary.batch_size: 50,
-    config_dictionary.log_step: 3,
-    config_dictionary.early_stopping_delta: 1e-4,
-    config_dictionary.early_stopping_patience: 100,
-    config_dictionary.early_stopping_window: 100,
+    constants.initial_learning_rate: 3e-4,
+    constants.tolerance: 0.0005,
+    constants.max_epoch: 100,
+    constants.batch_size: 50,
+    constants.log_step: 3,
+    constants.early_stopping_delta: 1e-4,
+    constants.early_stopping_patience: 100,
+    constants.early_stopping_window: 100,
 }
 # Configure the learning rate scheduler.
 scheduler_dict = {
-    config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
-    config_dictionary.gamma: 0.9,
-    config_dictionary.lr_min: 1e-6,
-    config_dictionary.lr_max: 1e-3,
-    config_dictionary.step_size_up: 500,
-    config_dictionary.reduce_factor: 0.3,
-    config_dictionary.patience: 100,
-    config_dictionary.threshold: 1e-3,
-    config_dictionary.cooldown: 10,
+    constants.scheduler_type: constants.reduce_on_plateau,
+    constants.gamma: 0.9,
+    constants.lr_min: 1e-6,
+    constants.lr_max: 1e-3,
+    constants.step_size_up: 500,
+    constants.reduce_factor: 0.3,
+    constants.patience: 100,
+    constants.threshold: 1e-3,
+    constants.cooldown: 10,
 }
 # Configure the regularizers and constraints.
 constraint_dict = {
-    config_dictionary.rho_flux_integral: 1.0,
-    config_dictionary.rho_local_flux: 1.0,
-    config_dictionary.rho_intercept: 1.0,
-    config_dictionary.max_flux_density: 1000000,
+    constants.rho_flux_integral: 1.0,
+    constants.rho_local_flux: 1.0,
+    constants.rho_intercept: 1.0,
+    constants.max_flux_density: 1000000,
 }
 # Combine configurations.
 optimization_configuration = {
-    config_dictionary.optimization: optimizer_dict,
-    config_dictionary.scheduler: scheduler_dict,
-    config_dictionary.constraints: constraint_dict,
+    constants.optimization: optimizer_dict,
+    constants.scheduler: scheduler_dict,
+    constants.constraints: constraint_dict,
 }
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -177,7 +178,7 @@ with setup_distributed_environment(
     number_of_heliostat_groups=number_of_heliostat_groups,
     device=device,
 ) as ddp_setup:
-    device = ddp_setup[config_dictionary.device]  # type: ignore
+    device = ddp_setup[constants.device]  # type: ignore
 
     # Load the scenario.
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -216,21 +217,21 @@ with setup_distributed_environment(
     # )
     # loss_definition = FocalSpotLoss(scenario=scenario)
     # For an optimization using a distribution as target use this loss function definition:
-    e_trapezoid = utils.trapezoid_distribution(
-        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_e],
+    e_trapezoid = bitmap.trapezoid_distribution(
+        total_width=bitmap_resolution[indices.unbatched_bitmap_e],
         slope_width=30,
         plateau_width=110,
         device=device,
     )
-    u_trapezoid = utils.trapezoid_distribution(
-        total_width=bitmap_resolution[index_mapping.unbatched_bitmap_u],
+    u_trapezoid = bitmap.trapezoid_distribution(
+        total_width=bitmap_resolution[indices.unbatched_bitmap_u],
         slope_width=30,
         plateau_width=110,
         device=device,
     )
     ground_truth = u_trapezoid.unsqueeze(
-        index_mapping.unbatched_bitmap_u
-    ) * e_trapezoid.unsqueeze(index_mapping.unbatched_bitmap_e)
+        indices.unbatched_bitmap_u
+    ) * e_trapezoid.unsqueeze(indices.unbatched_bitmap_e)
     ground_truth = (ground_truth / ground_truth.sum()) * target_flux_integral
 
     loss_definition = KLDivergenceLoss()

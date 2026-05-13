@@ -5,8 +5,8 @@ import torch
 from typing_extensions import Self
 
 from artist.field.tower_target_areas import TowerTargetAreas
-from artist.util import config_dictionary
-from artist.util.environment_setup import get_device
+from artist.util import constants
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the cylindrical tower target areas."""
@@ -132,9 +132,7 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         if rank == 0:
             log.info("Loading the cylindrical tower target areas from an HDF5 file.")
 
-        number_of_target_areas = len(
-            config_file[config_dictionary.target_area_cylindrical_key]
-        )
+        number_of_target_areas = len(config_file[constants.target_area_cylindrical_key])
 
         names = []
         radii = torch.zeros(number_of_target_areas, device=device)
@@ -145,51 +143,41 @@ class TowerTargetAreasCylindrical(TowerTargetAreas):
         opening_angles = torch.zeros(number_of_target_areas, device=device)
 
         for index, target_area_name in enumerate(
-            sorted(config_file[config_dictionary.target_area_cylindrical_key].keys())
+            sorted(config_file[constants.target_area_cylindrical_key].keys())
         ):
             single_target_area_config = config_file[
-                config_dictionary.target_area_cylindrical_key
+                constants.target_area_cylindrical_key
             ][target_area_name]
             names.append(target_area_name)
             radii[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_cylinder_radius
-                ][()],
+                single_target_area_config[constants.target_area_cylinder_radius][()],
                 dtype=torch.float,
                 device=device,
             )
             centers[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_cylinder_center
-                ][()],
+                single_target_area_config[constants.target_area_cylinder_center][()],
                 dtype=torch.float,
                 device=device,
             )
             heights[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_cylinder_height
-                ][()],
+                single_target_area_config[constants.target_area_cylinder_height][()],
                 dtype=torch.float,
                 device=device,
             )
             axes[index] = torch.tensor(
-                single_target_area_config[config_dictionary.target_area_cylinder_axis][
-                    ()
-                ],
+                single_target_area_config[constants.target_area_cylinder_axis][()],
                 dtype=torch.float,
                 device=device,
             )
             normals[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_cylinder_normal
-                ][()],
+                single_target_area_config[constants.target_area_cylinder_normal][()],
                 dtype=torch.float,
                 device=device,
             )
             opening_angles[index] = torch.tensor(
-                single_target_area_config[
-                    config_dictionary.target_area_cylinder_opening_angle
-                ][()],
+                single_target_area_config[constants.target_area_cylinder_opening_angle][
+                    ()
+                ],
                 dtype=torch.float,
                 device=device,
             )

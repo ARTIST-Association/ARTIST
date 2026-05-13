@@ -11,24 +11,24 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.core.heliostat_ray_tracer import HeliostatRayTracer
-from artist.core.kinematics_reconstructor import KinematicsReconstructor
-from artist.core.loss_functions import FocalSpotLoss, KLDivergenceLoss
-from artist.core.motor_position_optimizer import MotorPositionsOptimizer
-from artist.core.surface_reconstructor import SurfaceReconstructor
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
 from artist.field.heliostat_group import HeliostatGroup
-from artist.scenario import Scenario
+from artist.flux import bitmap
+from artist.io.calibration_parser import CalibrationDataParser
+from artist.io.paint_calibration_parser import PaintCalibrationDataParser
+from artist.optim.kinematics_reconstructor import KinematicsReconstructor
+from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss
+from artist.optim.motor_position_optimizer import MotorPositionsOptimizer
+from artist.optim.surface_reconstructor import SurfaceReconstructor
+from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
+from artist.scenario.scenario import Scenario
 from artist.util import (
-    config_dictionary,
-    index_mapping,
+    constants,
+    indices,
     runtime_log,
     set_logger_config,
     track_runtime,
-    utils,
 )
-from artist.util.environment_setup import (
+from artist.util.env import (
     DdpSetup,
     get_device,
     setup_distributed_environment,
@@ -126,8 +126,8 @@ def create_distributions(
         measured_flux = torch.nn.functional.interpolate(
             bitmap_resized,
             size=(
-                resolution[index_mapping.unbatched_bitmap_u],
-                resolution[index_mapping.unbatched_bitmap_e],
+                resolution[indices.unbatched_bitmap_u],
+                resolution[indices.unbatched_bitmap_e],
             ),
             mode="bilinear",
             align_corners=True,
@@ -136,14 +136,14 @@ def create_distributions(
         results_dict["measured_flux"] = measured_flux
 
     if "homogeneous_distribution" not in results_dict.keys():
-        e_trapezoid = utils.trapezoid_distribution(
-            total_width=resolution[index_mapping.unbatched_bitmap_e],
+        e_trapezoid = bitmap.trapezoid_distribution(
+            total_width=resolution[indices.unbatched_bitmap_e],
             slope_width=30,
             plateau_width=120,
             device=device,
         )
-        u_trapezoid = utils.trapezoid_distribution(
-            total_width=resolution[index_mapping.unbatched_bitmap_u],
+        u_trapezoid = bitmap.trapezoid_distribution(
+            total_width=resolution[indices.unbatched_bitmap_u],
             slope_width=30,
             plateau_width=166,
             device=device,
@@ -276,8 +276,8 @@ def save_heliostat_model(
             data["positions"].extend(
                 tuple(position[:3].tolist()) for position in heliostat_group.positions
             )
-            start = -torch.norm(heliostat_group.canting, dim=index_mapping.canting)
-            end = torch.norm(heliostat_group.canting, dim=index_mapping.canting)
+            start = -torch.norm(heliostat_group.canting, dim=indices.canting)
+            end = torch.norm(heliostat_group.canting, dim=indices.canting)
             data["widths"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 0] + 0.01)
             data["heights"].extend(((end[:, 0] - start[:, 0]) * 2)[:, 1] + 0.01)
             data["number_of_facets"].extend(
@@ -417,12 +417,10 @@ def kinematics_evaluation(
             heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
-            parser = cast(
-                CalibrationDataParser, heliostat_data[config_dictionary.data_parser]
-            )
+            parser = cast(CalibrationDataParser, heliostat_data[constants.data_parser])
             heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-                heliostat_data[config_dictionary.heliostat_data_mapping],
+                heliostat_data[constants.heliostat_data_mapping],
             )
             (
                 measured_fluxes,
@@ -519,12 +517,10 @@ def surface_evaluation(
             heliostat_group: HeliostatGroup = scenario.heliostat_field.heliostat_groups[
                 heliostat_group_index
             ]
-            parser = cast(
-                CalibrationDataParser, heliostat_data[config_dictionary.data_parser]
-            )
+            parser = cast(CalibrationDataParser, heliostat_data[constants.data_parser])
             heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-                heliostat_data[config_dictionary.heliostat_data_mapping],
+                heliostat_data[constants.heliostat_data_mapping],
             )
             (
                 measured_fluxes,
@@ -566,7 +562,7 @@ def surface_evaluation(
                 target_area_indices=target_area_indices.detach(),
                 device=device,
             )
-            cropped_flux_distributions = utils.crop_flux_distributions_around_center(
+            cropped_flux_distributions = bitmap.crop_flux_distributions_around_center(
                 flux_distributions=bitmaps_per_heliostat.detach(),
                 solar_tower=scenario.solar_tower,
                 target_area_indices=target_area_indices.detach(),
@@ -648,8 +644,8 @@ def aim_point_plots(
         device = get_device(device)
         total_flux = torch.zeros(
             (
-                int(bitmap_resolution[index_mapping.unbatched_bitmap_u].item()),
-                int(bitmap_resolution[index_mapping.unbatched_bitmap_e].item()),
+                int(bitmap_resolution[indices.unbatched_bitmap_u].item()),
+                int(bitmap_resolution[indices.unbatched_bitmap_e].item()),
             ),
             device=device,
         )
@@ -863,34 +859,34 @@ def full_field_optimizations(
             number_of_rays=kinematics_config["number_of_rays"]
         )
         optimization_configuration_kinematics = {
-            config_dictionary.optimization: {
-                config_dictionary.initial_learning_rate_rotation_deviation: kinematics_config[
+            constants.optimization: {
+                constants.initial_learning_rate_rotation_deviation: kinematics_config[
                     "initial_learning_rate_rotation_deviation"
                 ],
-                config_dictionary.initial_learning_rate_initial_angles: kinematics_config[
+                constants.initial_learning_rate_initial_angles: kinematics_config[
                     "initial_learning_rate_initial_angles"
                 ],
-                config_dictionary.initial_learning_rate_initial_stroke_length: kinematics_config[
+                constants.initial_learning_rate_initial_stroke_length: kinematics_config[
                     "initial_learning_rate_initial_stroke_length"
                 ],
-                config_dictionary.tolerance: 1e-5,
-                config_dictionary.max_epoch: kinematics_config["max_epoch"],
-                config_dictionary.batch_size: kinematics_config["batch_size"],
-                config_dictionary.log_step: basic_config[config_dictionary.log_step],
-                config_dictionary.early_stopping_delta: 1e-12,
-                config_dictionary.early_stopping_patience: 10000,
-                config_dictionary.early_stopping_window: 10000,
+                constants.tolerance: 1e-5,
+                constants.max_epoch: kinematics_config["max_epoch"],
+                constants.batch_size: kinematics_config["batch_size"],
+                constants.log_step: basic_config[constants.log_step],
+                constants.early_stopping_delta: 1e-12,
+                constants.early_stopping_patience: 10000,
+                constants.early_stopping_window: 10000,
             },
-            config_dictionary.scheduler: {
-                config_dictionary.scheduler_type: kinematics_config["scheduler"],
-                config_dictionary.gamma: kinematics_config["gamma"],
-                config_dictionary.lr_min: kinematics_config["min_learning_rate"],
-                config_dictionary.lr_max: kinematics_config["max_learning_rate"],
-                config_dictionary.step_size_up: kinematics_config["step_size_up"],
-                config_dictionary.reduce_factor: kinematics_config["reduce_factor"],
-                config_dictionary.patience: kinematics_config["patience"],
-                config_dictionary.threshold: kinematics_config["threshold"],
-                config_dictionary.cooldown: kinematics_config["cooldown"],
+            constants.scheduler: {
+                constants.scheduler_type: kinematics_config["scheduler"],
+                constants.gamma: kinematics_config["gamma"],
+                constants.lr_min: kinematics_config["min_learning_rate"],
+                constants.lr_max: kinematics_config["max_learning_rate"],
+                constants.step_size_up: kinematics_config["step_size_up"],
+                constants.reduce_factor: kinematics_config["reduce_factor"],
+                constants.patience: kinematics_config["patience"],
+                constants.threshold: kinematics_config["threshold"],
+                constants.cooldown: kinematics_config["cooldown"],
             },
         }
         kinematics_reconstructor = KinematicsReconstructor(
@@ -899,7 +895,7 @@ def full_field_optimizations(
             data=data_mappings["kinematics_training"],
             dni=baseline_dni,
             optimization_configuration=optimization_configuration_kinematics,
-            reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
+            reconstruction_method=constants.kinematics_reconstruction_raytracing,
         )
         kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
             kinematics_reconstructor.reconstruct_kinematics(
@@ -974,53 +970,47 @@ def full_field_optimizations(
         data_surfaces = []
         batch_size = surface_config["batch_size_outer"]
         heliostat_data = data_mappings["surface_training"][
-            config_dictionary.heliostat_data_mapping
+            constants.heliostat_data_mapping
         ]
         for i in range(0, len(heliostat_data), batch_size):
             batch = heliostat_data[i : i + batch_size]
             data_surfaces.append(
                 {
-                    config_dictionary.data_parser: data_mappings["surface_training"][
-                        config_dictionary.data_parser
+                    constants.data_parser: data_mappings["surface_training"][
+                        constants.data_parser
                     ],
-                    config_dictionary.heliostat_data_mapping: batch,
+                    constants.heliostat_data_mapping: batch,
                 }
             )
         optimization_configuration_surface = {
-            config_dictionary.optimization: {
-                config_dictionary.initial_learning_rate: surface_config[
+            constants.optimization: {
+                constants.initial_learning_rate: surface_config[
                     "initial_learning_rate"
                 ],
-                config_dictionary.tolerance: 1e-5,
-                config_dictionary.max_epoch: surface_config["max_epoch"],
-                config_dictionary.batch_size: surface_config["batch_size"],
-                config_dictionary.log_step: basic_config[config_dictionary.log_step],
-                config_dictionary.early_stopping_delta: 1e-12,
-                config_dictionary.early_stopping_patience: 10000,
-                config_dictionary.early_stopping_window: 10000,
+                constants.tolerance: 1e-5,
+                constants.max_epoch: surface_config["max_epoch"],
+                constants.batch_size: surface_config["batch_size"],
+                constants.log_step: basic_config[constants.log_step],
+                constants.early_stopping_delta: 1e-12,
+                constants.early_stopping_patience: 10000,
+                constants.early_stopping_window: 10000,
             },
-            config_dictionary.scheduler: {
-                config_dictionary.scheduler_type: surface_config["scheduler"],
-                config_dictionary.gamma: surface_config["gamma"],
-                config_dictionary.lr_min: surface_config["min_learning_rate"],
-                config_dictionary.lr_max: surface_config["max_learning_rate"],
-                config_dictionary.step_size_up: surface_config["step_size_up"],
-                config_dictionary.reduce_factor: surface_config["reduce_factor"],
-                config_dictionary.patience: surface_config["patience"],
-                config_dictionary.threshold: surface_config["threshold"],
-                config_dictionary.cooldown: surface_config["cooldown"],
+            constants.scheduler: {
+                constants.scheduler_type: surface_config["scheduler"],
+                constants.gamma: surface_config["gamma"],
+                constants.lr_min: surface_config["min_learning_rate"],
+                constants.lr_max: surface_config["max_learning_rate"],
+                constants.step_size_up: surface_config["step_size_up"],
+                constants.reduce_factor: surface_config["reduce_factor"],
+                constants.patience: surface_config["patience"],
+                constants.threshold: surface_config["threshold"],
+                constants.cooldown: surface_config["cooldown"],
             },
-            config_dictionary.constraints: {
-                config_dictionary.weight_smoothness: surface_config[
-                    "weight_smoothness"
-                ],
-                config_dictionary.weight_ideal_surface: surface_config[
-                    "weight_ideal_surface"
-                ],
-                config_dictionary.rho_flux_integral: surface_config[
-                    "rho_flux_integral"
-                ],
-                config_dictionary.energy_tolerance: surface_config["energy_tolerance"],
+            constants.constraints: {
+                constants.weight_smoothness: surface_config["weight_smoothness"],
+                constants.weight_ideal_surface: surface_config["weight_ideal_surface"],
+                constants.rho_flux_integral: surface_config["rho_flux_integral"],
+                constants.energy_tolerance: surface_config["energy_tolerance"],
             },
         }
         if not control_points_path.exists():
@@ -1130,7 +1120,7 @@ def full_field_optimizations(
             data=data_mappings["kinematics_training"],
             dni=baseline_dni,
             optimization_configuration=optimization_configuration_kinematics,
-            reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
+            reconstruction_method=constants.kinematics_reconstruction_raytracing,
         )
         kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
             kinematics_reconstructor.reconstruct_kinematics(
@@ -1226,38 +1216,34 @@ def full_field_optimizations(
             number_of_rays=aim_point_config["number_of_rays"]
         )
         optimization_configuration_aim_points = {
-            config_dictionary.optimization: {
-                config_dictionary.initial_learning_rate: aim_point_config[
+            constants.optimization: {
+                constants.initial_learning_rate: aim_point_config[
                     "initial_learning_rate"
                 ],
-                config_dictionary.tolerance: 1e-5,
-                config_dictionary.max_epoch: aim_point_config["max_epoch"],
-                config_dictionary.batch_size: aim_point_config["batch_size"],
-                config_dictionary.log_step: basic_config[config_dictionary.log_step],
-                config_dictionary.early_stopping_delta: 1e-12,
-                config_dictionary.early_stopping_patience: 10000,
-                config_dictionary.early_stopping_window: 10000,
+                constants.tolerance: 1e-5,
+                constants.max_epoch: aim_point_config["max_epoch"],
+                constants.batch_size: aim_point_config["batch_size"],
+                constants.log_step: basic_config[constants.log_step],
+                constants.early_stopping_delta: 1e-12,
+                constants.early_stopping_patience: 10000,
+                constants.early_stopping_window: 10000,
             },
-            config_dictionary.scheduler: {
-                config_dictionary.scheduler_type: aim_point_config["scheduler"],
-                config_dictionary.gamma: aim_point_config["gamma"],
-                config_dictionary.lr_min: aim_point_config["min_learning_rate"],
-                config_dictionary.lr_max: aim_point_config["max_learning_rate"],
-                config_dictionary.step_size_up: aim_point_config["step_size_up"],
-                config_dictionary.reduce_factor: aim_point_config["reduce_factor"],
-                config_dictionary.patience: aim_point_config["patience"],
-                config_dictionary.threshold: aim_point_config["threshold"],
-                config_dictionary.cooldown: aim_point_config["cooldown"],
+            constants.scheduler: {
+                constants.scheduler_type: aim_point_config["scheduler"],
+                constants.gamma: aim_point_config["gamma"],
+                constants.lr_min: aim_point_config["min_learning_rate"],
+                constants.lr_max: aim_point_config["max_learning_rate"],
+                constants.step_size_up: aim_point_config["step_size_up"],
+                constants.reduce_factor: aim_point_config["reduce_factor"],
+                constants.patience: aim_point_config["patience"],
+                constants.threshold: aim_point_config["threshold"],
+                constants.cooldown: aim_point_config["cooldown"],
             },
-            config_dictionary.constraints: {
-                config_dictionary.rho_flux_integral: aim_point_config[
-                    "rho_flux_integral"
-                ],
-                config_dictionary.rho_local_flux: aim_point_config["rho_local_flux"],
-                config_dictionary.rho_intercept: aim_point_config["rho_intercept"],
-                config_dictionary.max_flux_density: aim_point_config[
-                    "max_flux_density"
-                ],
+            constants.constraints: {
+                constants.rho_flux_integral: aim_point_config["rho_flux_integral"],
+                constants.rho_local_flux: aim_point_config["rho_local_flux"],
+                constants.rho_intercept: aim_point_config["rho_intercept"],
+                constants.max_flux_density: aim_point_config["max_flux_density"],
             },
         }
         motor_positions_optimizer = MotorPositionsOptimizer(
@@ -1355,10 +1341,10 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: dataset_splits[
-            "kinematics_reconstruction"
-        ]["plot"],
+        constants.data_parser: data_parser_plots,
+        constants.heliostat_data_mapping: dataset_splits["kinematics_reconstruction"][
+            "plot"
+        ],
     }
 
     data_kinematics_training: dict[
@@ -1366,10 +1352,10 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser_kinematics,
-        config_dictionary.heliostat_data_mapping: dataset_splits[
-            "kinematics_reconstruction"
-        ]["training"],
+        constants.data_parser: data_parser_kinematics,
+        constants.heliostat_data_mapping: dataset_splits["kinematics_reconstruction"][
+            "training"
+        ],
     }
 
     data_kinematics_validation: dict[
@@ -1377,10 +1363,10 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser_kinematics,
-        config_dictionary.heliostat_data_mapping: dataset_splits[
-            "kinematics_reconstruction"
-        ]["validation"],
+        constants.data_parser: data_parser_kinematics,
+        constants.heliostat_data_mapping: dataset_splits["kinematics_reconstruction"][
+            "validation"
+        ],
     }
 
     data_surface_plot: dict[
@@ -1388,10 +1374,10 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser_plots,
-        config_dictionary.heliostat_data_mapping: dataset_splits[
-            "surface_reconstruction"
-        ]["plot"],
+        constants.data_parser: data_parser_plots,
+        constants.heliostat_data_mapping: dataset_splits["surface_reconstruction"][
+            "plot"
+        ],
     }
 
     data_surface_training: dict[
@@ -1399,20 +1385,20 @@ def create_heliostat_data_mappings(
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser_surface,
-        config_dictionary.heliostat_data_mapping: dataset_splits[
-            "surface_reconstruction"
-        ]["training"],
+        constants.data_parser: data_parser_surface,
+        constants.heliostat_data_mapping: dataset_splits["surface_reconstruction"][
+            "training"
+        ],
     }
     data_surface_validation: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser_surface,
-        config_dictionary.heliostat_data_mapping: dataset_splits[
-            "surface_reconstruction"
-        ]["validation"],
+        constants.data_parser: data_parser_surface,
+        constants.heliostat_data_mapping: dataset_splits["surface_reconstruction"][
+            "validation"
+        ],
     }
 
     data_mappings = {
@@ -1480,9 +1466,15 @@ def parse_runtimes(filepath: pathlib.Path) -> dict[str, Any]:
 @track_runtime(runtime_log)
 def main() -> None:
     """Generate field optimization results and save them."""
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1509,17 +1501,24 @@ def main() -> None:
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get(
-        "results_dir", "./examples/field_optimizations/results"
+    # Resolve directory defaults relative to the repo root.
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/field_optimizations/results")
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/field_optimizations/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/field_optimizations/scenarios")
     )
-    measured_data_dir_default = config.get(
-        "measured_data_dir", "./examples/field_optimizations/measured_data"
+    measured_data_dir_default = _make_abs(
+        config.get(
+            "measured_data_dir",
+            "./examples/field_optimizations/measured_data",
+        )
     )
-    data_for_stral_dir_default = config.get(
-        "data_for_stral_dir", "./examples/field_optimizations/data_for_stral"
+    data_for_stral_dir_default = _make_abs(
+        config.get(
+            "data_for_stral_dir",
+            "./examples/field_optimizations/data_for_stral",
+        )
     )
     heliostats_for_plots_default = config.get(
         "heliostats_for_plots", ["AK54", "AM55", "AM56"]
@@ -1545,25 +1544,25 @@ def main() -> None:
         "--results_dir",
         type=str,
         help="Path to the results directory containing the viable heliostats list.",
-        default=results_dir_default,
+        default=str(results_dir_default),
     )
     parser.add_argument(
         "--scenarios_dir",
         type=str,
         help="Path to the directory for saving the generated scenarios.",
-        default=scenarios_dir_default,
+        default=str(scenarios_dir_default),
     )
     parser.add_argument(
         "--measured_data_dir",
         type=str,
         help="Path to the directory containing measured data.",
-        default=measured_data_dir_default,
+        default=str(measured_data_dir_default),
     )
     parser.add_argument(
         "--data_for_stral_dir",
         type=str,
         help="Path to the directory where the data for the STRAL comparison will be saved.",
-        default=data_for_stral_dir_default,
+        default=str(data_for_stral_dir_default),
     )
     parser.add_argument(
         "--heliostats_for_plots",
@@ -1596,20 +1595,25 @@ def main() -> None:
     args = parser.parse_args()
     device = get_device(torch.device(args.device))
 
+    # Convert any CLI‑provided paths (which may still be relative) to absolute paths.
+    results_dir = _make_abs(args.results_dir)
+    scenarios_dir = _make_abs(args.scenarios_dir)
+    measured_data_dir = _make_abs(args.measured_data_dir)
+    data_for_stral_dir = _make_abs(args.data_for_stral_dir)
+
     for case in ["baseline"]:
         # for case in ["baseline", "full_field"]:
         # Set directory paths.
-        results_dir = pathlib.Path(args.results_dir) / f"{case}"
+        results_dir = results_dir / f"{case}"
         results_dir.mkdir(parents=True, exist_ok=True)
         results_number = get_incremented_path_number(
             base_path=results_dir / "results.pt"
         )
         results_path = results_dir / f"results_{results_number}.pt"
 
-        measured_data_dir = pathlib.Path(args.measured_data_dir)
         measured_data_dir.mkdir(parents=True, exist_ok=True)
 
-        data_for_stral_dir = pathlib.Path(args.data_for_stral_dir) / case
+        data_for_stral_dir = data_for_stral_dir / case
         data_for_stral_dir.mkdir(parents=True, exist_ok=True)
 
         surface_optimization_config = (
@@ -1622,23 +1626,21 @@ def main() -> None:
         basic_config = args.basic_config
 
         # Define scenario paths and viable heliostat data paths.
-        scenario_path_ideal = (
-            pathlib.Path(args.scenarios_dir) / f"ideal_{case}_scenario.h5"
-        )
+        scenario_path_ideal = scenarios_dir / f"ideal_{case}_scenario.h5"
+
         if not scenario_path_ideal.exists():
             raise FileNotFoundError(
                 f"The ideal scenario located at {scenario_path_ideal} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
             )
         scenario_path_deflectometry = (
-            pathlib.Path(args.scenarios_dir)
-            / "deflectometry_scenario_for_comparison.h5"
+            scenarios_dir / "deflectometry_scenario_for_comparison.h5"
         )
         if not scenario_path_deflectometry.exists():
             raise FileNotFoundError(
                 f"The deflectometry scenario located at {scenario_path_deflectometry} could not be found! Please run the ``generate_scenarios.py`` to generate this scenario, or adjust the file path and try again."
             )
 
-        dataset_splits = pathlib.Path(args.results_dir) / case / "dataset_splits.json"
+        dataset_splits = results_dir / "dataset_splits.json"
         if not dataset_splits.exists():
             raise FileNotFoundError(
                 f"The viable heliostat list located at {dataset_splits} could not be not found! Please run the ``generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."

@@ -1,3 +1,25 @@
+"""
+Perform raytracing and save the results.
+
+This script executes the raytracing in ``ARTIST`` for the two previously generated scenarios. The resulting bitmaps
+representing flux images are saved for plotting later.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+heliostats : dict[str, int]
+    Heliostats and calibration measurements required for raytracing.
+results_dir : str
+    Path to where the results will be saved.
+scenarios_dir : str
+    Path to the directory containing the scenarios.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -10,12 +32,11 @@ import torch
 import yaml
 from PIL import Image
 
-from artist.core import HeliostatRayTracer
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
-from artist.data_parser.paint_scenario_parser import extract_paint_heliostat_properties
+from artist.io import PaintCalibrationDataParser, paint_scenario_parser
+from artist.raytracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 set_logger_config()
 
@@ -127,15 +148,11 @@ def extract_canting_and_translation_from_properties(
                 _,
                 _,
                 _,
-            ) = extract_paint_heliostat_properties(
+            ) = paint_scenario_parser.extract_paint_heliostat_properties(
                 heliostat_properties_path=properties_path,
-                power_plant_position=torch.tensor(
-                    [
-                        paint_mappings.POWER_PLANT_LAT,
-                        paint_mappings.POWER_PLANT_LON,
-                        paint_mappings.POWER_PLANT_ALT,
-                    ]
-                ),
+                power_plant_position=torch.zeros(
+                    3
+                ),  # Zeros because to extract only facet translations and canting no global position is needed.
                 device=device,
             )
 
@@ -306,8 +323,11 @@ def generate_flux_images(
 
     results_dict: dict[str, dict[str, np.ndarray | torch.Tensor]] = {}
 
+    # Load any existing results onto the CPU.
     try:
-        loaded = torch.load(results_file, weights_only=False)
+        loaded = torch.load(
+            results_file, weights_only=False, map_location=torch.device("cpu")
+        )
         results_dict = cast(dict[str, dict[str, np.ndarray | torch.Tensor]], loaded)
     except FileNotFoundError:
         print(f"File not found: {results_file}. Initializing with an empty dictionary.")
@@ -426,13 +446,13 @@ def generate_flux_images(
             ]
             facet_points_decanted_tensor = perform_inverse_canting_and_translation(
                 canted_points=facet_points_canted,
-                translation=torch.zeros(4, 4),
+                translation=torch.zeros(4, 4, device=device),
                 canting=facet_canting_vectors,
                 device=device,
             )
             facet_normals_decanted_tensor = perform_inverse_canting_and_translation(
                 canted_points=facet_normals_canted,
-                translation=torch.zeros(4, 4),
+                translation=torch.zeros(4, 4, device=device),
                 canting=facet_canting_vectors,
                 device=device,
             )
@@ -458,30 +478,15 @@ def generate_flux_images(
 
 
 if __name__ == "__main__":
-    """
-    Perform raytracing and save the results.
-
-    This script executes the raytracing in ``ARTIST`` for the two previously generated scenarios. The resulting bitmaps
-    representing flux images are saved for plotting later.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    heliostats : dict[str, int]
-        Heliostats and calibration measurements required for raytracing.
-    results_dir : str
-        Path to where the results will be saved.
-    scenarios_dir : str
-        Path to the directory containing the scenarios.
-    """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -507,15 +512,17 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
     device_default = config.get("device", "cuda")
     heliostats_default = config.get(
         "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
 
     parser.add_argument(
         "--device",
@@ -553,13 +560,14 @@ if __name__ == "__main__":
     args = parser.parse_args(args=unknown)
 
     device = get_device(torch.device(args.device))
-    data_dir = pathlib.Path(args.data_dir)
-    results_path = pathlib.Path(args.results_dir) / "flux_prediction_results.pt"
 
+    # Convert command‑line paths (which may still be relative) to absolute ones.
+    data_dir = _make_abs(args.data_dir)
+    results_path = _make_abs(args.results_dir) / "flux_prediction_results.pt"
     deflectometry_scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
+        _make_abs(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
     )
-    ideal_scenario_file = pathlib.Path(args.scenarios_dir) / "flux_prediction_ideal.h5"
+    ideal_scenario_file = _make_abs(args.scenarios_dir) / "flux_prediction_ideal.h5"
 
     # Generate and merge flux images for both scenarios into one results file.
     generate_flux_images(

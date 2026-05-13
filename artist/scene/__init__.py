@@ -1,13 +1,11 @@
-"""Bundle all classes that represent the scene in ``ARTIST``."""
-
-from artist.scene.light_source import LightSource
-from artist.scene.light_source_array import LightSourceArray
-from artist.scene.rays import Rays
-from artist.scene.sun import Sun
+from .light_source import LightSource
+from .light_source_array import LightSourceArray
+from .rays import Rays
+from .sun import Sun
 
 __all__ = [
-    "LightSourceArray",
     "LightSource",
+    "LightSourceArray",
     "Sun",
     "Rays",
 ]

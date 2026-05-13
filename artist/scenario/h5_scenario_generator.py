@@ -6,7 +6,8 @@ from typing import Any
 import h5py
 import torch
 
-from artist.scenario.configuration_classes import (
+from artist.util import constants
+from artist.util.config import (
     ActuatorConfig,
     ActuatorListConfig,
     HeliostatListConfig,
@@ -17,7 +18,6 @@ from artist.scenario.configuration_classes import (
     TargetAreaCylindricalListConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.util import config_dictionary
 
 log = logging.getLogger(__name__)
 """A logger for the scenario generator."""
@@ -237,7 +237,7 @@ class H5ScenarioGenerator:
             f.attrs["version"] = self.version
 
             # Include number of heliostat groups in the top level.
-            f[config_dictionary.number_of_heliostat_groups] = (
+            f[constants.number_of_heliostat_groups] = (
                 self._get_number_of_heliostat_groups()
             )
 
@@ -245,7 +245,7 @@ class H5ScenarioGenerator:
             log.info("Including parameters for the power plant.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.power_plant_key,
+                prefix=constants.power_plant_key,
                 parameters=self._flatten_dict(
                     self.power_plant_config.create_power_plant_dict()
                 ),
@@ -255,7 +255,7 @@ class H5ScenarioGenerator:
             log.info("Including parameters for the planar target areas.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.target_area_planar_key,
+                prefix=constants.target_area_planar_key,
                 parameters=self._flatten_dict(
                     self.target_area_list_planar_config.create_target_area_list_dict()
                 ),
@@ -264,7 +264,7 @@ class H5ScenarioGenerator:
             log.info("Including parameters for the cylindrical target areas.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.target_area_cylindrical_key,
+                prefix=constants.target_area_cylindrical_key,
                 parameters=self._flatten_dict(
                     self.target_area_list_cylindrical_config.create_target_area_list_dict()
                 ),
@@ -274,7 +274,7 @@ class H5ScenarioGenerator:
             log.info("Including parameters for the light sources.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.light_source_key,
+                prefix=constants.light_source_key,
                 parameters=self._flatten_dict(
                     self.light_source_list_config.create_light_source_list_dict()
                 ),
@@ -284,7 +284,7 @@ class H5ScenarioGenerator:
             log.info("Including parameters for the prototype.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.prototype_key,
+                prefix=constants.prototype_key,
                 parameters=self._flatten_dict(
                     self.prototype_config.create_prototype_dict()
                 ),
@@ -294,7 +294,7 @@ class H5ScenarioGenerator:
             log.info("Including parameters for the heliostats.")
             self._include_parameters(
                 file=f,
-                prefix=config_dictionary.heliostat_key,
+                prefix=constants.heliostat_key,
                 parameters=self._flatten_dict(
                     self.heliostat_list_config.create_heliostat_list_dict()
                 ),

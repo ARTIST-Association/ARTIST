@@ -1,3 +1,23 @@
+"""
+Generate reconstruction results and save them.
+
+This script performs kinematics reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
+plots.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+data_dir : str
+    Path to the data directory.
+device : str
+    Device to use for the computation.
+results_dir : str
+    Path to the directory for the results.
+scenarios_dir : str
+    Path to the directory for saving the generated scenarios.
+"""
+
 import argparse
 import json
 import pathlib
@@ -10,13 +30,12 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.core.kinematics_reconstructor import KinematicsReconstructor
-from artist.core.loss_functions import FocalSpotLoss
-from artist.data_parser.calibration_data_parser import CalibrationDataParser
-from artist.data_parser.paint_calibration_parser import PaintCalibrationDataParser
+from artist.io import CalibrationDataParser, PaintCalibrationDataParser
+from artist.optim import KinematicsReconstructor
+from artist.optim.loss import FocalSpotLoss
 from artist.scenario import Scenario
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import (
+from artist.util import constants, set_logger_config
+from artist.util.env import (
     DdpSetup,
     get_device,
     setup_distributed_environment,
@@ -75,38 +94,38 @@ def generate_reconstruction_results(
     ) as ddp_setup:
         # Select calibration via raytracing.
         kinematics_reconstruction_method = (
-            config_dictionary.kinematics_reconstruction_raytracing
+            constants.kinematics_reconstruction_raytracing
         )
 
         # Configure the optimization.
         optimizer_dict = {
-            config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
-            config_dictionary.initial_learning_rate_initial_angles: 1e-3,
-            config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
-            config_dictionary.tolerance: 0,
-            config_dictionary.max_epoch: 1000,
-            config_dictionary.batch_size: 500,
-            config_dictionary.log_step: 50,
-            config_dictionary.early_stopping_delta: 1e-6,
-            config_dictionary.early_stopping_patience: 4000,
-            config_dictionary.early_stopping_window: 1000,
+            constants.initial_learning_rate_rotation_deviation: 1e-4,
+            constants.initial_learning_rate_initial_angles: 1e-3,
+            constants.initial_learning_rate_initial_stroke_length: 1e-2,
+            constants.tolerance: 0,
+            constants.max_epoch: 1000,
+            constants.batch_size: 500,
+            constants.log_step: 50,
+            constants.early_stopping_delta: 1e-6,
+            constants.early_stopping_patience: 4000,
+            constants.early_stopping_window: 1000,
         }
         # Configure the learning rate scheduler.
         scheduler_dict = {
-            config_dictionary.scheduler_type: config_dictionary.exponential,
-            config_dictionary.gamma: 0.999,
-            config_dictionary.lr_min: 1e-5,
-            config_dictionary.lr_max: 1e-2,
-            config_dictionary.step_size_up: 500,
-            config_dictionary.reduce_factor: 0.3,
-            config_dictionary.patience: 10,
-            config_dictionary.threshold: 1e-3,
-            config_dictionary.cooldown: 10,
+            constants.scheduler_type: constants.exponential,
+            constants.gamma: 0.999,
+            constants.lr_min: 1e-5,
+            constants.lr_max: 1e-2,
+            constants.step_size_up: 500,
+            constants.reduce_factor: 0.3,
+            constants.patience: 10,
+            constants.threshold: 1e-3,
+            constants.cooldown: 10,
         }
         # Combine configurations.
         optimization_configuration = {
-            config_dictionary.optimization: optimizer_dict,
-            config_dictionary.scheduler: scheduler_dict,
+            constants.optimization: optimizer_dict,
+            constants.scheduler: scheduler_dict,
         }
 
         for centroid in [paint_mappings.UTIS_KEY, paint_mappings.HELIOS_KEY]:
@@ -119,10 +138,10 @@ def generate_reconstruction_results(
                 CalibrationDataParser
                 | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
             ] = {
-                config_dictionary.data_parser: PaintCalibrationDataParser(
+                constants.data_parser: PaintCalibrationDataParser(
                     sample_limit=3, centroid_extraction_method=centroid
                 ),
-                config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+                constants.heliostat_data_mapping: heliostat_data_mapping,
             }
 
             kinematics_reconstructor = KinematicsReconstructor(
@@ -154,28 +173,15 @@ def generate_reconstruction_results(
 
 
 if __name__ == "__main__":
-    """
-    Generate reconstruction results and save them.
-
-    This script performs kinematics reconstruction in ``ARTIST``, generating the results and saving them to be later loaded for the
-    plots.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    data_dir : str
-        Path to the data directory.
-    device : str
-        Device to use for the computation.
-    results_dir : str
-        Path to the directory for the results.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
-    # Set default location for configuration file.
+    # Locate the script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -202,9 +208,11 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
 
     parser.add_argument(
@@ -231,14 +239,20 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    viable_heliostats_data = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    # Convert any CLI‑provided paths (which may be relative) to absolute ones.
+    results_dir = _make_abs(args.results_dir)
+    scenarios_dir = _make_abs(args.scenarios_dir)
+
+    viable_heliostats_data = results_dir / "viable_heliostats.json"
     if not viable_heliostats_data.exists():
         raise FileNotFoundError(
-            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, or adjust the file path and try again."
+            f"The viable heliostat list located at {viable_heliostats_data} could not be not found! "
+            f"Please run the ``reconstruction_generate_viable_heliostats_list.py`` script to generate this list, "
+            f"or adjust the file path and try again."
         )
 
     # Define scenario path.
-    scenario_path = pathlib.Path(args.scenarios_dir) / "reconstruction.h5"
+    scenario_path = scenarios_dir / "reconstruction.h5"
     if not scenario_path.exists():
         raise FileNotFoundError(
             f"The reconstruction scenario located at {scenario_path} could not be found! Please run the ``reconstruction_scenario.py`` to generate this scenario, or adjust the file path and try again."
@@ -263,9 +277,8 @@ if __name__ == "__main__":
         device=device,
     )
 
-    results_path = (
-        pathlib.Path(args.results_dir) / "kinematics_reconstruction_results.pt"
-    )
+    results_path = results_dir / "kinematics_reconstruction_results.pt"
+
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)
 

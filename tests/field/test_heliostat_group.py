@@ -1,8 +1,7 @@
 import pytest
 import torch
 
-from artist.field.heliostat_group import HeliostatGroup
-from artist.field.heliostat_group_rigid_body import HeliostatGroupRigidBody
+from artist.field import HeliostatGroup, HeliostatGroupRigidBody
 
 
 @pytest.fixture

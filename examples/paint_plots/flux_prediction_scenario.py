@@ -1,3 +1,27 @@
+"""
+Generate two scenarios for the flux prediction plots.
+
+One of these scenarios uses ideal surfaces whilst one includes surfaces fitted with deflectometry data.
+If a configuration file is provided the values will be loaded from this file. It is also possible to override
+the configuration file using command line arguments. If no command line arguments and no configuration file
+is provided, default values will be used which may fail.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+tower_file_name : str
+    Name of the file containing the tower measurements.
+heliostats : dict[str, int]
+    The heliostats and associated calibration measurement required in the scenario.
+scenarios_dir : str
+    Path to the directory for saving the generated scenarios.
+"""
+
 import argparse
 import pathlib
 import warnings
@@ -7,14 +31,14 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.data_parser import paint_scenario_parser
-from artist.scenario.configuration_classes import (
+from artist.io import paint_scenario_parser
+from artist.scenario import H5ScenarioGenerator
+from artist.util import constants, set_logger_config
+from artist.util.config import (
     LightSourceConfig,
     LightSourceListConfig,
 )
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.util import config_dictionary, set_logger_config
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 set_logger_config()
 
@@ -100,9 +124,9 @@ def generate_flux_prediction_scenario(
     # Include the light source configuration.
     light_source_config = LightSourceConfig(
         light_source_key="sun",
-        light_source_type=config_dictionary.sun_key,
+        light_source_type=constants.sun_key,
         number_of_rays=10,
-        distribution_type=config_dictionary.light_source_distribution_is_normal,
+        distribution_type=constants.light_source_distribution_is_normal,
         mean=0.0,
         covariance=4.3681e-06,
     )
@@ -149,7 +173,7 @@ def generate_flux_prediction_scenario(
                 power_plant_position=power_plant_config.power_plant_position,
                 number_of_nurbs_control_points=torch.tensor([20, 20], device=device),
                 deflectometry_step_size=100,
-                nurbs_fit_method=config_dictionary.fit_nurbs_from_normals,
+                nurbs_fit_method=constants.fit_nurbs_from_normals,
                 nurbs_fit_tolerance=1e-10,
                 nurbs_fit_max_epoch=400,
                 nurbs_fit_optimizer=nurbs_fit_optimizer,
@@ -190,32 +214,15 @@ def generate_flux_prediction_scenario(
 
 
 if __name__ == "__main__":
-    """
-    Generate two scenarios for the flux prediction plots.
-
-    One of these scenarios uses ideal surfaces whilst one includes surfaces fitted with deflectometry data.
-    If a configuration file is provided the values will be loaded from this file. It is also possible to override
-    the configuration file using command line arguments. If no command line arguments and no configuration file
-    is provided, default values will be used which may fail.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    tower_file_name : str
-        Name of the file containing the tower measurements.
-    heliostats : dict[str, int]
-        The heliostats and associated calibration measurement required in the scenario.
-    scenarios_dir : str
-        Path to the directory for saving the generated scenarios.
-    """
-    # Set default location for configuration file.
+    # Locate the script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -241,7 +248,7 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
     device_default = config.get("device", "cuda")
     tower_file_name_default = config.get(
         "tower_file_name", "WRI1030197-tower-measurements.json"
@@ -249,8 +256,8 @@ if __name__ == "__main__":
     heliostats_default = config.get(
         "heliostats_for_raytracing", {"AA39": 149576, "AY26": 247613, "BC34": 82084}
     )
-    scenarios_dir_default = config.get(
-        "scenarios_dir", "./examples/paint_plots/scenarios"
+    scenarios_dir_default = _make_abs(
+        config.get("scenarios_dir", "./examples/paint_plots/scenarios")
     )
 
     parser.add_argument(
@@ -290,14 +297,15 @@ if __name__ == "__main__":
 
     device = get_device(torch.device(args.device))
 
-    data_dir = pathlib.Path(args.data_dir)
+    # Convert any CLI‑provided paths (which may still be relative) to absolute paths.
+    data_dir = _make_abs(args.data_dir)
     tower_file = data_dir / args.tower_file_name
 
     # Generate two scenarios: deflectometry and ideal (no deflectometry).
     deflectometry_scenario_file = (
-        pathlib.Path(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
+        _make_abs(args.scenarios_dir) / "flux_prediction_deflectometry.h5"
     )
-    ideal_scenario_file = pathlib.Path(args.scenarios_dir) / "flux_prediction_ideal.h5"
+    ideal_scenario_file = _make_abs(args.scenarios_dir) / "flux_prediction_ideal.h5"
 
     for scenario_path, use_deflectometry in [
         (deflectometry_scenario_file, True),

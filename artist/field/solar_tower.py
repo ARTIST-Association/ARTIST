@@ -9,8 +9,8 @@ from typing_extensions import Self
 from artist.field.tower_target_areas import TowerTargetAreas
 from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
 from artist.field.tower_target_areas_planar import TowerTargetAreasPlanar
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the solar tower."""
@@ -161,25 +161,23 @@ class SolarTower:
 
         planar_mask = (
             target_area_indices
-            < self.number_of_target_areas_per_type[index_mapping.planar_target_areas]
+            < self.number_of_target_areas_per_type[indices.planar_target_areas]
         )
         if target_area_indices[planar_mask].numel() > 0:
             planar = cast(
                 TowerTargetAreasPlanar,
-                self.target_areas[index_mapping.planar_target_areas],
+                self.target_areas[indices.planar_target_areas],
             )
             centers[planar_mask] = planar.centers[target_area_indices[planar_mask]]
 
         if target_area_indices[~planar_mask].numel() > 0:
             cylinder_indices = (
                 target_area_indices[~planar_mask]
-                - self.number_of_target_areas_per_type[
-                    index_mapping.planar_target_areas
-                ]
+                - self.number_of_target_areas_per_type[indices.planar_target_areas]
             )
             cylindrical = cast(
                 TowerTargetAreasCylindrical,
-                self.target_areas[index_mapping.cylindrical_target_areas],
+                self.target_areas[indices.cylindrical_target_areas],
             )
             centers[~planar_mask] = (
                 cylindrical.centers[cylinder_indices]

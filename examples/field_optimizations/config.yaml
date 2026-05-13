@@ -1,6 +1,6 @@
 metadata_root: "./examples/field_optimizations/"
 metadata_file_name: "calibration_metadata_all_heliostats.csv"
-data_dir: "/workVERLEIHNIX/share/PAINT_data"
+data_dir: "/base/path/data"
 tower_file_name: "WRI1030197-tower-measurements.json"
 scenarios_dir: "./examples/field_optimizations/scenarios"
 measured_data_dir: "./examples/field_optimizations/measured_data"
@@ -42,7 +42,7 @@ surface_reconstruction_optimization_configuration:
   weight_smoothness: 0.00
   weight_ideal_surface: 0.10
 kinematics_reconstruction_optimization_configuration:
-  max_epoch: 350
+  max_epoch: 200
   batch_size: 960
   sample_limit: 18
   number_of_rays: 7
@@ -59,7 +59,7 @@ kinematics_reconstruction_optimization_configuration:
   cooldown: 5
   gamma: 0.92
 aim_point_optimization_configuration:
-  max_epoch: 400
+  max_epoch: 200
   batch_size: 96
   number_of_rays: 5
   initial_learning_rate: 1e-03

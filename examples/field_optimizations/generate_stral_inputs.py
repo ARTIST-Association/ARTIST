@@ -1,3 +1,16 @@
+"""
+Generate .binp files to be used in the ``STRAL`` software comparison.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_for_stral_dir : str
+    Path to the directory for the generated ``STRAL`` files.
+"""
+
 import argparse
 import os
 import pathlib
@@ -9,7 +22,7 @@ import numpy as np
 import torch
 import yaml
 
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 
 def save_binp_from_artist_data(
@@ -150,21 +163,15 @@ def save_binp_from_artist_data(
 
 
 if __name__ == "__main__":
-    """
-    Generate .binp files to be used in the ``STRAL`` software comparison.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_for_stral_dir : str
-        Path to the directory for the generated ``STRAL`` files.
-    """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -191,7 +198,10 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    data_for_stral_dir_default = config.get("data_for_stral_dir", "./data_for_stral")
+    # Resolve the default data‑for‑STRAL directory relative to the repo root.
+    data_for_stral_dir_default = _make_abs(
+        config.get("data_for_stral_dir", "./data_for_stral")
+    )
 
     parser.add_argument(
         "--device",
@@ -203,18 +213,17 @@ if __name__ == "__main__":
         "--data_for_stral_dir",
         type=str,
         help="Path to JSON file containing a list of heliostat names to restrict to.",
-        default=data_for_stral_dir_default,
+        default=str(data_for_stral_dir_default),
     )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-
     device = get_device(torch.device(args.device))
 
+    # Convert the CLI‑provided path (which may still be relative) to an absolute path.
+    data_for_stral_dir = _make_abs(args.data_for_stral_dir)
     heliostats_data_path = (
-        pathlib.Path(args.data_for_stral_dir)
-        / "baseline"
-        / "reconstructed_heliostats_data_0.pt"
+        data_for_stral_dir / "baseline" / "reconstructed_heliostats_data_0.pt"
     )
 
     heliostats_data = torch.load(heliostats_data_path, weights_only=False)
