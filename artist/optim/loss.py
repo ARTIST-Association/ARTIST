@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 import torch
 
@@ -436,9 +436,10 @@ class AngleLoss(Loss):
         return 1.0 - self.loss_function(prediction, ground_truth)
 
 
-def mean_loss_per_heliostat(
+def loss_per_heliostat(
     loss_per_sample: torch.Tensor,
     number_of_samples_per_heliostat: int,
+    reduction: Callable[..., Any],
 ) -> torch.Tensor:
     """
     Calculate the mean loss per heliostat from a loss per sample.
@@ -447,7 +448,7 @@ def mean_loss_per_heliostat(
     ----------
     loss_per_sample : torch.Tensor
         Loss per sample.
-        Shape is ``[number_of_samples]``.
+        Tensor of shape [number_of_samples].
     number_of_samples_per_heliostat : int
         Number of samples per heliostat.
 
@@ -455,7 +456,7 @@ def mean_loss_per_heliostat(
     -------
     torch.Tensor
         Loss per heliostat.
-        Shape is ``[number_of_heliostats]``.
+        Tensor of shape [number_of_heliostats].
     """
     number_of_heliostats = int(
         loss_per_sample.numel() // number_of_samples_per_heliostat
@@ -464,8 +465,11 @@ def mean_loss_per_heliostat(
         : number_of_heliostats * number_of_samples_per_heliostat
     ]
 
-    loss_per_heliostat = loss_per_sample.view(
+    reduced = reduction(loss_per_sample.view(
         number_of_heliostats, number_of_samples_per_heliostat
-    ).mean(dim=1)
+    ))
 
-    return loss_per_heliostat
+    if not isinstance(reduced, torch.Tensor):
+        reduced = reduced.values
+
+    return reduced
