@@ -3,8 +3,8 @@ from unittest import mock
 import h5py
 import torch
 
-from artist.field.tower_target_areas_cylindrical import TowerTargetAreasCylindrical
-from artist.util import config_dictionary
+from artist.field import TowerTargetAreasCylindrical
+from artist.util import constants
 
 
 def test_target_area_load_from_hdf5(
@@ -46,23 +46,23 @@ def test_target_area_load_from_hdf5(
     mock_level_cylindrical_target = mock.MagicMock()
 
     mock_level_cylindrical_target.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_cylinder_normal: mock_normal,
-        config_dictionary.target_area_cylinder_center: mock_center,
-        config_dictionary.target_area_cylinder_axis: mock_axis,
-        config_dictionary.target_area_cylinder_radius: mock_radius,
-        config_dictionary.target_area_cylinder_height: mock_height,
-        config_dictionary.target_area_cylinder_opening_angle: mock_opening_angle,
+        constants.target_area_cylinder_normal: mock_normal,
+        constants.target_area_cylinder_center: mock_center,
+        constants.target_area_cylinder_axis: mock_axis,
+        constants.target_area_cylinder_radius: mock_radius,
+        constants.target_area_cylinder_height: mock_height,
+        constants.target_area_cylinder_opening_angle: mock_opening_angle,
     }[key]
 
     mock_level_target_areas = mock.MagicMock()
     mock_level_target_areas.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_receiver: mock_level_cylindrical_target
+        constants.target_area_receiver: mock_level_cylindrical_target
     }[key]
-    mock_level_target_areas.keys.return_value = [config_dictionary.target_area_receiver]
+    mock_level_target_areas.keys.return_value = [constants.target_area_receiver]
     mock_level_target_areas.__len__.return_value = 1
 
     mock_h5_file.__getitem__.side_effect = lambda key: {
-        config_dictionary.target_area_cylindrical_key: mock_level_target_areas
+        constants.target_area_cylindrical_key: mock_level_target_areas
     }[key]
 
     # Perform the test.
@@ -72,7 +72,7 @@ def test_target_area_load_from_hdf5(
     )
 
     assert isinstance(target_areas, TowerTargetAreasCylindrical)
-    assert target_areas.names == [config_dictionary.target_area_receiver]
+    assert target_areas.names == [constants.target_area_receiver]
     torch.testing.assert_close(
         target_areas.centers,
         torch.tensor([[0.0, 0.0, 0.0, 1.0]], device=device),

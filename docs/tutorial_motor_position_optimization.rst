@@ -39,10 +39,10 @@ Below, we define the targeted trapezoid distribution as the ground truth:
 
 .. code-block:: python
 
-    e_trapezoid = utils.trapezoid_distribution(
+    e_trapezoid = bitmap.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=110, device=device
     )
-    u_trapezoid = utils.trapezoid_distribution(
+    u_trapezoid = bitmap.trapezoid_distribution(
         total_width=256, slope_width=30, plateau_width=110, device=device
     )
     ground_truth = u_trapezoid.unsqueeze(
@@ -102,39 +102,39 @@ settings:
 
     # Set optimizer parameters.
     optimizer_dict = {
-        config_dictionary.initial_learning_rate: 3e-4,
-        config_dictionary.tolerance: 0.0005,
-        config_dictionary.max_epoch: 30,
-        config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 3,
-        config_dictionary.early_stopping_delta: 1e-4,
-        config_dictionary.early_stopping_patience: 100,
-        config_dictionary.early_stopping_window: 100,
+        constants.initial_learning_rate: 3e-4,
+        constants.tolerance: 0.0005,
+        constants.max_epoch: 100,
+        constants.batch_size: 50,
+        constants.log_step: 3,
+        constants.early_stopping_delta: 1e-4,
+        constants.early_stopping_patience: 100,
+        constants.early_stopping_window: 100,
     }
     # Configure the learning rate scheduler.
     scheduler_dict = {
-        config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
-        config_dictionary.gamma: 0.9,
-        config_dictionary.lr_min: 1e-6,
-        config_dictionary.lr_max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.3,
-        config_dictionary.patience: 100,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 10,
+        constants.scheduler_type: constants.reduce_on_plateau,
+        constants.gamma: 0.9,
+        constants.lr_min: 1e-6,
+        constants.lr_max: 1e-3,
+        constants.step_size_up: 500,
+        constants.reduce_factor: 0.3,
+        constants.patience: 100,
+        constants.threshold: 1e-3,
+        constants.cooldown: 10,
     }
     # Configure the regularizers and constraints.
     constraint_dict = {
-        config_dictionary.rho_flux_integral: 1.0,
-        config_dictionary.rho_local_flux: 1.0,
-        config_dictionary.rho_intercept: 1.0,
-        config_dictionary.max_flux_density: 1000000,
+        constants.rho_flux_integral: 1.0,
+        constants.rho_local_flux: 1.0,
+        constants.rho_intercept: 1.0,
+        constants.max_flux_density: 1000000,
     }
     # Combine configurations.
     optimization_configuration = {
-        config_dictionary.optimization: optimizer_dict,
-        config_dictionary.scheduler: scheduler_dict,
-        config_dictionary.constraints: constraint_dict,
+        constants.optimization: optimizer_dict,
+        constants.scheduler: scheduler_dict,
+        constants.constraints: constraint_dict,
     }
 
 The optimization configuration is a combination of optimizer parameters, scheduler parameters, and the learning

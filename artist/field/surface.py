@@ -1,22 +1,20 @@
 import torch
 
-from artist.scenario.configuration_classes import SurfaceConfig
-from artist.util import index_mapping, utils
-from artist.util.environment_setup import get_device
-from artist.util.nurbs import NURBSSurfaces
+from artist.nurbs.surfaces import NURBSSurfaces
+from artist.nurbs.utils import create_nurbs_evaluation_grid
+from artist.util import indices
+from artist.util.config import SurfaceConfig
+from artist.util.env import get_device
 
 
 class Surface:
     """
-    Implement the surface module which contains a list of facets.
+    Implement the surface module from a list of facets.
 
     Attributes
     ----------
-    nurbs_facets : list[NURBSSurface]
-        A list of one nurbs surface for each facet.
-    facet_translation_vectors : torch.Tensor
-        The facet translation vectors for all facets.
-        Tensor of shape [number_of_facets, 4].
+    nurbs_surface : NURBSSurface
+        The NURBS surface.
 
     Methods
     -------
@@ -46,7 +44,7 @@ class Surface:
         """
         device = get_device(device=device)
 
-        degrees = surface_config.facet_list[index_mapping.first_facet].degrees
+        degrees = surface_config.facet_list[indices.first_facet].degrees
         control_points = []
 
         for facet_config in surface_config.facet_list:
@@ -56,7 +54,7 @@ class Surface:
 
         self.nurbs_surface = NURBSSurfaces(
             degrees=degrees,
-            control_points=control_points.unsqueeze(index_mapping.heliostat_dimension),
+            control_points=control_points.unsqueeze(indices.heliostat_dimension),
             device=device,
         )
 
@@ -90,11 +88,11 @@ class Surface:
         device = get_device(device=device)
 
         evaluation_points = (
-            utils.create_nurbs_evaluation_grid(
+            create_nurbs_evaluation_grid(
                 number_of_evaluation_points=number_of_points_per_facet, device=device
             )
-            .unsqueeze(index_mapping.heliostat_dimension)
-            .unsqueeze(index_mapping.facet_index_unbatched)
+            .unsqueeze(indices.heliostat_dimension)
+            .unsqueeze(indices.facet_index_unbatched)
             .expand(1, self.nurbs_surface.number_of_facets_per_surface, -1, -1)
         )
 
@@ -104,9 +102,9 @@ class Surface:
                 surface_normals,
             ) = self.nurbs_surface.calculate_surface_points_and_normals(
                 evaluation_points=evaluation_points,
-                canting=canting.unsqueeze(index_mapping.heliostat_dimension),
+                canting=canting.unsqueeze(indices.heliostat_dimension),
                 facet_translations=facet_translations.unsqueeze(
-                    index_mapping.heliostat_dimension
+                    indices.heliostat_dimension
                 ),
                 device=device,
             )

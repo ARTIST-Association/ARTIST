@@ -1,6 +1,6 @@
 import torch
 
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 
 class Actuators(torch.nn.Module):
@@ -11,16 +11,18 @@ class Actuators(torch.nn.Module):
     ----------
     non_optimizable_parameters : torch.Tensor
         The non-optimizable actuator parameters, describing actuator geometry.
-        Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+        Shape is ``[number_of_heliostats, 7, 2]`` for linear actuators
+        or ``[number_of_heliostats, 4, 2]`` for ideal actuators.
     optimizable_parameters : torch.Tensor
         The two optimizable actuator parameters, describing the initial actuator configuration.
-        Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators.
+        Shape is ``[number_of_heliostats, 2, 2]`` for linear actuators or ``[]`` for ideal actuators.
     active_non_optimizable_parameters : torch.Tensor
         Active non-optimizable geometry parameters.
-        Tensor of shape [number_of_active_heliostats, 7, 2] for linear actuators or [number_of_active_heliostats, 4, 2] for ideal actuators.
+        Shape is ``[number_of_active_heliostats, 7, 2]`` for linear actuators
+        or ``[number_of_active_heliostats, 4, 2]`` for ideal actuators.
     active_optimizable_parameters : torch.Tensor
         Active optimizable parameters.
-        Tensor of shape [number_of_active_heliostats, 2, 2] for linear actuators or [] for ideal actuators.
+        Shape is ``[number_of_active_heliostats, 2, 2]`` for linear actuators or ``[]`` for ideal actuators.
 
     Methods
     -------
@@ -51,10 +53,12 @@ class Actuators(torch.nn.Module):
         ----------
         non_optimizable_parameters : torch.Tensor
             The non-optimizable actuator parameters, describing actuator geometry.
-            Tensor of shape [number_of_heliostats, 7, 2] for linear actuators or [number_of_heliostats, 4, 2] for ideal actuators.
+            Shape is ``[number_of_heliostats, 7, 2]`` for linear actuators
+            or ``[number_of_heliostats, 4, 2]`` for ideal actuators.
         optimizable_parameters : torch.Tensor
             The two optimizable actuator parameters, describing the initial actuator configuration.
-            Tensor of shape [number_of_heliostats, 2, 2] for linear actuators or [] for ideal actuators (default is torch.Tensor([])).
+            Shape is ``[number_of_heliostats, 2, 2]`` for linear actuators
+            or ``[]`` for ideal actuators (default is ``torch.tensor([])``).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -82,7 +86,7 @@ class Actuators(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -105,7 +109,7 @@ class Actuators(torch.nn.Module):
         ----------
         angles : torch.Tensor
             The joint angles.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -128,7 +132,7 @@ class Actuators(torch.nn.Module):
         ----------
         motor_positions : torch.Tensor
             The motor positions to be converted to joint angles.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -138,7 +142,7 @@ class Actuators(torch.nn.Module):
         -------
         torch.Tensor
             The joint angles.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
 
         """
         device = get_device(device=device)

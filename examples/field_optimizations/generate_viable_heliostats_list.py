@@ -1,3 +1,32 @@
+"""
+Generate list of viable heliostats for the field optimizations.
+
+This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for the optimization process. It will create one list for the baseline case, including the 96 heliostats specified in
+the `config.yaml`, and one list for the full-field case, including all heliostats with the minimum amount of calibration
+files available.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+minimum_number_of_measurements : int
+    Minimum number of calibration measurements per heliostat required.
+kinematics_reconstruction_image_type : str
+    Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
+surface_reconstruction_image_type : str
+    Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
+excluded_heliostats_for_reconstruction : list[str]
+    Heliostat names to exclude from the reconstruction process.
+heliostat_list_baseline : list[str]
+    List of all heliostat names included in the baseline measurement.
+"""
+
 import argparse
 import json
 import pathlib
@@ -295,38 +324,15 @@ def create_heliostat_data_mappings(
 
 
 if __name__ == "__main__":
-    """
-    Generate list of viable heliostats for the field optimizations.
-
-    This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the optimization process. It will create one list for the baseline case, including the 96 heliostats specified in
-    the `config.yaml`, and one list for the full-field case, including all heliostats with the minimum amount of calibration
-    files available.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    minimum_number_of_measurements : int
-        Minimum number of calibration measurements per heliostat required.
-    kinematics_reconstruction_image_type : str
-        Type of calibration image to use for the kinematics reconstruction, i.e., flux or flux-centered.
-    surface_reconstruction_image_type : str
-        Type of calibration image to use for the surface reconstruction, i.e., flux or flux-centered.
-    excluded_heliostats_for_reconstruction : list[str]
-        Heliostat names to exclude from the reconstruction process.
-    heliostat_list_baseline : list[str]
-        List of all heliostat names included in the baseline measurement.
-    """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -356,9 +362,10 @@ if __name__ == "__main__":
     metadata_file_default = config.get(
         "metadata_file_name", "calibration_metadata_all_heliostats.csv"
     )
-    data_dir_default = config.get("data_dir", "./paint_data")
-    results_dir_default = config.get(
-        "results_dir", "./examples/field_optimizations/results"
+    # Resolve directory defaults relative to the repository root.
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/field_optimizations/results")
     )
     maximum_number_of_measurements_default = config.get(
         "maximum_number_of_measurements", 4
@@ -394,13 +401,13 @@ if __name__ == "__main__":
         "--data_dir",
         type=str,
         help="Path to the data directory.",
-        default=data_dir_default,
+        default=str(data_dir_default),
     )
     parser.add_argument(
         "--results_dir",
         type=str,
         help="Path to where the results will be saved.",
-        default=results_dir_default,
+        default=str(results_dir_default),
     )
     parser.add_argument(
         "--maximum_number_of_measurements",
@@ -449,10 +456,13 @@ if __name__ == "__main__":
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
-    metadata_file = pathlib.Path(
-        "./examples/field_optimizations/metadata/", args.metadata_file_name
-    )
-    data_dir = pathlib.Path(args.data_dir)
+
+    # Convert any CLI‑provided paths (which may still be relative) to absolute ones.
+    data_dir = _make_abs(args.data_dir)
+    results_dir = _make_abs(args.results_dir)
+    metadata_dir = _make_abs(pathlib.Path("./examples/field_optimizations/metadata/"))
+    metadata_file = metadata_dir / args.metadata_file_name
+
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
     for case in ["baseline", "full_field"]:
@@ -490,7 +500,7 @@ if __name__ == "__main__":
             for heliostat_name, calibration_paths, kinematics_reconstruction_flux_paths, surface_reconstruction_flux_image_path, properties_path in heliostat_data_list
         ]
 
-        results_path = pathlib.Path(args.results_dir) / case / "viable_heliostats.json"
+        results_path = results_dir / case / "viable_heliostats.json"
 
         if not results_path.parent.is_dir():
             results_path.parent.mkdir(parents=True, exist_ok=True)
@@ -505,5 +515,5 @@ if __name__ == "__main__":
             viable_heliostats=serializable_data,
             heliostats_for_plots=args.heliostats_for_plots,
             ratio=0.9,
-            file_path=pathlib.Path(args.results_dir) / case / "dataset_splits.json",
+            file_path=results_dir / case / "dataset_splits.json",
         )

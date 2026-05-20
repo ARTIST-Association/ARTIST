@@ -26,7 +26,7 @@ import torch
 import yaml
 from matplotlib import pyplot as plt
 
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 
 def normalize(image: np.ndarray) -> np.ndarray:
@@ -62,7 +62,8 @@ def plot_flux_prediction(
     device : torch.device
         Device to use.
     """
-    device = get_device(device)
+    # The plots are created on the CPU – there is no need to move tensors to a GPU for plotting only.
+    cpu_device = torch.device("cpu")
 
     # Set plot style.
     plt.rcParams["text.usetex"] = True
@@ -72,7 +73,7 @@ def plot_flux_prediction(
     results_dict: dict[str, dict[str, np.ndarray]] = torch.load(
         results_file,
         weights_only=False,
-        map_location=device,
+        map_location=cpu_device,
     )
     number_of_heliostats = len(results_dict)
 
@@ -142,6 +143,16 @@ if __name__ == "__main__":
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
 
+    # Repository root (two levels up from this file).  All paths that
+    # appear in the YAML are relative to the repository root, not to the
+    # current working directory.
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -167,8 +178,14 @@ if __name__ == "__main__":
 
     # Add remaining arguments to the parser with defaults loaded from the config.
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
-    plots_dir_default = config.get("plots_dir", "./examples/paint_plots/plots")
+    # Resolve the directory defaults that come from the YAML **relative to the
+    # repository root** (the place where the paths in the YAML were written for).
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
+    plots_dir_default = _make_abs(
+        config.get("plots_dir", "./examples/paint_plots/plots")
+    )
 
     parser.add_argument(
         "--device",

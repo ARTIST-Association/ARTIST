@@ -1,3 +1,29 @@
+"""
+Generate list of viable heliostats for kinematics reconstruction.
+
+This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
+the reconstruction process.
+
+Command-Line Arguments
+----------------------
+config : str
+    Path to the configuration file.
+device : str
+    Device to use for the computation.
+data_dir : str
+    Path to the data directory.
+results_dir : str
+    Path to where the results will be saved.
+minimum_number_of_measurements : int
+    Minimum number of calibration measurements per heliostat required.
+maximum_number_of_heliostats_for_reconstruction : int
+    Maximum number of heliostats to include.
+excluded_heliostats_for_reconstruction : list[str]
+    List of heliostats to exclude.
+calibration_image_type : str
+    Type of calibration image to use, either flux or flux-centered.
+"""
+
 import argparse
 import json
 import pathlib
@@ -8,7 +34,7 @@ import paint.util.paint_mappings as paint_mappings
 import torch
 import yaml
 
-from artist.util.environment_setup import get_device
+from artist.util.env import get_device
 
 
 def find_viable_heliostats(
@@ -132,34 +158,15 @@ def find_viable_heliostats(
 
 
 if __name__ == "__main__":
-    """
-    Generate list of viable heliostats for kinematics reconstruction.
-
-    This script identifies a list of viable heliostats, i.e., containing a minimum number of valid measurements, for
-    the reconstruction process.
-
-    Parameters
-    ----------
-    config : str
-        Path to the configuration file.
-    device : str
-        Device to use for the computation.
-    data_dir : str
-        Path to the data directory.
-    results_dir : str
-        Path to where the results will be saved.
-    minimum_number_of_measurements : int
-        Minimum number of calibration measurements per heliostat required.
-    maximum_number_of_heliostats_for_reconstruction : int
-        Maximum number of heliostats to include.
-    excluded_heliostats_for_reconstruction : list[str]
-        List of heliostats to exclude.
-    calibration_image_type : str
-        Type of calibration image to use, either flux or flux-centered.
-    """
-    # Set default location for configuration file.
+    # Locate this script and the repository root (two levels up).
     script_dir = pathlib.Path(__file__).resolve().parent
     default_config_path = script_dir / "paint_plot_config.yaml"
+    project_root = script_dir.parent.parent
+
+    def _make_abs(p: str | pathlib.Path) -> pathlib.Path:
+        """Resolve a possibly‑relative path relative to the repository root (where YAML paths were written)."""
+        p = pathlib.Path(p).expanduser()
+        return p if p.is_absolute() else (project_root / p).resolve()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -185,9 +192,11 @@ if __name__ == "__main__":
         )
 
     # Add remaining arguments to the parser with defaults loaded from the config.
-    data_dir_default = config.get("data_dir", "./paint_data")
+    data_dir_default = _make_abs(config.get("data_dir", "./paint_data"))
     device_default = config.get("device", "cuda")
-    results_dir_default = config.get("results_dir", "./examples/paint_plots/results")
+    results_dir_default = _make_abs(
+        config.get("results_dir", "./examples/paint_plots/results")
+    )
     minimum_number_of_measurements_default = config.get(
         "minimum_number_of_measurements", 80
     )
@@ -248,7 +257,10 @@ if __name__ == "__main__":
     args = parser.parse_args(args=unknown)
 
     device = get_device(torch.device(args.device))
-    data_dir = pathlib.Path(args.data_dir)
+
+    # Convert any CLI‑provided paths (which may be relative) to absolute paths.
+    data_dir = _make_abs(args.data_dir)
+    results_dir = _make_abs(args.results_dir)
 
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
 
@@ -283,7 +295,7 @@ if __name__ == "__main__":
         for heliostat_name, calibration_paths, flux_paths, properties_path in heliostat_data_list
     ]
 
-    results_path = pathlib.Path(args.results_dir) / "viable_heliostats.json"
+    results_path = results_dir / "viable_heliostats.json"
     if not results_path.parent.is_dir():
         results_path.parent.mkdir(parents=True, exist_ok=True)
 

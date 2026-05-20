@@ -4,7 +4,9 @@ import h5py
 import pytest
 from pytest_mock import MockerFixture
 
-from artist.scenario.configuration_classes import (
+from artist.scenario import H5ScenarioGenerator
+from artist.util import constants
+from artist.util.config import (
     HeliostatListConfig,
     LightSourceListConfig,
     PowerPlantConfig,
@@ -12,8 +14,6 @@ from artist.scenario.configuration_classes import (
     TargetAreaCylindricalListConfig,
     TargetAreaPlanarListConfig,
 )
-from artist.scenario.h5_scenario_generator import H5ScenarioGenerator
-from artist.util import config_dictionary
 
 
 @pytest.fixture
@@ -98,16 +98,16 @@ def test_generate_scenario(
 
     with h5py.File(save_name, "r") as f:
         assert f.attrs["version"] == 1.0
-        assert config_dictionary.number_of_heliostat_groups in f
-        assert f[config_dictionary.number_of_heliostat_groups][()] == 3
+        assert constants.number_of_heliostat_groups in f
+        assert f[constants.number_of_heliostat_groups][()] == 3
 
         expected_datasets = {
-            config_dictionary.power_plant_key: ["param1"],
-            config_dictionary.target_area_planar_key: ["param2"],
-            config_dictionary.target_area_cylindrical_key: ["param3"],
-            config_dictionary.light_source_key: ["param4"],
-            config_dictionary.prototype_key: ["param5"],
-            config_dictionary.heliostat_key: ["param6"],
+            constants.power_plant_key: ["param1"],
+            constants.target_area_planar_key: ["param2"],
+            constants.target_area_cylindrical_key: ["param3"],
+            constants.light_source_key: ["param4"],
+            constants.prototype_key: ["param5"],
+            constants.heliostat_key: ["param6"],
         }
         for prefix, keys in expected_datasets.items():
             for key in keys:

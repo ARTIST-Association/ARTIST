@@ -1,8 +1,7 @@
 import pytest
 import torch
 
-from artist.field.kinematics import Kinematics
-from artist.field.kinematics_rigid_body import RigidBody
+from artist.field import Kinematics, RigidBody
 
 
 @pytest.mark.parametrize(

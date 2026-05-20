@@ -3,8 +3,8 @@
 import torch
 
 from artist.field.kinematics import Kinematics
-from artist.util import index_mapping
-from artist.util.environment_setup import get_device
+from artist.util import indices
+from artist.util.env import get_device
 
 
 class HeliostatGroup:
@@ -29,41 +29,41 @@ class HeliostatGroup:
         The string names of each heliostat in the group in order.
     positions : torch.Tensor
         The positions of all heliostats in the group.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     surface_points : torch.Tensor
         The surface points of all heliostats in the group.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     surface_normals : torch.Tensor
         The surface normals of all heliostats in the group.
-        Tensor of shape [number_of_heliostats, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
     initial_orientations : torch.Tensor
         The initial orientations of all heliostats in the group.
-        Tensor of shape [number_of_heliostats, 4].
+        Shape is ``[number_of_heliostats, 4]``.
     nurbs_control_points : torch.Tensor
         The control points for NURBS surfaces for all heliostats in the group.
-        Tensor of shape [number_of_heliostats, number_of_facets_per_heliostat, number_of_control_points_u_direction, number_of_control_points_v_direction 3].
+        Shape is ``[number_of_heliostats, number_of_facets_per_heliostat, number_of_control_points_u_direction, number_of_control_points_v_direction 3]``.
     nurbs_degrees : torch.Tensor
         The spline degrees for NURBS surfaces in u and then in v direction, for all heliostats in the group.
-        Tensor of shape [2].
+        Shape is ``[2]``.
     kinematics : Kinematics
         The kinematics of all heliostats in the group.
     number_of_active_heliostats : int
         The number of active heliostats.
     active_heliostats_mask : torch.Tensor
         A mask defining which heliostats are activated.
-        Tensor of shape [number_of_heliostats].
+        Shape is ``[number_of_heliostats]``.
     active_surface_points : torch.Tensor
         The surface points of all active heliostats in the group, these can be aligned.
-        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4].
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_points_all_facets, 4]``.
     active_surface_normals : torch.Tensor
         The surface normals of all active heliostats in the group, these can be aligned.
-        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
     active_nurbs_control_points : torch.Tensor
         The NURBS control points of all active heliostats in the group, these can be learned.
-        Tensor of shape [number_of_active_heliostats, number_of_facets_per_heliostat, number_of_control_points_u_direction, number_of_control_points_v_direction 3].
+        Shape is ``[number_of_active_heliostats, number_of_facets_per_heliostat, number_of_control_points_u_direction, number_of_control_points_v_direction 3]``.
     preferred_reflection_directions : torch.Tensor
         The preferred reflection directions of all heliostats in the group.
-        Tensor of shape [number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4].
+        Shape is ``[number_of_active_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
 
     Methods
     -------
@@ -97,22 +97,22 @@ class HeliostatGroup:
             The string names of each heliostat in the group in order.
         positions : torch.Tensor
             The positions of all heliostats in the group.
-            Tensor of shape [number_of_heliostats, 4].
+            Shape is ``[number_of_heliostats, 4]``.
         surface_points : torch.Tensor
             The surface points of all heliostats in the group.
-            Tensor of shape [number_of_heliostats, number_of_combined_surface_points_all_facets, 4].
+            Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
         surface_normals : torch.Tensor
             The surface normals of all heliostats in the group.
-            Tensor of shape [number_of_heliostats, number_of_combined_surface_normals_all_facets, 4].
+            Shape is ``[number_of_heliostats, number_of_combined_surface_normals_all_facets, 4]``.
         initial_orientations : torch.Tensor
             The initial orientations of all heliostats in the group.
-            Tensor of shape [number_of_heliostats, 4].
+            Shape is ``[number_of_heliostats, 4]``.
         nurbs_control_points : torch.Tensor
             The control points for NURBS surfaces for all heliostats in the group.
-            Tensor of shape [number_of_heliostats, number_of_facets_per_heliostat, number_of_control_points_u_direction, number_of_control_points_v_direction 3].
+            Shape is ``[number_of_heliostats, number_of_facets_per_heliostat, number_of_control_points_u_direction, number_of_control_points_v_direction 3]``.
         nurbs_degrees : torch.Tensor
             The spline degrees for NURBS surfaces in u and then in v direction, for all heliostats in the group.
-            Tensor of shape [2].
+            Shape is ``[2]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -122,7 +122,7 @@ class HeliostatGroup:
 
         self.number_of_heliostats = len(names)
         self.number_of_facets_per_heliostat = nurbs_control_points.shape[
-            index_mapping.facet_dimension
+            indices.facet_dimension
         ]
         self.names = names
         self.positions = positions
@@ -172,14 +172,14 @@ class HeliostatGroup:
         ----------
         aim_points : torch.Tensor
             The aim points for all active heliostats.
-            Tensor of shape [number_of_active_heliostats, 4].
+            Shape is ``[number_of_active_heliostats, 4]``.
         incident_ray_directions : torch.Tensor
             The incident ray directions.
-            Tensor of shape [number_of_active_heliostats, 4].
+            Shape is ``[number_of_active_heliostats, 4]``.
         active_heliostats_mask : torch.Tensor
             A mask where 0 indicates a deactivated heliostat and 1 an activated one.
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -205,11 +205,11 @@ class HeliostatGroup:
         ----------
         motor_positions : torch.Tensor
             The motor positions for all active heliostats.
-            Tensor of shape [number_of_active_heliostats, 2].
+            Shape is ``[number_of_active_heliostats, 2]``.
         active_heliostats_mask : torch.Tensor
             A mask where 0 indicates a deactivated heliostat and 1 an activated one.
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -240,7 +240,7 @@ class HeliostatGroup:
             A mask where 0 indicates a deactivated heliostat and 1 an activated one (default is None).
             An integer greater than 1 indicates that this heliostat is regarded multiple times.
             If no mask is provided, all heliostats in the scenario will be activated once.
-            Tensor of shape [number_of_heliostats].
+            Shape is ``[number_of_heliostats]``.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate

@@ -101,8 +101,8 @@ to store the final result:
     combined_bitmaps_per_target = torch.zeros(
         (
             scenario.target_areas.number_of_target_areas,
-            bitmap_resolution[index_mapping.unbatched_bitmap_e],
-            bitmap_resolution[index_mapping.unbatched_bitmap_u],
+            bitmap_resolution[indices.unbatched_bitmap_e],
+            bitmap_resolution[indices.unbatched_bitmap_u],
         ),
         device=device,
     )
@@ -113,8 +113,8 @@ distributed ray tracing process takes place within a ``for`` loop:
 
 .. code-block:: python
 
-    for heliostat_group_index in ddp_setup[config_dictionary.groups_to_ranks_mapping][
-        ddp_setup[config_dictionary.rank]
+    for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
+        ddp_setup["rank"]
     ]:
         heliostat_group = scenario.heliostat_field.heliostat_groups[
             heliostat_group_index
@@ -167,10 +167,10 @@ processes ``world_size``, the individual process ID ``rank``, the ``batch_size``
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
-        world_size=ddp_setup[config_dictionary.heliostat_group_world_size],
-        rank=ddp_setup[config_dictionary.heliostat_group_rank],
+        world_size=ddp_setup["heliostat_group_world_size"],
+        rank=ddp_setup["heliostat_group_rank"],
         batch_size=heliostat_group.number_of_active_heliostats,
-        random_seed=ddp_setup[config_dictionary.heliostat_group_rank],
+        random_seed=ddp_setup["heliostat_group_rank"],
         bitmap_resolution=bitmap_resolution,
     )
 
@@ -282,11 +282,11 @@ intermediate results using a nested ``all_reduce``:
 
 .. code-block:: python
 
-    if ddp_setup[config_dictionary.is_nested]:
+    if ddp_setup["is_nested"]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target,
             op=torch.distributed.ReduceOp.SUM,
-            group=ddp_setup[config_dictionary.process_subgroup],
+            group=ddp_setup["process_subgroup"],
         )
 
 This ``all_reduce`` is performed per process subgroup, meaning it only reduces the results of heliostats within the
@@ -313,7 +313,7 @@ In practice, the global ``all_reduce`` is sufficient to obtain the final bitmap 
 
 .. code-block:: python
 
-    if ddp_setup[config_dictionary.is_distributed]:
+    if ddp_setup["is_distributed"]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )

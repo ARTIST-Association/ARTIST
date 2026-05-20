@@ -4,7 +4,7 @@ import h5py
 import pytest
 import torch
 
-from artist.scene.light_source import LightSource
+from artist.scene import LightSource
 
 
 def test_load_light_source_from_hdf5(

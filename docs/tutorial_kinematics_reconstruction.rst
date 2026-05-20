@@ -85,8 +85,8 @@ This mapping is stored in a data dictionary that will later be used during optim
         str,
         CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
-        config_dictionary.data_parser: data_parser,
-        config_dictionary.heliostat_data_mapping: heliostat_data_mapping,
+        constants.data_parser: data_parser,
+        constants.heliostat_data_mapping: heliostat_data_mapping,
     }
 
 If you are not using your own data, you can use the sample data provided in the ``data/`` directory, for example, for
@@ -106,33 +106,33 @@ Since each parameter has its own scale and magnitude, they must be treated separ
 
     # Configure the optimization.
     optimizer_dict = {
-        config_dictionary.initial_learning_rate_rotation_deviation: 1e-4,
-        config_dictionary.initial_learning_rate_initial_angles: 1e-3,
-        config_dictionary.initial_learning_rate_initial_stroke_length: 1e-2,
-        config_dictionary.tolerance: 0.0000,
-        config_dictionary.max_epoch: 200,
-        config_dictionary.batch_size: 50,
-        config_dictionary.log_step: 1,
-        config_dictionary.early_stopping_delta: 1e-8,
-        config_dictionary.early_stopping_patience: 1000,
-        config_dictionary.early_stopping_window: 2000,
+        constants.initial_learning_rate_rotation_deviation: 1e-4,
+        constants.initial_learning_rate_initial_angles: 1e-3,
+        constants.initial_learning_rate_initial_stroke_length: 1e-2,
+        constants.tolerance: 0.0000,
+        constants.max_epoch: 200,
+        constants.batch_size: 50,
+        constants.log_step: 1,
+        constants.early_stopping_delta: 1e-8,
+        constants.early_stopping_patience: 1000,
+        constants.early_stopping_window: 2000,
     }
     # Configure the learning rate scheduler.
     scheduler_dict = {
-        config_dictionary.scheduler_type: config_dictionary.reduce_on_plateau,
-        config_dictionary.gamma: 0.9,
-        config_dictionary.lr_min: 1e-6,
-        config_dictionary.lr_max: 1e-3,
-        config_dictionary.step_size_up: 500,
-        config_dictionary.reduce_factor: 0.0001,
-        config_dictionary.patience: 50,
-        config_dictionary.threshold: 1e-3,
-        config_dictionary.cooldown: 10,
+        constants.scheduler_type: constants.reduce_on_plateau,
+        constants.gamma: 0.9,
+        constants.lr_min: 1e-6,
+        constants.lr_max: 1e-3,
+        constants.step_size_up: 500,
+        constants.reduce_factor: 0.0001,
+        constants.patience: 50,
+        constants.threshold: 1e-3,
+        constants.cooldown: 10,
     }
     # Combine configurations.
     optimization_configuration = {
-        config_dictionary.optimization: optimizer_dict,
-        config_dictionary.scheduler: scheduler_dict,
+        constants.optimization: optimizer_dict,
+        constants.scheduler: scheduler_dict,
     }
 
 
@@ -156,7 +156,7 @@ The reconstructor can be initialized as follows:
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        reconstruction_method=config_dictionary.kinematics_reconstruction_raytracing,
+        reconstruction_method=constants.kinematics_reconstruction_raytracing,
     )
 
 
