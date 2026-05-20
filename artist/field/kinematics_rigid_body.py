@@ -338,8 +338,8 @@ class RigidBody(Kinematics):
         incident_ray_directions: torch.Tensor,
         aim_points: torch.Tensor,
         device: torch.device | None = None,
-        max_num_iterations: int = 2,
-        min_eps: float = 0.0001,
+        num_refinement_iterations: int = 200,
+        refinement_lr: float = 0.08,
     ) -> torch.Tensor:
         """
         Compute orientation matrices given incident ray directions.
@@ -369,113 +369,152 @@ class RigidBody(Kinematics):
         """
         device = get_device(device=device)
 
-        motor_positions = torch.zeros(
+        initial_motor_positions = torch.zeros(
             (
                 self.number_of_active_heliostats,
                 constants.rigid_body_number_of_actuators,
             ),
             device=device,
         )
-        last_iteration_loss = None
+        with torch.no_grad():
 
-        for _ in range(max_num_iterations):
             orientations = self._compute_orientations_from_motor_positions(
-                motor_positions=motor_positions, device=device
+                motor_positions=initial_motor_positions,
+                device=device,
             )
 
-            concentrator_normals = orientations @ torch.tensor(
-                [0, -1, 0, 0], dtype=torch.float32, device=device
-            )
             concentrator_origins = orientations @ torch.tensor(
-                [0, 0, 0, 1], dtype=torch.float32, device=device
+                [0.0, 0.0, 0.0, 1.0], device=device,
             )
 
-            # Compute desired normals.
             desired_reflection_directions = torch.nn.functional.normalize(
-                aim_points - concentrator_origins, p=2, dim=1
-            )
-            desired_concentrator_normals = torch.nn.functional.normalize(
-                -incident_ray_directions + desired_reflection_directions, p=2, dim=1
-            )
-
-            # Compute loss.
-            loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(
-                dim=0
-            )
-
-            # Stop if converged.
-            if isinstance(last_iteration_loss, torch.Tensor):
-                eps = torch.abs(last_iteration_loss - loss)
-                if torch.any(eps <= min_eps):
-                    break
-            last_iteration_loss = loss
-
-            # Analytical solution for joint angles.
-            joint_angles_1 = -torch.arcsin(
-                torch.clamp(
-                    -desired_concentrator_normals[:, indices.e]
-                    / torch.cos(
-                        self.active_translation_deviation_parameters[
-                            :, indices.second_joint_translation_n
-                        ]
-                    ),
-                    min=-1,
-                    max=1,
-                )
-            )
-
-            a = -torch.cos(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.cos(joint_angles_1) + torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_n
-                ]
-            ) * torch.sin(joint_angles_1)
-            b = -torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.cos(joint_angles_1) - torch.cos(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_n
-                ]
-            ) * torch.sin(joint_angles_1)
-
-            joint_angles_0 = (
-                torch.arctan2(
-                    a * -desired_concentrator_normals[:, indices.u]
-                    - b * -desired_concentrator_normals[:, indices.n],
-                    a * -desired_concentrator_normals[:, indices.n]
-                    + b * -desired_concentrator_normals[:, indices.u],
-                )
-                - torch.pi
-            )
-
-            joint_angles = torch.stack(
-                [
-                    joint_angles_0,
-                    joint_angles_1,
-                ],
+                aim_points[:, :3] - concentrator_origins[:, :3],
+                p=2,
                 dim=1,
+                eps=1e-8,
             )
+
+            desired_concentrator_normals = torch.nn.functional.normalize(
+                -incident_ray_directions[:, :3] + desired_reflection_directions,
+                p=2,
+                dim=1,
+                eps=1e-8,
+            )
+
+        joint_angles_1 = -torch.arcsin(
+            torch.clamp(
+                -desired_concentrator_normals[:, indices.e]
+                / torch.cos(
+                    self.active_translation_deviation_parameters[
+                        :, indices.second_joint_translation_n
+                    ]
+                ),
+                min=-1,
+                max=1,
+            )
+        )
+
+        a = -torch.cos(
+            self.active_translation_deviation_parameters[
+                :, indices.second_joint_translation_e
+            ]
+        ) * torch.cos(joint_angles_1) + torch.sin(
+            self.active_translation_deviation_parameters[
+                :, indices.second_joint_translation_e
+            ]
+        ) * torch.sin(
+            self.active_translation_deviation_parameters[
+                :, indices.second_joint_translation_n
+            ]
+        ) * torch.sin(joint_angles_1)
+
+        b = -torch.sin(
+            self.active_translation_deviation_parameters[
+                :, indices.second_joint_translation_e
+            ]
+        ) * torch.cos(joint_angles_1) - torch.cos(
+            self.active_translation_deviation_parameters[
+                :, indices.second_joint_translation_e
+            ]
+        ) * torch.sin(
+            self.active_translation_deviation_parameters[
+                :, indices.second_joint_translation_n
+            ]
+        ) * torch.sin(joint_angles_1)
+
+        joint_angles_0 = (
+            torch.arctan2(
+                a * -desired_concentrator_normals[:, indices.u]
+                - b * -desired_concentrator_normals[:, indices.n],
+
+                a * -desired_concentrator_normals[:, indices.n]
+                + b * -desired_concentrator_normals[:, indices.u],
+            )
+            - torch.pi
+        )
+
+        joint_angles = torch.stack(
+            [
+                joint_angles_0,
+                joint_angles_1,
+            ],
+            dim=1,
+        )
+
+        joint_angles = joint_angles.detach().clone().requires_grad_(True)
+
+        optimizer = torch.optim.Adam(
+            [joint_angles],
+            lr=refinement_lr,
+        )
+
+        for _ in range(num_refinement_iterations):
+
+            optimizer.zero_grad(set_to_none=True)
 
             motor_positions = self.actuators.angles_to_motor_positions(
-                angles=joint_angles, device=device
+                angles=joint_angles,
+                device=device,
             )
+
+            orientations_refined = (
+                self._compute_orientations_from_motor_positions(
+                    motor_positions=motor_positions,
+                    device=device,
+                )
+            )
+
+            predicted_normals = orientations_refined @ torch.tensor(
+                [0.0, -1.0, 0.0, 0.0],
+                device=device,
+            )
+
+            predicted_normals = torch.nn.functional.normalize(
+                predicted_normals[:, :3],
+                p=2,
+                dim=1,
+                eps=1e-8,
+            )
+
+            loss = torch.mean(
+                (predicted_normals - desired_concentrator_normals) ** 2
+            )
+
+            print(loss)
+
+            loss.backward()
+
+            optimizer.step()
+
+        orientations = self._compute_orientations_from_motor_positions(
+            motor_positions=motor_positions,
+            device=device,
+        )
 
         orientations_with_initial_orientation_offsets = (
             self._apply_initial_orientation_offsets(
-                orientations=orientations, device=device
+                orientations=orientations,
+                device=device,
             )
         )
 
