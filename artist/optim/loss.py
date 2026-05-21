@@ -493,13 +493,15 @@ class CosineSimilarityLoss(Loss):
         return 1.0 - self.loss_function(prediction, ground_truth)
 
 
-def loss_per_heliostat(
+def reduce_loss_per_sample(
     loss_per_sample: torch.Tensor,
     number_of_samples_per_heliostat: int,
     reduction: Callable[..., Any],
 ) -> torch.Tensor:
     """
-    Calculate the mean loss per heliostat from a loss per sample.
+    Calculate the loss per heliostat from a loss per sample.
+
+    The reduction operation is chosen via the `reduction` parameter.
 
     Parameters
     ----------
