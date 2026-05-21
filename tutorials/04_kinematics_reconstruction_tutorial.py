@@ -16,7 +16,7 @@ from artist.io import (
     paint_scenario_parser,
 )
 from artist.optim import KinematicsReconstructor
-from artist.optim.loss import FocalSpotLoss
+from artist.optim.loss import AngleLoss, FocalSpotLoss
 from artist.raytracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import constants, set_logger_config
