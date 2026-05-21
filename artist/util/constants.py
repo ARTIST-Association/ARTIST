@@ -165,6 +165,8 @@ fit_nurbs_from_normals = "deflectometry"
 
 kinematics_reconstruction_raytracing = "raytracing"
 """Defines that the kinematics reconstructor uses ray tracing."""
+kinematics_reconstruction_geometry = "geometry"
+"""Defines that the kinematics reconstructor uses geometry."""
 
 names = "names"
 """Key to access heliostat names."""
