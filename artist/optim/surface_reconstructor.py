@@ -11,7 +11,7 @@ from artist.io.calibration_parser import CalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.nurbs.utils import create_nurbs_evaluation_grid
 from artist.optim import training
-from artist.optim.loss import Loss, mean_loss_per_heliostat
+from artist.optim.loss import Loss, reduce_loss_per_sample
 from artist.optim.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario

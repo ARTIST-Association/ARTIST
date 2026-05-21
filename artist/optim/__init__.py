@@ -6,7 +6,7 @@ from .loss import (
     Loss,
     PixelLoss,
     VectorLoss,
-    mean_loss_per_heliostat,
+    reduce_loss_per_sample,
 )
 from .motor_position_optimizer import MotorPositionsOptimizer
 from .regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
