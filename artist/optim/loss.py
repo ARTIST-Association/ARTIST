@@ -122,7 +122,7 @@ class VectorLoss(Loss):
 
 class FocalSpotLoss(Loss):
     """
-    A loss defined as Euclidean distance between the predicted focal spot coordinate and the ground-truth coordinate.
+    A loss defined as Euclidean distance between the predicted focal spot coordinate and the ground-truth focal spot coordinate.
 
     Attributes
     ----------
@@ -157,7 +157,7 @@ class FocalSpotLoss(Loss):
         r"""
         Compute the focal spot loss.
 
-        First the focal spots of the prediction are computed, then the loss is computed and reduced
+        First the focal spots of the prediction and ground truth flux maps are computed, then the loss is computed and reduced
         along the specified dimensions.
 
         Parameters
@@ -203,7 +203,7 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        focal_spot_coordinates = coordinates.bitmap_coordinates_to_target_coordinates(
+        focal_spot_coordinates_prediction = coordinates.bitmap_coordinates_to_target_coordinates(
             bitmap_coordinates=focal_spots_bitmap,
             bitmap_resolution=torch.tensor(
                 [
@@ -217,7 +217,26 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        return torch.norm(focal_spot_coordinates[:, :3] - ground_truth[:, :3], dim=1)
+        focal_spots_ground_truth = bitmap.get_center_of_mass(
+            bitmaps=ground_truth,
+            device=device,
+        )
+
+        focal_spot_coordinates_ground_truth = coordinates.bitmap_coordinates_to_target_coordinates(
+            bitmap_coordinates=focal_spots_ground_truth,
+            bitmap_resolution=torch.tensor(
+                [
+                    prediction.shape[indices.batched_bitmap_u],
+                    prediction.shape[indices.batched_bitmap_e],
+                ],
+                device=device,
+            ),
+            solar_tower=self.scenario.solar_tower,
+            target_area_indices=target_area_indices,
+            device=device,
+        )
+
+        return torch.norm(focal_spot_coordinates_prediction[:, :3] - focal_spot_coordinates_ground_truth[:, :3], dim=1)
 
 
 class PixelLoss(Loss):
@@ -236,17 +255,9 @@ class PixelLoss(Loss):
     :class:`Loss` : Reference to the parent class.
     """
 
-    def __init__(self, scenario: Scenario) -> None:
-        """
-        Initialize the pixel loss.
-
-        Parameters
-        ----------
-        scenario : Scenario
-            The scenario.
-        """
+    def __init__(self) -> None:
+        """Initialize the pixel loss."""
         super().__init__(loss_function=torch.nn.MSELoss(reduction="none"))
-        self.scenario = scenario
 
     def __call__(
         self,
@@ -255,10 +266,10 @@ class PixelLoss(Loss):
         **kwargs: Any,
     ) -> torch.Tensor:
         r"""
-        Compute the pixel loss.
+        Compute the normalized pixel-wise loss.
 
-        First the predicted bitmaps and the ground truth are normalized, then the loss is
-        computed and reduced along the specified dimensions.
+        To make the loss invariant to the overall magnitude of the ground truth flux, the summed loss is divided 
+        by the total ground truth intensity per sample.
 
         Parameters
         ----------
@@ -270,7 +281,7 @@ class PixelLoss(Loss):
             Shape is ``[number_of_samples, bitmap_resolution_e, bitmap_resolution_u]``.
         \*\*kwargs : Any
             Keyword arguments.
-            ``reduction_dimensions``, ``target_area_indices``, and ``device`` are expected keyword arguments for the pixel loss.
+            ``reduction_dimensions`` is an expected keyword arguments for the pixel loss.
 
         Raises
         ------
@@ -283,7 +294,7 @@ class PixelLoss(Loss):
             The summed MSE pixel loss reduced along the specified dimensions.
             Shape is ``[number_of_samples]``.
         """
-        expected_kwargs = ["reduction_dimensions", "device", "target_area_indices"]
+        expected_kwargs = ["reduction_dimensions"]
         errors = []
         for key in expected_kwargs:
             if key not in kwargs:
@@ -294,9 +305,7 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        loss = self.loss_function(prediction, ground_truth)
-
-        return loss.sum(dim=kwargs["reduction_dimensions"])
+        return self.loss_function(prediction, ground_truth).sum(dim=kwargs["reduction_dimensions"]) / ground_truth.sum(dim=(1, 2))
 
 
 class KLDivergenceLoss(Loss):
@@ -392,6 +401,54 @@ class KLDivergenceLoss(Loss):
 class AngleLoss(Loss):
     """
     A loss defined as the angular difference between the prediction and ground truth.
+
+    Attributes
+    ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the angle loss."""
+        super().__init__(loss_function=None)
+
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        **kwargs: Any,
+    ) -> torch.Tensor:
+        r"""
+        Compute the angular distance between prediction and ground truth.
+
+        Parameters
+        ----------
+        prediction : torch.Tensor
+            The predicted values.
+            Shape is ``[number_of_samples, 4]``.
+        ground_truth : torch.Tensor
+            The ground truth.
+            Shape is ``[number_of_samples, 4]``.
+        \*\*kwargs : Any
+            Keyword arguments.
+
+        Returns
+        -------
+        torch.Tensor
+            The summed loss reduced along the specified dimensions.
+            Shape is ``[number_of_samples]``.
+        """
+
+        return torch.acos((prediction[:, :3] * ground_truth[:, :3]).sum(dim=-1).clamp(-1.0, 1.0))
+
+
+class CosineSimilarityLoss(Loss):
+    """
+    A loss defined as the cosine similarity between prediction and ground truth.
 
     Attributes
     ----------
