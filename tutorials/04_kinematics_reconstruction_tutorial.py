@@ -247,7 +247,8 @@ scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/examples/field_optimizat
 # Or if you have a directory with downloaded data use this code to create a mapping.
 heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
     base_path="/workVERLEIHNIX/share/PAINT_data",
-    heliostat_names=["AG48", "AG49", "AG50", "AG51", "AG52", "AG53", "AG54", "AG55", "AG56", "AG57", "AG58", "AH48", "AH49", "AH50", "AH55", "AH56", "AH57", "AH58", "AI48", "AI49", "AI50", "AI51", "AI52", "AI53", "AI54", "AI55", "AI56", "AI57", "AI58", "AI59", "AI60", "AI61", "AJ49", "AJ50", "AJ51", "AJ53", "AJ54", "AJ55", "AJ56", "AJ57", "AJ58", "AJ61", "AJ62", "AK48", "AK49", "AK50", "AK51", "AK52", "AK53", "AK54", "AK55", "AK56", "AK58", "AK59", "AK60", "AK61", "AK62", "AL48", "AL49", "AL51", "AL53", "AL56", "AL58", "AL59", "AL60", "AL61", "AL62", "AM48", "AM49", "AM50", "AM51", "AM52", "AM53", "AM54", "AM55", "AM56", "AM57", "AM58", "AM59", "AM60", "AM62", "AN48", "AN49", "AN50", "AN51", "AN52", "AN53", "AN54", "AN55", "AN56", "AN57", "AN58", "AN59", "AN60", "AN61", "AN62"],
+    heliostat_names=["AG48", "AG49", "AG50", "AG51", "AG52", "AG53", "AG54", "AG55", "AG56", "AG57", "AG58"],
+    #heliostat_names=["AG48", "AG49", "AG50", "AG51", "AG52", "AG53", "AG54", "AG55", "AG56", "AG57", "AG58", "AH48", "AH49", "AH50", "AH55", "AH56", "AH57", "AH58", "AI48", "AI49", "AI50", "AI51", "AI52", "AI53", "AI54", "AI55", "AI56", "AI57", "AI58", "AI59", "AI60", "AI61", "AJ49", "AJ50", "AJ51", "AJ53", "AJ54", "AJ55", "AJ56", "AJ57", "AJ58", "AJ61", "AJ62", "AK48", "AK49", "AK50", "AK51", "AK52", "AK53", "AK54", "AK55", "AK56", "AK58", "AK59", "AK60", "AK61", "AK62", "AL48", "AL49", "AL51", "AL53", "AL56", "AL58", "AL59", "AL60", "AL61", "AL62", "AM48", "AM49", "AM50", "AM51", "AM52", "AM53", "AM54", "AM55", "AM56", "AM57", "AM58", "AM59", "AM60", "AM62", "AN48", "AN49", "AN50", "AN51", "AN52", "AN53", "AN54", "AN55", "AN56", "AN57", "AN58", "AN59", "AN60", "AN61", "AN62"],
     #heliostat_names=['AZ43', 'AP35', 'AA39', 'AC31', 'AC42', 'AC24', 'AM31', 'BF65', 'AQ27', 'AF33', 'BD31', 'AW42', 'AZ39', 'AL36', 'AD42', 'AP39', 'AE28', 'BE38', 'AY55', 'AP50'],
     number_of_measurements=37,
     image_variant="flux",
@@ -340,7 +341,7 @@ with setup_distributed_environment(
 
     scenario.set_number_of_rays(number_of_rays=4)
     optimization_configuration[constants.optimization][constants.initial_learning_rate_rotation_deviation] = 1e-4
-    optimization_configuration[constants.optimization][constants.max_epoch] = 900
+    optimization_configuration[constants.optimization][constants.max_epoch] = 300
     # Create the kinematics reconstructor.
     kinematics_reconstructor = KinematicsReconstructor(
         ddp_setup=ddp_setup,
@@ -348,7 +349,7 @@ with setup_distributed_environment(
         data=data,
         dni=500,
         optimization_configuration=optimization_configuration,
-        reconstruction_method="direction",
+        reconstruction_method=constants.kinematics_reconstruction_geometry,
         bitmap_resolution=resolution,
     )
     # Reconstruct the kinematics.
