@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 from functools import partial
 import logging
 import pathlib
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 from matplotlib import pyplot as plt
 import torch
@@ -21,70 +20,6 @@ from artist.util.env import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
-
-@dataclass
-class TrainTestSplit:
-    """
-    Container holding the train/test split for heliostat reconstruction data.
-
-    Attributes
-    ----------
-    flux_measured_train : torch.Tensor
-        Measured flux distributions for the training set.
-    focal_spots_measured_train : torch.Tensor
-        Measured focal spot coordinates for the training set.
-    incident_ray_directions_train : torch.Tensor
-        Incident ray directions for the training set.
-    motor_positions_train : torch.Tensor
-        Motor positions for the training set.
-    target_area_indices_train : torch.Tensor
-        Target area indices for the training set.
-    flux_measured_test : torch.Tensor
-        Measured flux distributions for the test set.
-    focal_spots_measured_test : torch.Tensor
-        Measured focal spot coordinates for the test set.
-    incident_ray_directions_test : torch.Tensor
-        Incident ray directions for the test set.
-    motor_positions_test : torch.Tensor
-        Motor positions for the test set.
-    target_area_indices_test : torch.Tensor
-        Target area indices for the test set.
-    active_heliostats_mask_train : torch.Tensor
-        Number of active training samples per heliostat.
-    active_heliostats_mask_test : torch.Tensor
-        Number of active test samples per heliostat.
-    train_indices : torch.Tensor
-        Flattened indices selecting training samples from the original dataset.
-    test_indices : torch.Tensor
-        Flattened indices selecting test samples from the original dataset.
-    number_of_train_samples : int
-        Number of training samples per heliostat.
-    number_of_test_samples : int
-        Number of test samples per heliostat.
-    number_of_samples_per_heliostat : int
-        Total number of samples available per heliostat.
-    """
-    flux_measured_train: torch.Tensor
-    focal_spots_measured_train: torch.Tensor
-    incident_ray_directions_train: torch.Tensor
-    motor_positions_train: torch.Tensor
-    target_area_indices_train: torch.Tensor
-
-    flux_measured_test: torch.Tensor
-    focal_spots_measured_test: torch.Tensor
-    incident_ray_directions_test: torch.Tensor
-    motor_positions_test: torch.Tensor
-    target_area_indices_test: torch.Tensor
-
-    active_heliostats_mask_train: torch.Tensor
-    active_heliostats_mask_test: torch.Tensor
-
-    train_indices: torch.Tensor
-    test_indices: torch.Tensor
-
-    number_of_train_samples: int
-    number_of_test_samples: int
-    number_of_samples_per_heliostat: int
 
 class KinematicsReconstructor:
     """
@@ -112,6 +47,15 @@ class KinematicsReconstructor:
         Direct normal irradiance in W/m^2.
     reconstruction_method : str
         The reconstruction method. Currently, only reconstruction via ray tracing is implemented.
+    validation_loss_focal_spot : FocalSpotLoss
+        Flux loss used for validation.
+    validation_loss_pixel : PixelLoss
+        Pixel loss used for validation.
+    validation_loss_kl_div : KLDivergenceLoss
+        Kullback-Leibler divergence loss used for validation.
+
+    plot_results : bool
+        Create flux plots in the last epoch of training for each heliostat and all its samples (slow!).
 
     Note
     ----
@@ -136,6 +80,7 @@ class KinematicsReconstructor:
         dni: float | None = None,
         reconstruction_method: str = constants.kinematics_reconstruction_raytracing,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
+        plot_results: bool = False
     ) -> None:
         """
         Initialize the kinematics optimizer.
@@ -158,6 +103,8 @@ class KinematicsReconstructor:
         bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256, 256])``).
             Shape is ``[2]``.
+        plot_results : bool
+            Create flux plots in the last epoch of training for each heliostat and all its samples (slow!, default is ``False``).
         """
         rank = ddp_setup["rank"]
         if rank == 0:
@@ -171,9 +118,9 @@ class KinematicsReconstructor:
         self.dni = dni
         self.bitmap_resolution = bitmap_resolution
 
-        self.loss_focal_spot = FocalSpotLoss(scenario=self.scenario)
-        self.loss_pixel = PixelLoss()
-        self.loss_kl_div = KLDivergenceLoss()
+        self.validation_loss_focal_spot = FocalSpotLoss(scenario=self.scenario)
+        self.validation_loss_pixel = PixelLoss()
+        self.validation_loss_kl_div = KLDivergenceLoss()
 
         if reconstruction_method in [
             constants.kinematics_reconstruction_raytracing,
@@ -185,6 +132,8 @@ class KinematicsReconstructor:
                 f"The kinematics reconstruction method '{reconstruction_method}' is unknown. "
                 f"Please select another reconstruction method and try again!"
             )
+
+        self.plot_results = plot_results
 
     def reconstruct_kinematics(
         self,
@@ -229,7 +178,7 @@ class KinematicsReconstructor:
             self.reconstruction_method == constants.kinematics_reconstruction_geometry
         ):
             loss, loss_history = (
-                self._reconstruct_kinematics_parameters_with_geometry(
+                self._reconstruct_kinematics_parameters_wih_alignment(
                     loss_definition=loss_definition,
                     device=device,
                 )
@@ -244,68 +193,35 @@ class KinematicsReconstructor:
         return loss, loss_history
 
 
-    def train_test_split(
-        self,
-        active_heliostats_mask: torch.Tensor,
-        flux_measured: torch.Tensor,
-        focal_spots_measured: torch.Tensor,
-        incident_ray_directions: torch.Tensor,
-        motor_positions: torch.Tensor,
-        target_area_indices: torch.Tensor,
-        test_fraction: int = 0.25,
-        device: torch.device | None = None
-    ) -> TrainTestSplit:
-        device = get_device(device=device)
-       
-        total_samples = int(active_heliostats_mask.sum().item())
-        number_of_heliostats = int((active_heliostats_mask > 0).sum().item())
-        number_of_samples_per_heliostat = int(
-            total_samples / number_of_heliostats
-        )
-        number_of_test_samples = max(1, int(number_of_samples_per_heliostat * test_fraction))
-        number_of_train_samples = number_of_samples_per_heliostat - number_of_test_samples
-        starts = torch.arange(number_of_heliostats) * number_of_samples_per_heliostat
-        offsets = torch.arange(number_of_train_samples, number_of_samples_per_heliostat)
-        train_indices = (
-            torch.arange(0, total_samples, number_of_samples_per_heliostat, device=device)[:, None]
-            + torch.arange(number_of_train_samples, device=device)
-        ).reshape(-1)
-        test_indices = (starts[:, None] + offsets).reshape(-1)
-
-        active_heliostats_mask_train = torch.clamp(active_heliostats_mask - number_of_test_samples, min=0)
-        active_heliostats_mask_test = torch.clamp(active_heliostats_mask - number_of_train_samples, min=0)
-
-        return TrainTestSplit(
-            flux_measured_train=flux_measured[train_indices],
-            focal_spots_measured_train=focal_spots_measured[train_indices],
-            incident_ray_directions_train=incident_ray_directions[train_indices],
-            motor_positions_train=motor_positions[train_indices],
-            target_area_indices_train=target_area_indices[train_indices],
-
-            flux_measured_test=flux_measured[test_indices],
-            focal_spots_measured_test=focal_spots_measured[test_indices],
-            incident_ray_directions_test=incident_ray_directions[test_indices],
-            motor_positions_test=motor_positions[test_indices],
-            target_area_indices_test=target_area_indices[test_indices],
-
-            active_heliostats_mask_train=active_heliostats_mask_train,
-            active_heliostats_mask_test=active_heliostats_mask_test,
-
-            train_indices=train_indices,
-            test_indices=test_indices,
-
-            number_of_train_samples=number_of_train_samples,
-            number_of_test_samples=number_of_test_samples,
-            number_of_samples_per_heliostat=number_of_samples_per_heliostat,
-        )
-    
-
     def validate(
         self,
         heliostat_group: HeliostatGroup,
-        data_split: TrainTestSplit,
+        data_split: training.TrainTestSplit,
+        reduction: Callable[..., Any],
         device: torch.device | None = None,
-    ):
+    ) -> torch.Tensor:
+        """
+        Validate the kinematic reconstruction for a specified heliostat group on the test data.
+
+        Parameters
+        ----------
+        heliostat_group : HeliostatGroup
+            Heliostat group to validate.
+        data_split : training.TrainTestSplit
+            Train/test split containing all test tensors and metadata.
+        reduction : Callable[..., Any]
+            Reduction function applied across the sample dimension for each heliostat.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted flux distributions for the local validation samples.
+            Shape is ``[number_of_local_test_samples, height, width]``.
+        """
         device = get_device(device=device)
 
         heliostat_group.activate_heliostats(
@@ -340,7 +256,7 @@ class KinematicsReconstructor:
 
         indices_for_local_rank = ray_tracer.get_sampler_indices()
 
-        loss_focal_spot_per_sample = self.loss_focal_spot(
+        loss_focal_spot_per_sample = self.validation_loss_focal_spot(
             prediction=flux_prediction,
             ground_truth=data_split.flux_measured_test[
                 indices_for_local_rank
@@ -350,14 +266,14 @@ class KinematicsReconstructor:
             ],
             device=device
         )
-        loss_pixel_per_sample = self.loss_pixel(
+        loss_pixel_per_sample = self.validation_loss_pixel(
             prediction=flux_prediction,
             ground_truth=data_split.flux_measured_test[
                 indices_for_local_rank
             ],
             reduction_dimensions=(1,2,),
         )
-        loss_kl_div_per_sample = self.loss_kl_div(
+        loss_kl_div_per_sample = self.validation_loss_kl_div(
             prediction=flux_prediction,
             ground_truth=data_split.flux_measured_test[
                 indices_for_local_rank
@@ -368,22 +284,24 @@ class KinematicsReconstructor:
         test_loss_focal_spot = reduce_loss_per_sample(
             loss_per_sample=loss_focal_spot_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
-            reduction=partial(torch.median, dim=1),
+            reduction=reduction,
         )                   
         test_loss_pixel = reduce_loss_per_sample(
             loss_per_sample=loss_pixel_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
-            reduction=partial(torch.median, dim=1),
+            reduction=reduction,
         )                        
         test_loss_kl_div = reduce_loss_per_sample(
             loss_per_sample=loss_kl_div_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
-            reduction=partial(torch.median, dim=1),
+            reduction=reduction,
         )
 
-        print(f"test loss focal spot, mean: {torch.mean(test_loss_focal_spot)}")
-        print(f"test loss pixel, mean: {torch.mean(test_loss_pixel)}")
-        print(f"test loss kl div, mean: {torch.mean(test_loss_kl_div)}")
+        log.info(
+            f"test loss focal spot mean: {torch.mean(test_loss_focal_spot).item()},",
+            f" pixel mean: {torch.mean(test_loss_pixel.item())}",
+            f" kl div mean: {torch.mean(test_loss_kl_div).item()}"
+        )
 
         return flux_prediction
 
@@ -392,7 +310,7 @@ class KinematicsReconstructor:
         flux_measured: torch.Tensor,
         flux_prediction_train: torch.Tensor,
         flux_prediction_test: torch.Tensor,
-        data_split: TrainTestSplit,
+        data_split: training.TrainTestSplit,
         plot_name: str,
     ) -> None:
         device=torch.device("cpu")
@@ -437,20 +355,20 @@ class KinematicsReconstructor:
                     )   
 
             plt.tight_layout()
-            plt.savefig(f"./ignored/new/heliostat_{heliostat_start_index // samples_per_heliostat}_{plot_name}")
+            plt.savefig(f"./ignored/fixed/heliostat_{heliostat_start_index // samples_per_heliostat}_{plot_name}")
             plt.close(fig)
 
 
-    def _reconstruct_kinematics_parameters_with_geometry(
+    def _reconstruct_kinematics_parameters_wih_alignment(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, list[list[dict[str, list[float]]]]]:
         """
-        Reconstruct the kinematics parameters using ray tracing.
+        Reconstruct the kinematics parameters using alignment and geometry data.
 
-        This reconstruction method optimizes the kinematics parameters by extracting the focal points
-        of calibration images and using heliostat-tracing.
+        This reconstruction method optimizes the kinematics parameters by iteratively 
+        aligning heliostats to reach a defined flux focal spot.
 
         Parameters
         ----------
@@ -517,8 +435,7 @@ class KinematicsReconstructor:
             )
 
             if active_heliostats_mask.sum() > 0:
-
-                data_split: TrainTestSplit = self.train_test_split(
+                data_split: training.TrainTestSplit = training.train_test_split(
                     active_heliostats_mask=active_heliostats_mask,
                     flux_measured=flux_measured,
                     focal_spots_measured=focal_spots_measured,
@@ -528,7 +445,7 @@ class KinematicsReconstructor:
                     test_fraction=0.25,
                     device=device
                 )
-
+                # Calculate focal spot from measured flux.
                 preferred_reflection_directions_measured = (
                     torch.nn.functional.normalize(
                         (
@@ -541,7 +458,6 @@ class KinematicsReconstructor:
                         dim=1,
                     )
                 )
-
                 normals_measured = coordinates.convert_3d_directions_to_4d_format(torch.nn.functional.normalize(preferred_reflection_directions_measured - incident_ray_directions[:, :3], dim=-1), device=device)
 
                 # Set up optimizer, scheduler, and early stopping.
@@ -619,6 +535,8 @@ class KinematicsReconstructor:
 
                     loss.backward()
                     
+                    # Severely misaligned heliostat samples produce nan gradients. These are set to zero and the 
+                    # sample has no influence on the training epoch.
                     optimizer.param_groups[0]["params"][0].grad.nan_to_num_(nan=0.0, posinf=0.0, neginf=0.0)
 
                     if self.ddp_setup["is_nested"]:
@@ -638,43 +556,6 @@ class KinematicsReconstructor:
                                     ]
 
                     optimizer.step()
-
-                    with torch.no_grad():
-                        heliostat_group.activate_heliostats(
-                            active_heliostats_mask=data_split.active_heliostats_mask_train, device=device
-                        )
-
-                        heliostat_group.align_surfaces_with_motor_positions(
-                            motor_positions=data_split.motor_positions_train,
-                            active_heliostats_mask=data_split.active_heliostats_mask_train,
-                            device=device
-                        )
-
-                        ray_tracer = HeliostatRayTracer(
-                            scenario=self.scenario,
-                            heliostat_group=heliostat_group,
-                            blocking_active=False,
-                            world_size=self.ddp_setup["heliostat_group_world_size"],
-                            rank=self.ddp_setup["heliostat_group_rank"],
-                            batch_size=self.optimizer_dict[constants.batch_size],
-                            random_seed=self.ddp_setup["heliostat_group_rank"],
-                            dni=self.dni,
-                            bitmap_resolution=self.bitmap_resolution,
-                        )
-
-                        flux_prediction_train, _, _, _ = ray_tracer.trace_rays(
-                            incident_ray_directions=data_split.incident_ray_directions_train,
-                            active_heliostats_mask=data_split.active_heliostats_mask_train,
-                            target_area_indices=data_split.target_area_indices_train,
-                            device=device,
-                        )
-
-                        flux_prediction_test=self.validate(
-                            heliostat_group=heliostat_group,
-                            data_split=data_split,
-                            device=device
-                        )
-
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
@@ -682,29 +563,63 @@ class KinematicsReconstructor:
                     else:
                         scheduler.step()
 
-                    if epoch % log_step == 0:
-                        log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss},",
-                        )
-
-                    loss_history_list.append(loss.detach().cpu().item())
-
-                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    is_last_epoch = epoch == self.optimizer_dict[constants.max_epoch] - 1
                     stop = early_stopper.step(loss.item())
 
+                    if epoch % log_step == 0 or is_last_epoch or stop:
+                        log.info(
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}",
+                        )
+
+                        with torch.no_grad():
+                            heliostat_group.activate_heliostats(
+                                active_heliostats_mask=data_split.active_heliostats_mask_train,
+                                device=device,
+                            )
+                            heliostat_group.align_surfaces_with_motor_positions(
+                                motor_positions=data_split.motor_positions_train,
+                                active_heliostats_mask=data_split.active_heliostats_mask_train,
+                                device=device,
+                            )
+                            ray_tracer = HeliostatRayTracer(
+                                scenario=self.scenario,
+                                heliostat_group=heliostat_group,
+                                blocking_active=False,
+                                world_size=self.ddp_setup["heliostat_group_world_size"],
+                                rank=self.ddp_setup["heliostat_group_rank"],
+                                batch_size=self.optimizer_dict[constants.batch_size],
+                                random_seed=self.ddp_setup["heliostat_group_rank"],
+                                dni=self.dni,
+                                bitmap_resolution=self.bitmap_resolution,
+                            )
+                            flux_prediction_train, _, _, _ = ray_tracer.trace_rays(
+                                incident_ray_directions=data_split.incident_ray_directions_train,
+                                active_heliostats_mask=data_split.active_heliostats_mask_train,
+                                target_area_indices=data_split.target_area_indices_train,
+                                device=device,
+                            )
+                            flux_prediction_test = self.validate(
+                                heliostat_group=heliostat_group,
+                                data_split=data_split,
+                                reduction=partial(torch.mean),
+                                device=device,   
+                            )
+
+                    # Early stopping when loss did not improve for a predefined number of epochs.
                     if stop:
                         log.info(f"Early stopping at epoch {epoch}.")
                         break
-                    
-                    if epoch == 300:
+
+                    if self.plot_results and (is_last_epoch or stop):
                         self.plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
                             flux_prediction_train=flux_prediction_train.cpu().detach(),
                             flux_prediction_test=flux_prediction_test.cpu().detach(),
                             data_split=data_split,
-                            plot_name=f"geometry_{epoch}"
+                            plot_name=f"geometry_{epoch}",
                         )
 
+                    loss_history_list.append(loss.detach().cpu().item())
                     epoch += 1
 
                 loss_history.append(
@@ -836,7 +751,7 @@ class KinematicsReconstructor:
             )
 
             if active_heliostats_mask.sum() > 0:
-                data_split: TrainTestSplit = self.train_test_split(
+                data_split: training.TrainTestSplit = training.train_test_split(
                     active_heliostats_mask=active_heliostats_mask,
                     flux_measured=flux_measured,
                     focal_spots_measured=focal_spots_measured,
@@ -967,14 +882,6 @@ class KinematicsReconstructor:
                                     ]
 
                     optimizer.step()
-
-                    with torch.no_grad():
-                        flux_prediction_test=self.validate(
-                            heliostat_group=heliostat_group,
-                            data_split=data_split,
-                            device=device
-                        )
-
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
@@ -982,29 +889,37 @@ class KinematicsReconstructor:
                     else:
                         scheduler.step()
 
-                    if epoch % log_step == 0:
-                        log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss},",
-                        )
-
-                    loss_history_list.append(loss.detach().cpu().item())
-
-                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    is_last_epoch = epoch == self.optimizer_dict[constants.max_epoch] - 1
                     stop = early_stopper.step(loss.item())
 
+                    if epoch % log_step == 0 or is_last_epoch or stop:
+                        log.info(
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}",
+                        )
+
+                        with torch.no_grad():
+                            flux_prediction_test = self.validate(
+                                heliostat_group=heliostat_group,
+                                data_split=data_split,
+                                reduction=partial(torch.median, dim=1),
+                                device=device,
+                            )
+
+                    # Early stopping when loss did not improve for a predefined number of epochs.
                     if stop:
                         log.info(f"Early stopping at epoch {epoch}.")
                         break
-                    
-                    if epoch == 300:
+
+                    if self.plot_results and (is_last_epoch or stop):
                         self.plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
                             flux_prediction_train=flux_prediction_train.cpu().detach(),
                             flux_prediction_test=flux_prediction_test.cpu().detach(),
                             data_split=data_split,
-                            plot_name=f"raytracing_{epoch}"
+                            plot_name=f"raytracing_{epoch}",
                         )
 
+                    loss_history_list.append(loss.detach().cpu().item())
                     epoch += 1
 
                 loss_history.append(
