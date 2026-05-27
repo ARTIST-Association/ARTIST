@@ -510,6 +510,8 @@ def reduce_loss_per_sample(
         Tensor of shape [number_of_samples].
     number_of_samples_per_heliostat : int
         Number of samples per heliostat.
+    reduction : Callable[..., Any]
+        Reduction function applied across the sample dimension for each heliostat.
 
     Returns
     -------
