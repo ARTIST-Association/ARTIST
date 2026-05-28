@@ -53,7 +53,6 @@ class KinematicsReconstructor:
         Pixel loss used for validation.
     validation_loss_kl_div : KLDivergenceLoss
         Kullback-Leibler divergence loss used for validation.
-
     plot_results : bool
         Create flux plots in the last epoch of training for each heliostat and all its samples (slow!).
 
@@ -124,7 +123,7 @@ class KinematicsReconstructor:
 
         if reconstruction_method in [
             constants.kinematics_reconstruction_raytracing,
-            constants.kinematics_reconstruction_geometry
+            constants.kinematics_reconstruction_alignment
         ]:
             self.reconstruction_method = reconstruction_method
         else:
@@ -175,7 +174,7 @@ class KinematicsReconstructor:
                 )
             )
         elif (
-            self.reconstruction_method == constants.kinematics_reconstruction_geometry
+            self.reconstruction_method == constants.kinematics_reconstruction_alignment
         ):
             loss, loss_history = (
                 self._reconstruct_kinematics_parameters_wih_alignment(
@@ -193,7 +192,7 @@ class KinematicsReconstructor:
         return loss, loss_history
 
 
-    def validate(
+    def _validate(
         self,
         heliostat_group: HeliostatGroup,
         data_split: training.TrainTestSplit,
@@ -298,14 +297,17 @@ class KinematicsReconstructor:
         )
 
         log.info(
-            f"test loss focal spot mean: {torch.mean(test_loss_focal_spot).item()},",
-            f" pixel mean: {torch.mean(test_loss_pixel.item())}",
-            f" kl div mean: {torch.mean(test_loss_kl_div).item()}"
+            "test loss focal spot mean: %.5f, "
+            "pixel mean: %.5f, "
+            "kl div mean: %.5f",
+            torch.mean(test_loss_focal_spot).item(),
+            torch.mean(test_loss_pixel).item(),
+            torch.mean(test_loss_kl_div).item(),
         )
 
         return flux_prediction
 
-    def plot_fluxes(
+    def _plot_fluxes(
         self,
         flux_measured: torch.Tensor,
         flux_prediction_train: torch.Tensor,
@@ -313,13 +315,39 @@ class KinematicsReconstructor:
         data_split: training.TrainTestSplit,
         plot_name: str,
     ) -> None:
+        """
+        Plot predicted and measured flux maps for each heliostat sample.
+
+        Each row in the generated figure corresponds to one sample of a
+        heliostat, where the left column contains the predicted flux and 
+        the right column contains the measured flux.
+        The subplot borders are color-coded to indicate whether a sample
+        belongs to the training samples (green) or testing samples (red)
+        One figure is generated per heliostat.
+
+        Parameters
+        ----------
+        flux_measured : torch.Tensor
+            Ground-truth measured flux maps.
+        flux_prediction_train : torch.Tensor
+            Predicted flux maps of the training samples.
+        flux_prediction_test : torch.Tensor
+            Predicted flux maps of the testing samples.
+        data_split : training.TrainTestSplit
+            Information on the train/test split.
+        plot_name : str
+            Name suffix used when saving the generated plot files.
+        """
         device=torch.device("cpu")
+        
         flux_predicted = torch.zeros_like(flux_measured, device=device)
         flux_predicted[data_split.train_indices] = flux_prediction_train
         flux_predicted[data_split.test_indices] = flux_prediction_test
         samples_per_heliostat = data_split.number_of_samples_per_heliostat
         total_samples = flux_measured.shape[0]
-        
+        train_indices = set(data_split.train_indices.tolist())
+        test_indices = set(data_split.test_indices.tolist())
+
         centers_of_mass_predicted = bitmap.get_center_of_mass(flux_predicted, device=device)
         centers_of_mass_measured = bitmap.get_center_of_mass(flux_measured, device=device)
 
@@ -331,12 +359,19 @@ class KinematicsReconstructor:
 
             for sample_offset in range(samples_per_heliostat):
                 sample_index = heliostat_start_index + sample_offset
+    
+                if sample_index in train_indices:
+                    border_color = "green"
+                    split_name = "TRAIN"
+                elif sample_index in test_indices:
+                    border_color = "red"
+                    split_name = "TEST"
 
                 axes[sample_offset, 0].imshow(flux_predicted[sample_index])
-                axes[sample_offset, 0].set_title(f"Predicted Flux - Heliostat {heliostat_index}")
+                axes[sample_offset, 0].set_title(f"Predicted Flux - Heliostat {heliostat_index} ({split_name})")
 
                 axes[sample_offset, 1].imshow(flux_measured[sample_index])
-                axes[sample_offset, 1].set_title(f"Measured Flux - Heliostat {heliostat_index}")
+                axes[sample_offset, 1].set_title(f"Measured Flux - Heliostat {heliostat_index} ({split_name})")
 
                 for ax in axes[sample_offset, :]:
                     ax.scatter(
@@ -353,9 +388,14 @@ class KinematicsReconstructor:
                         s=30,
                         marker="x",
                     )   
+                
+                for spine in axes[sample_offset, :].flat:
+                    for spines in spine.spines.values():
+                        spines.set_edgecolor(border_color)
+                        spines.set_linewidth(4)
 
             plt.tight_layout()
-            plt.savefig(f"./ignored/fixed/heliostat_{heliostat_start_index // samples_per_heliostat}_{plot_name}")
+            plt.savefig(f"./ignored/fixed/heliostat_{heliostat_index}_{plot_name}")
             plt.close(fig)
 
 
@@ -409,11 +449,10 @@ class KinematicsReconstructor:
 
         # Iterate heliostat groups assigned to this rank.
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-            # Parse calibration inputs for current group to obtain measured flux, incident ray directions, mask of
-            # active heliostats, and target area indices.
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
+            # Load data parser and input file mapping, then parse the calibration data.
             parser = cast(CalibrationDataParser, self.data[constants.data_parser])
             heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
@@ -434,6 +473,7 @@ class KinematicsReconstructor:
                 device=device,
             )
 
+            # Skip groups with no active heliostats.
             if active_heliostats_mask.sum() > 0:
                 data_split: training.TrainTestSplit = training.train_test_split(
                     active_heliostats_mask=active_heliostats_mask,
@@ -598,7 +638,7 @@ class KinematicsReconstructor:
                                 target_area_indices=data_split.target_area_indices_train,
                                 device=device,
                             )
-                            flux_prediction_test = self.validate(
+                            flux_prediction_test = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.mean),
@@ -611,12 +651,12 @@ class KinematicsReconstructor:
                         break
 
                     if self.plot_results and (is_last_epoch or stop):
-                        self.plot_fluxes(
+                        self._plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
                             flux_prediction_train=flux_prediction_train.cpu().detach(),
                             flux_prediction_test=flux_prediction_test.cpu().detach(),
                             data_split=data_split,
-                            plot_name=f"geometry_{epoch}",
+                            plot_name=f"alignment_{epoch}",
                         )
 
                     loss_history_list.append(loss.detach().cpu().item())
@@ -725,11 +765,10 @@ class KinematicsReconstructor:
 
         # Iterate heliostat groups assigned to this rank.
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-            # Parse calibration inputs for current group to obtain measured flux, incident ray directions, mask of
-            # active heliostats, and target area indices.
             heliostat_group: HeliostatGroup = (
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
+            # Load data parser and input file mapping, then parse the calibration data.
             parser = cast(CalibrationDataParser, self.data[constants.data_parser])
             heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
@@ -851,7 +890,10 @@ class KinematicsReconstructor:
                         target_area_indices=data_split.target_area_indices_train[
                             sample_indices_for_local_rank
                         ],
-                        reduction_dimensions=(1,2),
+                        reduction_dimensions=(
+                            indices.batched_bitmap_e,
+                            indices.batched_bitmap_u,
+                        ),
                         device=device,
                     )
 
@@ -865,6 +907,7 @@ class KinematicsReconstructor:
 
                     loss.backward()
 
+                    # Nested-DDP gradient synchronization within heliostat-group subgroup.
                     if self.ddp_setup["is_nested"]:
                         # Reduce gradients within each heliostat group.
                         for param_group in optimizer.param_groups:
@@ -898,7 +941,7 @@ class KinematicsReconstructor:
                         )
 
                         with torch.no_grad():
-                            flux_prediction_test = self.validate(
+                            flux_prediction_test = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.median, dim=1),
@@ -911,7 +954,7 @@ class KinematicsReconstructor:
                         break
 
                     if self.plot_results and (is_last_epoch or stop):
-                        self.plot_fluxes(
+                        self._plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
                             flux_prediction_train=flux_prediction_train.cpu().detach(),
                             flux_prediction_test=flux_prediction_test.cpu().detach(),
