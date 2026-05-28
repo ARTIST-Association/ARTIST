@@ -1,7 +1,9 @@
+from functools import partial
 import logging
 import pathlib
 from typing import Any, cast
 
+from matplotlib import pyplot as plt
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -11,7 +13,7 @@ from artist.io.calibration_parser import CalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.nurbs.utils import create_nurbs_evaluation_grid
 from artist.optim import training
-from artist.optim.loss import Loss, reduce_loss_per_sample
+from artist.optim.loss import KLDivergenceLoss, Loss, PixelLoss, reduce_loss_per_sample
 from artist.optim.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
@@ -63,6 +65,12 @@ class SurfaceReconstructor:
         Shape is ``[2]``.
     epsilon : float | None
         Small numerical offset used to avoid division by zero in the energy constraint.
+    plot_results : bool
+        Create flux plots in the last epoch of training for each heliostat and all its samples (slow!).
+    validation_loss_pixel : PixelLoss
+        Pixel loss used for validation.
+    validation_loss_kl_div : KLDivergenceLoss
+        Kullback-Leibler divergence loss used for validation.
 
     Note
     ----
@@ -90,6 +98,7 @@ class SurfaceReconstructor:
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         epsilon: float | None = 1e-12,
+        plot_results: bool = False,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -117,6 +126,8 @@ class SurfaceReconstructor:
             Shape is ``[2]``.
         epsilon : float | None
             Small numerical offset used to avoid division by zero in the energy constraint (default is 1e-12).
+        plot_results : bool
+            Create flux plots in the last epoch of training for each heliostat and all its samples (slow!, default is ``False``).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -139,6 +150,228 @@ class SurfaceReconstructor:
         self.dni = dni
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
+        self.plot_results = plot_results
+
+        self.validation_loss_pixel = PixelLoss()
+        self.validation_loss_kl_div = KLDivergenceLoss()
+
+
+    def _validate(
+        self,
+        heliostat_group: HeliostatGroup,
+        data_split: training.TrainTestSplit,
+        evaluation_points: torch.Tensor,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """
+        Validate the surface reconstruction for a specified heliostat group on the test data.
+
+        Parameters
+        ----------
+        heliostat_group : HeliostatGroup
+            Heliostat group to validate.
+        data_split : training.TrainTestSplit
+            Train/test split containing all test tensors and metadata.
+        evaluation_points : torch.Tensor
+            Evaluation points for the NURBS surface sampling.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ARTIST will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted flux distributions for the local validation samples.
+            Shape is ``[number_of_local_test_samples, height, width]``.
+        """
+        device = get_device(device=device)
+
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=data_split.active_heliostats_mask_test,
+            device=device,
+        )
+
+        nurbs_surfaces = NURBSSurfaces(
+            degrees=heliostat_group.nurbs_degrees,
+            control_points=heliostat_group.active_nurbs_control_points,
+            device=device,
+        )
+
+        (
+            new_surface_points,
+            new_surface_normals,
+        ) = nurbs_surfaces.calculate_surface_points_and_normals(
+            evaluation_points=evaluation_points[data_split.test_indices],
+            canting=heliostat_group.active_canting,
+            facet_translations=heliostat_group.active_facet_translations,
+            device=device,
+        )
+
+        heliostat_group.active_surface_points = new_surface_points.reshape(
+            heliostat_group.active_surface_points.shape[
+                indices.heliostat_dimension
+            ],
+            -1,
+            4,
+        )
+        heliostat_group.active_surface_normals = (
+            new_surface_normals.reshape(
+                heliostat_group.active_surface_normals.shape[
+                    indices.heliostat_dimension
+                ],
+                -1,
+                4,
+            )
+        )
+
+        heliostat_group.align_surfaces_with_incident_ray_directions(
+            aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
+                target_area_indices=data_split.target_area_indices_test, device=device
+            ),
+            incident_ray_directions=data_split.incident_ray_directions_test,
+            active_heliostats_mask=data_split.active_heliostats_mask_test,
+            device=device,
+        )
+
+        ray_tracer = HeliostatRayTracer(
+            scenario=self.scenario,
+            heliostat_group=heliostat_group,
+            blocking_active=False,
+            world_size=self.ddp_setup["heliostat_group_world_size"],
+            rank=self.ddp_setup["heliostat_group_rank"],
+            batch_size=self.optimizer_dict[constants.batch_size],
+            random_seed=self.ddp_setup["heliostat_group_rank"],
+            dni=self.dni,
+            bitmap_resolution=self.bitmap_resolution,
+        )
+
+        flux_prediction, _, _, _ = ray_tracer.trace_rays(
+            incident_ray_directions=data_split.incident_ray_directions_test,
+            active_heliostats_mask=data_split.active_heliostats_mask_test,
+            target_area_indices=data_split.target_area_indices_test,
+            device=device,
+        )
+
+        cropped_flux_distributions = (
+            bitmap.crop_flux_distributions_around_center(
+                flux_distributions=flux_prediction,
+                solar_tower=self.scenario.solar_tower,
+                target_area_indices=data_split.target_area_indices_test,
+                device=device,
+            )
+        )
+
+        indices_for_local_rank = ray_tracer.get_sampler_indices()
+
+        loss_pixel_per_sample = self.validation_loss_pixel(
+            prediction=cropped_flux_distributions,
+            ground_truth=data_split.flux_measured_test[
+                indices_for_local_rank
+            ],
+            reduction_dimensions=(1,2,),
+        )
+        loss_kl_div_per_sample = self.validation_loss_kl_div(
+            prediction=cropped_flux_distributions,
+            ground_truth=data_split.flux_measured_test[
+                indices_for_local_rank
+            ],
+            reduction_dimensions=(1,2,),
+        )
+                 
+        test_loss_pixel = reduce_loss_per_sample(
+            loss_per_sample=loss_pixel_per_sample,
+            number_of_samples_per_heliostat=data_split.number_of_test_samples,
+            reduction=partial(torch.mean),
+        )                        
+        test_loss_kl_div = reduce_loss_per_sample(
+            loss_per_sample=loss_kl_div_per_sample,
+            number_of_samples_per_heliostat=data_split.number_of_test_samples,
+            reduction=partial(torch.mean),
+        )
+
+        log.info(
+            "pixel mean: %.5f, "
+            "kl div mean: %.5f",
+            torch.mean(test_loss_pixel).item(),
+            torch.mean(test_loss_kl_div).item(),
+        )
+
+        return flux_prediction
+
+
+    def _plot_fluxes(
+        self,
+        flux_measured: torch.Tensor,
+        flux_prediction_train: torch.Tensor,
+        flux_prediction_test: torch.Tensor,
+        data_split: training.TrainTestSplit,
+        plot_name: str,
+    ) -> None:
+        """
+        Plot predicted and measured flux maps for each heliostat sample.
+
+        Each row in the generated figure corresponds to one sample of a
+        heliostat, where the left column contains the predicted flux and 
+        the right column contains the measured flux.
+        The subplot borders are color-coded to indicate whether a sample
+        belongs to the training samples (green) or testing samples (red)
+        One figure is generated per heliostat.
+
+        Parameters
+        ----------
+        flux_measured : torch.Tensor
+            Ground-truth measured flux maps.
+        flux_prediction_train : torch.Tensor
+            Predicted flux maps of the training samples.
+        flux_prediction_test : torch.Tensor
+            Predicted flux maps of the testing samples.
+        data_split : training.TrainTestSplit
+            Information on the train/test split.
+        plot_name : str
+            Name suffix used when saving the generated plot files.
+        """
+        device = torch.device("cpu")
+
+        flux_predicted = torch.zeros_like(flux_measured, device=device)
+        flux_predicted[data_split.train_indices] = flux_prediction_train
+        flux_predicted[data_split.test_indices] = flux_prediction_test
+        samples_per_heliostat = data_split.number_of_samples_per_heliostat
+        total_samples = flux_measured.shape[0]
+        train_indices = set(data_split.train_indices.tolist())
+        test_indices = set(data_split.test_indices.tolist())
+
+        for heliostat_start_index in range(0, total_samples, samples_per_heliostat):
+            fig, axes = plt.subplots(
+                samples_per_heliostat, 2, figsize=(8, samples_per_heliostat * 4),
+            )
+            heliostat_index = heliostat_start_index // samples_per_heliostat
+
+            for sample_offset in range(samples_per_heliostat):
+                sample_index = heliostat_start_index + sample_offset
+
+                if sample_index in train_indices:
+                    border_color = "green"
+                    split_name = "TRAIN"
+                elif sample_index in test_indices:
+                    border_color = "red"
+                    split_name = "TEST"
+
+                axes[sample_offset, 0].imshow(flux_predicted[sample_index])
+                axes[sample_offset, 0].set_title(f"Predicted Flux - Heliostat {heliostat_index} ({split_name})")
+
+                axes[sample_offset, 1].imshow(flux_measured[sample_index])
+                axes[sample_offset, 1].set_title(f"Measured Flux - Heliostat {heliostat_index} ({split_name})")
+
+                for spine in axes[sample_offset, :].flat:
+                    for spines in spine.spines.values():
+                        spines.set_edgecolor(border_color)
+                        spines.set_linewidth(4)
+
+            plt.tight_layout()
+            plt.savefig(f"./ignored/fixed/heliostat_{heliostat_index}_{plot_name}")
+            plt.close(fig)
+
 
     def reconstruct_surfaces(
         self,
@@ -207,19 +440,17 @@ class SurfaceReconstructor:
                 self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
             )
 
-            # Load calibration parser and input file mapping.
+            # Load data parser and input file mapping, then parse the calibration data.
             parser = cast(CalibrationDataParser, self.data[constants.data_parser])
             heliostat_mapping = cast(
                 list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
                 self.data[constants.heliostat_data_mapping],
             )
-
-            # Obtain measured flux + metadata for this group.
             (
-                measured_flux_distributions,
-                _,
+                flux_measured,
+                focal_spots_measured,
                 incident_ray_directions,
-                _,
+                motor_positions,
                 active_heliostats_mask,
                 target_area_indices,
             ) = parser.parse_data_for_reconstruction(
@@ -232,7 +463,16 @@ class SurfaceReconstructor:
 
             # Skip groups with no active heliostats.
             if active_heliostats_mask.sum() > 0:
-                # Create NURBS evaluation points: Build a UV grid for NURBS sampling and expand to required shape.
+                data_split: training.TrainTestSplit = training.train_test_split(
+                    active_heliostats_mask=active_heliostats_mask,
+                    flux_measured=flux_measured,
+                    focal_spots_measured=focal_spots_measured,
+                    incident_ray_directions=incident_ray_directions,
+                    motor_positions=motor_positions,
+                    target_area_indices=target_area_indices,
+                    test_fraction=0.25,
+                    device=device
+                )
                 evaluation_points = (
                     create_nurbs_evaluation_grid(
                         number_of_evaluation_points=self.number_of_surface_points,
@@ -247,14 +487,13 @@ class SurfaceReconstructor:
                         -1,
                     )
                 )
-
                 # Keep a frozen copy of original control points for regularization terms.
                 with torch.no_grad():
                     original_control_points = heliostat_group.nurbs_control_points[
                         active_heliostats_mask > 0
                     ].clone()
 
-                # Create the optimizer: Optimize NURBS control points directly.
+                # Create the optimizer.
                 optimizer = torch.optim.Adam(
                     [heliostat_group.nurbs_control_points.requires_grad_()],
                     lr=float(self.optimizer_dict[constants.initial_learning_rate]),
@@ -310,23 +549,15 @@ class SurfaceReconstructor:
                     if self.optimizer_dict[constants.log_step] == 0
                     else self.optimizer_dict[constants.log_step]
                 )
-                max_epoch = int(
-                    torch.tensor(
-                        [self.optimizer_dict[constants.max_epoch]],
-                        device=device,
-                    )
-                )
-
-                # Optimization loop.
                 while (
                     total_loss > float(self.optimizer_dict[constants.tolerance])
-                    and epoch <= max_epoch
+                    and epoch <= self.optimizer_dict[constants.max_epoch]
                 ):
                     optimizer.zero_grad()
 
-                    # Activate heliostats according to current mask.
+                    # Activate heliostats.
                     heliostat_group.activate_heliostats(
-                        active_heliostats_mask=active_heliostats_mask, device=device
+                        active_heliostats_mask=data_split.active_heliostats_mask_train, device=device
                     )
 
                     # Build NURBS surface from current control points.
@@ -341,7 +572,7 @@ class SurfaceReconstructor:
                         new_surface_points,
                         new_surface_normals,
                     ) = nurbs_surfaces.calculate_surface_points_and_normals(
-                        evaluation_points=evaluation_points,
+                        evaluation_points=evaluation_points[data_split.train_indices],
                         canting=heliostat_group.active_canting,
                         facet_translations=heliostat_group.active_facet_translations,
                         device=device,
@@ -368,10 +599,10 @@ class SurfaceReconstructor:
                     # Align heliostat surfaces toward target under current incident ray directions.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
                         aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
-                            target_area_indices=target_area_indices, device=device
+                            target_area_indices=data_split.target_area_indices_train, device=device
                         ),
-                        incident_ray_directions=incident_ray_directions,
-                        active_heliostats_mask=active_heliostats_mask,
+                        incident_ray_directions=data_split.incident_ray_directions_train,
+                        active_heliostats_mask=data_split.active_heliostats_mask_train,
                         device=device,
                     )
 
@@ -389,41 +620,36 @@ class SurfaceReconstructor:
                     )
 
                     # Perform heliostat-based ray tracing to obtain simulated flux from current reconstructed surfaces.
-                    flux_distributions, _, _, _ = ray_tracer.trace_rays(
-                        incident_ray_directions=incident_ray_directions,
-                        active_heliostats_mask=active_heliostats_mask,
-                        target_area_indices=target_area_indices,
+                    flux_prediction_train, _, _, _ = ray_tracer.trace_rays(
+                        incident_ray_directions=data_split.incident_ray_directions_train,
+                        active_heliostats_mask=data_split.active_heliostats_mask_train,
+                        target_area_indices=data_split.target_area_indices_train,
                         device=device,
                     )
 
-                    # Recover local sampler ordering and samples-per-heliostat factor.
-                    sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
-                    number_of_samples_per_heliostat = int(
-                        heliostat_group.active_heliostats_mask.sum()
-                        / (heliostat_group.active_heliostats_mask > 0).sum()
-                    )
-                    local_indices = (
-                        sample_indices_for_local_rank[::number_of_samples_per_heliostat]
-                        // number_of_samples_per_heliostat
-                    )
-
                     # Crop predictions around center before comparing to measurements.
-                    cropped_flux_distributions = (
+                    cropped_flux_predictions = (
                         bitmap.crop_flux_distributions_around_center(
-                            flux_distributions=flux_distributions,
+                            flux_distributions=flux_prediction_train,
                             solar_tower=self.scenario.solar_tower,
-                            target_area_indices=target_area_indices,
+                            target_area_indices=data_split.target_area_indices_train,
                             device=device,
                         )
                     )
 
-                    # Flux loss (data-fit term): Compare predicted and measured flux maps.
+                    sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+                    local_indices = (
+                        sample_indices_for_local_rank[::data_split.number_of_train_samples]
+                        // data_split.number_of_train_samples
+                    )
+
+                    # Compute loss from prediction vs. measured flux.
                     flux_loss_per_sample = loss_definition(
-                        prediction=cropped_flux_distributions,
-                        ground_truth=measured_flux_distributions[
+                        prediction=cropped_flux_predictions,
+                        ground_truth=data_split.flux_measured_train[
                             sample_indices_for_local_rank
                         ],
-                        target_area_indices=target_area_indices[
+                        target_area_indices=data_split.target_area_indices_train[
                             sample_indices_for_local_rank
                         ],
                         reduction_dimensions=(
@@ -432,27 +658,30 @@ class SurfaceReconstructor:
                         ),
                         device=device,
                     )
-                    flux_loss_per_heliostat = mean_loss_per_heliostat(
+                    
+                    flux_loss_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=flux_loss_per_sample,
-                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                        number_of_samples_per_heliostat=data_split.number_of_train_samples,
+                        reduction=partial(torch.mean)
                     )
 
                     # Add Augmented-Lagrangian constraint to ensure that flux integral is conserved,
                     # i.e., intensity does not get lost.
                     if epoch == 0:
-                        flux_integrals_reference = cropped_flux_distributions.sum(
-                            dim=(1, 2)
+                        flux_integrals_reference = cropped_flux_predictions.sum(
+                            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
                         ).detach()
                     flux_integrals_relative_differences = (
-                        cropped_flux_distributions.sum(dim=(1, 2))
+                        cropped_flux_predictions.sum(dim=(indices.batched_bitmap_e, indices.batched_bitmap_u))
                         - flux_integrals_reference
                     ) / (flux_integrals_reference + torch.tensor(self.epsilon))
                     flux_constraint_per_sample = torch.clamp(
                         -energy_tolerance - flux_integrals_relative_differences, min=0.0
                     )
-                    flux_constraint_per_heliostat = mean_loss_per_heliostat(
+                    flux_constraint_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=flux_constraint_per_sample,
-                        number_of_samples_per_heliostat=number_of_samples_per_heliostat,
+                        number_of_samples_per_heliostat=data_split.number_of_train_samples,
+                        reduction=partial(torch.mean)
                     )
                     flux_integrals_constraint = (
                         lambda_flux_integral * flux_constraint_per_heliostat
@@ -469,7 +698,7 @@ class SurfaceReconstructor:
                     if weight_smoothness > 0:
                         smoothness_loss_per_heliostat = smoothness_regularizer(
                             current_control_points=heliostat_group.active_nurbs_control_points[
-                                ::number_of_samples_per_heliostat
+                                ::data_split.number_of_train_samples
                             ][local_indices],
                             original_control_points=original_control_points[
                                 local_indices
@@ -479,7 +708,7 @@ class SurfaceReconstructor:
                     if weight_ideal_surface > 0:
                         ideal_surface_loss_per_heliostat = ideal_surface_regularizer(
                             current_control_points=heliostat_group.active_nurbs_control_points[
-                                ::number_of_samples_per_heliostat
+                                ::data_split.number_of_train_samples
                             ][local_indices],
                             original_control_points=original_control_points[
                                 local_indices
@@ -511,10 +740,9 @@ class SurfaceReconstructor:
                         + alpha * smoothness_loss_per_heliostat
                         + beta * ideal_surface_loss_per_heliostat
                     )
-                    # Average over all heliostats in group.
-                    total_loss = total_loss_per_heliostat.mean()
+                    
+                    total_loss = torch.mean(total_loss_per_heliostat)
 
-                    # Back-propagate through ray tracing and NURBS evaluation pipeline.
                     total_loss.backward()
 
                     # Update Augmented-Lagrangian multiplier.
@@ -559,9 +787,34 @@ class SurfaceReconstructor:
                     else:
                         scheduler.step()
 
-                    if epoch % log_step == 0 and rank == 0:
+                    is_last_epoch = epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    stop = early_stopper.step(total_loss.item())
+
+                    if epoch % log_step == 0 or is_last_epoch or stop:
                         log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}"
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}",
+                        )
+
+                        with torch.no_grad():
+                            flux_prediction_test = self._validate(
+                                heliostat_group=heliostat_group,
+                                data_split=data_split,
+                                evaluation_points=evaluation_points,
+                                device=device,
+                            )
+
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
+                        break
+
+                    if self.plot_results and (is_last_epoch or stop):
+                        self._plot_fluxes(
+                            flux_measured=flux_measured.cpu().detach(),
+                            flux_prediction_train=flux_prediction_train.cpu().detach(),
+                            flux_prediction_test=flux_prediction_test.cpu().detach(),
+                            data_split=data_split,
+                            plot_name=f"{epoch}",
                         )
 
                     total_loss_history.append(total_loss.detach().cpu().item())
@@ -589,42 +842,7 @@ class SurfaceReconstructor:
                         flux_integrals_constraint.mean().detach().cpu().item()
                     )
 
-                    # Early stopping when loss did not improve for a predefined number of epochs.
-                    stop = early_stopper.step(total_loss.item())
-
-                    if stop:
-                        log.info(f"Early stopping at epoch {epoch}.")
-                        break
-
                     epoch += 1
-                # ##################################################
-                import matplotlib.pyplot as plt
-
-                m = 3
-                n = measured_flux_distributions.shape[0]
-                for i in range(0, n, m):
-                    fig, axes = plt.subplots(m, 2, figsize=(8, 20))
-                    for j in range(m):
-                        idx = i + j
-                        if idx >= n:
-                            axes[j, 0].axis("off")
-                            axes[j, 1].axis("off")
-                            continue
-                        img_flux = cropped_flux_distributions[idx]
-                        img_meas = measured_flux_distributions[idx].cpu().detach()
-
-                        ax1 = axes[j, 0]
-                        ax1.imshow(img_flux.cpu().detach())
-                        ax1.set_title(f"heliostat {i // m}")
-                        ax1.axis("off")
-                        ax2 = axes[j, 1]
-                        ax2.imshow(img_meas.cpu().detach())
-                        # ax2.set_title(f"loss: {flux_loss_per_heliostat[i]}")
-                        ax2.axis("off")
-                    plt.tight_layout()
-                    plt.savefig(f"./bitmaps/kinematics/heliostat_{i // m}.png")
-                    plt.close(fig)
-                # ##################################################
 
                 loss_history.append(
                     {
