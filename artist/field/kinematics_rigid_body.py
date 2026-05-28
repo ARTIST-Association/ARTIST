@@ -557,7 +557,6 @@ class RigidBody(Kinematics):
             )
 
             # Stop if converged.
-            print(loss, loss.mean())
             if isinstance(last_iteration_loss, torch.Tensor):
                 eps = torch.abs(last_iteration_loss - loss)
                 if torch.any(eps <= min_eps):
