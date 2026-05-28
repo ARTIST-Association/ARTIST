@@ -203,18 +203,20 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        focal_spot_coordinates_prediction = coordinates.bitmap_coordinates_to_target_coordinates(
-            bitmap_coordinates=focal_spots_bitmap,
-            bitmap_resolution=torch.tensor(
-                [
-                    prediction.shape[indices.batched_bitmap_u],
-                    prediction.shape[indices.batched_bitmap_e],
-                ],
+        focal_spot_coordinates_prediction = (
+            coordinates.bitmap_coordinates_to_target_coordinates(
+                bitmap_coordinates=focal_spots_bitmap,
+                bitmap_resolution=torch.tensor(
+                    [
+                        prediction.shape[indices.batched_bitmap_u],
+                        prediction.shape[indices.batched_bitmap_e],
+                    ],
+                    device=device,
+                ),
+                solar_tower=self.scenario.solar_tower,
+                target_area_indices=target_area_indices,
                 device=device,
-            ),
-            solar_tower=self.scenario.solar_tower,
-            target_area_indices=target_area_indices,
-            device=device,
+            )
         )
 
         focal_spots_ground_truth = bitmap.get_center_of_mass(
@@ -222,21 +224,27 @@ class FocalSpotLoss(Loss):
             device=device,
         )
 
-        focal_spot_coordinates_ground_truth = coordinates.bitmap_coordinates_to_target_coordinates(
-            bitmap_coordinates=focal_spots_ground_truth,
-            bitmap_resolution=torch.tensor(
-                [
-                    prediction.shape[indices.batched_bitmap_u],
-                    prediction.shape[indices.batched_bitmap_e],
-                ],
+        focal_spot_coordinates_ground_truth = (
+            coordinates.bitmap_coordinates_to_target_coordinates(
+                bitmap_coordinates=focal_spots_ground_truth,
+                bitmap_resolution=torch.tensor(
+                    [
+                        prediction.shape[indices.batched_bitmap_u],
+                        prediction.shape[indices.batched_bitmap_e],
+                    ],
+                    device=device,
+                ),
+                solar_tower=self.scenario.solar_tower,
+                target_area_indices=target_area_indices,
                 device=device,
-            ),
-            solar_tower=self.scenario.solar_tower,
-            target_area_indices=target_area_indices,
-            device=device,
+            )
         )
 
-        return torch.norm(focal_spot_coordinates_prediction[:, :3] - focal_spot_coordinates_ground_truth[:, :3], dim=1)
+        return torch.norm(
+            focal_spot_coordinates_prediction[:, :3]
+            - focal_spot_coordinates_ground_truth[:, :3],
+            dim=1,
+        )
 
 
 class PixelLoss(Loss):
@@ -268,7 +276,7 @@ class PixelLoss(Loss):
         r"""
         Compute the normalized pixel-wise loss.
 
-        To make the loss invariant to the overall magnitude of the ground truth flux, the summed loss is divided 
+        To make the loss invariant to the overall magnitude of the ground truth flux, the summed loss is divided
         by the total ground truth intensity per sample.
 
         Parameters
@@ -305,7 +313,9 @@ class PixelLoss(Loss):
                 + " ".join(errors)
             )
 
-        return self.loss_function(prediction, ground_truth).sum(dim=kwargs["reduction_dimensions"]) / ground_truth.sum(dim=(1, 2))
+        return self.loss_function(prediction, ground_truth).sum(
+            dim=kwargs["reduction_dimensions"]
+        ) / ground_truth.sum(dim=(1, 2))
 
 
 class KLDivergenceLoss(Loss):
@@ -442,8 +452,9 @@ class AngleLoss(Loss):
             The summed loss reduced along the specified dimensions.
             Shape is ``[number_of_samples]``.
         """
-
-        return torch.acos((prediction[:, :3] * ground_truth[:, :3]).sum(dim=-1).clamp(-1.0, 1.0))
+        return torch.acos(
+            (prediction[:, :3] * ground_truth[:, :3]).sum(dim=-1).clamp(-1.0, 1.0)
+        )
 
 
 class CosineSimilarityLoss(Loss):
@@ -526,9 +537,9 @@ def reduce_loss_per_sample(
         : number_of_heliostats * number_of_samples_per_heliostat
     ]
 
-    reduced = reduction(loss_per_sample.view(
-        number_of_heliostats, number_of_samples_per_heliostat
-    ))
+    reduced = reduction(
+        loss_per_sample.view(number_of_heliostats, number_of_samples_per_heliostat)
+    )
 
     if not isinstance(reduced, torch.Tensor):
         reduced = reduced.values

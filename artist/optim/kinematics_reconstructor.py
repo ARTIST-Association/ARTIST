@@ -1,10 +1,10 @@
-from functools import partial
 import logging
 import pathlib
+from functools import partial
 from typing import Any, Callable, cast
 
-from matplotlib import pyplot as plt
 import torch
+from matplotlib import pyplot as plt
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
@@ -12,7 +12,13 @@ from artist.flux import bitmap
 from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.optim import training
-from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss, Loss, PixelLoss, reduce_loss_per_sample
+from artist.optim.loss import (
+    FocalSpotLoss,
+    KLDivergenceLoss,
+    Loss,
+    PixelLoss,
+    reduce_loss_per_sample,
+)
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import constants, indices
@@ -20,6 +26,7 @@ from artist.util.env import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
 """A logger for the kinematic reconstructor."""
+
 
 class KinematicsReconstructor:
     """
@@ -79,7 +86,7 @@ class KinematicsReconstructor:
         dni: float | None = None,
         reconstruction_method: str = constants.kinematics_reconstruction_raytracing,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
-        plot_results: bool = False
+        plot_results: bool = False,
     ) -> None:
         """
         Initialize the kinematics optimizer.
@@ -123,7 +130,7 @@ class KinematicsReconstructor:
 
         if reconstruction_method in [
             constants.kinematics_reconstruction_raytracing,
-            constants.kinematics_reconstruction_alignment
+            constants.kinematics_reconstruction_alignment,
         ]:
             self.reconstruction_method = reconstruction_method
         else:
@@ -176,11 +183,9 @@ class KinematicsReconstructor:
         elif (
             self.reconstruction_method == constants.kinematics_reconstruction_alignment
         ):
-            loss, loss_history = (
-                self._reconstruct_kinematics_parameters_wih_alignment(
-                    loss_definition=loss_definition,
-                    device=device,
-                )
+            loss, loss_history = self._reconstruct_kinematics_parameters_wih_alignment(
+                loss_definition=loss_definition,
+                device=device,
             )
 
         else:
@@ -190,7 +195,6 @@ class KinematicsReconstructor:
             )
 
         return loss, loss_history
-
 
     def _validate(
         self,
@@ -257,39 +261,39 @@ class KinematicsReconstructor:
 
         loss_focal_spot_per_sample = self.validation_loss_focal_spot(
             prediction=flux_prediction,
-            ground_truth=data_split.flux_measured_test[
-                indices_for_local_rank
-            ],
+            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
             target_area_indices=data_split.target_area_indices_test[
                 indices_for_local_rank
             ],
-            device=device
+            device=device,
         )
         loss_pixel_per_sample = self.validation_loss_pixel(
             prediction=flux_prediction,
-            ground_truth=data_split.flux_measured_test[
-                indices_for_local_rank
-            ],
-            reduction_dimensions=(1,2,),
+            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
+            reduction_dimensions=(
+                1,
+                2,
+            ),
         )
         loss_kl_div_per_sample = self.validation_loss_kl_div(
             prediction=flux_prediction,
-            ground_truth=data_split.flux_measured_test[
-                indices_for_local_rank
-            ],
-            reduction_dimensions=(1,2,),
+            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
+            reduction_dimensions=(
+                1,
+                2,
+            ),
         )
 
         test_loss_focal_spot = reduce_loss_per_sample(
             loss_per_sample=loss_focal_spot_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
             reduction=reduction,
-        )                   
+        )
         test_loss_pixel = reduce_loss_per_sample(
             loss_per_sample=loss_pixel_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
             reduction=reduction,
-        )                        
+        )
         test_loss_kl_div = reduce_loss_per_sample(
             loss_per_sample=loss_kl_div_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
@@ -297,9 +301,7 @@ class KinematicsReconstructor:
         )
 
         log.info(
-            "test loss focal spot mean: %.5f, "
-            "pixel mean: %.5f, "
-            "kl div mean: %.5f",
+            "test loss focal spot mean: %.5f, pixel mean: %.5f, kl div mean: %.5f",
             torch.mean(test_loss_focal_spot).item(),
             torch.mean(test_loss_pixel).item(),
             torch.mean(test_loss_kl_div).item(),
@@ -319,7 +321,7 @@ class KinematicsReconstructor:
         Plot predicted and measured flux maps for each heliostat sample.
 
         Each row in the generated figure corresponds to one sample of a
-        heliostat, where the left column contains the predicted flux and 
+        heliostat, where the left column contains the predicted flux and
         the right column contains the measured flux.
         The subplot borders are color-coded to indicate whether a sample
         belongs to the training samples (green) or testing samples (red)
@@ -338,8 +340,8 @@ class KinematicsReconstructor:
         plot_name : str
             Name suffix used when saving the generated plot files.
         """
-        device=torch.device("cpu")
-        
+        device = torch.device("cpu")
+
         flux_predicted = torch.zeros_like(flux_measured, device=device)
         flux_predicted[data_split.train_indices] = flux_prediction_train
         flux_predicted[data_split.test_indices] = flux_prediction_test
@@ -348,18 +350,24 @@ class KinematicsReconstructor:
         train_indices = set(data_split.train_indices.tolist())
         test_indices = set(data_split.test_indices.tolist())
 
-        centers_of_mass_predicted = bitmap.get_center_of_mass(flux_predicted, device=device)
-        centers_of_mass_measured = bitmap.get_center_of_mass(flux_measured, device=device)
+        centers_of_mass_predicted = bitmap.get_center_of_mass(
+            flux_predicted, device=device
+        )
+        centers_of_mass_measured = bitmap.get_center_of_mass(
+            flux_measured, device=device
+        )
 
         for heliostat_start_index in range(0, total_samples, samples_per_heliostat):
             fig, axes = plt.subplots(
-                samples_per_heliostat, 2, figsize=(8, samples_per_heliostat * 4),
+                samples_per_heliostat,
+                2,
+                figsize=(8, samples_per_heliostat * 4),
             )
             heliostat_index = heliostat_start_index // samples_per_heliostat
 
             for sample_offset in range(samples_per_heliostat):
                 sample_index = heliostat_start_index + sample_offset
-    
+
                 if sample_index in train_indices:
                     border_color = "green"
                     split_name = "TRAIN"
@@ -368,10 +376,14 @@ class KinematicsReconstructor:
                     split_name = "TEST"
 
                 axes[sample_offset, 0].imshow(flux_predicted[sample_index])
-                axes[sample_offset, 0].set_title(f"Predicted Flux - Heliostat {heliostat_index} ({split_name})")
+                axes[sample_offset, 0].set_title(
+                    f"Predicted Flux - Heliostat {heliostat_index} ({split_name})"
+                )
 
                 axes[sample_offset, 1].imshow(flux_measured[sample_index])
-                axes[sample_offset, 1].set_title(f"Measured Flux - Heliostat {heliostat_index} ({split_name})")
+                axes[sample_offset, 1].set_title(
+                    f"Measured Flux - Heliostat {heliostat_index} ({split_name})"
+                )
 
                 for ax in axes[sample_offset, :]:
                     ax.scatter(
@@ -387,8 +399,8 @@ class KinematicsReconstructor:
                         c="red",
                         s=30,
                         marker="x",
-                    )   
-                
+                    )
+
                 for spine in axes[sample_offset, :].flat:
                     for spines in spine.spines.values():
                         spines.set_edgecolor(border_color)
@@ -398,7 +410,6 @@ class KinematicsReconstructor:
             plt.savefig(f"./ignored/fixed/heliostat_{heliostat_index}_{plot_name}")
             plt.close(fig)
 
-
     def _reconstruct_kinematics_parameters_wih_alignment(
         self,
         loss_definition: Loss,
@@ -407,7 +418,7 @@ class KinematicsReconstructor:
         """
         Reconstruct the kinematics parameters using alignment and geometry data.
 
-        This reconstruction method optimizes the kinematics parameters by iteratively 
+        This reconstruction method optimizes the kinematics parameters by iteratively
         aligning heliostats to reach a defined flux focal spot.
 
         Parameters
@@ -483,7 +494,7 @@ class KinematicsReconstructor:
                     motor_positions=motor_positions,
                     target_area_indices=target_area_indices,
                     test_fraction=0.25,
-                    device=device
+                    device=device,
                 )
                 # Calculate focal spot from measured flux.
                 preferred_reflection_directions_measured = (
@@ -498,7 +509,14 @@ class KinematicsReconstructor:
                         dim=1,
                     )
                 )
-                normals_measured = coordinates.convert_3d_directions_to_4d_format(torch.nn.functional.normalize(preferred_reflection_directions_measured - incident_ray_directions[:, :3], dim=-1), device=device)
+                normals_measured = coordinates.convert_3d_directions_to_4d_format(
+                    torch.nn.functional.normalize(
+                        preferred_reflection_directions_measured
+                        - incident_ray_directions[:, :3],
+                        dim=-1,
+                    ),
+                    device=device,
+                )
 
                 # Set up optimizer, scheduler, and early stopping.
                 optimizer_params = [
@@ -547,12 +565,15 @@ class KinematicsReconstructor:
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
-                        active_heliostats_mask=data_split.active_heliostats_mask_train, device=device
+                        active_heliostats_mask=data_split.active_heliostats_mask_train,
+                        device=device,
                     )
 
-                    orientations = heliostat_group.kinematics.motor_positions_to_orientations(
-                        motor_positions=data_split.motor_positions_train,
-                        device=device,
+                    orientations = (
+                        heliostat_group.kinematics.motor_positions_to_orientations(
+                            motor_positions=data_split.motor_positions_train,
+                            device=device,
+                        )
                     )
 
                     normals_predicted = orientations @ torch.tensor(
@@ -568,16 +589,18 @@ class KinematicsReconstructor:
                     loss_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=loss_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.mean)
+                        reduction=partial(torch.mean),
                     )
 
                     loss = torch.mean(loss_per_heliostat)
 
                     loss.backward()
-                    
-                    # Severely misaligned heliostat samples produce nan gradients. These are set to zero and the 
+
+                    # Severely misaligned heliostat samples produce nan gradients. These are set to zero and the
                     # sample has no influence on the training epoch.
-                    optimizer.param_groups[0]["params"][0].grad.nan_to_num_(nan=0.0, posinf=0.0, neginf=0.0)
+                    optimizer.param_groups[0]["params"][0].grad.nan_to_num_(
+                        nan=0.0, posinf=0.0, neginf=0.0
+                    )
 
                     if self.ddp_setup["is_nested"]:
                         # Reduce gradients within each heliostat group.
@@ -603,7 +626,9 @@ class KinematicsReconstructor:
                     else:
                         scheduler.step()
 
-                    is_last_epoch = epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    is_last_epoch = (
+                        epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    )
                     stop = early_stopper.step(loss.item())
 
                     if epoch % log_step == 0 or is_last_epoch or stop:
@@ -642,7 +667,7 @@ class KinematicsReconstructor:
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.mean),
-                                device=device,   
+                                device=device,
                             )
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
@@ -668,7 +693,9 @@ class KinematicsReconstructor:
                     }
                 )
 
-                final_loss_per_heliostat[active_heliostats_mask!=0] = loss_per_heliostat
+                final_loss_per_heliostat[active_heliostats_mask != 0] = (
+                    loss_per_heliostat
+                )
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
@@ -702,10 +729,11 @@ class KinematicsReconstructor:
             final_loss_history_all_groups = [loss_history]
 
         for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
-            heliostat_group.kinematics.rotation_deviation_parameters = heliostat_group.kinematics.rotation_deviation_parameters.detach()
+            heliostat_group.kinematics.rotation_deviation_parameters = (
+                heliostat_group.kinematics.rotation_deviation_parameters.detach()
+            )
 
         return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
-
 
     def _reconstruct_kinematics_parameters_with_raytracing(
         self,
@@ -798,7 +826,7 @@ class KinematicsReconstructor:
                     motor_positions=motor_positions,
                     target_area_indices=target_area_indices,
                     test_fraction=0.25,
-                    device=device
+                    device=device,
                 )
 
                 # Set up optimizer, scheduler, and early stopping.
@@ -848,7 +876,8 @@ class KinematicsReconstructor:
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
-                        active_heliostats_mask=data_split.active_heliostats_mask_train, device=device
+                        active_heliostats_mask=data_split.active_heliostats_mask_train,
+                        device=device,
                     )
 
                     # Align heliostats.
@@ -900,7 +929,7 @@ class KinematicsReconstructor:
                     loss_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=loss_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.median, dim=1)
+                        reduction=partial(torch.median, dim=1),
                     )
 
                     loss = torch.mean(loss_per_heliostat)
@@ -932,7 +961,9 @@ class KinematicsReconstructor:
                     else:
                         scheduler.step()
 
-                    is_last_epoch = epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    is_last_epoch = (
+                        epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    )
                     stop = early_stopper.step(loss.item())
 
                     if epoch % log_step == 0 or is_last_epoch or stop:
@@ -972,7 +1003,7 @@ class KinematicsReconstructor:
                 )
 
                 local_indices = (
-                    sample_indices_for_local_rank[::data_split.number_of_train_samples]
+                    sample_indices_for_local_rank[:: data_split.number_of_train_samples]
                     // data_split.number_of_train_samples
                 )
 
@@ -1021,6 +1052,8 @@ class KinematicsReconstructor:
             final_loss_history_all_groups = [loss_history]
 
         for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
-            heliostat_group.kinematics.rotation_deviation_parameters = heliostat_group.kinematics.rotation_deviation_parameters.detach()
+            heliostat_group.kinematics.rotation_deviation_parameters = (
+                heliostat_group.kinematics.rotation_deviation_parameters.detach()
+            )
 
         return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups

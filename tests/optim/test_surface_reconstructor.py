@@ -14,20 +14,20 @@ from artist.util.env import DdpSetup
 
 
 @pytest.mark.parametrize(
-    "loss_class, early_stopping_window, data_parser, scheduler",
+    "loss, early_stopping_window, data_parser, scheduler",
     [
         (
-            KLDivergenceLoss,
+            KLDivergenceLoss(),
             40,
             PaintCalibrationDataParser(),
             constants.reduce_on_plateau,
         ),
-        (PixelLoss, 20, PaintCalibrationDataParser(), constants.cyclic),
-        (PixelLoss, 10, CalibrationDataParser(), constants.cyclic),
+        (PixelLoss(), 20, PaintCalibrationDataParser(), constants.cyclic),
+        (PixelLoss(), 10, CalibrationDataParser(), constants.cyclic),
     ],
 )
 def test_surface_reconstructor(
-    loss_class: Loss,
+    loss: Loss,
     early_stopping_window: int,
     data_parser: CalibrationDataParser | PaintCalibrationDataParser,
     scheduler: str,
@@ -39,8 +39,8 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
-    loss_class : Loss
-        The loss class.
+    loss: Loss
+        The loss definition.
     early_stopping_window : int
         Number of epochs used to estimate loss trend.
     data_parser : CalibrationDataParser
@@ -159,14 +159,10 @@ def test_surface_reconstructor(
         device=device,
     )
 
-    loss_definition = (
-        PixelLoss(scenario=scenario) if loss_class is PixelLoss else KLDivergenceLoss()
-    )
-
     if not isinstance(data_parser, PaintCalibrationDataParser):
         with pytest.raises(NotImplementedError) as exc_info:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_definition=loss_definition, device=device
+                loss_definition=loss, device=device
             )
 
             assert "Must be overridden!" in str(exc_info.value)
@@ -175,7 +171,7 @@ def test_surface_reconstructor(
         torch.use_deterministic_algorithms(False)
         try:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_definition=loss_definition, device=device
+                loss_definition=loss, device=device
             )
         finally:
             torch.use_deterministic_algorithms(old_state)
@@ -183,7 +179,7 @@ def test_surface_reconstructor(
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups
         ):
-            loss_name = "pixel_loss" if loss_class is PixelLoss else "kl_divergence"
+            loss_name = "pixel_loss" if isinstance(loss, PixelLoss) else "kl_divergence"
             expected_path = (
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/expected_reconstructed_surfaces"

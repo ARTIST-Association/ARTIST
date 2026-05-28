@@ -241,6 +241,7 @@ class TrainTestSplit:
     number_of_samples_per_heliostat : int
         Total number of samples available per heliostat before splitting.
     """
+
     flux_measured_train: torch.Tensor
     focal_spots_measured_train: torch.Tensor
     incident_ray_directions_train: torch.Tensor
@@ -271,8 +272,8 @@ def train_test_split(
     incident_ray_directions: torch.Tensor,
     motor_positions: torch.Tensor,
     target_area_indices: torch.Tensor,
-    test_fraction: int = 0.25,
-    device: torch.device | None = None
+    test_fraction: float = 0.25,
+    device: torch.device | None = None,
 ) -> TrainTestSplit:
     """
     Split heliostat reconstruction data into training and test subsets.
@@ -315,24 +316,30 @@ def train_test_split(
         Dataclass containing: train/test tensors, train/test indices, updated active heliostat masks.
     """
     device = get_device(device=device)
-    
+
     total_samples = int(active_heliostats_mask.sum().item())
     number_of_heliostats = int((active_heliostats_mask > 0).sum().item())
-    number_of_samples_per_heliostat = int(
-        total_samples / number_of_heliostats
+    number_of_samples_per_heliostat = int(total_samples / number_of_heliostats)
+    number_of_test_samples = max(
+        1, int(number_of_samples_per_heliostat * test_fraction)
     )
-    number_of_test_samples = max(1, int(number_of_samples_per_heliostat * test_fraction))
     number_of_train_samples = number_of_samples_per_heliostat - number_of_test_samples
     starts = torch.arange(number_of_heliostats) * number_of_samples_per_heliostat
     offsets = torch.arange(number_of_train_samples, number_of_samples_per_heliostat)
     train_indices = (
-        torch.arange(0, total_samples, number_of_samples_per_heliostat, device=device)[:, None]
+        torch.arange(0, total_samples, number_of_samples_per_heliostat, device=device)[
+            :, None
+        ]
         + torch.arange(number_of_train_samples, device=device)
     ).reshape(-1)
     test_indices = (starts[:, None] + offsets).reshape(-1)
 
-    active_heliostats_mask_train = torch.clamp(active_heliostats_mask - number_of_test_samples, min=0)
-    active_heliostats_mask_test = torch.clamp(active_heliostats_mask - number_of_train_samples, min=0)
+    active_heliostats_mask_train = torch.clamp(
+        active_heliostats_mask - number_of_test_samples, min=0
+    )
+    active_heliostats_mask_test = torch.clamp(
+        active_heliostats_mask - number_of_train_samples, min=0
+    )
 
     return TrainTestSplit(
         flux_measured_train=flux_measured[train_indices],
@@ -340,21 +347,16 @@ def train_test_split(
         incident_ray_directions_train=incident_ray_directions[train_indices],
         motor_positions_train=motor_positions[train_indices],
         target_area_indices_train=target_area_indices[train_indices],
-
         flux_measured_test=flux_measured[test_indices],
         focal_spots_measured_test=focal_spots_measured[test_indices],
         incident_ray_directions_test=incident_ray_directions[test_indices],
         motor_positions_test=motor_positions[test_indices],
         target_area_indices_test=target_area_indices[test_indices],
-
         active_heliostats_mask_train=active_heliostats_mask_train,
         active_heliostats_mask_test=active_heliostats_mask_test,
-
         train_indices=train_indices,
         test_indices=test_indices,
-
         number_of_train_samples=number_of_train_samples,
         number_of_test_samples=number_of_test_samples,
         number_of_samples_per_heliostat=number_of_samples_per_heliostat,
     )
-

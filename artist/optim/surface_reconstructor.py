@@ -1,10 +1,10 @@
-from functools import partial
 import logging
 import pathlib
+from functools import partial
 from typing import Any, cast
 
-from matplotlib import pyplot as plt
 import torch
+from matplotlib import pyplot as plt
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
@@ -155,7 +155,6 @@ class SurfaceReconstructor:
         self.validation_loss_pixel = PixelLoss()
         self.validation_loss_kl_div = KLDivergenceLoss()
 
-
     def _validate(
         self,
         heliostat_group: HeliostatGroup,
@@ -209,20 +208,14 @@ class SurfaceReconstructor:
         )
 
         heliostat_group.active_surface_points = new_surface_points.reshape(
-            heliostat_group.active_surface_points.shape[
-                indices.heliostat_dimension
-            ],
+            heliostat_group.active_surface_points.shape[indices.heliostat_dimension],
             -1,
             4,
         )
-        heliostat_group.active_surface_normals = (
-            new_surface_normals.reshape(
-                heliostat_group.active_surface_normals.shape[
-                    indices.heliostat_dimension
-                ],
-                -1,
-                4,
-            )
+        heliostat_group.active_surface_normals = new_surface_normals.reshape(
+            heliostat_group.active_surface_normals.shape[indices.heliostat_dimension],
+            -1,
+            4,
         )
 
         heliostat_group.align_surfaces_with_incident_ray_directions(
@@ -253,37 +246,37 @@ class SurfaceReconstructor:
             device=device,
         )
 
-        cropped_flux_distributions = (
-            bitmap.crop_flux_distributions_around_center(
-                flux_distributions=flux_prediction,
-                solar_tower=self.scenario.solar_tower,
-                target_area_indices=data_split.target_area_indices_test,
-                device=device,
-            )
+        cropped_flux_distributions = bitmap.crop_flux_distributions_around_center(
+            flux_distributions=flux_prediction,
+            solar_tower=self.scenario.solar_tower,
+            target_area_indices=data_split.target_area_indices_test,
+            device=device,
         )
 
         indices_for_local_rank = ray_tracer.get_sampler_indices()
 
         loss_pixel_per_sample = self.validation_loss_pixel(
             prediction=cropped_flux_distributions,
-            ground_truth=data_split.flux_measured_test[
-                indices_for_local_rank
-            ],
-            reduction_dimensions=(1,2,),
+            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
+            reduction_dimensions=(
+                1,
+                2,
+            ),
         )
         loss_kl_div_per_sample = self.validation_loss_kl_div(
             prediction=cropped_flux_distributions,
-            ground_truth=data_split.flux_measured_test[
-                indices_for_local_rank
-            ],
-            reduction_dimensions=(1,2,),
+            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
+            reduction_dimensions=(
+                1,
+                2,
+            ),
         )
-                 
+
         test_loss_pixel = reduce_loss_per_sample(
             loss_per_sample=loss_pixel_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
             reduction=partial(torch.mean),
-        )                        
+        )
         test_loss_kl_div = reduce_loss_per_sample(
             loss_per_sample=loss_kl_div_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
@@ -291,14 +284,12 @@ class SurfaceReconstructor:
         )
 
         log.info(
-            "pixel mean: %.5f, "
-            "kl div mean: %.5f",
+            "pixel mean: %.5f, kl div mean: %.5f",
             torch.mean(test_loss_pixel).item(),
             torch.mean(test_loss_kl_div).item(),
         )
 
         return flux_prediction
-
 
     def _plot_fluxes(
         self,
@@ -312,7 +303,7 @@ class SurfaceReconstructor:
         Plot predicted and measured flux maps for each heliostat sample.
 
         Each row in the generated figure corresponds to one sample of a
-        heliostat, where the left column contains the predicted flux and 
+        heliostat, where the left column contains the predicted flux and
         the right column contains the measured flux.
         The subplot borders are color-coded to indicate whether a sample
         belongs to the training samples (green) or testing samples (red)
@@ -343,7 +334,9 @@ class SurfaceReconstructor:
 
         for heliostat_start_index in range(0, total_samples, samples_per_heliostat):
             fig, axes = plt.subplots(
-                samples_per_heliostat, 2, figsize=(8, samples_per_heliostat * 4),
+                samples_per_heliostat,
+                2,
+                figsize=(8, samples_per_heliostat * 4),
             )
             heliostat_index = heliostat_start_index // samples_per_heliostat
 
@@ -358,10 +351,14 @@ class SurfaceReconstructor:
                     split_name = "TEST"
 
                 axes[sample_offset, 0].imshow(flux_predicted[sample_index])
-                axes[sample_offset, 0].set_title(f"Predicted Flux - Heliostat {heliostat_index} ({split_name})")
+                axes[sample_offset, 0].set_title(
+                    f"Predicted Flux - Heliostat {heliostat_index} ({split_name})"
+                )
 
                 axes[sample_offset, 1].imshow(flux_measured[sample_index])
-                axes[sample_offset, 1].set_title(f"Measured Flux - Heliostat {heliostat_index} ({split_name})")
+                axes[sample_offset, 1].set_title(
+                    f"Measured Flux - Heliostat {heliostat_index} ({split_name})"
+                )
 
                 for spine in axes[sample_offset, :].flat:
                     for spines in spine.spines.values():
@@ -371,7 +368,6 @@ class SurfaceReconstructor:
             plt.tight_layout()
             plt.savefig(f"./ignored/fixed/heliostat_{heliostat_index}_{plot_name}")
             plt.close(fig)
-
 
     def reconstruct_surfaces(
         self,
@@ -471,7 +467,7 @@ class SurfaceReconstructor:
                     motor_positions=motor_positions,
                     target_area_indices=target_area_indices,
                     test_fraction=0.25,
-                    device=device
+                    device=device,
                 )
                 evaluation_points = (
                     create_nurbs_evaluation_grid(
@@ -557,7 +553,8 @@ class SurfaceReconstructor:
 
                     # Activate heliostats.
                     heliostat_group.activate_heliostats(
-                        active_heliostats_mask=data_split.active_heliostats_mask_train, device=device
+                        active_heliostats_mask=data_split.active_heliostats_mask_train,
+                        device=device,
                     )
 
                     # Build NURBS surface from current control points.
@@ -599,7 +596,8 @@ class SurfaceReconstructor:
                     # Align heliostat surfaces toward target under current incident ray directions.
                     heliostat_group.align_surfaces_with_incident_ray_directions(
                         aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
-                            target_area_indices=data_split.target_area_indices_train, device=device
+                            target_area_indices=data_split.target_area_indices_train,
+                            device=device,
                         ),
                         incident_ray_directions=data_split.incident_ray_directions_train,
                         active_heliostats_mask=data_split.active_heliostats_mask_train,
@@ -639,7 +637,9 @@ class SurfaceReconstructor:
 
                     sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
                     local_indices = (
-                        sample_indices_for_local_rank[::data_split.number_of_train_samples]
+                        sample_indices_for_local_rank[
+                            :: data_split.number_of_train_samples
+                        ]
                         // data_split.number_of_train_samples
                     )
 
@@ -658,11 +658,11 @@ class SurfaceReconstructor:
                         ),
                         device=device,
                     )
-                    
+
                     flux_loss_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=flux_loss_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.mean)
+                        reduction=partial(torch.mean),
                     )
 
                     # Add Augmented-Lagrangian constraint to ensure that flux integral is conserved,
@@ -672,7 +672,9 @@ class SurfaceReconstructor:
                             dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
                         ).detach()
                     flux_integrals_relative_differences = (
-                        cropped_flux_predictions.sum(dim=(indices.batched_bitmap_e, indices.batched_bitmap_u))
+                        cropped_flux_predictions.sum(
+                            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
+                        )
                         - flux_integrals_reference
                     ) / (flux_integrals_reference + torch.tensor(self.epsilon))
                     flux_constraint_per_sample = torch.clamp(
@@ -681,7 +683,7 @@ class SurfaceReconstructor:
                     flux_constraint_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=flux_constraint_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.mean)
+                        reduction=partial(torch.mean),
                     )
                     flux_integrals_constraint = (
                         lambda_flux_integral * flux_constraint_per_heliostat
@@ -698,7 +700,7 @@ class SurfaceReconstructor:
                     if weight_smoothness > 0:
                         smoothness_loss_per_heliostat = smoothness_regularizer(
                             current_control_points=heliostat_group.active_nurbs_control_points[
-                                ::data_split.number_of_train_samples
+                                :: data_split.number_of_train_samples
                             ][local_indices],
                             original_control_points=original_control_points[
                                 local_indices
@@ -708,7 +710,7 @@ class SurfaceReconstructor:
                     if weight_ideal_surface > 0:
                         ideal_surface_loss_per_heliostat = ideal_surface_regularizer(
                             current_control_points=heliostat_group.active_nurbs_control_points[
-                                ::data_split.number_of_train_samples
+                                :: data_split.number_of_train_samples
                             ][local_indices],
                             original_control_points=original_control_points[
                                 local_indices
@@ -740,7 +742,7 @@ class SurfaceReconstructor:
                         + alpha * smoothness_loss_per_heliostat
                         + beta * ideal_surface_loss_per_heliostat
                     )
-                    
+
                     total_loss = torch.mean(total_loss_per_heliostat)
 
                     total_loss.backward()
@@ -787,7 +789,9 @@ class SurfaceReconstructor:
                     else:
                         scheduler.step()
 
-                    is_last_epoch = epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    is_last_epoch = (
+                        epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    )
                     stop = early_stopper.step(total_loss.item())
 
                     if epoch % log_step == 0 or is_last_epoch or stop:

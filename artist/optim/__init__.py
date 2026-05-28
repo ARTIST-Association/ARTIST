@@ -22,6 +22,7 @@ __all__ = [
     "EarlyStopping",
     "Loss",
     "VectorLoss",
+    "reduce_loss_per_sample",
     "FocalSpotLoss",
     "PixelLoss",
     "KLDivergenceLoss",

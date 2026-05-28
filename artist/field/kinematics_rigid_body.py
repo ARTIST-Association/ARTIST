@@ -1,4 +1,5 @@
 import logging
+
 import torch
 
 from artist.field.actuators import Actuators
@@ -9,6 +10,7 @@ from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the rigid body kinematics."""
+
 
 class RigidBody(Kinematics):
     """
@@ -53,7 +55,7 @@ class RigidBody(Kinematics):
         Standard orientation of the kinematics system: south (0, -1, 0, 0) in homogeneous ENU.
         Shape is ``[4]``
     initial_orientation_offsets : torch.Tensor
-        Rotation matrix to account for the initial orientation offset between surface mesh and kinematics system. 
+        Rotation matrix to account for the initial orientation offset between surface mesh and kinematics system.
         Shape is ``[1, 4, 4]``.
 
     Methods
@@ -167,14 +169,12 @@ class RigidBody(Kinematics):
         )
 
         # The surface points and normals are always sampled from a model (converted NURBS from deflectometry or ideal NURBS) that lays
-        # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since the kinematics in ARTIST expects the 
+        # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since the kinematics in ARTIST expects the
         # points and normals to be initially oriented to the south, an extra rotation needs to be applied.
         self.kinematics_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
         )
-        sampled_surface_orientation = torch.tensor(
-            [0.0, 0.0, 1.0, 0.0], device=device
-        )
+        sampled_surface_orientation = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
         east_angles, north_angles, up_angles = rotations.decompose_rotations(
             initial_vector=sampled_surface_orientation[None, :],
             target_vector=self.kinematics_standard_orientation,
@@ -184,7 +184,6 @@ class RigidBody(Kinematics):
             @ transforms.rotate_n(n=north_angles, device=device)
             @ transforms.rotate_u(u=up_angles, device=device)
         )
-
 
     def _compute_orientations_from_motor_positions(
         self,
@@ -323,12 +322,12 @@ class RigidBody(Kinematics):
     ) -> torch.Tensor:
         """
         Compute the motor positions from a normal vector.
-        
+
         This is the inverse kinematics. First the joint angles are computed from the desired normal vector.
         Then the motor positions are computed from the joint angles.
         The inverse kinematics produces two solutions, the valid solution is chosen according to resulting
-        motor positions which must lie within the minimum and maximum allowed motor positions defined within 
-        the actuator parameters. 
+        motor positions which must lie within the minimum and maximum allowed motor positions defined within
+        the actuator parameters.
 
         Parameters
         ----------
@@ -348,75 +347,93 @@ class RigidBody(Kinematics):
         """
         device = get_device(device=device)
 
-        first_rotation_axis_deviations = (
-            transforms.rotate_n(
-                n=self.active_rotation_deviation_parameters[
-                    :, indices.first_joint_tilt_n
-                ],
-                device=device,
-            )
-            @ transforms.rotate_u(
-                u=self.active_rotation_deviation_parameters[
-                    :, indices.first_joint_tilt_u
-                ],
-                device=device,
-            )
+        first_rotation_axis_deviations = transforms.rotate_n(
+            n=self.active_rotation_deviation_parameters[:, indices.first_joint_tilt_n],
+            device=device,
+        ) @ transforms.rotate_u(
+            u=self.active_rotation_deviation_parameters[:, indices.first_joint_tilt_u],
+            device=device,
         )
 
-        second_rotation_axis_deviations = (
-            transforms.rotate_e(
-                e=self.active_rotation_deviation_parameters[
-                    :, indices.second_joint_tilt_e
-                ],
-                device=device,
-            )
-            @ transforms.rotate_n(
-                n=self.active_rotation_deviation_parameters[
-                    :, indices.second_joint_tilt_n
-                ],
-                device=device,
-            )
+        second_rotation_axis_deviations = transforms.rotate_e(
+            e=self.active_rotation_deviation_parameters[:, indices.second_joint_tilt_e],
+            device=device,
+        ) @ transforms.rotate_n(
+            n=self.active_rotation_deviation_parameters[:, indices.second_joint_tilt_n],
+            device=device,
         )
 
-        normal_after_first_deviation = first_rotation_axis_deviations.transpose(-1, -2) @ normals[:, :, None]
+        normal_after_first_deviation = (
+            first_rotation_axis_deviations.transpose(-1, -2) @ normals[:, :, None]
+        )
 
         # Determine second joint angles.
         second_axis_deviation_00 = second_rotation_axis_deviations[:, 0, 0]
         second_axis_deviation_01 = second_rotation_axis_deviations[:, 0, 1]
 
-        denominator = torch.sqrt(second_axis_deviation_00 ** 2 + second_axis_deviation_01 ** 2)[:, None]
+        denominator = torch.sqrt(
+            second_axis_deviation_00**2 + second_axis_deviation_01**2
+        )[:, None]
         phi = torch.atan2(-second_axis_deviation_01, second_axis_deviation_00)[:, None]
 
-        ratio = torch.clamp((normal_after_first_deviation[:, 0] / (denominator + 1e-12)), -1.0 + 1e-7, 1.0 - 1e-7)
+        ratio = torch.clamp(
+            (normal_after_first_deviation[:, 0] / (denominator + 1e-12)),
+            -1.0 + 1e-7,
+            1.0 - 1e-7,
+        )
         second_joint_angle_1 = torch.arcsin(ratio) - phi
         second_joint_angle_2 = torch.pi - torch.arcsin(ratio) - phi
 
-        second_joint_angle_1 = torch.atan2(torch.sin(second_joint_angle_1), torch.cos(second_joint_angle_1))
-        second_joint_angle_2 = torch.atan2(torch.sin(second_joint_angle_2), torch.cos(second_joint_angle_2))
+        second_joint_angle_1 = torch.atan2(
+            torch.sin(second_joint_angle_1), torch.cos(second_joint_angle_1)
+        )
+        second_joint_angle_2 = torch.atan2(
+            torch.sin(second_joint_angle_2), torch.cos(second_joint_angle_2)
+        )
 
         # Determine first joint angles. There are two valid solutions.
-        v_1 = second_rotation_axis_deviations @ transforms.rotate_u(second_joint_angle_1[:, 0], device=device) @ self.kinematics_standard_orientation
+        v_1 = (
+            second_rotation_axis_deviations
+            @ transforms.rotate_u(second_joint_angle_1[:, 0], device=device)
+            @ self.kinematics_standard_orientation
+        )
         first_joint_angle_1 = torch.atan2(
-            v_1[:, 1] * normal_after_first_deviation[:, 2, 0] - v_1[:, 2] * normal_after_first_deviation[:, 1, 0],
-            v_1[:, 1] * normal_after_first_deviation[:, 1, 0] + v_1[:, 2] * normal_after_first_deviation[:, 2, 0],
+            v_1[:, 1] * normal_after_first_deviation[:, 2, 0]
+            - v_1[:, 2] * normal_after_first_deviation[:, 1, 0],
+            v_1[:, 1] * normal_after_first_deviation[:, 1, 0]
+            + v_1[:, 2] * normal_after_first_deviation[:, 2, 0],
         )
-        v_2 = second_rotation_axis_deviations @ transforms.rotate_u(second_joint_angle_2[:, 0], device=device) @ self.kinematics_standard_orientation
+        v_2 = (
+            second_rotation_axis_deviations
+            @ transforms.rotate_u(second_joint_angle_2[:, 0], device=device)
+            @ self.kinematics_standard_orientation
+        )
         first_joint_angle_2 = torch.atan2(
-            v_2[:, 1] * normal_after_first_deviation[:, 2, 0] - v_2[:, 2] * normal_after_first_deviation[:, 1, 0],
-            v_2[:, 1] * normal_after_first_deviation[:, 1, 0] + v_2[:, 2] * normal_after_first_deviation[:, 2, 0],
+            v_2[:, 1] * normal_after_first_deviation[:, 2, 0]
+            - v_2[:, 2] * normal_after_first_deviation[:, 1, 0],
+            v_2[:, 1] * normal_after_first_deviation[:, 1, 0]
+            + v_2[:, 2] * normal_after_first_deviation[:, 2, 0],
         )
-        
-        first_joint_angle_1 = torch.atan2(torch.sin(first_joint_angle_1), torch.cos(first_joint_angle_1))
-        first_joint_angle_2 = torch.atan2(torch.sin(first_joint_angle_2), torch.cos(first_joint_angle_2))
+
+        first_joint_angle_1 = torch.atan2(
+            torch.sin(first_joint_angle_1), torch.cos(first_joint_angle_1)
+        )
+        first_joint_angle_2 = torch.atan2(
+            torch.sin(first_joint_angle_2), torch.cos(first_joint_angle_2)
+        )
 
         # Determine possible motor positions.
         motor_positions_1 = self.actuators.angles_to_motor_positions(
-            angles=torch.stack([first_joint_angle_1, second_joint_angle_1[:, 0]], dim=-1),
-            device=device
+            angles=torch.stack(
+                [first_joint_angle_1, second_joint_angle_1[:, 0]], dim=-1
+            ),
+            device=device,
         )
         motor_positions_2 = self.actuators.angles_to_motor_positions(
-            angles=torch.stack([first_joint_angle_2, second_joint_angle_2[:, 0]], dim=-1),
-            device=device
+            angles=torch.stack(
+                [first_joint_angle_2, second_joint_angle_2[:, 0]], dim=-1
+            ),
+            device=device,
         )
 
         # Determine valid solution. Prefer motor_positions_1 when valid, otherwise use motor_positions_2.
@@ -439,13 +456,14 @@ class RigidBody(Kinematics):
             log.warning(
                 f"No valid motor position combination for active heliostat number(s): {invalid_rows.tolist()}."
             )
-        
+
         motor_positions = torch.where(
-            solution_1_valid[:, None], motor_positions_1, motor_positions_2,
+            solution_1_valid[:, None],
+            motor_positions_1,
+            motor_positions_2,
         )
 
         return motor_positions
-
 
     def motor_positions_to_orientations(
         self, motor_positions: torch.Tensor, device: torch.device | None = None
@@ -476,7 +494,6 @@ class RigidBody(Kinematics):
         )
 
         return orientations @ self.initial_orientation_offsets
-
 
     def incident_ray_directions_to_orientations(
         self,
@@ -525,15 +542,18 @@ class RigidBody(Kinematics):
 
         for _ in range(max_num_iterations):
             orientations = self._compute_orientations_from_motor_positions(
-                motor_positions=motor_positions, device=device,
+                motor_positions=motor_positions,
+                device=device,
             )
 
             concentrator_normals = orientations @ torch.tensor(
-                [0.0, -1.0, 0.0, 0.0], device=device,
+                [0.0, -1.0, 0.0, 0.0],
+                device=device,
             )
 
             concentrator_origins = orientations @ torch.tensor(
-                [0.0, 0.0, 0.0, 1.0], device=device,
+                [0.0, 0.0, 0.0, 1.0],
+                device=device,
             )
 
             desired_reflection_directions = torch.nn.functional.normalize(
@@ -549,8 +569,12 @@ class RigidBody(Kinematics):
                 dim=1,
                 eps=1e-8,
             )
-            
-            desired_concentrator_normals = coordinates.convert_3d_directions_to_4d_format(desired_concentrator_normals, device=device)
+
+            desired_concentrator_normals = (
+                coordinates.convert_3d_directions_to_4d_format(
+                    desired_concentrator_normals, device=device
+                )
+            )
 
             loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(
                 dim=-1
@@ -562,12 +586,11 @@ class RigidBody(Kinematics):
                 if torch.any(eps <= min_eps):
                     break
             last_iteration_loss = loss
-            
+
             motor_positions = self._compute_motor_positions_from_normal(
-                normals=desired_concentrator_normals,
-                device=device
+                normals=desired_concentrator_normals, device=device
             )
 
         self.active_motor_positions = motor_positions
-        
+
         return orientations @ self.initial_orientation_offsets

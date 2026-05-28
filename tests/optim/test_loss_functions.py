@@ -343,7 +343,7 @@ def test_pixel_loss(
 
     target_area_indices = torch.tensor([0], device=device)
 
-    pixel_loss = PixelLoss(scenario=mock_scenario)
+    pixel_loss = PixelLoss()
 
     if not kwargs:
         with pytest.raises(ValueError) as exc_info:
