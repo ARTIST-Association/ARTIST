@@ -1,4 +1,4 @@
-"""Motor positions optimizer tutorial."""
+"""Aim point optimization tutorial."""
 
 import pathlib
 
@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from artist.flux import bitmap
-from artist.optim import MotorPositionsOptimizer
+from artist.optim import AimPointOptimizer
 from artist.optim.loss import KLDivergenceLoss
 from artist.raytracing import HeliostatRayTracer
 from artist.scenario import Scenario
@@ -19,7 +19,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 115 for the tutorial code.
+# Skip to line 124 for the tutorial code.
 #############################################################################################################
 
 
@@ -238,8 +238,8 @@ with setup_distributed_environment(
 
     create_flux_plot(label="before", resolution=bitmap_resolution)
 
-    # Create the motor positions optimizer.
-    motor_positions_optimizer = MotorPositionsOptimizer(
+    # Create the aim point optimizer.
+    aim_point_optimizer = AimPointOptimizer(
         ddp_setup=ddp_setup,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
@@ -252,11 +252,11 @@ with setup_distributed_environment(
     )
 
     # Optimize the motor positions.
-    final_loss, _, _, _, _ = motor_positions_optimizer.optimize(
+    final_loss, _, _, _, _ = aim_point_optimizer.optimize(
         loss_definition=loss_definition, device=device
     )
 
-# Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
+# Inspect the synchronized loss per heliostat.
 print(f"rank {ddp_setup['rank']}, final loss {final_loss}")
 
 create_flux_plot(label="after", resolution=bitmap_resolution)

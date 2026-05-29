@@ -1,3 +1,4 @@
+from .aim_point_optimizer import AimPointOptimizer
 from .kinematics_reconstructor import KinematicsReconstructor
 from .loss import (
     AngleLoss,
@@ -8,14 +9,13 @@ from .loss import (
     VectorLoss,
     reduce_loss_per_sample,
 )
-from .motor_position_optimizer import MotorPositionsOptimizer
 from .regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from .surface_reconstructor import SurfaceReconstructor
 from .training import EarlyStopping, cyclic, exponential, reduce_on_plateau
 
 __all__ = [
     "KinematicsReconstructor",
-    "MotorPositionsOptimizer",
+    "AimPointOptimizer",
     "SurfaceReconstructor",
     "SmoothnessRegularizer",
     "IdealSurfaceRegularizer",

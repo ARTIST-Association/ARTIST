@@ -15,9 +15,9 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.flux import bitmap
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
+from artist.optim.aim_point_optimizer import AimPointOptimizer
 from artist.optim.kinematics_reconstructor import KinematicsReconstructor
 from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss
-from artist.optim.motor_position_optimizer import MotorPositionsOptimizer
 from artist.optim.surface_reconstructor import SurfaceReconstructor
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
@@ -1241,7 +1241,7 @@ def full_field_optimizations(
                 constants.max_flux_density: aim_point_config["max_flux_density"],
             },
         }
-        motor_positions_optimizer = MotorPositionsOptimizer(
+        aim_point_optimizer = AimPointOptimizer(
             ddp_setup=ddp_setup,
             scenario=scenario_aim_points,
             optimization_configuration=optimization_configuration_aim_points,
@@ -1255,7 +1255,7 @@ def full_field_optimizations(
             device=device,
         )
         aimpoint_optimization_final_loss, loss_history_aim_points, _, _, _ = (
-            motor_positions_optimizer.optimize(
+            aim_point_optimizer.optimize(
                 loss_definition=KLDivergenceLoss(), device=device
             )
         )

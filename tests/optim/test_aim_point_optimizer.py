@@ -5,7 +5,7 @@ import pytest
 import torch
 
 from artist import ARTIST_ROOT
-from artist.optim import MotorPositionsOptimizer
+from artist.optim import AimPointOptimizer
 from artist.optim.loss import KLDivergenceLoss, Loss
 from artist.scenario import Scenario
 from artist.util import constants
@@ -62,7 +62,7 @@ def distribution(device: torch.device) -> torch.Tensor:
         (KLDivergenceLoss(), "distribution", 30, constants.reduce_on_plateau),
     ],
 )
-def test_motor_positions_optimizer(
+def test_aim_point_optimizer(
     loss: Loss,
     ground_truth_fixture_name: str,
     early_stopping_window: int,
@@ -72,7 +72,7 @@ def test_motor_positions_optimizer(
     device: torch.device,
 ) -> None:
     """
-    Test the motor positions optimizer.
+    Test the aim point optimizer.
 
     Parameters
     ----------
@@ -143,8 +143,8 @@ def test_motor_positions_optimizer(
 
     ddp_setup_for_testing["device"] = device
 
-    # Create the motor positions optimizer.
-    motor_positions_optimizer = MotorPositionsOptimizer(
+    # Create the aim point optimizer.
+    aim_point_optimizer = AimPointOptimizer(
         ddp_setup=ddp_setup_for_testing,
         scenario=scenario,
         optimization_configuration=optimization_configuration,
@@ -156,10 +156,8 @@ def test_motor_positions_optimizer(
         device=device,
     )
 
-    # Optimize the motor positions.
-    _, _, _, _, _ = motor_positions_optimizer.optimize(
-        loss_definition=loss, device=device
-    )
+    # Optimize the aim points.
+    _, _, _, _, _ = aim_point_optimizer.optimize(loss_definition=loss, device=device)
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         expected_path = (

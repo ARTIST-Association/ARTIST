@@ -13,12 +13,12 @@ from artist.util import constants, indices
 from artist.util.env import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
-"""A logger for the motor positions optimizer."""
+"""A logger for the aim point optimizer."""
 
 
-class MotorPositionsOptimizer:
+class AimPointOptimizer:
     """
-    An optimizer used to find optimal motor positions for the heliostats.
+    An optimizer used to find optimal aim points via individual motor positions for the heliostats.
 
     The optimization loss is defined as the loss between the combined predicted and target
     flux densities. Additionally, there is one constraint that maximizes the flux integral,
@@ -74,7 +74,7 @@ class MotorPositionsOptimizer:
         device: torch.device | None = None,
     ) -> None:
         """
-        Initialize the motor-positions optimizer.
+        Initialize the aim points optimizer.
 
         Parameters
         ----------
@@ -110,7 +110,7 @@ class MotorPositionsOptimizer:
         rank = ddp_setup["rank"]
 
         if rank == 0:
-            log.info("Create a motor positions optimizer.")
+            log.info("Create an aim points optimizer.")
 
         self.ddp_setup = ddp_setup
         self.scenario = scenario
@@ -130,7 +130,7 @@ class MotorPositionsOptimizer:
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, dict[str, list], torch.Tensor, torch.Tensor, torch.Tensor]:
         r"""
-        Optimize the motor positions.
+        Optimize the motor positions for optimal aim points.
 
         The motor positions are optimized through a reparameterization to ensure stable training
         across different heliostats with widely varying initial motor positions and ranges. Motor
@@ -174,7 +174,7 @@ class MotorPositionsOptimizer:
         Returns
         -------
         torch.Tensor
-            Final loss of the motor position optimization.
+            Final loss of the aim point optimization.
         dict[str, list]
             Loss history over epochs, with keys ``"total_loss"``, ``"flux_loss"``,
             ``"local_flux_constraint"``, ``"intercept_constraint"``, ``"flux_integral_constraint"``,
@@ -190,7 +190,7 @@ class MotorPositionsOptimizer:
         rank = self.ddp_setup["rank"]
 
         if rank == 0:
-            log.info("Start the motor positions optimization.")
+            log.info("Start the aim point optimization.")
 
         optimizable_parameters_all_groups = []
         scales_all_groups = []
@@ -624,7 +624,7 @@ class MotorPositionsOptimizer:
             "flux_integral_constraint": flux_integral_constraint_history,
             "flux_integral": flux_integral,
         }
-        log.info(f"Rank: {rank}, motor positions optimized.")
+        log.info(f"Rank: {rank}, aim points optimized.")
 
         # Broadcast final motor positions for each heliostat group from source rank to others.
         if self.ddp_setup["is_distributed"]:
@@ -637,7 +637,7 @@ class MotorPositionsOptimizer:
                     src=source[indices.first_rank_from_group],
                 )
 
-            log.info(f"Rank: {rank}, synchronized after motor positions optimization.")
+            log.info(f"Rank: {rank}, synchronized after aim point optimization.")
 
         return (
             loss.detach().cpu(),
