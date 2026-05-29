@@ -407,7 +407,7 @@ class KinematicsReconstructor:
                         spines.set_linewidth(4)
 
             plt.tight_layout()
-            plt.savefig(f"./ignored/fixed/heliostat_{heliostat_index}_{plot_name}")
+            plt.savefig(f"heliostat_{heliostat_index}_{plot_name}")
             plt.close(fig)
 
     def _reconstruct_kinematics_parameters_wih_alignment(
@@ -455,6 +455,14 @@ class KinematicsReconstructor:
             (self.scenario.heliostat_field.number_of_heliostats_per_group.sum(),),
             torch.inf,
             device=device,
+        )
+        final_loss_start_indices = torch.cat(
+            [
+                torch.tensor([0], device=device),
+                self.scenario.heliostat_field.number_of_heliostats_per_group.cumsum(
+                    indices.heliostat_dimension
+                ),
+            ]
         )
         loss_history: list[dict[str, list[float]]] = []
 
@@ -670,11 +678,6 @@ class KinematicsReconstructor:
                                 device=device,
                             )
 
-                    # Early stopping when loss did not improve for a predefined number of epochs.
-                    if stop:
-                        log.info(f"Early stopping at epoch {epoch}.")
-                        break
-
                     if self.plot_results and (is_last_epoch or stop):
                         self._plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
@@ -683,6 +686,11 @@ class KinematicsReconstructor:
                             data_split=data_split,
                             plot_name=f"alignment_{epoch}",
                         )
+
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
+                        break
 
                     loss_history_list.append(loss.detach().cpu().item())
                     epoch += 1
@@ -693,7 +701,13 @@ class KinematicsReconstructor:
                     }
                 )
 
-                final_loss_per_heliostat[active_heliostats_mask != 0] = (
+                active_indices_group = torch.nonzero(
+                    active_heliostats_mask != 0, as_tuple=True
+                )[0]
+            
+                final_indices = active_indices_group + final_loss_start_indices[heliostat_group_index]
+
+                final_loss_per_heliostat[final_indices] = (
                     loss_per_heliostat
                 )
 
@@ -979,11 +993,6 @@ class KinematicsReconstructor:
                                 device=device,
                             )
 
-                    # Early stopping when loss did not improve for a predefined number of epochs.
-                    if stop:
-                        log.info(f"Early stopping at epoch {epoch}.")
-                        break
-
                     if self.plot_results and (is_last_epoch or stop):
                         self._plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
@@ -992,6 +1001,11 @@ class KinematicsReconstructor:
                             data_split=data_split,
                             plot_name=f"raytracing_{epoch}",
                         )
+                    
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
+                        break
 
                     loss_history_list.append(loss.detach().cpu().item())
                     epoch += 1
