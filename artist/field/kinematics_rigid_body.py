@@ -593,4 +593,4 @@ class RigidBody(Kinematics):
 
         self.active_motor_positions = motor_positions
 
-        return orientations @ self.initial_orientation_offsets
+        return  orientations @ self.initial_orientation_offsets
