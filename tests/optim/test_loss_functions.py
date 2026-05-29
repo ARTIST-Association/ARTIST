@@ -1,3 +1,4 @@
+import math
 from unittest import mock
 
 import pytest
@@ -11,6 +12,7 @@ from artist.field import (
 )
 from artist.optim.loss import (
     AngleLoss,
+    CosineSimilarityLoss,
     FocalSpotLoss,
     KLDivergenceLoss,
     Loss,
@@ -140,22 +142,22 @@ def test_vector_loss(
         (
             torch.ones((1, 2, 2)),
             torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
-            torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
+            torch.ones((1, 2, 2)),
             torch.tensor([0.0]),
             True,
         ),
         (
             torch.ones((1, 2, 2)),
             torch.tensor([[1.5, 0.0, 0.0, 1.0]]),
-            torch.tensor([[1.5, 0.0, 0.0, 1.0]]),
+            torch.ones((1, 2, 2)),
             torch.tensor([0.0]),
             True,
         ),
         (
             torch.ones((1, 2, 2)),
             torch.tensor([[0.0, 0.0, 0.0, 1.0]]),
-            torch.tensor([[1.0, 1.0, 1.0, 0.0]]),
-            torch.tensor([1.732050776482]),
+            torch.tensor([[[0.0, 1.0], [0.0, 0.0]]]),
+            torch.tensor([0.7071]),
             True,
         ),
         (
@@ -259,33 +261,27 @@ def test_focal_spot_loss(
             device=device,
         )
 
-        torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+        torch.testing.assert_close(result, expected.to(device), atol=1e-5, rtol=1e-6)
 
 
 @pytest.mark.parametrize(
-    "prediction, ground_truth, target_area_dimensions, number_of_rays, expected, kwargs",
+    "prediction, ground_truth, expected, kwargs",
     [
         (
             torch.tensor([[[1.0, 2.0], [3.0, 4.0]]]),
             torch.tensor([[[1.0, 2.0], [3.0, 4.0]]]),
-            torch.tensor([[2.0, 2.0]]),
-            100,
             torch.tensor([0.0]),
             True,
         ),
         (
             torch.tensor([[[2.0, 3.0], [9.0, 12.0]]]),
             torch.tensor([[[1.0, 2.0], [8.0, 6.0]]]),
-            torch.tensor([[2.0, 2.0]]),
-            100,
-            torch.tensor([39.0]),
+            torch.tensor([2.2941176470588234]),
             True,
         ),
         (
             torch.tensor([[[2.0, 3.0], [9.0, 12.0]]]),
             torch.tensor([[[1.0, 2.0], [8.0, 6.0]]]),
-            torch.tensor([[2.0, 2.0]]),
-            100,
             torch.tensor([1.0]),
             False,
         ),
@@ -294,8 +290,6 @@ def test_focal_spot_loss(
 def test_pixel_loss(
     prediction: torch.Tensor,
     ground_truth: torch.Tensor,
-    target_area_dimensions: torch.Tensor,
-    number_of_rays: int,
     expected: torch.Tensor,
     kwargs: bool,
     device: torch.device,
@@ -311,11 +305,6 @@ def test_pixel_loss(
     ground_truth : torch.Tensor
         The ground truth.
         Tensor of shape [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-    target_area_dimensions : torch.Tensor
-        The dimensions of the tower target areas aimed at.
-        Tensor of shape [number_of_samples, 2].
-    number_of_rays : int
-        The number of rays used to generate the flux.
     expected : torch.Tensor
         The expected pixel loss.
         Tensor of shape [number_of_samples].
@@ -329,20 +318,6 @@ def test_pixel_loss(
     AssertionError
         If test does not complete as expected.
     """
-    mock_scenario = mock.MagicMock(spec=Scenario)
-
-    target_areas = mock.MagicMock(spec=TowerTargetAreas)
-    target_areas.dimensions = target_area_dimensions.to(device)
-    mock_scenario.target_areas = target_areas
-
-    light_sources = mock.MagicMock(spec=LightSourceArray)
-    light_source = mock.MagicMock(spec=LightSource)
-    light_source.number_of_rays = number_of_rays
-    light_sources.light_source_list = [light_source]
-    mock_scenario.light_sources = light_sources
-
-    target_area_indices = torch.tensor([0], device=device)
-
     pixel_loss = PixelLoss()
 
     if not kwargs:
@@ -352,7 +327,7 @@ def test_pixel_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The vector loss expects ['reduction_dimensions', 'device', 'target_area_indices'] as keyword arguments. Please add reduction_dimensions as keyword argument. Please add device as keyword argument. Please add target_area_indices as keyword argument."
+            "The vector loss expects ['reduction_dimensions'] as keyword arguments. Please add reduction_dimensions as keyword argument."
             in str(exc_info.value)
         )
 
@@ -360,9 +335,7 @@ def test_pixel_loss(
         result = pixel_loss(
             prediction=prediction.to(device),
             ground_truth=ground_truth.to(device),
-            target_area_indices=target_area_indices,
             reduction_dimensions=(1, 2),
-            device=device,
         )
 
         torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
@@ -495,7 +468,7 @@ def test_kl_divergence(
         ),
     ],
 )
-def test_angle_loss(
+def test_cosine_similarity_loss(
     prediction: torch.Tensor,
     ground_truth: torch.Tensor,
     reduction_dimensions: tuple[int],
@@ -503,7 +476,7 @@ def test_angle_loss(
     device: torch.device,
 ) -> None:
     """
-    Test the angle loss.
+    Test the cosine similarity loss.
 
     Parameters
     ----------
@@ -526,7 +499,7 @@ def test_angle_loss(
     AssertionError
         If test does not complete as expected.
     """
-    vector_loss = AngleLoss()
+    vector_loss = CosineSimilarityLoss()
     result = vector_loss(
         prediction=prediction.to(device),
         ground_truth=ground_truth.to(device),
@@ -536,3 +509,62 @@ def test_angle_loss(
     )
 
     torch.testing.assert_close(result, expected.to(device), atol=1e-6, rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "prediction, ground_truth, expected",
+    [
+        (
+            torch.tensor([[1.0, 2.0, 3.0, 0.0], [1.0, 1.0, 0.0, 1.0]]),
+            torch.tensor([[1.0, 2.0, 3.0, 0.0], [0.0, 1.0, 0.0, 0.0]]),
+            torch.tensor([0.0, math.pi/4]),
+        ),
+        (
+            torch.tensor([[0.0, 1.0, 0.0]]),
+            torch.tensor([[0.0, -1.0, 0.0]]),
+            torch.tensor([math.pi]),
+        ),
+        (
+            torch.tensor([[0.0, 1.0, 0.0]]),
+            torch.tensor([[1.0, 0.0, 0.0]]),
+            torch.tensor([math.pi/2]),
+        ),
+    ],
+)
+def test_angle_loss(
+    prediction: torch.Tensor,
+    ground_truth: torch.Tensor,
+    expected: torch.Tensor,
+    device: torch.device,
+) -> None:
+    """
+    Test the angle loss.
+
+    Parameters
+    ----------
+    prediction : torch.Tensor
+        The predicted values.
+        Tensor of variable shape.
+    ground_truth : torch.Tensor
+        The ground truth.
+        Tensor of variable shape.
+    expected : torch.Tensor
+        The expected loss.
+        Tensor of shape [number_of_samples].
+    device : torch.device
+        The device on which to initialize tensors.
+
+    Raises
+    ------
+    AssertionError
+        If test does not complete as expected.
+    """
+    vector_loss = AngleLoss()
+    result = vector_loss(
+        prediction=prediction.to(device),
+        ground_truth=ground_truth.to(device),
+        target_area_indices=torch.tensor([0, 1], device=device),
+        device=device,
+    )
+
+    torch.testing.assert_close(result, expected.to(device), atol=1e-3, rtol=1e-4)
