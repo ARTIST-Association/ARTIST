@@ -16,7 +16,7 @@ from artist.io import (
     paint_scenario_parser,
 )
 from artist.optim import KinematicsReconstructor
-from artist.optim.loss import AngleLoss, FocalSpotLoss
+from artist.optim.loss import AngleLoss
 from artist.raytracing import HeliostatRayTracer
 from artist.scenario import Scenario
 from artist.util import constants, set_logger_config
@@ -35,7 +35,7 @@ def create_fluxes(
     data_parser: CalibrationDataParser,
     heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     resolution: torch.Tensor,
-    method: str
+    method: str,
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """
     Create data to plot the heliostat fluxes.
@@ -97,7 +97,9 @@ def create_fluxes(
             elif method == "incident_ray":
                 # Align heliostats.
                 heliostat_group.align_surfaces_with_incident_ray_directions(
-                    aim_points=scenario.solar_tower.get_centers_of_target_areas(target_area_indices=target_area_indices, device=device),
+                    aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                        target_area_indices=target_area_indices, device=device
+                    ),
                     incident_ray_directions=incident_ray_directions,
                     active_heliostats_mask=active_heliostats_mask,
                     device=device,
@@ -156,37 +158,75 @@ def create_plots(
         center_after = (
             bitmap.get_center_of_mass(flux_after, device=device).cpu().detach()
         )
-        center_ray = (
-            bitmap.get_center_of_mass(flux_ray, device=device).cpu().detach()
-        )
+        center_ray = bitmap.get_center_of_mass(flux_ray, device=device).cpu().detach()
 
         for i in range(len(flux_before)):
             _, axes = plt.subplots(nrows=1, ncols=4, figsize=(20, 5))
 
             axes[0].imshow(flux_before[i].cpu().detach(), cmap="gray")
             axes[0].set_title("Before reconstruction", fontsize=16)
-            axes[0].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="green", marker="o", label="Measured")
-            axes[0].scatter(x=center_before[i, 0], y=center_before[i, 1], c="red", marker="x", label="Predicted")
-            #axes[0].scatter(256/2, 256/2, c="blue")
+            axes[0].scatter(
+                x=center_measured[i, 0],
+                y=center_measured[i, 1],
+                c="green",
+                marker="o",
+                label="Measured",
+            )
+            axes[0].scatter(
+                x=center_before[i, 0],
+                y=center_before[i, 1],
+                c="red",
+                marker="x",
+                label="Predicted",
+            )
+            # axes[0].scatter(256/2, 256/2, c="blue")
             axes[0].axis("off")
-            
+
             axes[1].imshow(flux_after[i].cpu().detach(), cmap="gray")
             axes[1].set_title("After reconstruction", fontsize=16)
-            axes[1].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="green", marker="o", label="Measured")
-            axes[1].scatter(x=center_after[i, 0], y=center_after[i, 1], c="red", marker="x", label="Predicted")
-            #axes[1].scatter(256/2, 256/2, c="blue")
+            axes[1].scatter(
+                x=center_measured[i, 0],
+                y=center_measured[i, 1],
+                c="green",
+                marker="o",
+                label="Measured",
+            )
+            axes[1].scatter(
+                x=center_after[i, 0],
+                y=center_after[i, 1],
+                c="red",
+                marker="x",
+                label="Predicted",
+            )
+            # axes[1].scatter(256/2, 256/2, c="blue")
             axes[1].axis("off")
 
             axes[2].imshow(flux_ray[i].cpu().detach(), cmap="gray")
-            axes[2].set_title("After reconstruction align only with sun pos", fontsize=16)
-            axes[2].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="green", marker="o", label="Measured")
-            axes[2].scatter(x=center_ray[i, 0], y=center_ray[i, 1], c="red", marker="x", label="Predicted")
-            #axes[2].scatter(256/2, 256/2, c="blue")
+            axes[2].set_title(
+                "After reconstruction align only with sun pos", fontsize=16
+            )
+            axes[2].scatter(
+                x=center_measured[i, 0],
+                y=center_measured[i, 1],
+                c="green",
+                marker="o",
+                label="Measured",
+            )
+            axes[2].scatter(
+                x=center_ray[i, 0],
+                y=center_ray[i, 1],
+                c="red",
+                marker="x",
+                label="Predicted",
+            )
+            # axes[2].scatter(256/2, 256/2, c="blue")
             axes[2].axis("off")
 
             axes[3].imshow(flux_measured[i].cpu().detach(), cmap="gray")
             axes[3].set_title("Measured", fontsize=16)
-            axes[3].scatter(x=center_measured[i, 0], y=center_measured[i, 1], c="green", marker="o")
+            axes[3].scatter(
+                x=center_measured[i, 0], y=center_measured[i, 1], c="green", marker="o"
+            )
             axes[3].axis("off")
 
             axes[0].legend()
@@ -195,7 +235,9 @@ def create_plots(
 
             plt.subplots_adjust(wspace=0.05)
             plt.show()
-            plt.savefig(f"./ignored/fixed/heliostat_{i}_in_group_{group_index}_calibration.png")
+            plt.savefig(
+                f"./ignored/fixed/heliostat_{i}_in_group_{group_index}_calibration.png"
+            )
 
 
 #############################################################################################################
@@ -210,53 +252,51 @@ log = logging.getLogger(__name__)
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/examples/field_optimizations/scenarios/ideal_baseline_scenario.h5")
+scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
-# heliostat_data_mapping = [
-#     (
-#         "heliostat_name_1",
-#         [
-#             pathlib.Path(
-#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-#             ),
-#             # ....
-#         ],
-#         [
-#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-#             # ....
-#         ],
-#     ),
-#     (
-#         "heliostat_name_2",
-#         [
-#             pathlib.Path(
-#                 "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
-#             ),
-#             # ....
-#         ],
-#         [
-#             pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
-#             # ....
-#         ],
-#     ),
-# ]
+heliostat_data_mapping = [
+    (
+        "heliostat_name_1",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+    (
+        "heliostat_name_2",
+        [
+            pathlib.Path(
+                "please/insert/the/path/to/the/paint/data/here/calibration-properties.json"
+            ),
+            # ....
+        ],
+        [
+            pathlib.Path("please/insert/the/path/to/the/paint/data/here/flux.png"),
+            # ....
+        ],
+    ),
+]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
 heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
-    base_path="/workVERLEIHNIX/share/PAINT_data",
-    heliostat_names=["AG48", "AG49", "AG50", "AG51", "AG52", "AG53", "AG54", "AM55"],
-    #heliostat_names=["AG48", "AG49", "AG50", "AG51", "AG52", "AG53", "AG54", "AG55", "AG56", "AG57", "AG58", "AH48", "AH49", "AH50", "AH55", "AH56", "AH57", "AH58", "AI48", "AI49", "AI50", "AI51", "AI52", "AI53", "AI54", "AI55", "AI56", "AI57", "AI58", "AI59", "AI60", "AI61", "AJ49", "AJ50", "AJ51", "AJ53", "AJ54", "AJ55", "AJ56", "AJ57", "AJ58", "AJ61", "AJ62", "AK48", "AK49", "AK50", "AK51", "AK52", "AK53", "AK54", "AK55", "AK56", "AK58", "AK59", "AK60", "AK61", "AK62", "AL48", "AL49", "AL51", "AL53", "AL56", "AL58", "AL59", "AL60", "AL61", "AL62", "AM48", "AM49", "AM50", "AM51", "AM52", "AM53", "AM54", "AM55", "AM56", "AM57", "AM58", "AM59", "AM60", "AM62", "AN48", "AN49", "AN50", "AN51", "AN52", "AN53", "AN54", "AN55", "AN56", "AN57", "AN58", "AN59", "AN60", "AN61", "AN62"],
-    #heliostat_names=['AZ43', 'AP35', 'AA39', 'AC31', 'AC42', 'AC24', 'AM31', 'BF65', 'AQ27', 'AF33', 'BD31', 'AW42', 'AZ39', 'AL36', 'AD42', 'AP39', 'AE28', 'BE38', 'AY55', 'AP50'],
-    number_of_measurements=37,
+    base_path="base/path/data",
+    heliostat_names=["heliostat_1", "..."],
+    number_of_measurements=5,
     image_variant="flux",
     randomize=True,
     seed=7,
 )
 
 # Configure the optimization.
-optimizer_dict = {
+optimizer_dict: dict[str, str | float | int] = {
     constants.initial_learning_rate_rotation_deviation: 1e-4,
     constants.initial_learning_rate_initial_angles: 1e-3,
     constants.initial_learning_rate_initial_stroke_length: 1e-2,
@@ -269,7 +309,7 @@ optimizer_dict = {
     constants.early_stopping_window: 2000,
 }
 # Configure the learning rate scheduler.
-scheduler_dict = {
+scheduler_dict: dict[str, str | float | int] = {
     constants.scheduler_type: constants.reduce_on_plateau,
     constants.gamma: 0.9,
     constants.lr_min: 1e-6,
@@ -281,7 +321,7 @@ scheduler_dict = {
     constants.cooldown: 10,
 }
 # Combine configurations.
-optimization_configuration = {
+optimization_configuration: dict[str, dict[str, str | float | int]] = {
     constants.optimization: optimizer_dict,
     constants.scheduler: scheduler_dict,
 }
@@ -335,12 +375,15 @@ with setup_distributed_environment(
             for heliostat in heliostat_data_mapping
         ],
         resolution=resolution,
-        method="motor_pos"
+        method="motor_pos",
     )
 
     scenario.set_number_of_rays(number_of_rays=4)
-    optimization_configuration[constants.optimization][constants.initial_learning_rate_rotation_deviation] = 3e-4
-    optimization_configuration[constants.optimization][constants.max_epoch] = 600
+
+    optimization_configuration[constants.optimization][
+        constants.initial_learning_rate_rotation_deviation
+    ] = 3e-4
+    optimization_configuration[constants.optimization][constants.max_epoch] = 200
     # Create the kinematics reconstructor.
     kinematics_reconstructor = KinematicsReconstructor(
         ddp_setup=ddp_setup,
@@ -348,30 +391,35 @@ with setup_distributed_environment(
         data=data,
         dni=500,
         optimization_configuration=optimization_configuration,
-        reconstruction_method=constants.kinematics_reconstruction_geometry,
+        reconstruction_method=constants.kinematics_reconstruction_alignment,
         bitmap_resolution=resolution,
+        plot_results=True,
     )
     # Reconstruct the kinematics.
     final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
         loss_definition=AngleLoss(), device=device
     )
 
-    optimization_configuration[constants.optimization][constants.initial_learning_rate_rotation_deviation] = 1e-4
-    optimization_configuration[constants.optimization][constants.max_epoch] = 300
-    # Create the kinematics reconstructor.
-    kinematics_reconstructor = KinematicsReconstructor(
-        ddp_setup=ddp_setup,
-        scenario=scenario,
-        data=data,
-        dni=500,
-        optimization_configuration=optimization_configuration,
-        reconstruction_method=constants.kinematics_reconstruction_raytracing,
-        bitmap_resolution=resolution,
-    )
-    # Reconstruct the kinematics.
-    final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
-        loss_definition=FocalSpotLoss(scenario=scenario), device=device
-    )
+    # Uncomment the code below to add a further reconstruction step using raytracing to refine the kinematics reconstruction.
+    # optimization_configuration[constants.optimization][
+    #     constants.initial_learning_rate_rotation_deviation
+    # ] = 1e-4
+    # optimization_configuration[constants.optimization][constants.max_epoch] = 400
+    # # Create the kinematics reconstructor.
+    # kinematics_reconstructor = KinematicsReconstructor(
+    #     ddp_setup=ddp_setup,
+    #     scenario=scenario,
+    #     data=data,
+    #     dni=500,
+    #     optimization_configuration=optimization_configuration,
+    #     reconstruction_method=constants.kinematics_reconstruction_raytracing,
+    #     bitmap_resolution=resolution,
+    #     plot_results=True,
+    # )
+    # # Reconstruct the kinematics.
+    # final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(
+    #     loss_definition=FocalSpotLoss(scenario=scenario), device=device
+    # )
 
 # Inspect the synchronized loss per heliostat. Heliostats that have not been optimized have an infinite loss.
 print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
