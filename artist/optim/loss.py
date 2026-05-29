@@ -452,8 +452,10 @@ class AngleLoss(Loss):
             The summed loss reduced along the specified dimensions.
             Shape is ``[number_of_samples]``.
         """
+        prediction = torch.nn.functional.normalize(prediction[:, :3])
+        ground_truth = torch.nn.functional.normalize(ground_truth[:, :3])
         return torch.acos(
-            (prediction[:, :3] * ground_truth[:, :3]).sum(dim=-1).clamp(-1.0, 1.0)
+            (prediction * ground_truth).sum(dim=-1).clamp(-1.0, 1.0)
         )
 
 
