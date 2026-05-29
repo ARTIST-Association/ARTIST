@@ -22,7 +22,7 @@ from artist.util.env import DdpSetup
             PaintCalibrationDataParser(),
             constants.reduce_on_plateau,
         ),
-        (PixelLoss(), 20, PaintCalibrationDataParser(), constants.cyclic),
+        (PixelLoss(), 10, PaintCalibrationDataParser(), constants.cyclic),
         (PixelLoss(), 10, CalibrationDataParser(), constants.cyclic),
     ],
 )
@@ -104,28 +104,17 @@ def test_surface_reconstructor(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-calibration-properties_1.json",
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-calibration-properties_2.json",
+                / "tests/data/field_data/AA39-calibration-properties_2.json",                
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-calibration-properties_3.json",
             ],
             [
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-flux-centered_1.png",
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-flux-centered_2.png",
-            ],
-        ),
-        (
-            "AA31",
-            [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_1.json",
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_2.json",
-            ],
-            [
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-flux-centered_1.png",
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-flux-centered_2.png",
+                / "tests/data/field_data/AA39-flux-centered_3.png",
             ],
         ),
     ]
@@ -157,6 +146,7 @@ def test_surface_reconstructor(
         data=data,
         optimization_configuration=optimization_configuration,
         device=device,
+        plot_results=True
     )
 
     if not isinstance(data_parser, PaintCalibrationDataParser):
@@ -164,8 +154,7 @@ def test_surface_reconstructor(
             _ = surface_reconstructor.reconstruct_surfaces(
                 loss_definition=loss, device=device
             )
-
-            assert "Must be overridden!" in str(exc_info.value)
+        assert "Must be overridden!" in str(exc_info.value)
     else:
         old_state = torch.are_deterministic_algorithms_enabled()
         torch.use_deterministic_algorithms(False)

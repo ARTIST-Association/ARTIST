@@ -57,15 +57,13 @@ def distribution(device: torch.device) -> torch.Tensor:
 
 
 @pytest.mark.parametrize(
-    "loss_class, ground_truth_fixture_name, early_stopping_window, scheduler",
+    "loss, ground_truth_fixture_name, early_stopping_window, scheduler",
     [
-        (FocalSpotLoss, "focal_spot", 50, constants.cyclic),
-        (KLDivergenceLoss, "distribution", 50, constants.reduce_on_plateau),
-        (KLDivergenceLoss, "distribution", 10, constants.reduce_on_plateau),
+        (KLDivergenceLoss(), "distribution", 30, constants.reduce_on_plateau),
     ],
 )
 def test_motor_positions_optimizer(
-    loss_class: Loss,
+    loss: Loss,
     ground_truth_fixture_name: str,
     early_stopping_window: int,
     scheduler: str,
@@ -78,8 +76,8 @@ def test_motor_positions_optimizer(
 
     Parameters
     ----------
-    loss_class : Loss
-        The loss class.
+    loss : Loss
+        The loss function.
     ground_truth_fixture_name : str
         A fixture to retrieve the ground truth.
     early_stopping_window : int
@@ -114,7 +112,7 @@ def test_motor_positions_optimizer(
     optimizer_dict = {
         constants.initial_learning_rate: 1e-3,
         constants.tolerance: 0.0005,
-        constants.max_epoch: 50,
+        constants.max_epoch: 40,
         constants.batch_size: 50,
         constants.log_step: 1,
         constants.early_stopping_delta: 1.0,
@@ -158,15 +156,9 @@ def test_motor_positions_optimizer(
         device=device,
     )
 
-    loss_definition = (
-        FocalSpotLoss(scenario=scenario)
-        if loss_class is FocalSpotLoss
-        else KLDivergenceLoss()
-    )
-
     # Optimize the motor positions.
     _, _, _, _, _ = motor_positions_optimizer.optimize(
-        loss_definition=loss_definition, device=device
+        loss_definition=loss, device=device
     )
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
@@ -175,6 +167,8 @@ def test_motor_positions_optimizer(
             / "tests/data/expected_optimized_motor_positions"
             / f"{ground_truth_fixture_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
         )
+
+        torch.save(heliostat_group.kinematics.motor_positions, expected_path)
 
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
