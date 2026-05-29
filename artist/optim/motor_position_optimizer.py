@@ -492,9 +492,7 @@ class MotorPositionsOptimizer:
             if isinstance(loss_definition, FocalSpotLoss):
                 loss = flux_loss
 
-            if isinstance(
-                loss_definition, KLDivergenceLoss
-            ):
+            if isinstance(loss_definition, KLDivergenceLoss):
                 # Store references at epoch 0, i.e., baseline flux integral and intercept factors.
                 if epoch == 0:
                     flux_integral_reference = total_flux.sum().detach()

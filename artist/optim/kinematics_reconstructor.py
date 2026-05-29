@@ -704,12 +704,13 @@ class KinematicsReconstructor:
                 active_indices_group = torch.nonzero(
                     active_heliostats_mask != 0, as_tuple=True
                 )[0]
-            
-                final_indices = active_indices_group + final_loss_start_indices[heliostat_group_index]
 
-                final_loss_per_heliostat[final_indices] = (
-                    loss_per_heliostat
+                final_indices = (
+                    active_indices_group
+                    + final_loss_start_indices[heliostat_group_index]
                 )
+
+                final_loss_per_heliostat[final_indices] = loss_per_heliostat
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
@@ -1001,7 +1002,7 @@ class KinematicsReconstructor:
                             data_split=data_split,
                             plot_name=f"raytracing_{epoch}",
                         )
-                    
+
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     if stop:
                         log.info(f"Early stopping at epoch {epoch}.")

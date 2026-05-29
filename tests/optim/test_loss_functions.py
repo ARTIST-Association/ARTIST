@@ -6,7 +6,6 @@ import torch
 
 from artist.field import (
     SolarTower,
-    TowerTargetAreas,
     TowerTargetAreasCylindrical,
     TowerTargetAreasPlanar,
 )
@@ -20,7 +19,6 @@ from artist.optim.loss import (
     VectorLoss,
 )
 from artist.scenario import Scenario
-from artist.scene import LightSource, LightSourceArray
 
 
 def test_base_loss(
@@ -517,7 +515,7 @@ def test_cosine_similarity_loss(
         (
             torch.tensor([[1.0, 2.0, 3.0, 0.0], [1.0, 1.0, 0.0, 1.0]]),
             torch.tensor([[1.0, 2.0, 3.0, 0.0], [0.0, 1.0, 0.0, 0.0]]),
-            torch.tensor([0.0, math.pi/4]),
+            torch.tensor([0.0, math.pi / 4]),
         ),
         (
             torch.tensor([[0.0, 1.0, 0.0]]),
@@ -527,7 +525,7 @@ def test_cosine_similarity_loss(
         (
             torch.tensor([[0.0, 1.0, 0.0]]),
             torch.tensor([[1.0, 0.0, 0.0]]),
-            torch.tensor([math.pi/2]),
+            torch.tensor([math.pi / 2]),
         ),
     ],
 )

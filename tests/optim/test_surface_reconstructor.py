@@ -104,7 +104,7 @@ def test_surface_reconstructor(
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-calibration-properties_1.json",
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA39-calibration-properties_2.json",                
+                / "tests/data/field_data/AA39-calibration-properties_2.json",
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-calibration-properties_3.json",
             ],
@@ -146,7 +146,7 @@ def test_surface_reconstructor(
         data=data,
         optimization_configuration=optimization_configuration,
         device=device,
-        plot_results=True
+        plot_results=True,
     )
 
     if not isinstance(data_parser, PaintCalibrationDataParser):

@@ -454,9 +454,7 @@ class AngleLoss(Loss):
         """
         prediction = torch.nn.functional.normalize(prediction[:, :3])
         ground_truth = torch.nn.functional.normalize(ground_truth[:, :3])
-        return torch.acos(
-            (prediction * ground_truth).sum(dim=-1).clamp(-1.0, 1.0)
-        )
+        return torch.acos((prediction * ground_truth).sum(dim=-1).clamp(-1.0, 1.0))
 
 
 class CosineSimilarityLoss(Loss):

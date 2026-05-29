@@ -499,9 +499,9 @@ class RigidBody(Kinematics):
         self,
         incident_ray_directions: torch.Tensor,
         aim_points: torch.Tensor,
+        device: torch.device | None = None,
         max_num_iterations: int = 4,
         min_eps: float = 0.0001,
-        device: torch.device | None = None,
     ) -> torch.Tensor:
         """
         Compute orientation matrices given incident ray directions.
@@ -514,14 +514,14 @@ class RigidBody(Kinematics):
         aim_points : torch.Tensor
             The aim points for the active heliostats.
             Shape is ``[number_of_active_heliostats, 4]``.
-        max_num_iterations : int
-            Maximum number of iterations (default is 2).
-        min_eps : float
-            Convergence criterion (default is 0.0001).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
+        max_num_iterations : int
+            Maximum number of iterations (default is 2).
+        min_eps : float
+            Convergence criterion (default is 0.0001).
 
         Returns
         -------
@@ -593,4 +593,4 @@ class RigidBody(Kinematics):
 
         self.active_motor_positions = motor_positions
 
-        return  orientations @ self.initial_orientation_offsets
+        return orientations @ self.initial_orientation_offsets
