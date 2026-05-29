@@ -667,7 +667,7 @@ def aim_point_plots(
             )
             if label == "before":
                 heliostat_group.align_surfaces_with_incident_ray_directions(
-                    aim_points=aim_point,
+                    aim_points=aim_point[None],
                     incident_ray_directions=incident_ray_directions,
                     active_heliostats_mask=active_heliostats_mask,
                     device=device,
@@ -705,30 +705,6 @@ def aim_point_plots(
                 target_area_indices=target_area_indices,
                 device=device,
             )
-            # ###########
-            # import matplotlib.pyplot as plt
-
-            # aim_point_measured_bitmap = 256 - torch.tensor([112.9362, 111.4531])
-            # for i in range(bitmaps_per_heliostat.shape[0]):
-            #     total_f = bitmaps_per_heliostat[i].sum()
-            #     if total_f > 0:
-            #         h, w = bitmaps_per_heliostat[i].shape
-            #         y_grid = torch.arange(h, device=device).unsqueeze(1).expand(h, w)
-            #         x_grid = torch.arange(w, device=device).unsqueeze(0).expand(h, w)
-            #         cy_f = (y_grid * bitmaps_per_heliostat[i]).sum() / total_f
-            #         cx_f = (x_grid * bitmaps_per_heliostat[i]).sum() / total_f
-            #     plt.imshow(bitmaps_per_heliostat[i].cpu().detach())
-            #     plt.scatter(
-            #         x=aim_point_measured_bitmap[0],
-            #         y=aim_point_measured_bitmap[1],
-            #         c="r",
-            #         s=30,
-            #     )
-            #     plt.scatter(cx_f.cpu().detach(), cy_f.cpu().detach(), c="g", s=30)
-            #     plt.scatter(x=w / 2, y=h / 2, c="black", s=30, marker="x")
-            #     plt.savefig(f"./bitmaps/aim_points/{label}_{i}")
-            #     plt.close()
-            # ###########
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=bitmaps_per_heliostat,
                 target_area_indices=target_area_indices,
@@ -804,11 +780,6 @@ def full_field_optimizations(
         device=device,
     ) as ddp_setup:
         device = ddp_setup["device"]
-
-        assert data_mappings is not None, "data_mappings must be provided."
-        assert surface_config is not None, "surface_config must be provided."
-        assert kinematics_config is not None, "kinematics_config must be provided."
-        assert aim_point_config is not None, "aim_point_config must be provided."
 
         bitmap_resolution = torch.tensor(
             basic_config["bitmap_resolution"], device=device

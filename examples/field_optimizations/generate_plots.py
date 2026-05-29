@@ -545,11 +545,11 @@ def plot_surface_validation(
         ax1 = axes[row][0]
         ax2 = axes[row][1]
 
-        im1 = ax1.imshow(measured_flux)
+        _ = ax1.imshow(measured_flux)
         ax1.set_title(f"Measured {k}")
         ax1.axis("off")
 
-        im2 = ax2.imshow(artist_flux)
+        _ = ax2.imshow(artist_flux)
         ax2.set_title(f"Artist {k}")
         ax2.axis("off")
 
@@ -994,13 +994,13 @@ def plot_kinematics_validation(
         ax1 = axes[row][0]
         ax2 = axes[row][1]
 
-        im1 = ax1.imshow(measured_flux.detach().cpu())
+        _ = ax1.imshow(measured_flux.detach().cpu())
         ax1.set_title(f"Measured {k}")
         ax1.scatter(x=centers[0, 0], y=centers[0, 1], c="black", marker="o", s=30)
         ax1.scatter(x=centers[1, 0], y=centers[1, 1], c="red", marker="x", s=30)
         ax1.axis("off")
 
-        im2 = ax2.imshow(artist_flux.detach().cpu())
+        _ = ax2.imshow(artist_flux.detach().cpu())
         ax2.set_title(f"Artist {k}")
         ax2.scatter(x=centers[0, 0], y=centers[0, 1], c="black", marker="o", s=30)
         ax2.scatter(x=centers[1, 0], y=centers[1, 1], c="red", marker="x", s=30)
