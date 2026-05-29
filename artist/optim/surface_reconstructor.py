@@ -366,7 +366,7 @@ class SurfaceReconstructor:
                         spines.set_linewidth(4)
 
             plt.tight_layout()
-            plt.savefig(f"./ignored/fixed/heliostat_{heliostat_index}_{plot_name}")
+            plt.savefig(f"heliostat_{heliostat_index}_{plot_name}")
             plt.close(fig)
 
     def reconstruct_surfaces(
@@ -807,11 +807,6 @@ class SurfaceReconstructor:
                                 device=device,
                             )
 
-                    # Early stopping when loss did not improve for a predefined number of epochs.
-                    if stop:
-                        log.info(f"Early stopping at epoch {epoch}.")
-                        break
-
                     if self.plot_results and (is_last_epoch or stop):
                         self._plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
@@ -820,6 +815,11 @@ class SurfaceReconstructor:
                             data_split=data_split,
                             plot_name=f"{epoch}",
                         )
+
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
+                        break
 
                     total_loss_history.append(total_loss.detach().cpu().item())
                     flux_loss_history.append(
