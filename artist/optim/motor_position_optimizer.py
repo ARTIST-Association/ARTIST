@@ -210,11 +210,10 @@ class MotorPositionsOptimizer:
             ]
         )
 
-        # Per-group pre-alignment + reparameterization prep
+        # Per-group pre-alignment and parameterization
         for group_index, group in enumerate(
             self.scenario.heliostat_field.heliostat_groups
         ):
-            # All heliostats are initially active.
             active_heliostats_masks_all_groups.append(
                 torch.ones(
                     group.number_of_heliostats,
@@ -222,7 +221,6 @@ class MotorPositionsOptimizer:
                     device=device,
                 )
             )
-            # All target indices are initially set to selected target area.
             target_area_indices_all_groups.append(
                 torch.full(
                     (group.number_of_heliostats,),
@@ -231,20 +229,15 @@ class MotorPositionsOptimizer:
                     device=device,
                 )
             )
-            # Repeat the same incident ray direction per heliostat.
             incident_ray_directions_all_groups.append(
                 self.incident_ray_direction.repeat(group.number_of_heliostats, 1)
             )
 
             # Align all heliostats once, to the given incident ray direction and target, to set initial motor positions.
-            # The motor positions are set automatically in the ``align_surfaces_with_incident_ray_directions()`` method.
-            # Activate heliostats.
             group.activate_heliostats(
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
                 device=device,
             )
-
-            # Align heliostats.
             group.align_surfaces_with_incident_ray_directions(
                 aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
                     target_area_indices=target_area_indices_all_groups[group_index],
@@ -260,7 +253,6 @@ class MotorPositionsOptimizer:
                 group.kinematics.active_motor_positions.detach().clone()
             )
             initial_motor_positions_all_groups.append(initial_motor_positions)
-            # Read actuator min/max positions.
             motor_positions_minimum = (
                 group.kinematics.actuators.non_optimizable_parameters[
                     :, indices.actuator_min_motor_position
@@ -277,7 +269,6 @@ class MotorPositionsOptimizer:
                 torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
             )
 
-            # Create trainable unconstrained tensor.
             optimizable_parameters_all_groups.append(
                 torch.nn.Parameter(
                     torch.zeros_like(initial_motor_positions, device=device)
@@ -307,7 +298,6 @@ class MotorPositionsOptimizer:
             relative=True,
         )
 
-        # Determine target-plane dimensions.
         target_plane_dimensions = torch.empty(2, device=device)
         target_areas, index = self.scenario.solar_tower.index_to_target_area[
             self.target_area_index
@@ -317,9 +307,9 @@ class MotorPositionsOptimizer:
             < self.scenario.solar_tower.number_of_target_areas_per_type[
                 indices.planar_target_areas
             ]
-        ):  # Planar target
+        ):
             target_plane_dimensions = target_areas.dimensions[self.target_area_index]  # type: ignore[attr-defined]
-        else:  # Cylinder target
+        else:
             cylinder_indices = (
                 self.target_area_index
                 - self.scenario.solar_tower.number_of_target_areas_per_type[
@@ -383,7 +373,7 @@ class MotorPositionsOptimizer:
             on_target_factors = torch.zeros_like(intercept_factors, device=device)
             blocking_factors = torch.zeros_like(intercept_factors, device=device)
 
-            # First per-group loop: Reconstruct and apply motor positions.
+            # First per-group loop: Align all heliostats such that blocking can be computed correctly.
             for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][
                 rank
             ]:
@@ -405,7 +395,6 @@ class MotorPositionsOptimizer:
                     * scales_all_groups[heliostat_group_index]
                 )
 
-                # Activate heliostats.
                 heliostat_alignment_group.activate_heliostats(
                     active_heliostats_mask=active_heliostats_masks_all_groups[
                         heliostat_group_index
@@ -422,7 +411,7 @@ class MotorPositionsOptimizer:
                     device=device,
                 )
 
-            # Second per-group loop: Trace rays and accumulate outputs.
+            # Second per-group loop: Trace rays and accumulate fluxes.
             for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][
                 rank
             ]:
@@ -464,7 +453,6 @@ class MotorPositionsOptimizer:
                     device=device,
                 )
                 sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
-                # Retrieve flux on selected target.
                 flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                     bitmaps_per_heliostat=flux_distributions,
                     target_area_indices=target_area_indices_all_groups[
@@ -472,7 +460,6 @@ class MotorPositionsOptimizer:
                     ][sample_indices_for_local_rank],
                     device=device,
                 )[self.target_area_index]
-                # Add to global flux.
                 total_flux = total_flux + flux_distribution_on_target
 
                 global_indices = (
@@ -482,7 +469,6 @@ class MotorPositionsOptimizer:
                 on_target_factors[global_indices] = on_target_factor
                 blocking_factors[global_indices] = blocking_factor
 
-            # Reduce total flux in the distributed case.
             if self.ddp_setup["is_distributed"]:
                 total_flux = torch.distributed.nn.functional.all_reduce(
                     total_flux,
@@ -503,12 +489,12 @@ class MotorPositionsOptimizer:
                 device=device,
             )
 
-            if isinstance(loss_definition, FocalSpotLoss):  # Focal-spot loss
+            if isinstance(loss_definition, FocalSpotLoss):
                 loss = flux_loss
 
             if isinstance(
                 loss_definition, KLDivergenceLoss
-            ):  # Kullback-Leibler divergence loss
+            ):
                 # Store references at epoch 0, i.e., baseline flux integral and intercept factors.
                 if epoch == 0:
                     flux_integral_reference = total_flux.sum().detach()
@@ -590,7 +576,6 @@ class MotorPositionsOptimizer:
                             param.grad /= self.ddp_setup[constants.world_size]  # type: ignore
 
             optimizer.step()
-            # Scheduler update.
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 scheduler.step(loss.detach())
             else:
