@@ -191,9 +191,9 @@ def test_kinematics_reconstructor(
                 in str(exc_info.value)
             )
         else:
-            if reconstruction_method == constants.kinematics_reconstruction_alignment
+            if reconstruction_method == constants.kinematics_reconstruction_alignment:
                 loss_definition = AngleLoss(scenario=scenario)
-            elif reconstruction_method == constants.kinematics_reconstruction_raytracing
+            elif reconstruction_method == constants.kinematics_reconstruction_raytracing:
                 loss_definition = FocalSpotLoss(scenario=scenario)
 
             kinematics_reconstructor = KinematicsReconstructor(
