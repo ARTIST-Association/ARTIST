@@ -19,7 +19,7 @@ from artist.util.env import DdpSetup
     [
         # Test early stopping, reconstruction with alignment.
         (
-            constants.kinematics_reconstruction_alignment
+            constants.kinematics_reconstruction_alignment,
             PaintCalibrationDataParser(),
             paint_mappings.UTIS_KEY,
             50,
