@@ -192,7 +192,7 @@ def test_kinematics_reconstructor(
             )
         else:
             if reconstruction_method == constants.kinematics_reconstruction_alignment:
-                loss_definition = AngleLoss(scenario=scenario)
+                loss_definition = AngleLoss()
             elif (
                 reconstruction_method == constants.kinematics_reconstruction_raytracing
             ):
