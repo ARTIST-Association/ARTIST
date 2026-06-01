@@ -195,7 +195,7 @@ def test_kinematics_reconstructor(
                 loss_definition = AngleLoss(scenario=scenario)
             elif reconstruction_method == constants.kinematics_reconstruction_raytracing
                 loss_definition = FocalSpotLoss(scenario=scenario)
-            
+
             kinematics_reconstructor = KinematicsReconstructor(
                 ddp_setup=ddp_setup_for_testing,
                 scenario=scenario,
