@@ -234,11 +234,11 @@ def test_kinematics_reconstructor(
 
                     tol = 1e-6 + 5e-3 * torch.maximum(
                         heliostat_group.kinematics.rotation_deviation_parameters.abs(),
-                        expected["rotation_deviations"].abs(),
+                        expected.abs(),
                     )
                     diff = (
                         heliostat_group.kinematics.rotation_deviation_parameters
-                        - expected["rotation_deviations"]
+                        - expected
                     ).abs()
 
                     assert torch.all(diff <= tol)
