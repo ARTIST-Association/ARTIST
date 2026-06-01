@@ -166,8 +166,6 @@ def test_aim_point_optimizer(
             / f"{ground_truth_fixture_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
         )
 
-        torch.save(heliostat_group.kinematics.motor_positions, expected_path)
-
         expected = torch.load(expected_path, map_location=device, weights_only=True)
 
         torch.testing.assert_close(

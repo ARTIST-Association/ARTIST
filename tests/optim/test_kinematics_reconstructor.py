@@ -191,6 +191,7 @@ def test_kinematics_reconstructor(
                 in str(exc_info.value)
             )
         else:
+            loss_definition: AngleLoss | FocalSpotLoss
             if reconstruction_method == constants.kinematics_reconstruction_alignment:
                 loss_definition = AngleLoss()
             elif (
@@ -204,6 +205,7 @@ def test_kinematics_reconstructor(
                 data=data,
                 optimization_configuration=optimization_configuration,
                 reconstruction_method=reconstruction_method,
+                plot_results=True,
             )
 
             # Reconstruct the kinematics.
