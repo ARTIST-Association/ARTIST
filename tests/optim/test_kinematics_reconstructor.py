@@ -8,7 +8,7 @@ import torch
 from artist import ARTIST_ROOT
 from artist.io import CalibrationDataParser, PaintCalibrationDataParser
 from artist.optim import KinematicsReconstructor
-from artist.optim.loss import FocalSpotLoss, AngleLoss
+from artist.optim.loss import AngleLoss, FocalSpotLoss
 from artist.scenario import Scenario
 from artist.util import constants
 from artist.util.env import DdpSetup
@@ -193,7 +193,9 @@ def test_kinematics_reconstructor(
         else:
             if reconstruction_method == constants.kinematics_reconstruction_alignment:
                 loss_definition = AngleLoss(scenario=scenario)
-            elif reconstruction_method == constants.kinematics_reconstruction_raytracing:
+            elif (
+                reconstruction_method == constants.kinematics_reconstruction_raytracing
+            ):
                 loss_definition = FocalSpotLoss(scenario=scenario)
 
             kinematics_reconstructor = KinematicsReconstructor(
