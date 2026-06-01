@@ -225,22 +225,20 @@ def test_kinematics_reconstructor(
                     scenario.heliostat_field.heliostat_groups
                 ):
                     expected_path = (
-                        pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/expected_reconstructed_kinematics_parameters"
-                        / f"group_{index}_{reconstruction_method}_{early_stopping_window}_{device.type}.pt"
+                        pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
                     )
-
                     expected = torch.load(
                         expected_path, map_location=device, weights_only=True
                     )
+                    expected_key = f"kinematics_group_{index}_{reconstruction_method}_{early_stopping_window}_{device.type}"
 
                     tol = 1e-6 + 5e-3 * torch.maximum(
                         heliostat_group.kinematics.rotation_deviation_parameters.abs(),
-                        expected.abs(),
+                        expected[expected_key].to(device).abs(),
                     )
                     diff = (
                         heliostat_group.kinematics.rotation_deviation_parameters
-                        - expected
+                        - expected[expected_key].to(device)
                     ).abs()
 
                     assert torch.all(diff <= tol)

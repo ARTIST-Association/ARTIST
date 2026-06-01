@@ -169,17 +169,16 @@ def test_surface_reconstructor(
             scenario.heliostat_field.heliostat_groups
         ):
             loss_name = "pixel_loss" if isinstance(loss, PixelLoss) else "kl_divergence"
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/expected_reconstructed_surfaces"
-                / f"{loss_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
-            )
 
+            expected_path = (
+                pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
+            )
             expected = torch.load(expected_path, map_location=device, weights_only=True)
+            expected_key = f"surfaces_{loss_name}_group_{index}_{early_stopping_window}_{device.type}"
 
             torch.testing.assert_close(
                 heliostat_group.nurbs_control_points,
-                expected,
+                expected[expected_key].to(device),
                 atol=5e-3,
                 rtol=5e-3,
             )

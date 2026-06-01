@@ -44,13 +44,12 @@ def distribution(device: torch.device) -> torch.Tensor:
         The desired distribution.
         Tensor of shape [bitmap_resolution_e, bitmap_resolution_u].
     """
-    path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_optimized_motor_positions"
-        / "distribution.pt"
-    )
+    path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
+    expected_key = "ground_truth_flux"
 
-    ground_truth = torch.load(path, map_location=device, weights_only=True)
+    ground_truth = torch.load(path, map_location=device, weights_only=True)[
+        expected_key
+    ]
 
     # Scale bitmap intensity to account for the dni and ray magnitude set in this test.
     return ground_truth * 19400
@@ -160,17 +159,15 @@ def test_aim_point_optimizer(
     _, _, _, _, _ = aim_point_optimizer.optimize(loss_definition=loss, device=device)
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
-        expected_path = (
-            pathlib.Path(ARTIST_ROOT)
-            / "tests/data/expected_optimized_motor_positions"
-            / f"{ground_truth_fixture_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
-        )
-
+        expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
         expected = torch.load(expected_path, map_location=device, weights_only=True)
+        expected_key = (
+            f"motor_positions_group_{index}_{early_stopping_window}_{device.type}"
+        )
 
         torch.testing.assert_close(
             heliostat_group.kinematics.motor_positions,
-            expected,
+            expected[expected_key].to(device),
             atol=5e-3,
             rtol=5e-2,
         )
