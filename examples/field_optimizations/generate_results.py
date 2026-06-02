@@ -17,7 +17,7 @@ from artist.io.calibration_parser import CalibrationDataParser
 from artist.io.paint_calibration_parser import PaintCalibrationDataParser
 from artist.optim.aim_point_optimizer import AimPointOptimizer
 from artist.optim.kinematics_reconstructor import KinematicsReconstructor
-from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss
+from artist.optim.loss import AngleLoss, KLDivergenceLoss
 from artist.optim.surface_reconstructor import SurfaceReconstructor
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
@@ -233,7 +233,9 @@ def create_deflectometry_surface_for_comparison(
     original_deflec_data = {}
     for name in heliostats_for_plots:
         path = measured_data_dir / f"deflec_{name}.pt"
-        data = torch.load(path, weights_only=False)
+        data = torch.load(
+            path, map_location=torch.device(device=device), weights_only=False
+        )
         original_deflec_data[name] = data
 
     results_dict["deflectometry_original"] = original_deflec_data
@@ -314,68 +316,6 @@ def save_heliostat_model(
         )
 
 
-def merge_data(
-    unoptimized_data: dict[str, dict[str, torch.Tensor]],
-    optimized_data: dict[str, dict[str, torch.Tensor]],
-) -> dict[str, dict[str, torch.Tensor]]:
-    """
-    Merge data dictionaries.
-
-    Parameters
-    ----------
-    unoptimized_data : dict[str, dict[str, torch.Tensor]]
-        Data dictionary containing unoptimized data.
-    optimized_data : dict[str, dict[str, torch.Tensor]]
-        Data dictionary containing optimized data.
-
-    Returns
-    -------
-    dict[str, dict[str, torch.Tensor]]
-        The combined data dictionary.
-    """
-    with torch.no_grad():
-        merged = {}
-
-        for heliostat in unoptimized_data.keys():
-            fluxes = torch.stack(
-                (
-                    unoptimized_data[heliostat]["measured_flux"],
-                    unoptimized_data[heliostat]["artist_flux"],
-                    optimized_data[heliostat]["artist_flux"],
-                )
-            )
-
-            merged[heliostat] = {
-                "fluxes": fluxes,
-            }
-
-            if len(unoptimized_data[heliostat]) > 2:
-                surface_points = torch.stack(
-                    (
-                        unoptimized_data[heliostat]["surface_points"],
-                        optimized_data[heliostat]["surface_points"],
-                    )
-                )
-                surface_normals = torch.stack(
-                    (
-                        unoptimized_data[heliostat]["surface_normals"],
-                        optimized_data[heliostat]["surface_normals"],
-                    )
-                )
-                canting = optimized_data[heliostat]["canting"]
-                facet_translations = optimized_data[heliostat]["facet_translations"]
-
-                merged[heliostat] = {
-                    "fluxes": fluxes,
-                    "surface_points": surface_points,
-                    "surface_normals": surface_normals,
-                    "canting": canting,
-                    "facet_translations": facet_translations,
-                }
-
-        return merged
-
-
 def kinematics_evaluation(
     scenario: Scenario,
     ddp_setup: DdpSetup,
@@ -409,7 +349,7 @@ def kinematics_evaluation(
     """
     with torch.no_grad():
         device = get_device(device)
-        bitmaps_for_plots = {}
+        data_for_plots = {}
 
         for heliostat_group_index in ddp_setup["groups_to_ranks_mapping"][
             ddp_setup["rank"]
@@ -462,18 +402,22 @@ def kinematics_evaluation(
                 target_area_indices=target_area_indices.detach(),
                 device=device,
             )
-            names = [
-                heliostat_group.names[i]
-                for i in torch.nonzero(active_heliostats_mask).squeeze()
-            ]
-
-            for i, heliostat in enumerate(names):
-                bitmaps_for_plots[heliostat] = {
-                    "artist_flux": bitmaps_per_heliostat[i].detach(),
-                    "measured_flux": measured_fluxes[i].detach(),
+            sample_offset = 0
+            for heliostat_idx, num_samples in enumerate(
+                active_heliostats_mask.tolist()
+            ):
+                if num_samples == 0:
+                    continue
+                heliostat = heliostat_group.names[heliostat_idx]
+                sample_slice = slice(sample_offset, sample_offset + num_samples)
+                data_for_plots[heliostat] = {
+                    "artist_flux": bitmaps_per_heliostat[sample_slice].detach(),
+                    "measured_flux": measured_fluxes[sample_slice].detach(),
+                    "target_area_index": target_area_indices[sample_slice].detach(),
                 }
+                sample_offset += num_samples
 
-        return bitmaps_for_plots
+        return data_for_plots
 
 
 def surface_evaluation(
@@ -553,7 +497,7 @@ def surface_evaluation(
                 blocking_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
-                batch_size=heliostat_group.number_of_active_heliostats,
+                batch_size=100,
                 random_seed=ddp_setup["heliostat_group_rank"],
             )
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
@@ -568,27 +512,30 @@ def surface_evaluation(
                 target_area_indices=target_area_indices.detach(),
                 device=device,
             )
-            names = [
-                heliostat_group.names[i]
-                for i in torch.nonzero(active_heliostats_mask.detach()).squeeze()
-            ]
 
-            for index, heliostat in enumerate(names):
-                heliostat_index_global = heliostat_group.names.index(heliostat)
+            sample_offset = 0
+            for heliostat_index, num_samples in enumerate(
+                active_heliostats_mask.tolist()
+            ):
+                if num_samples == 0:
+                    continue
+                heliostat = heliostat_group.names[heliostat_index]
+                sample_slice = slice(sample_offset, sample_offset + num_samples)
                 data_for_plots[heliostat] = {
-                    "measured_flux": measured_fluxes[index].detach(),
-                    "artist_flux": cropped_flux_distributions[index].detach(),
+                    "measured_flux": measured_fluxes[sample_slice].detach(),
+                    "artist_flux": cropped_flux_distributions[sample_slice].detach(),
                     "surface_points": heliostat_group.surface_points[
-                        heliostat_index_global
+                        heliostat_index
                     ].detach(),
                     "surface_normals": heliostat_group.surface_normals[
-                        heliostat_index_global
+                        heliostat_index
                     ].detach(),
-                    "canting": heliostat_group.canting[heliostat_index_global].detach(),
+                    "canting": heliostat_group.canting[heliostat_index].detach(),
                     "facet_translations": heliostat_group.facet_translations[
-                        heliostat_index_global
+                        heliostat_index
                     ].detach(),
                 }
+                sample_offset += num_samples
 
         return data_for_plots
 
@@ -626,7 +573,7 @@ def aim_point_plots(
     label : str
         Identifier fluxes.
     batch_size : int
-        Batch size for the raytracer.
+        Batch size for the ray tracer.
     number_of_rays : int
         Number of rays.
     device : torch.device | None
@@ -814,23 +761,21 @@ def full_field_optimizations(
             [surface_config["nurbs_degree"], surface_config["nurbs_degree"]],
             device=device,
         )
-
+        # Surface reconstruction.
         with h5py.File(scenario_path) as scenario_file:
-            scenario_kinematics_ideal_surfaces = Scenario.load_scenario_from_hdf5(
+            scenario_surface = Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
                 number_of_surface_points_per_facet=number_of_surface_points_per_facet,
                 change_number_of_control_points_per_facet=number_of_control_points_per_facet,
                 device=device,
             )
-        for (
-            heliostat_group
-        ) in scenario_kinematics_ideal_surfaces.heliostat_field.heliostat_groups:
+        for heliostat_group in scenario_surface.heliostat_field.heliostat_groups:
             heliostat_group.nurbs_degrees = nurbs_degree
-
+        # Ideal models flux evaluation.
         aim_point_data_ideal_models = aim_point_plots(
-            scenario=scenario_kinematics_ideal_surfaces,
+            scenario=scenario_surface,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[
+            target_area_index=scenario_surface.solar_tower.target_name_to_index[
                 baseline_target_area
             ],
             aim_point=baseline_aim_point,
@@ -842,119 +787,10 @@ def full_field_optimizations(
             device=device,
         )
         results_dict["ideal_model"] = {"aim_point_plot": aim_point_data_ideal_models}
-        torch.cuda.empty_cache()
-
-        kinematics_data_plot_before = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_plot"],
-            device=device,
-        )
-        scenario_kinematics_ideal_surfaces.set_number_of_rays(
-            number_of_rays=kinematics_config["number_of_rays"]
-        )
-        optimization_configuration_kinematics = {
-            constants.optimization: {
-                constants.initial_learning_rate_rotation_deviation: kinematics_config[
-                    "initial_learning_rate_rotation_deviation"
-                ],
-                constants.initial_learning_rate_initial_angles: kinematics_config[
-                    "initial_learning_rate_initial_angles"
-                ],
-                constants.initial_learning_rate_initial_stroke_length: kinematics_config[
-                    "initial_learning_rate_initial_stroke_length"
-                ],
-                constants.tolerance: 1e-5,
-                constants.max_epoch: kinematics_config["max_epoch"],
-                constants.batch_size: kinematics_config["batch_size"],
-                constants.log_step: basic_config[constants.log_step],
-                constants.early_stopping_delta: 1e-12,
-                constants.early_stopping_patience: 10000,
-                constants.early_stopping_window: 10000,
-            },
-            constants.scheduler: {
-                constants.scheduler_type: kinematics_config["scheduler"],
-                constants.gamma: kinematics_config["gamma"],
-                constants.lr_min: kinematics_config["min_learning_rate"],
-                constants.lr_max: kinematics_config["max_learning_rate"],
-                constants.step_size_up: kinematics_config["step_size_up"],
-                constants.reduce_factor: kinematics_config["reduce_factor"],
-                constants.patience: kinematics_config["patience"],
-                constants.threshold: kinematics_config["threshold"],
-                constants.cooldown: kinematics_config["cooldown"],
-            },
-        }
-        kinematics_reconstructor = KinematicsReconstructor(
-            ddp_setup=ddp_setup,
-            scenario=scenario_kinematics_ideal_surfaces,
-            data=data_mappings["kinematics_training"],
-            dni=baseline_dni,
-            optimization_configuration=optimization_configuration_kinematics,
-            reconstruction_method=constants.kinematics_reconstruction_raytracing,
-        )
-        kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
-            kinematics_reconstructor.reconstruct_kinematics(
-                loss_definition=FocalSpotLoss(
-                    scenario=scenario_kinematics_ideal_surfaces
-                ),
-                device=device,
-            )
-        )
-        if ddp_setup["is_distributed"]:
-            torch.distributed.barrier()
-        kinematics_validation = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_validation"],
-            device=device,
-        )
-        kinematics_data_plot_after = kinematics_evaluation(
-            scenario=scenario_kinematics_ideal_surfaces,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_plot"],
-            device=device,
-        )
-        merged_plot_data_kinematics = merge_data(
-            unoptimized_data=kinematics_data_plot_before,
-            optimized_data=kinematics_data_plot_after,
-        )
-        aim_point_data_kinematic_reconstruction = aim_point_plots(
-            scenario=scenario_kinematics_ideal_surfaces,
-            incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[
-                baseline_target_area
-            ],
-            aim_point=baseline_aim_point,
-            dni=baseline_dni,
-            bitmap_resolution=bitmap_resolution,
-            label="before",
-            batch_size=20,
-            number_of_rays=200,
-            device=device,
-        )
-        results_dict["kinematics_reconstruction_with_ideal_surfaces"] = {
-            "flux_plot_data": merged_plot_data_kinematics,
-            "validation_data": kinematics_validation,
-            "loss_history": loss_history_kinematics,
-            "loss": kinematics_reconstruction_final_loss_per_heliostat,
-            "aim_point_plot": aim_point_data_kinematic_reconstruction,
-        }
-        torch.cuda.empty_cache()
-
-        # Surface reconstruction.
-        with h5py.File(scenario_path) as scenario_file:
-            scenario_surface = Scenario.load_scenario_from_hdf5(
-                scenario_file=scenario_file,
-                number_of_surface_points_per_facet=number_of_surface_points_per_facet,
-                change_number_of_control_points_per_facet=number_of_control_points_per_facet,
-                device=device,
-            )
-        for heliostat_group in scenario_surface.heliostat_field.heliostat_groups:
-            heliostat_group.nurbs_degrees = nurbs_degree
         surface_data_plot_before = surface_evaluation(
             scenario=scenario_surface,
             ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["surface_plot"],
+            heliostat_data=data_mappings["surface_testing"],
             device=device,
         )
         scenario_surface.set_number_of_rays(
@@ -1019,6 +855,7 @@ def full_field_optimizations(
                     number_of_surface_points=number_of_surface_points_per_facet,
                     bitmap_resolution=bitmap_resolution,
                     device=device,
+                    plot_results=True,
                 )
                 losses_surfaces, loss_history_surface_part = (
                     surface_reconstructor.reconstruct_surfaces(
@@ -1046,21 +883,11 @@ def full_field_optimizations(
                 heliostat_group.nurbs_degrees = nurbs_degree
                 heliostat_group.nurbs_control_points = control_points
             scenario_surface.heliostat_field.update_surfaces(device=device)
-        surface_validation = surface_evaluation(
-            scenario=scenario_surface,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["surface_validation"],
-            device=device,
-        )
         surface_data_plot_after = surface_evaluation(
             scenario=scenario_surface,
             ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["surface_plot"],
+            heliostat_data=data_mappings["surface_testing"],
             device=device,
-        )
-        merged_data_surface = merge_data(
-            unoptimized_data=surface_data_plot_before,
-            optimized_data=surface_data_plot_after,
         )
         aim_point_data_surface_reconstruction = aim_point_plots(
             scenario=scenario_surface,
@@ -1077,8 +904,8 @@ def full_field_optimizations(
             device=device,
         )
         results_dict["surface_reconstruction"] = {
-            "flux_plot_data": merged_data_surface,
-            "validation_data": surface_validation,
+            "flux_plot_data_before": surface_data_plot_before,
+            "flux_plot_data_after": surface_data_plot_after,
             "loss_history": loss_history_surface,
             "loss": surface_reconstruction_final_loss_per_heliostat,
             "aim_point_plot": aim_point_data_surface_reconstruction,
@@ -1103,48 +930,63 @@ def full_field_optimizations(
         kinematics_data_plot_before = kinematics_evaluation(
             scenario=scenario_kinematics,
             ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_plot"],
+            heliostat_data=data_mappings["kinematics_testing"],
             device=device,
         )
         scenario_kinematics.set_number_of_rays(
             number_of_rays=kinematics_config["number_of_rays"]
         )
+        optimization_configuration_kinematics = {
+            constants.optimization: {
+                constants.initial_learning_rate_rotation_deviation: kinematics_config[
+                    "initial_learning_rate_rotation_deviation"
+                ],
+                constants.tolerance: 1e-5,
+                constants.max_epoch: kinematics_config["max_epoch"],
+                constants.batch_size: kinematics_config["batch_size"],
+                constants.log_step: basic_config[constants.log_step],
+                constants.early_stopping_delta: 1e-12,
+                constants.early_stopping_patience: 10000,
+                constants.early_stopping_window: 10000,
+            },
+            constants.scheduler: {
+                constants.scheduler_type: kinematics_config["scheduler"],
+                constants.gamma: kinematics_config["gamma"],
+                constants.lr_min: kinematics_config["min_learning_rate"],
+                constants.lr_max: kinematics_config["max_learning_rate"],
+                constants.step_size_up: kinematics_config["step_size_up"],
+                constants.reduce_factor: kinematics_config["reduce_factor"],
+                constants.patience: kinematics_config["patience"],
+                constants.threshold: kinematics_config["threshold"],
+                constants.cooldown: kinematics_config["cooldown"],
+            },
+        }
         kinematics_reconstructor = KinematicsReconstructor(
             ddp_setup=ddp_setup,
             scenario=scenario_kinematics,
             data=data_mappings["kinematics_training"],
             dni=baseline_dni,
             optimization_configuration=optimization_configuration_kinematics,
-            reconstruction_method=constants.kinematics_reconstruction_raytracing,
+            reconstruction_method=constants.kinematics_reconstruction_alignment,
+            plot_results=True,
         )
         kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
             kinematics_reconstructor.reconstruct_kinematics(
-                loss_definition=FocalSpotLoss(scenario=scenario_kinematics),
+                loss_definition=AngleLoss(),
                 device=device,
             )
         )
         if ddp_setup["is_distributed"]:
             torch.distributed.barrier()
-        kinematics_validation = kinematics_evaluation(
-            scenario=scenario_kinematics,
-            ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_validation"],
-            device=device,
-        )
         kinematics_data_plot_after = kinematics_evaluation(
             scenario=scenario_kinematics,
             ddp_setup=ddp_setup,
-            heliostat_data=data_mappings["kinematics_plot"],
+            heliostat_data=data_mappings["kinematics_testing"],
             device=device,
-        )
-        merged_plot_data_kinematics = merge_data(
-            unoptimized_data=kinematics_data_plot_before,
-            optimized_data=kinematics_data_plot_after,
         )
         reconstructed_kinematics = [
             {
                 "rotation_deviation_parameters": heliostat_group.kinematics.rotation_deviation_parameters.detach(),
-                "optimizable_parameters": heliostat_group.kinematics.actuators.optimizable_parameters.detach(),
             }
             for heliostat_group in scenario_kinematics.heliostat_field.heliostat_groups
         ]
@@ -1163,8 +1005,8 @@ def full_field_optimizations(
             device=device,
         )
         results_dict["kinematics_reconstruction_with_reconstructed_surfaces"] = {
-            "flux_plot_data": merged_plot_data_kinematics,
-            "validation_data": kinematics_validation,
+            "flux_plot_data_before": kinematics_data_plot_before,
+            "flux_plot_data_after": kinematics_data_plot_after,
             "loss_history": loss_history_kinematics,
             "loss": kinematics_reconstruction_final_loss_per_heliostat,
             "aim_point_plot": aim_point_data_combined_reconstruction,
@@ -1188,9 +1030,6 @@ def full_field_optimizations(
             heliostat_group.nurbs_degrees = nurbs_degree
             heliostat_group.kinematics.rotation_deviation_parameters = kinematics[
                 "rotation_deviation_parameters"
-            ]
-            heliostat_group.kinematics.actuators.optimizable_parameters = kinematics[
-                "optimizable_parameters"
             ]
         scenario_aim_points.heliostat_field.update_surfaces(device=device)
         aim_points_data_before = aim_point_plots(
@@ -1327,20 +1166,6 @@ def create_heliostat_data_mappings(
         sample_limit=sample_limit_kinematics,
         centroid_extraction_method=paint_mappings.UTIS_KEY,
     )
-    data_parser_plots = PaintCalibrationDataParser(
-        sample_limit=1, centroid_extraction_method=paint_mappings.UTIS_KEY
-    )
-
-    data_kinematics_plot: dict[
-        str,
-        CalibrationDataParser
-        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    ] = {
-        constants.data_parser: data_parser_plots,
-        constants.heliostat_data_mapping: dataset_splits["kinematics_reconstruction"][
-            "plot"
-        ],
-    }
 
     data_kinematics_training: dict[
         str,
@@ -1352,26 +1177,14 @@ def create_heliostat_data_mappings(
             "training"
         ],
     }
-
-    data_kinematics_validation: dict[
+    data_kinematics_testing: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         constants.data_parser: data_parser_kinematics,
         constants.heliostat_data_mapping: dataset_splits["kinematics_reconstruction"][
-            "validation"
-        ],
-    }
-
-    data_surface_plot: dict[
-        str,
-        CalibrationDataParser
-        | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-    ] = {
-        constants.data_parser: data_parser_plots,
-        constants.heliostat_data_mapping: dataset_splits["surface_reconstruction"][
-            "plot"
+            "testing"
         ],
     }
 
@@ -1385,24 +1198,22 @@ def create_heliostat_data_mappings(
             "training"
         ],
     }
-    data_surface_validation: dict[
+    data_surface_testing: dict[
         str,
         CalibrationDataParser
         | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     ] = {
         constants.data_parser: data_parser_surface,
         constants.heliostat_data_mapping: dataset_splits["surface_reconstruction"][
-            "validation"
+            "testing"
         ],
     }
 
     data_mappings = {
         "kinematics_training": data_kinematics_training,
-        "kinematics_validation": data_kinematics_validation,
-        "kinematics_plot": data_kinematics_plot,
+        "kinematics_testing": data_kinematics_testing,
         "surface_training": data_surface_training,
-        "surface_validation": data_surface_validation,
-        "surface_plot": data_surface_plot,
+        "surface_testing": data_surface_testing,
     }
 
     return data_mappings
