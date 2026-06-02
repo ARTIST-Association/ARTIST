@@ -26,7 +26,7 @@ plot_colors = {
     "darkgray": "#686868",
 }
 
-plt.rcParams["text.usetex"] = True
+plt.rcParams["text.usetex"] = False
 plt.rcParams["text.latex.preamble"] = r"""
 \usepackage{cmbright}
 \setlength{\parindent}{0pt}
@@ -684,7 +684,6 @@ def plot_kinematics_reconstruction_flux(
 def plot_kinematics_error_analysis(
     results: dict[str, Any],
     save_dir: pathlib.Path,
-    split_left: bool = True,
     results_number: int = 1,
 ) -> None:
     """
@@ -696,9 +695,6 @@ def plot_kinematics_error_analysis(
         Results of the study.
     save_dir : pathlib.Path
         Path to save the plots.
-    split_left : bool, default=True
-        If True, left column contains two stacked KDE plots (meters + mrad).
-        If False, left column contains only meters KDE.
     results_number : int
         Identifier of the results run.
     """
@@ -715,22 +711,10 @@ def plot_kinematics_error_analysis(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     for reconstruction, label in zip(reconstructions, case_labels):
-        errors_m = np.array(results[reconstruction]["loss"].detach().cpu())
-        errors_mrad = (errors_m / distances) * 1000
-        if split_left:
-            fig = plt.figure(figsize=(10, 6))
-            gs = GridSpec(
-                2,
-                2,
-                figure=fig,
-                width_ratios=[1, 1.3],
-                height_ratios=[0.5, 0.5],
-                wspace=0.3,
-                hspace=0.25,
-            )
-            ax_kde_m = fig.add_subplot(gs[0, 0])
-            ax_kde_mrad = fig.add_subplot(gs[1, 0])
-        else:
+        if reconstruction in results.keys():
+            errors_m = np.array(results[reconstruction]["loss"].detach().cpu())
+            errors_mrad = (errors_m / distances) * 1000
+
             fig = plt.figure(figsize=(10, 4))
             gs = GridSpec(
                 1,
@@ -740,122 +724,94 @@ def plot_kinematics_error_analysis(
                 wspace=0.3,
             )
             ax_kde_m = fig.add_subplot(gs[0, 0])
-            ax_kde_mrad = None
 
-        ax_dist_m = (
-            fig.add_subplot(gs[:, 1]) if split_left else fig.add_subplot(gs[0, 1])
-        )
-        ax_dist_mrad = ax_dist_m.twinx()
+            ax_dist_m = fig.add_subplot(gs[0, 1])
+            ax_dist_mrad = ax_dist_m.twinx()
 
-        x_max = max(errors_m)
-        x_vals = np.linspace(0, x_max, 100)
-        kde = gaussian_kde(errors_m, bw_method="scott")
-        kde_vals = kde(x_vals)
-
-        ax_kde_m.hist(
-            errors_m,
-            bins=25,
-            range=(0, x_max),
-            density=True,
-            alpha=0.3,
-            color=plot_colors["lightblue"],
-            label="Histogram",
-        )
-        ax_kde_m.plot(
-            x_vals,
-            kde_vals,
-            color=plot_colors["lightblue"],
-            label="KDE",
-        )
-        ax_kde_m.axvline(
-            np.mean(errors_m),
-            linestyle="--",
-            color=plot_colors["lightblue"],
-            label=f"Mean: {np.mean(errors_m):.3f} m",
-        )
-        ax_kde_m.set_xlabel(r"\textbf{Pointing Error [m]}")
-        ax_kde_m.set_ylabel(r"\textbf{Density}")
-        ax_kde_m.grid(True)
-        ax_kde_m.legend(fontsize=8)
-
-        if split_left:
-            x_max = max(errors_mrad)
+            x_max = max(errors_m)
             x_vals = np.linspace(0, x_max, 100)
-            kde = gaussian_kde(errors_mrad, bw_method="scott")
+            kde = gaussian_kde(errors_m, bw_method="scott")
             kde_vals = kde(x_vals)
 
-            ax_kde_mrad.hist(
-                errors_mrad,
+            ax_kde_m.hist(
+                errors_m,
                 bins=25,
                 range=(0, x_max),
                 density=True,
                 alpha=0.3,
-                color=plot_colors["darkblue"],
+                color=plot_colors["lightblue"],
                 label="Histogram",
             )
-            ax_kde_mrad.plot(
+            ax_kde_m.plot(
                 x_vals,
                 kde_vals,
-                color=plot_colors["darkblue"],
+                color=plot_colors["lightblue"],
                 label="KDE",
             )
-            ax_kde_mrad.axvline(
-                np.mean(errors_mrad),
+            ax_kde_m.axvline(
+                np.mean(errors_m),
                 linestyle="--",
-                color=plot_colors["darkblue"],
-                label=f"Mean: {np.mean(errors_mrad):.3f} mrad",
+                color=plot_colors["lightblue"],
+                label=f"Mean: {np.mean(errors_m):.3f} m",
             )
-            ax_kde_mrad.set_xlabel(r"\textbf{Pointing Error [mrad]}")
-            ax_kde_mrad.set_ylabel(r"\textbf{Density}")
-            ax_kde_mrad.grid(True)
-            ax_kde_mrad.legend(fontsize=8)
+            ax_kde_m.set_xlabel(r"\textbf{Pointing Error [m]}")
+            ax_kde_m.set_ylabel(r"\textbf{Density}")
+            ax_kde_m.grid(True)
+            ax_kde_m.legend(fontsize=8)
 
-        ax_dist_m.scatter(
-            distances,
-            errors_m,
-            marker="o",
-            color=plot_colors["lightblue"],
-            alpha=0.7,
-            label="Error (m)",
-        )
-        ax_dist_mrad.scatter(
-            distances,
-            errors_mrad,
-            marker="^",
-            color=plot_colors["darkblue"],
-            alpha=0.7,
-            label="Error (mrad)",
-        )
+            ax_dist_m.scatter(
+                distances,
+                errors_m,
+                marker="o",
+                color=plot_colors["lightblue"],
+                alpha=0.7,
+                label="Error (m)",
+            )
+            ax_dist_mrad.scatter(
+                distances,
+                errors_mrad,
+                marker="^",
+                color=plot_colors["darkblue"],
+                alpha=0.7,
+                label="Error (mrad)",
+            )
 
-        x_fit = np.linspace(distances.min(), distances.max(), 200)
-        fit_m = np.poly1d(np.polyfit(distances, errors_m, 1))
-        fit_mrad = np.poly1d(np.polyfit(distances, errors_mrad, 1))
+            x_fit = np.linspace(distances.min(), distances.max(), 200)
+            fit_m = np.poly1d(np.polyfit(distances, errors_m, 1))
+            fit_mrad = np.poly1d(np.polyfit(distances, errors_mrad, 1))
 
-        ax_dist_m.plot(
-            x_fit, fit_m(x_fit), linestyle="--", color=plot_colors["lightblue"]
-        )
-        ax_dist_mrad.plot(
-            x_fit, fit_mrad(x_fit), linestyle="--", color=plot_colors["darkblue"]
-        )
+            ax_dist_m.plot(
+                x_fit, fit_m(x_fit), linestyle="--", color=plot_colors["lightblue"]
+            )
+            ax_dist_mrad.plot(
+                x_fit, fit_mrad(x_fit), linestyle="--", color=plot_colors["darkblue"]
+            )
 
-        ax_dist_m.set_xlabel(r"\textbf{Heliostat Distance from Tower [m]}")
-        ax_dist_m.set_ylabel(r"\textbf{Pointing Error [m]}")
-        ax_dist_mrad.set_ylabel(r"\textbf{Pointing Error [mrad]}")
-        ax_dist_m.grid(True)
+            ax_dist_m.set_xlabel(r"\textbf{Heliostat Distance from Tower [m]}")
+            ax_dist_m.set_ylabel(r"\textbf{Pointing Error [m]}")
+            ax_dist_mrad.set_ylabel(r"\textbf{Pointing Error [mrad]}")
+            ax_dist_m.grid(True)
 
-        handles_m, labels_m = ax_dist_m.get_legend_handles_labels()
-        handles_a, labels_a = ax_dist_mrad.get_legend_handles_labels()
-        ax_dist_m.legend(
-            handles_m + handles_a, labels_m + labels_a, fontsize=8, loc="upper right"
-        )
+            handles_m, labels_m = ax_dist_m.get_legend_handles_labels()
+            handles_a, labels_a = ax_dist_mrad.get_legend_handles_labels()
+            ax_dist_m.legend(
+                handles_m + handles_a,
+                labels_m + labels_a,
+                fontsize=8,
+                loc="upper right",
+            )
 
-        fig.suptitle(rf"\textbf{{Kinematics Reconstruction with {label}}}", fontsize=14)
+            fig.suptitle(
+                rf"\textbf{{Kinematics Reconstruction with {label}}}", fontsize=14
+            )
 
-        filename = save_dir / f"{reconstruction}_error_analysis.pdf"
-        fig.savefig(filename, dpi=300, bbox_inches="tight")
-        plt.close(fig)
+            filename = save_dir / f"{reconstruction}_error_analysis.pdf"
+            fig.savefig(filename, dpi=300, bbox_inches="tight")
+            plt.close(fig)
 
-        print(f"Saved kinematics reconstruction error analysis plot at: {filename}.")
+            print(
+                f"Saved kinematics reconstruction error analysis plot at: {filename}."
+            )
 
 
 def plot_kinematics_loss_history(
@@ -1559,7 +1515,7 @@ if __name__ == "__main__":
     plots_dir = _make_abs(args.plots_dir)
 
     for case in ["baseline", "full_field"]:
-        results_number = 10
+        results_number = 0
         results_path = results_dir / case / f"results_{results_number}.pt"
         plots_path = plots_dir / case
         (plots_path / f"run_{results_number}").mkdir(parents=True, exist_ok=True)
@@ -1589,12 +1545,11 @@ if __name__ == "__main__":
         # plot_kinematics_reconstruction_flux(
         #     results=results, save_dir=plots_path, results_number=results_number
         # )
-        # plot_kinematics_error_analysis(
-        #     results=results,
-        #     save_dir=plots_path,
-        #     split_left=False,
-        #     results_number=results_number,
-        # )
+        plot_kinematics_error_analysis(
+            results=results,
+            save_dir=plots_path,
+            results_number=results_number,
+        )
         # plot_kinematics_loss_history(
         #     results=results, save_dir=plots_path, results_number=results_number
         # )
