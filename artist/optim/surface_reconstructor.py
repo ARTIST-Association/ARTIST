@@ -161,7 +161,7 @@ class SurfaceReconstructor:
         data_split: training.TrainTestSplit,
         evaluation_points: torch.Tensor,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
         Validate the surface reconstruction for a specified heliostat group on the test data.
 
@@ -183,7 +183,7 @@ class SurfaceReconstructor:
         torch.Tensor
             Predicted flux distributions for the local validation samples.
             Shape is ``[number_of_local_test_samples, height, width]``.
-        list[torch.Tensor]
+        dict[str, torch.Tensor]
             Test losses per sample.
         """
         device = get_device(device=device)
@@ -277,21 +277,24 @@ class SurfaceReconstructor:
         test_loss_pixel = reduce_loss_per_sample(
             loss_per_sample=loss_pixel_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
-            reduction=partial(torch.mean),
+            reduction=partial(torch.mean, dim=-1),
         )
         test_loss_kl_div = reduce_loss_per_sample(
             loss_per_sample=loss_kl_div_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
-            reduction=partial(torch.mean),
+            reduction=partial(torch.mean, dim=-1),
         )
 
         log.info(
-            "pixel mean: %.5f, kl div mean: %.5f",
+            "pixel mean: %.5f, kl-div mean: %.5f",
             torch.mean(test_loss_pixel).item(),
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return flux_prediction, [test_loss_pixel, test_loss_kl_div]
+        return cropped_flux_distributions, {
+            "pixel_loss": test_loss_pixel,
+            "kl_div": test_loss_kl_div,
+        }
 
     def _plot_fluxes(
         self,
@@ -375,7 +378,9 @@ class SurfaceReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[list[dict[str, list[float]]]]]:
+    ) -> tuple[
+        torch.Tensor, list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
+    ]:
         """
         Reconstruct NURBS surfaces from bitmaps.
 
@@ -393,7 +398,7 @@ class SurfaceReconstructor:
         torch.Tensor
             The final reconstruction loss per heliostat, one entry per heliostat in the scenario.
             Shape is ``[total_number_of_heliostats_in_scenario]``.
-        list[list[dict[str, list[float]]]]
+        list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]]
             Loss histories over epochs grouped by rank.
 
             - Outer list: one entry per rank.
@@ -430,7 +435,7 @@ class SurfaceReconstructor:
         )
 
         # Rank-local history: one dict per processed heliostat group.
-        loss_history: list[dict[str, list[float]]] = []
+        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]] = []
 
         # Process only groups assigned to this rank.
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
@@ -468,7 +473,6 @@ class SurfaceReconstructor:
                     incident_ray_directions=incident_ray_directions,
                     motor_positions=motor_positions,
                     target_area_indices=target_area_indices,
-                    test_fraction=0.25,
                     device=device,
                 )
                 evaluation_points = (
@@ -664,7 +668,7 @@ class SurfaceReconstructor:
                     flux_loss_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=flux_loss_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.mean),
+                        reduction=partial(torch.mean, dim=-1),
                     )
 
                     # Add Augmented-Lagrangian constraint to ensure that flux integral is conserved,
@@ -685,7 +689,7 @@ class SurfaceReconstructor:
                     flux_constraint_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=flux_constraint_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.mean),
+                        reduction=partial(torch.mean, dim=-1),
                     )
                     flux_integrals_constraint = (
                         lambda_flux_integral * flux_constraint_per_heliostat
@@ -812,7 +816,7 @@ class SurfaceReconstructor:
                     if self.plot_results and (is_last_epoch or stop):
                         self._plot_fluxes(
                             flux_measured=flux_measured.cpu().detach(),
-                            flux_prediction_train=flux_prediction_train.cpu().detach(),
+                            flux_prediction_train=cropped_flux_predictions.cpu().detach(),
                             flux_prediction_test=flux_prediction_test.cpu().detach(),
                             data_split=data_split,
                             plot_name=f"{epoch}",
@@ -889,9 +893,9 @@ class SurfaceReconstructor:
             torch.distributed.all_reduce(
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
-            final_loss_history_all_groups: list[list[dict[str, list[float]]]] = [
-                [] for _ in range(self.ddp_setup["world_size"])
-            ]
+            final_loss_history_all_groups: list[
+                list[dict[str, list[float] | dict[str, torch.Tensor]]]
+            ] = [[] for _ in range(self.ddp_setup["world_size"])]
             torch.distributed.all_gather_object(
                 final_loss_history_all_groups, loss_history
             )

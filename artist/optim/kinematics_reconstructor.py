@@ -145,7 +145,9 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[Any]]:
+    ) -> tuple[
+        torch.Tensor, list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
+    ]:
         """
         Reconstruct the kinematic parameters.
 
@@ -163,7 +165,7 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Shape is ``[total_number_of_heliostats_in_scenario]``.
-        list[list[dict[str, list[float]]]]
+        list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
             Loss histories over epochs grouped by rank.
             Outer list: one entry per rank.
             Inner list: one entry per heliostat group processed on that rank.
@@ -202,7 +204,7 @@ class KinematicsReconstructor:
         data_split: training.TrainTestSplit,
         reduction: Callable[..., Any],
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
         Validate the kinematic reconstruction for a specified heliostat group on the test data.
 
@@ -224,7 +226,7 @@ class KinematicsReconstructor:
         torch.Tensor
             Predicted flux distributions for the local validation samples.
             Shape is ``[number_of_local_test_samples, height, width]``.
-        list[torch.Tensor]
+        dict[str, torch.Tensor]
             Test losses per sample.
         """
         device = get_device(device=device)
@@ -303,17 +305,17 @@ class KinematicsReconstructor:
         )
 
         log.info(
-            "test loss focal spot mean: %.5f, pixel mean: %.5f, kl div mean: %.5f",
+            "test loss focal spot mean: %.5f, pixel mean: %.5f, kl-div mean: %.5f",
             torch.mean(test_loss_focal_spot).item(),
             torch.mean(test_loss_pixel).item(),
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return flux_prediction, [
-            test_loss_pixel,
-            test_loss_kl_div,
-            test_loss_focal_spot,
-        ]
+        return flux_prediction, {
+            "pixel_loss": test_loss_pixel,
+            "kl_div": test_loss_kl_div,
+            "focal_spot_loss": test_loss_focal_spot,
+        }
 
     def _plot_fluxes(
         self,
@@ -420,7 +422,9 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[list[dict[str, list[float]]]]]:
+    ) -> tuple[
+        torch.Tensor, list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
+    ]:
         """
         Reconstruct the kinematics parameters using alignment and geometry data.
 
@@ -441,7 +445,7 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Shape is ``[total_number_of_heliostats_in_scenario]``.
-        list[list[dict[str, list[float]]]]
+        list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
             Loss histories over epochs grouped by rank.
             Outer list: one entry per rank.
             Inner list: one entry per heliostat group processed on that rank.
@@ -470,7 +474,7 @@ class KinematicsReconstructor:
                 ),
             ]
         )
-        loss_history: list[dict[str, list[float]]] = []
+        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]] = []
 
         # Iterate heliostat groups assigned to this rank.
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
@@ -507,7 +511,6 @@ class KinematicsReconstructor:
                     incident_ray_directions=incident_ray_directions,
                     motor_positions=motor_positions,
                     target_area_indices=target_area_indices,
-                    test_fraction=0.25,
                     device=device,
                 )
                 # Calculate focal spot from measured flux.
@@ -603,7 +606,7 @@ class KinematicsReconstructor:
                     loss_per_heliostat = reduce_loss_per_sample(
                         loss_per_sample=loss_per_sample,
                         number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                        reduction=partial(torch.mean),
+                        reduction=partial(torch.mean, dim=-1),
                     )
 
                     loss = torch.mean(loss_per_heliostat)
@@ -680,7 +683,7 @@ class KinematicsReconstructor:
                             flux_prediction_test, test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
-                                reduction=partial(torch.mean),
+                                reduction=partial(torch.mean, dim=-1),
                                 device=device,
                             )
 
@@ -702,7 +705,7 @@ class KinematicsReconstructor:
                     epoch += 1
 
                 loss_history.append(
-                    {"total_loss": loss_history_list, "test_loss_pixel": test_loss}
+                    {"total_loss": loss_history_list, "test_loss": test_loss}
                 )
 
                 active_indices_group = torch.nonzero(
@@ -735,9 +738,9 @@ class KinematicsReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
-            final_loss_history_all_groups: list[list[dict[str, list[float]]]] = [
-                [] for _ in range(self.ddp_setup["world_size"])
-            ]
+            final_loss_history_all_groups: list[
+                list[dict[str, list[float] | dict[str, torch.Tensor]]]
+            ] = [[] for _ in range(self.ddp_setup["world_size"])]
             torch.distributed.all_gather_object(
                 final_loss_history_all_groups, loss_history
             )
@@ -758,7 +761,9 @@ class KinematicsReconstructor:
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, list[list[dict[str, list[float]]]]]:
+    ) -> tuple[
+        torch.Tensor, list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
+    ]:
         """
         Reconstruct the kinematics parameters using ray tracing.
 
@@ -779,7 +784,7 @@ class KinematicsReconstructor:
         torch.Tensor
             The final loss of the kinematics reconstruction for each heliostat in each group.
             Shape is ``[total_number_of_heliostats_in_scenario]``.
-        list[list[dict[str, list[float]]]]
+        list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
             Loss histories over epochs grouped by rank.
             Outer list: one entry per rank.
             Inner list: one entry per heliostat group processed on that rank.
@@ -808,7 +813,7 @@ class KinematicsReconstructor:
                 ),
             ]
         )
-        loss_history: list[dict[str, list[float]]] = []
+        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]] = []
 
         # Iterate heliostat groups assigned to this rank.
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
@@ -844,7 +849,6 @@ class KinematicsReconstructor:
                     incident_ray_directions=incident_ray_directions,
                     motor_positions=motor_positions,
                     target_area_indices=target_area_indices,
-                    test_fraction=0.25,
                     device=device,
                 )
 
@@ -1016,7 +1020,7 @@ class KinematicsReconstructor:
                     epoch += 1
 
                 loss_history.append(
-                    {"total_loss": loss_history_list, "test_loss_pixel": test_loss}
+                    {"total_loss": loss_history_list, "test_loss": test_loss}
                 )
 
                 local_indices = (
@@ -1056,9 +1060,9 @@ class KinematicsReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
-            final_loss_history_all_groups: list[list[dict[str, list[float]]]] = [
-                [] for _ in range(self.ddp_setup["world_size"])
-            ]
+            final_loss_history_all_groups: list[
+                list[dict[str, list[float] | dict[str, torch.Tensor]]]
+            ] = [[] for _ in range(self.ddp_setup["world_size"])]
             torch.distributed.all_gather_object(
                 final_loss_history_all_groups, loss_history
             )
