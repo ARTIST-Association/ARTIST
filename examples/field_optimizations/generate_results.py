@@ -853,7 +853,6 @@ def full_field_optimizations(
                     optimization_configuration=optimization_configuration_surface,
                     dni=baseline_dni,
                     number_of_surface_points=number_of_surface_points_per_facet,
-                    bitmap_resolution=bitmap_resolution,
                     device=device,
                     plot_results=True,
                 )
