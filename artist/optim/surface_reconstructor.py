@@ -161,7 +161,7 @@ class SurfaceReconstructor:
         data_split: training.TrainTestSplit,
         evaluation_points: torch.Tensor,
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
         """
         Validate the surface reconstruction for a specified heliostat group on the test data.
 
@@ -183,6 +183,8 @@ class SurfaceReconstructor:
         torch.Tensor
             Predicted flux distributions for the local validation samples.
             Shape is ``[number_of_local_test_samples, height, width]``.
+        list[torch.Tensor]
+            Test losses per sample.
         """
         device = get_device(device=device)
 
@@ -289,7 +291,7 @@ class SurfaceReconstructor:
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return flux_prediction
+        return flux_prediction, [test_loss_pixel, test_loss_kl_div]
 
     def _plot_fluxes(
         self,
@@ -800,7 +802,7 @@ class SurfaceReconstructor:
                         )
 
                         with torch.no_grad():
-                            flux_prediction_test = self._validate(
+                            flux_prediction_test, test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 evaluation_points=evaluation_points,
@@ -856,6 +858,7 @@ class SurfaceReconstructor:
                         "ideal_regularizer": ideal_history,
                         "flux_integral": flux_integral,
                         "flux_integral_constraint": flux_integral_history,
+                        "test_loss": test_loss,
                     }
                 )
 

@@ -202,7 +202,7 @@ class KinematicsReconstructor:
         data_split: training.TrainTestSplit,
         reduction: Callable[..., Any],
         device: torch.device | None = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
         """
         Validate the kinematic reconstruction for a specified heliostat group on the test data.
 
@@ -224,6 +224,8 @@ class KinematicsReconstructor:
         torch.Tensor
             Predicted flux distributions for the local validation samples.
             Shape is ``[number_of_local_test_samples, height, width]``.
+        list[torch.Tensor]
+            Test losses per sample.
         """
         device = get_device(device=device)
 
@@ -307,7 +309,11 @@ class KinematicsReconstructor:
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return flux_prediction
+        return flux_prediction, [
+            test_loss_pixel,
+            test_loss_kl_div,
+            test_loss_focal_spot,
+        ]
 
     def _plot_fluxes(
         self,
@@ -671,7 +677,7 @@ class KinematicsReconstructor:
                                 target_area_indices=data_split.target_area_indices_train,
                                 device=device,
                             )
-                            flux_prediction_test = self._validate(
+                            flux_prediction_test, test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.mean),
@@ -696,9 +702,7 @@ class KinematicsReconstructor:
                     epoch += 1
 
                 loss_history.append(
-                    {
-                        "total_loss": loss_history_list,
-                    }
+                    {"total_loss": loss_history_list, "test_loss_pixel": test_loss}
                 )
 
                 active_indices_group = torch.nonzero(
@@ -987,7 +991,7 @@ class KinematicsReconstructor:
                         )
 
                         with torch.no_grad():
-                            flux_prediction_test = self._validate(
+                            flux_prediction_test, test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.median, dim=1),
@@ -1012,9 +1016,7 @@ class KinematicsReconstructor:
                     epoch += 1
 
                 loss_history.append(
-                    {
-                        "total_loss": loss_history_list,
-                    }
+                    {"total_loss": loss_history_list, "test_loss_pixel": test_loss}
                 )
 
                 local_indices = (
