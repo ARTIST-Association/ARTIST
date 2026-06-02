@@ -272,7 +272,7 @@ def train_test_split(
     incident_ray_directions: torch.Tensor,
     motor_positions: torch.Tensor,
     target_area_indices: torch.Tensor,
-    test_fraction: float = 0.25,
+    test_fraction: float = 0.35,
     device: torch.device | None = None,
 ) -> TrainTestSplit:
     """
@@ -304,7 +304,7 @@ def train_test_split(
         Integer target area indices for all samples.
         Shape is ``[total_number_of_samples]``.
     test_fraction : float
-        Fraction of samples per heliostat assigned to the test set (default is 0.25).
+        Fraction of samples per heliostat assigned to the test set (default is 0.35).
     device : torch.device | None
         The device on which to perform computations or load tensors and models (default is None).
         If None, ARTIST will automatically select the most appropriate
