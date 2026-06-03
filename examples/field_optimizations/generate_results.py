@@ -393,7 +393,7 @@ def kinematics_evaluation(
                 blocking_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
-                batch_size=heliostat_group.number_of_active_heliostats,
+                batch_size=50,
                 random_seed=ddp_setup["heliostat_group_rank"],
             )
             bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
@@ -761,21 +761,24 @@ def full_field_optimizations(
             [surface_config["nurbs_degree"], surface_config["nurbs_degree"]],
             device=device,
         )
-        # Surface reconstruction.
+
+        # Kinematics reconstruction with ideal surfaces.
         with h5py.File(scenario_path) as scenario_file:
-            scenario_surface = Scenario.load_scenario_from_hdf5(
+            scenario_kinematics_ideal_surfaces = Scenario.load_scenario_from_hdf5(
                 scenario_file=scenario_file,
                 number_of_surface_points_per_facet=number_of_surface_points_per_facet,
                 change_number_of_control_points_per_facet=number_of_control_points_per_facet,
                 device=device,
             )
-        for heliostat_group in scenario_surface.heliostat_field.heliostat_groups:
+        for (
+            heliostat_group
+        ) in scenario_kinematics_ideal_surfaces.heliostat_field.heliostat_groups:
             heliostat_group.nurbs_degrees = nurbs_degree
-        # Ideal models flux evaluation.
+
         aim_point_data_ideal_models = aim_point_plots(
-            scenario=scenario_surface,
+            scenario=scenario_kinematics_ideal_surfaces,
             incident_ray_direction=baseline_incident_ray_direction,
-            target_area_index=scenario_surface.solar_tower.target_name_to_index[
+            target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[
                 baseline_target_area
             ],
             aim_point=baseline_aim_point,
@@ -787,6 +790,103 @@ def full_field_optimizations(
             device=device,
         )
         results_dict["ideal_model"] = {"aim_point_plot": aim_point_data_ideal_models}
+        torch.cuda.empty_cache()
+        kinematics_data_plot_before = kinematics_evaluation(
+            scenario=scenario_kinematics_ideal_surfaces,
+            ddp_setup=ddp_setup,
+            heliostat_data=data_mappings["kinematics_testing"],
+            device=device,
+        )
+        scenario_kinematics_ideal_surfaces.set_number_of_rays(
+            number_of_rays=kinematics_config["number_of_rays"]
+        )
+        optimization_configuration_kinematics = {
+            constants.optimization: {
+                constants.initial_learning_rate_rotation_deviation: float(
+                    kinematics_config[
+                        constants.initial_learning_rate_rotation_deviation
+                    ]
+                ),
+                constants.tolerance: 1e-5,
+                constants.max_epoch: int(kinematics_config[constants.max_epoch]),
+                constants.batch_size: int(kinematics_config[constants.batch_size]),
+                constants.log_step: int(basic_config[constants.log_step]),
+                constants.early_stopping_delta: 1e-12,
+                constants.early_stopping_patience: 10000,
+                constants.early_stopping_window: 10000,
+            },
+            constants.scheduler: {
+                constants.scheduler_type: str(
+                    kinematics_config[constants.scheduler_type]
+                ),
+                constants.gamma: float(kinematics_config[constants.gamma]),
+                constants.lr_min: float(kinematics_config[constants.lr_min]),
+                constants.lr_max: float(kinematics_config[constants.lr_max]),
+                constants.step_size_up: int(kinematics_config[constants.step_size_up]),
+                constants.reduce_factor: float(
+                    kinematics_config[constants.reduce_factor]
+                ),
+                constants.patience: int(kinematics_config[constants.patience]),
+                constants.threshold: float(kinematics_config[constants.threshold]),
+                constants.cooldown: int(kinematics_config[constants.cooldown]),
+            },
+        }
+        kinematics_reconstructor = KinematicsReconstructor(
+            ddp_setup=ddp_setup,
+            scenario=scenario_kinematics_ideal_surfaces,
+            data=data_mappings["kinematics_training"],
+            dni=baseline_dni,
+            optimization_configuration=optimization_configuration_kinematics,
+            reconstruction_method=constants.kinematics_reconstruction_alignment,
+        )
+        kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
+            kinematics_reconstructor.reconstruct_kinematics(
+                loss_definition=AngleLoss(),
+                device=device,
+            )
+        )
+        if ddp_setup["is_distributed"]:
+            torch.distributed.barrier()
+        kinematics_data_plot_after = kinematics_evaluation(
+            scenario=scenario_kinematics_ideal_surfaces,
+            ddp_setup=ddp_setup,
+            heliostat_data=data_mappings["kinematics_testing"],
+            device=device,
+        )
+        aim_point_data_kinematic_reconstruction = aim_point_plots(
+            scenario=scenario_kinematics_ideal_surfaces,
+            incident_ray_direction=baseline_incident_ray_direction,
+            target_area_index=scenario_kinematics_ideal_surfaces.solar_tower.target_name_to_index[
+                baseline_target_area
+            ],
+            aim_point=baseline_aim_point,
+            dni=baseline_dni,
+            bitmap_resolution=bitmap_resolution,
+            label="before",
+            batch_size=20,
+            number_of_rays=200,
+            device=device,
+        )
+        results_dict["kinematics_reconstruction_with_ideal_surfaces"] = {
+            "flux_plot_data_before": kinematics_data_plot_before,
+            "flux_plot_data_after": kinematics_data_plot_after,
+            "loss_history": loss_history_kinematics,
+            "loss": kinematics_reconstruction_final_loss_per_heliostat,
+            "aim_point_plot": aim_point_data_kinematic_reconstruction,
+        }
+        torch.cuda.empty_cache()
+
+        # Surface reconstruction.
+        with h5py.File(scenario_path) as scenario_file:
+            scenario_surface = Scenario.load_scenario_from_hdf5(
+                scenario_file=scenario_file,
+                number_of_surface_points_per_facet=number_of_surface_points_per_facet,
+                change_number_of_control_points_per_facet=number_of_control_points_per_facet,
+                device=device,
+            )
+        for heliostat_group in scenario_surface.heliostat_field.heliostat_groups:
+            heliostat_group.nurbs_degrees = nurbs_degree
+        # Ideal models flux evaluation.
         surface_data_plot_before = surface_evaluation(
             scenario=scenario_surface,
             ddp_setup=ddp_setup,
@@ -816,32 +916,40 @@ def full_field_optimizations(
         optimization_configuration_surface = {
             constants.optimization: {
                 constants.initial_learning_rate: surface_config[
-                    "initial_learning_rate"
+                    constants.initial_learning_rate
                 ],
                 constants.tolerance: 1e-5,
-                constants.max_epoch: surface_config["max_epoch"],
-                constants.batch_size: surface_config["batch_size"],
-                constants.log_step: basic_config[constants.log_step],
+                constants.max_epoch: int(surface_config[constants.max_epoch]),
+                constants.batch_size: int(surface_config[constants.batch_size]),
+                constants.log_step: int(basic_config[constants.log_step]),
                 constants.early_stopping_delta: 1e-12,
                 constants.early_stopping_patience: 10000,
                 constants.early_stopping_window: 10000,
             },
             constants.scheduler: {
-                constants.scheduler_type: surface_config["scheduler"],
-                constants.gamma: surface_config["gamma"],
-                constants.lr_min: surface_config["min_learning_rate"],
-                constants.lr_max: surface_config["max_learning_rate"],
-                constants.step_size_up: surface_config["step_size_up"],
-                constants.reduce_factor: surface_config["reduce_factor"],
-                constants.patience: surface_config["patience"],
-                constants.threshold: surface_config["threshold"],
-                constants.cooldown: surface_config["cooldown"],
+                constants.scheduler_type: str(surface_config[constants.scheduler_type]),
+                constants.gamma: float(surface_config[constants.gamma]),
+                constants.lr_min: float(surface_config[constants.lr_min]),
+                constants.lr_max: float(surface_config[constants.lr_max]),
+                constants.step_size_up: int(surface_config[constants.step_size_up]),
+                constants.reduce_factor: float(surface_config[constants.reduce_factor]),
+                constants.patience: int(surface_config[constants.patience]),
+                constants.threshold: float(surface_config[constants.threshold]),
+                constants.cooldown: int(surface_config[constants.cooldown]),
             },
             constants.constraints: {
-                constants.weight_smoothness: surface_config["weight_smoothness"],
-                constants.weight_ideal_surface: surface_config["weight_ideal_surface"],
-                constants.rho_flux_integral: surface_config["rho_flux_integral"],
-                constants.energy_tolerance: surface_config["energy_tolerance"],
+                constants.weight_smoothness: float(
+                    surface_config[constants.weight_smoothness]
+                ),
+                constants.weight_ideal_surface: float(
+                    surface_config[constants.weight_ideal_surface]
+                ),
+                constants.rho_flux_integral: float(
+                    surface_config[constants.rho_flux_integral]
+                ),
+                constants.energy_tolerance: float(
+                    surface_config[constants.energy_tolerance]
+                ),
             },
         }
         if not control_points_path.exists():
@@ -854,7 +962,6 @@ def full_field_optimizations(
                     dni=baseline_dni,
                     number_of_surface_points=number_of_surface_points_per_facet,
                     device=device,
-                    plot_results=True,
                 )
                 losses_surfaces, loss_history_surface_part = (
                     surface_reconstructor.reconstruct_surfaces(
@@ -935,31 +1042,6 @@ def full_field_optimizations(
         scenario_kinematics.set_number_of_rays(
             number_of_rays=kinematics_config["number_of_rays"]
         )
-        optimization_configuration_kinematics = {
-            constants.optimization: {
-                constants.initial_learning_rate_rotation_deviation: kinematics_config[
-                    "initial_learning_rate_rotation_deviation"
-                ],
-                constants.tolerance: 1e-5,
-                constants.max_epoch: kinematics_config["max_epoch"],
-                constants.batch_size: kinematics_config["batch_size"],
-                constants.log_step: basic_config[constants.log_step],
-                constants.early_stopping_delta: 1e-12,
-                constants.early_stopping_patience: 10000,
-                constants.early_stopping_window: 10000,
-            },
-            constants.scheduler: {
-                constants.scheduler_type: kinematics_config["scheduler"],
-                constants.gamma: kinematics_config["gamma"],
-                constants.lr_min: kinematics_config["min_learning_rate"],
-                constants.lr_max: kinematics_config["max_learning_rate"],
-                constants.step_size_up: kinematics_config["step_size_up"],
-                constants.reduce_factor: kinematics_config["reduce_factor"],
-                constants.patience: kinematics_config["patience"],
-                constants.threshold: kinematics_config["threshold"],
-                constants.cooldown: kinematics_config["cooldown"],
-            },
-        }
         kinematics_reconstructor = KinematicsReconstructor(
             ddp_setup=ddp_setup,
             scenario=scenario_kinematics,
@@ -967,7 +1049,6 @@ def full_field_optimizations(
             dni=baseline_dni,
             optimization_configuration=optimization_configuration_kinematics,
             reconstruction_method=constants.kinematics_reconstruction_alignment,
-            plot_results=True,
         )
         kinematics_reconstruction_final_loss_per_heliostat, loss_history_kinematics = (
             kinematics_reconstructor.reconstruct_kinematics(
@@ -1050,33 +1131,45 @@ def full_field_optimizations(
         )
         optimization_configuration_aim_points = {
             constants.optimization: {
-                constants.initial_learning_rate: aim_point_config[
-                    "initial_learning_rate"
-                ],
+                constants.initial_learning_rate: float(
+                    aim_point_config[constants.initial_learning_rate]
+                ),
                 constants.tolerance: 1e-5,
-                constants.max_epoch: aim_point_config["max_epoch"],
-                constants.batch_size: aim_point_config["batch_size"],
-                constants.log_step: basic_config[constants.log_step],
+                constants.max_epoch: int(aim_point_config[constants.max_epoch]),
+                constants.batch_size: int(aim_point_config[constants.batch_size]),
+                constants.log_step: int(basic_config[constants.log_step]),
                 constants.early_stopping_delta: 1e-12,
                 constants.early_stopping_patience: 10000,
                 constants.early_stopping_window: 10000,
             },
             constants.scheduler: {
-                constants.scheduler_type: aim_point_config["scheduler"],
-                constants.gamma: aim_point_config["gamma"],
-                constants.lr_min: aim_point_config["min_learning_rate"],
-                constants.lr_max: aim_point_config["max_learning_rate"],
-                constants.step_size_up: aim_point_config["step_size_up"],
-                constants.reduce_factor: aim_point_config["reduce_factor"],
-                constants.patience: aim_point_config["patience"],
-                constants.threshold: aim_point_config["threshold"],
-                constants.cooldown: aim_point_config["cooldown"],
+                constants.scheduler_type: str(
+                    aim_point_config[constants.scheduler_type]
+                ),
+                constants.gamma: float(aim_point_config[constants.gamma]),
+                constants.lr_min: float(aim_point_config[constants.lr_min]),
+                constants.lr_max: float(aim_point_config[constants.lr_max]),
+                constants.step_size_up: int(aim_point_config[constants.step_size_up]),
+                constants.reduce_factor: float(
+                    aim_point_config[constants.reduce_factor]
+                ),
+                constants.patience: int(aim_point_config[constants.patience]),
+                constants.threshold: float(aim_point_config[constants.threshold]),
+                constants.cooldown: int(aim_point_config[constants.cooldown]),
             },
             constants.constraints: {
-                constants.rho_flux_integral: aim_point_config["rho_flux_integral"],
-                constants.rho_local_flux: aim_point_config["rho_local_flux"],
-                constants.rho_intercept: aim_point_config["rho_intercept"],
-                constants.max_flux_density: aim_point_config["max_flux_density"],
+                constants.rho_flux_integral: float(
+                    aim_point_config[constants.rho_flux_integral]
+                ),
+                constants.rho_local_flux: float(
+                    aim_point_config[constants.rho_local_flux]
+                ),
+                constants.rho_intercept: float(
+                    aim_point_config[constants.rho_intercept]
+                ),
+                constants.max_flux_density: float(
+                    aim_point_config[constants.max_flux_density]
+                ),
             },
         }
         aim_point_optimizer = AimPointOptimizer(
@@ -1498,7 +1591,7 @@ def main() -> None:
 
         # Logging.
         runtime_log.info(
-            f"Number of heliostats: {len(data_mappings['kinematics_training'])}"
+            f"Number of heliostats: {len(data_mappings['kinematics_training']['heliostat_data_mapping'])}"
         )
         runtime_log.info(f"surface reconstruction: {surface_optimization_config}")
         runtime_log.info(f"kinematics reconstruction: {kinematics_optimization_config}")
