@@ -190,12 +190,6 @@ class KinematicsReconstructor:
                 device=device,
             )
 
-        else:
-            raise ValueError(
-                f"The kinematics reconstruction method '{self.reconstruction_method}' is unknown. "
-                f"Please select another reconstruction method and try again!"
-            )
-
         return loss, loss_history
 
     def _validate(
