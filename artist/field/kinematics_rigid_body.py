@@ -53,10 +53,13 @@ class RigidBody(Kinematics):
         The actuators used in the kinematics.
     kinematics_standard_orientation : torch.Tensor
         Standard orientation of the kinematics system: south (0, -1, 0, 0) in homogeneous ENU.
-        Shape is ``[4]``
+        Shape is ``[4]``.
     initial_orientation_offsets : torch.Tensor
         Rotation matrix to account for the initial orientation offset between surface mesh and kinematics system.
         Shape is ``[1, 4, 4]``.
+    homogeneous_origin
+        Origin point in 4x4 homogeneous transform matrices.
+        Shape is ``[4]``.
 
     Methods
     -------
@@ -170,7 +173,8 @@ class RigidBody(Kinematics):
 
         # The surface points and normals are always sampled from a model (converted NURBS from deflectometry or ideal NURBS) that lays
         # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since the kinematics in ARTIST expects the
-        # points and normals to be initially oriented to the south, an extra rotation needs to be applied.
+        # points and normals to be initially oriented to the south, an extra rotation needs to be applied. The orientations of the
+        # two systems are defined here.
         self.kinematics_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
         )
@@ -185,6 +189,8 @@ class RigidBody(Kinematics):
             @ transforms.rotate_u(u=up_angles, device=device)
         )
 
+        self.homogeneous_origin = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
+
     def _compute_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
@@ -192,6 +198,8 @@ class RigidBody(Kinematics):
     ) -> torch.Tensor:
         """
         Compute orientation matrices from given motor positions without initial orientation offsets.
+
+        This is the forward kinematics.
 
         Parameters
         ----------
@@ -216,7 +224,7 @@ class RigidBody(Kinematics):
             device=device,
         )
 
-        initial_orientations = torch.eye(4, device=device).unsqueeze(0)
+        initial_orientations = torch.eye(4, device=device)[None]
 
         # Account for positions.
         initial_orientations = initial_orientations @ transforms.translate_enu(
@@ -318,6 +326,7 @@ class RigidBody(Kinematics):
     def _compute_motor_positions_from_normal(
         self,
         normals: torch.Tensor,
+        epsilon: float = 1e-8,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -334,6 +343,8 @@ class RigidBody(Kinematics):
         normals : torch.Tensor
             Concentrator normals.
             Shape is ``[number_of_active_heliostats, 4]``.
+        epsilon : float
+            Small value to avoid divisions by zero (default is 1e-8).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -346,6 +357,17 @@ class RigidBody(Kinematics):
             Shape is ``[number_of_active_heliostats, 2]``.
         """
         device = get_device(device=device)
+
+        # The forward kinematics model:
+        # n = R_n(τ1n) * R_u(τ1u) * R_e(θ1) * R_e(τ2e) * R_n(τ2n) * R_u(θ2) * ref
+        # where
+        # n                     : normal
+        # R                     : rotation matrices
+        # τ1n, τ1u, τ2e, τ2n    : rotation_deviations for both axes
+        # ref                   : reference direction of the kinematics system (0,-1,0) ENU
+        # θ1, θ2                : first_joint_angle, second_joint_angle
+        #
+        # This is inverted in the following.
 
         first_rotation_axis_deviations = transforms.rotate_n(
             n=self.active_rotation_deviation_parameters[:, indices.first_joint_tilt_n],
@@ -363,27 +385,44 @@ class RigidBody(Kinematics):
             device=device,
         )
 
+        # Factor out first-actuator rotation deviations:
+        # n' := F1^T * n
+        # where: F1 = R_n(τ1n) * R_u(τ1u)
+        # This transforms the target normal into the intermediate frame where only (θ1, θ2) remain unknown.
         normal_after_first_deviation = (
             first_rotation_axis_deviations.transpose(-1, -2) @ normals[:, :, None]
-        )
+        )[:, :, indices.squeeze_index]
 
-        # Determine second joint angles.
-        second_axis_deviation_00 = second_rotation_axis_deviations[:, 0, 0]
-        second_axis_deviation_01 = second_rotation_axis_deviations[:, 0, 1]
+        # Reduced kinematics after removing first joint rotation deviations:
+        # n' = R_e(θ1) * v(θ2),      with v(θ2) := F2 R_u(θ2) * ref
+        # where: F2 = R_e(τ2e) * R_n(τ2n).
+        # As the first joint rotates around the e-axis, only the n- and u-components change and
+        # n'_e = v_e(θ2).
+        # Substituting v_e(θ2) back in and considering that the second joint rotates around the u-axis:
+        # n'_e = v_e(θ2) = F2_00 * cos(θ2) - F2_01 * sin(θ2) + F2_02 * 0
+        # In the above equation only θ2 is unknown. It is solved by reducing the expression
+        # to a phase-shifted sinusoid: n'_e = a * sin(θ2 + φ) which results in two possible solutions.
+        second_axis_deviation_00 = second_rotation_axis_deviations[
+            :, indices.e, indices.e
+        ]
+        second_axis_deviation_01 = second_rotation_axis_deviations[
+            :, indices.e, indices.n
+        ]
 
         denominator = torch.sqrt(
             second_axis_deviation_00**2 + second_axis_deviation_01**2
-        )[:, None]
-        phi = torch.atan2(-second_axis_deviation_01, second_axis_deviation_00)[:, None]
+        )
+        phi = torch.atan2(-second_axis_deviation_01, second_axis_deviation_00)
 
         ratio = torch.clamp(
-            (normal_after_first_deviation[:, 0] / (denominator + 1e-12)),
-            -1.0 + 1e-7,
-            1.0 - 1e-7,
+            (normal_after_first_deviation[:, indices.e] / (denominator + epsilon)),
+            -1.0 + epsilon,
+            1.0 - epsilon,
         )
         second_joint_angle_1 = torch.arcsin(ratio) - phi
         second_joint_angle_2 = torch.pi - torch.arcsin(ratio) - phi
 
+        # Wrap both solutions into [-pi, pi].
         second_joint_angle_1 = torch.atan2(
             torch.sin(second_joint_angle_1), torch.cos(second_joint_angle_1)
         )
@@ -391,30 +430,32 @@ class RigidBody(Kinematics):
             torch.sin(second_joint_angle_2), torch.cos(second_joint_angle_2)
         )
 
-        # Determine first joint angles. There are two valid solutions.
+        # As the second joint angle is now known, the first joint angle can be computed using:
+        # the expression from above: n' = R_e(θ1) * v(θ2)
         v_1 = (
             second_rotation_axis_deviations
-            @ transforms.rotate_u(second_joint_angle_1[:, 0], device=device)
+            @ transforms.rotate_u(second_joint_angle_1, device=device)
             @ self.kinematics_standard_orientation
         )
         first_joint_angle_1 = torch.atan2(
-            v_1[:, 1] * normal_after_first_deviation[:, 2, 0]
-            - v_1[:, 2] * normal_after_first_deviation[:, 1, 0],
-            v_1[:, 1] * normal_after_first_deviation[:, 1, 0]
-            + v_1[:, 2] * normal_after_first_deviation[:, 2, 0],
+            v_1[:, indices.n] * normal_after_first_deviation[:, indices.u]
+            - v_1[:, indices.u] * normal_after_first_deviation[:, indices.n],
+            v_1[:, indices.n] * normal_after_first_deviation[:, indices.n]
+            + v_1[:, indices.u] * normal_after_first_deviation[:, indices.u],
         )
         v_2 = (
             second_rotation_axis_deviations
-            @ transforms.rotate_u(second_joint_angle_2[:, 0], device=device)
+            @ transforms.rotate_u(second_joint_angle_2, device=device)
             @ self.kinematics_standard_orientation
         )
         first_joint_angle_2 = torch.atan2(
-            v_2[:, 1] * normal_after_first_deviation[:, 2, 0]
-            - v_2[:, 2] * normal_after_first_deviation[:, 1, 0],
-            v_2[:, 1] * normal_after_first_deviation[:, 1, 0]
-            + v_2[:, 2] * normal_after_first_deviation[:, 2, 0],
+            v_2[:, indices.n] * normal_after_first_deviation[:, indices.u]
+            - v_2[:, indices.u] * normal_after_first_deviation[:, indices.n],
+            v_2[:, indices.n] * normal_after_first_deviation[:, indices.n]
+            + v_2[:, indices.u] * normal_after_first_deviation[:, indices.u],
         )
 
+        # Wrap both solutions into [-pi, pi].
         first_joint_angle_1 = torch.atan2(
             torch.sin(first_joint_angle_1), torch.cos(first_joint_angle_1)
         )
@@ -424,15 +465,11 @@ class RigidBody(Kinematics):
 
         # Determine possible motor positions.
         motor_positions_1 = self.actuators.angles_to_motor_positions(
-            angles=torch.stack(
-                [first_joint_angle_1, second_joint_angle_1[:, 0]], dim=-1
-            ),
+            angles=torch.stack([first_joint_angle_1, second_joint_angle_1], dim=-1),
             device=device,
         )
         motor_positions_2 = self.actuators.angles_to_motor_positions(
-            angles=torch.stack(
-                [first_joint_angle_2, second_joint_angle_2[:, 0]], dim=-1
-            ),
+            angles=torch.stack([first_joint_angle_2, second_joint_angle_2], dim=-1),
             device=device,
         )
 
@@ -450,7 +487,9 @@ class RigidBody(Kinematics):
         solution_2_valid = valid_2.all(dim=1)
 
         # Detect active heliostats where neither solution works.
-        invalid_rows = torch.nonzero(~(solution_1_valid | solution_2_valid))[:, 0]
+        invalid_rows = torch.nonzero(~(solution_1_valid | solution_2_valid))[
+            :, indices.squeeze_index
+        ]
 
         if invalid_rows.numel() > 0:
             log.warning(
@@ -541,41 +580,36 @@ class RigidBody(Kinematics):
         last_iteration_loss = None
 
         for _ in range(max_num_iterations):
+            # Forward kinematics to get orientation from initial motor positions.
             orientations = self._compute_orientations_from_motor_positions(
                 motor_positions=motor_positions,
                 device=device,
             )
 
-            concentrator_normals = orientations @ torch.tensor(
-                [0.0, -1.0, 0.0, 0.0],
-                device=device,
-            )
+            # The kinematic system is calibrated such that the mirror normals point south (0, -1, 0) ENU in its reference position.
+            concentrator_normals = orientations @ self.kinematics_standard_orientation
+            concentrator_origins = orientations @ self.homogeneous_origin
 
-            concentrator_origins = orientations @ torch.tensor(
-                [0.0, 0.0, 0.0, 1.0],
-                device=device,
-            )
-
+            # Calculate desired normal from ray direction and aim point.
             desired_reflection_directions = torch.nn.functional.normalize(
-                aim_points[:, :3] - concentrator_origins[:, :3],
+                aim_points[:, : indices.slice_fourth_dimension]
+                - concentrator_origins[:, : indices.slice_fourth_dimension],
                 p=2,
                 dim=1,
                 eps=1e-8,
             )
-
             desired_concentrator_normals = torch.nn.functional.normalize(
-                -incident_ray_directions[:, :3] + desired_reflection_directions,
+                -incident_ray_directions[:, : indices.slice_fourth_dimension]
+                + desired_reflection_directions,
                 p=2,
                 dim=1,
                 eps=1e-8,
             )
-
             desired_concentrator_normals = (
                 coordinates.convert_3d_directions_to_4d_format(
                     desired_concentrator_normals, device=device
                 )
             )
-
             loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(
                 dim=-1
             )
@@ -583,10 +617,11 @@ class RigidBody(Kinematics):
             # Stop if converged.
             if isinstance(last_iteration_loss, torch.Tensor):
                 eps = torch.abs(last_iteration_loss - loss)
-                if torch.any(eps <= min_eps):
+                if torch.all(eps <= min_eps):
                     break
             last_iteration_loss = loss
 
+            # Use inverse kinematics to update motor positions given the desired normal vector.
             motor_positions = self._compute_motor_positions_from_normal(
                 normals=desired_concentrator_normals, device=device
             )
