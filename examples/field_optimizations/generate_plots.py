@@ -12,7 +12,7 @@ from matplotlib.gridspec import GridSpec
 from scipy.stats import gaussian_kde
 
 from artist.flux import bitmap
-from artist.geometry import coordinates, transforms
+from artist.geometry import coordinates
 from artist.optim.loss import KLDivergenceLoss
 from artist.scenario.scenario import Scenario
 from artist.util.env import get_device
@@ -121,159 +121,133 @@ def plot_surface_reconstruction_flux(
     results_number : int
         Identifier of the results run.
     """
-    plot_data = results["surface_reconstruction"]["flux_plot_data"]
-    number_of_heliostats = len(plot_data)
-    fig, axes = plt.subplots(number_of_heliostats, 7, figsize=(35, 15))
-    fontsize = 28
-    for index in range(1):
-        heliostat_name = "AK54"
-        heliostat_data = plot_data[heliostat_name]
-        axes[index, 0].imshow(
-            heliostat_data["fluxes"][0].cpu().detach(), cmap="inferno"
-        )
-        axes[index, 0].set_title("Calibration Flux", fontsize=fontsize)
-        axes[index, 0].axis("off")
-
-        axes[index, 1].imshow(
-            heliostat_data["fluxes"][1].cpu().detach(), cmap="inferno"
-        )
-        axes[index, 1].set_title("Surface not reconstructed", fontsize=fontsize)
-        axes[index, 1].axis("off")
-
-        axes[index, 2].imshow(
-            heliostat_data["fluxes"][2].cpu().detach(), cmap="inferno"
-        )
-        axes[index, 2].set_title("Surface reconstructed", fontsize=fontsize)
-        axes[index, 2].axis("off")
-
-        reference_direction = torch.tensor([0.0, 0.0, 1.0], device=torch.device("cpu"))
-        canting = heliostat_data["canting"].cpu().detach()
-
-        # Process original deflectometry data.
-        deflectometry_original = (
-            results["deflectometry_original"][heliostat_name].cpu().detach()
-        )
-        ones = torch.ones_like(deflectometry_original, device=torch.device("cpu"))
-        deflectometry_original = torch.cat(
-            (deflectometry_original, ones[..., 0, None]), dim=-1
-        )
-        deflectometry_uncanted_original = transforms.perform_canting(
-            canting_angles=canting.expand(2, -1, -1, -1),
-            data=deflectometry_original,
-            inverse=True,
-            device=torch.device("cpu"),
-        )
-        deflectometry_points_original = deflectometry_uncanted_original[
-            0, :, :, :3
-        ].reshape(-1, 3)
-        deflectometry_normals_original = torch.nn.functional.normalize(
-            deflectometry_uncanted_original[1, :, :, :3], dim=-1
-        ).reshape(-1, 3)
-        cos_theta_deflectometry_original = (
-            deflectometry_normals_original @ reference_direction
-        )
-        angles_deflectometry_original = torch.clip(
-            torch.arccos(torch.clip(cos_theta_deflectometry_original, -1.0, 1.0)),
-            -0.1,
-            0.1,
-        )
-        sc3 = axes[index, 3].scatter(
-            x=deflectometry_points_original[:, 0],
-            y=deflectometry_points_original[:, 1],
-            c=deflectometry_points_original[:, 2],
-            cmap="inferno",
-            vmin=0.0345,
-            vmax=0.036,
-        )
-        axes[index, 3].set_title("Deflectometry Points", fontsize=fontsize)
-        axes[index, 3].axis("off")
-        axes[index, 3].set_aspect("equal", adjustable="box")
-        cbar3 = fig.colorbar(
-            sc3, ax=axes[index, 3], orientation="horizontal", fraction=0.046, pad=0.1
-        )
-        cbar3.set_label("m", fontsize=fontsize)
-        cbar3.ax.tick_params(labelsize=23)
-
-        sc4 = axes[index, 4].scatter(
-            x=deflectometry_points_original[:, 0],
-            y=deflectometry_points_original[:, 1],
-            c=angles_deflectometry_original,
-            cmap="inferno",
-            vmin=0.0,
-            vmax=0.005,
-        )
-        axes[index, 4].set_title("Deflectometry Normals", fontsize=fontsize)
-        axes[index, 4].axis("off")
-        axes[index, 4].set_aspect("equal", adjustable="box")
-        cbar4 = fig.colorbar(
-            sc4, ax=axes[index, 4], orientation="horizontal", fraction=0.046, pad=0.1
-        )
-        cbar4.set_label("Angle (rad)", fontsize=fontsize)
-        cbar4.ax.tick_params(labelsize=23)
-
-        # Process reconstructed data.
-        points_uncanted = transforms.perform_canting(
-            canting_angles=canting.expand(2, -1, -1, -1),
-            data=heliostat_data["surface_points"].cpu().detach().reshape(2, 4, -1, 4),
-            inverse=True,
-            device=torch.device("cpu"),
-        )
-        normals_uncanted = transforms.perform_canting(
-            canting_angles=canting.expand(2, -1, -1, -1),
-            data=heliostat_data["surface_normals"].cpu().detach().reshape(2, 4, -1, 4),
-            inverse=True,
-            device=torch.device("cpu"),
-        )
-        reconstructed_points = points_uncanted[1, :, :, :3].reshape(-1, 3)
-        reconstructed_normals = torch.nn.functional.normalize(
-            normals_uncanted[1, :, :, :3], dim=-1
-        ).reshape(-1, 3)
-        cos_theta_reconstructed = reconstructed_normals @ reference_direction
-        angles_reconstructed = torch.clip(
-            torch.arccos(torch.clip(cos_theta_reconstructed, -1.0, 1.0)), -0.1, 0.1
-        )
-        sc5 = axes[index, 5].scatter(
-            x=reconstructed_points[:, 0],
-            y=reconstructed_points[:, 1],
-            c=reconstructed_points[:, 2],
-            cmap="inferno",
-            vmin=0.0345,
-            vmax=0.036,
-        )
-        axes[index, 5].set_title("Reconstructed Points", fontsize=fontsize)
-        axes[index, 5].axis("off")
-        axes[index, 5].set_aspect("equal", adjustable="box")
-        cbar5 = fig.colorbar(
-            sc5, ax=axes[index, 5], orientation="horizontal", fraction=0.046, pad=0.1
-        )
-        cbar5.set_label("m", fontsize=fontsize)
-        cbar5.ax.tick_params(labelsize=23)
-
-        sc6 = axes[index, 6].scatter(
-            x=reconstructed_points[:, 0],
-            y=reconstructed_points[:, 1],
-            c=angles_reconstructed,
-            cmap="inferno",
-            vmin=0.0,
-            vmax=0.005,
-        )
-        axes[index, 6].set_title("Reconstructed Normals", fontsize=fontsize)
-        axes[index, 6].axis("off")
-        axes[index, 6].set_aspect("equal", adjustable="box")
-        cbar6 = fig.colorbar(
-            sc6, ax=axes[index, 6], orientation="horizontal", fraction=0.046, pad=0.1
-        )
-        cbar6.set_label("Angle (rad)", fontsize=fontsize)
-        cbar6.ax.tick_params(labelsize=23)
-
+    col_labels = [
+        "Calibration Flux",
+        "Ideal\\\\Surfaces",
+        "Reconstructed\\\\Surfaces",
+    ]
     save_dir = save_dir / f"run_{results_number}"
     save_dir.mkdir(parents=True, exist_ok=True)
-    filename = save_dir / "surface_reconstruction_flux.png"
-    fig.tight_layout()
-    fig.savefig(filename, dpi=300, bbox_inches="tight")
-    plt.close(fig)
 
-    print(f"Saved surface reconstruction flux plot at: {filename}.")
+    flux_data_before = results["surface_reconstruction"]["flux_plot_data_before"]
+    flux_data_after = results["surface_reconstruction"]["flux_plot_data_after"]
+
+    testing_loss_pixel_1 = results["surface_reconstruction"]["loss_history"][0][0][0][
+        "test_loss"
+    ]["pixel_loss"]
+    testing_loss_pixel_2 = results["surface_reconstruction"]["loss_history"][1][0][0][
+        "test_loss"
+    ]["pixel_loss"]
+    testing_loss_pixel_3 = results["surface_reconstruction"]["loss_history"][2][0][0][
+        "test_loss"
+    ]["pixel_loss"]
+    testing_errors_pixel = (
+        torch.cat(
+            [testing_loss_pixel_1, testing_loss_pixel_2, testing_loss_pixel_3], dim=0
+        )
+        .cpu()
+        .detach()
+        .numpy()
+    )
+
+    testing_loss_kl_div_1 = results["surface_reconstruction"]["loss_history"][0][0][0][
+        "test_loss"
+    ]["kl_div"]
+    testing_loss_kl_div_2 = results["surface_reconstruction"]["loss_history"][1][0][0][
+        "test_loss"
+    ]["kl_div"]
+    testing_loss_kl_div_3 = results["surface_reconstruction"]["loss_history"][2][0][0][
+        "test_loss"
+    ]["kl_div"]
+    testing_errors_kl_div = (
+        torch.cat(
+            [testing_loss_kl_div_1, testing_loss_kl_div_2, testing_loss_kl_div_3], dim=0
+        )
+        .cpu()
+        .detach()
+        .numpy()
+    )
+
+    heliostat_names = list(flux_data_before.keys())
+
+    for heliostat_idx, heliostat_name in enumerate(heliostat_names):
+        if heliostat_idx == 10:
+            break
+        pixel_loss = testing_errors_pixel[heliostat_idx].item()
+        kl_div = testing_errors_kl_div[heliostat_idx].item()
+        measured_flux = flux_data_before[heliostat_name]["measured_flux"].detach().cpu()
+
+        artist_flux_before = (
+            flux_data_before[heliostat_name]["artist_flux"].detach().cpu()
+        )
+
+        artist_flux_after = (
+            flux_data_after[heliostat_name]["artist_flux"].detach().cpu()
+        )
+
+        n_samples = min(2, measured_flux.shape[0])
+
+        measured_flux = measured_flux[:n_samples]
+        artist_flux_before = artist_flux_before[:n_samples]
+        artist_flux_after = artist_flux_after[:n_samples]
+
+        fig, axes = plt.subplots(
+            n_samples,
+            3,
+            figsize=(9, 3 * n_samples),
+        )
+
+        if n_samples == 1:
+            axes = axes[np.newaxis, :]
+
+        for col_idx, label in enumerate(col_labels):
+            axes[0, col_idx].set_title(
+                rf"\textbf{{{label}}}",
+                fontsize=13,
+            )
+
+        for sample_idx in range(n_samples):
+            axes[sample_idx, 0].imshow(
+                measured_flux[sample_idx],
+                cmap=cmap,
+            )
+            axes[sample_idx, 1].imshow(
+                artist_flux_before[sample_idx],
+                cmap=cmap,
+            )
+            axes[sample_idx, 2].imshow(
+                artist_flux_after[sample_idx],
+                cmap=cmap,
+            )
+            axes[sample_idx, 0].set_ylabel(
+                rf"\textbf{{Sample {sample_idx + 1}}}",
+                rotation=90,
+                fontsize=12,
+                labelpad=15,
+            )
+            for col_idx in range(3):
+                axes[sample_idx, col_idx].set_xticks([])
+                axes[sample_idx, col_idx].set_yticks([])
+
+        position = results["heliostat_positions"][heliostat_name]
+        position_str = ", ".join(f"{coord:.2f}" for coord in position[:3])
+
+        fig.suptitle(
+            rf"\textbf{{Heliostat {heliostat_name}}}"
+            + "\n"
+            + rf"\textit{{ENU Position: {position_str}}}"
+            + "\n"
+            + rf"Test Loss Pixel: {pixel_loss:.4f}, "
+            + rf"Test Loss KL Div: {kl_div:.4f}, ",
+            fontsize=15,
+        )
+
+        filename = save_dir / f"surface_reconstruction_{heliostat_name}_flux.png"
+        fig.tight_layout()
+        fig.savefig(filename, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+        print(f"Saved surface reconstruction flux plot at: {filename}.")
 
 
 def plot_surface_error_analysis(
@@ -566,19 +540,6 @@ def plot_kinematics_reconstruction_flux(
             artist_flux_before = artist_flux_before[:n_samples]
             artist_flux_after = artist_flux_after[:n_samples]
 
-            measured_vmin = measured_flux.min().item()
-            measured_vmax = measured_flux.max().item()
-
-            artist_vmin = min(
-                artist_flux_before.min().item(),
-                artist_flux_after.min().item(),
-            )
-
-            artist_vmax = max(
-                artist_flux_before.max().item(),
-                artist_flux_after.max().item(),
-            )
-
             fig, axes = plt.subplots(
                 n_samples,
                 3,
@@ -598,20 +559,14 @@ def plot_kinematics_reconstruction_flux(
                 axes[sample_idx, 0].imshow(
                     measured_flux[sample_idx],
                     cmap=cmap,
-                    vmin=measured_vmin,
-                    vmax=measured_vmax,
                 )
                 axes[sample_idx, 1].imshow(
                     artist_flux_before[sample_idx],
                     cmap=cmap,
-                    vmin=artist_vmin,
-                    vmax=artist_vmax,
                 )
                 axes[sample_idx, 2].imshow(
                     artist_flux_after[sample_idx],
                     cmap=cmap,
-                    vmin=artist_vmin,
-                    vmax=artist_vmax,
                 )
                 axes[sample_idx, 0].set_ylabel(
                     rf"\textbf{{Sample {sample_idx + 1}}}",
@@ -1532,7 +1487,7 @@ if __name__ == "__main__":
     plots_dir = _make_abs(args.plots_dir)
 
     for case in ["baseline", "full_field"]:
-        results_number = 0
+        results_number = 4
         results_path = results_dir / case / f"results_{results_number}.pt"
         plots_path = plots_dir / case
         (plots_path / f"run_{results_number}").mkdir(parents=True, exist_ok=True)
@@ -1582,10 +1537,11 @@ if __name__ == "__main__":
             results=results, save_dir=plots_path, results_number=results_number
         )
 
+        plot_surface_reconstruction_flux(
+            results=results, save_dir=plots_path, results_number=results_number
+        )
+
         # The methods below have not been updated yet.
-        # plot_surface_reconstruction_flux(
-        #     results=results, save_dir=plots_path, results_number=results_number
-        # )
 
         # plot_surface_loss_history(
         #     results=results, save_dir=plots_path, results_number=results_number
