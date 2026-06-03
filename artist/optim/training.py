@@ -272,7 +272,7 @@ def train_test_split(
     incident_ray_directions: torch.Tensor,
     motor_positions: torch.Tensor,
     target_area_indices: torch.Tensor,
-    test_fraction: float = 0.35,
+    test_fraction: float = 0.25,
     device: torch.device | None = None,
 ) -> TrainTestSplit:
     """
