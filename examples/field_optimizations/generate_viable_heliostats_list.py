@@ -175,7 +175,7 @@ def find_calibration_data(
 def split_single_heliostat_all_tasks(
     heliostat_data: dict[str, Any],
     random_generator: random.Random,
-    ratio: float,
+    test_fraction: float,
 ) -> tuple[
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]],
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]],
@@ -189,7 +189,7 @@ def split_single_heliostat_all_tasks(
         Dictionary containing heliostat data with the following keys.
     random_generator : random.Random
         Random number generator used to shuffle the data indices.
-    ratio : float
+    test_fraction : float
         Fraction of samples to include in the testing set.
 
     Returns
@@ -210,7 +210,7 @@ def split_single_heliostat_all_tasks(
     n = len(calibration_properties)
     indices = list(range(n))
     random_generator.shuffle(indices)
-    split = n - int(n * ratio)
+    split = n - int(n * test_fraction)
     testing_indices = indices[split:]
 
     training = (
@@ -234,7 +234,7 @@ def create_heliostat_data_mappings(
     file_path: pathlib.Path,
     number_of_samples_kinematics: int,
     number_of_samples_surfaces: int,
-    ratio: float = 0.35,
+    test_fraction: float = 0.25,
 ) -> None:
     """
     Create training and testing data mappings for heliostat reconstruction tasks.
@@ -253,7 +253,7 @@ def create_heliostat_data_mappings(
         Number of samples to consider for the kinematics reconstruction task.
     number_of_samples_surfaces : int
         Number of samples to consider for the surface reconstruction task.
-    ratio : float
+    test_fraction : float
         Fraction of samples used for training.
     """
     random_generator = random.Random()
@@ -274,7 +274,7 @@ def create_heliostat_data_mappings(
         training, testing = split_single_heliostat_all_tasks(
             heliostat_data=heliostat_data,
             random_generator=random_generator,
-            ratio=ratio,
+            test_fraction=test_fraction,
         )
         heliostat_name, training_calibration, training_kinematics, training_surfaces = (
             training
@@ -299,7 +299,7 @@ def create_heliostat_data_mappings(
         training, testing = split_single_heliostat_all_tasks(
             heliostat_data=heliostat_data,
             random_generator=random_generator,
-            ratio=ratio,
+            test_fraction=test_fraction,
         )
         heliostat_name, training_calibration, training_kinematics, training_surfaces = (
             training
