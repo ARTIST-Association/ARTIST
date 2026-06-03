@@ -217,9 +217,14 @@ def test_kinematics_reconstructor(
 
                 assert "Must be overridden!" in str(exc_info.value)
             else:
-                _ = kinematics_reconstructor.reconstruct_kinematics(
-                    loss_definition=loss_definition, device=device
-                )
+                old_state = torch.are_deterministic_algorithms_enabled()
+                torch.use_deterministic_algorithms(False)
+                try:
+                    _ = kinematics_reconstructor.reconstruct_kinematics(
+                        loss_definition=loss_definition, device=device
+                    )
+                finally:
+                    torch.use_deterministic_algorithms(old_state)
 
                 for index, heliostat_group in enumerate(
                     scenario.heliostat_field.heliostat_groups
