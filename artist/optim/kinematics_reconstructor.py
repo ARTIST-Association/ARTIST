@@ -457,7 +457,7 @@ class KinematicsReconstructor:
         rank = self.ddp_setup["rank"]
 
         if rank == 0:
-            log.info("Beginning kinematics reconstruction with ray tracing.")
+            log.info("Beginning kinematics reconstruction with alignment.")
 
         # Initialize final loss per heliostat, group offset table into global heliostat index space, and
         # per-group loss curves for this rank.
