@@ -240,10 +240,7 @@ class KinematicsReconstructor:
             scenario=self.scenario,
             heliostat_group=heliostat_group,
             blocking_active=False,
-            world_size=self.ddp_setup["heliostat_group_world_size"],
-            rank=self.ddp_setup["heliostat_group_rank"],
             batch_size=self.optimizer_dict[constants.batch_size],
-            random_seed=self.ddp_setup["heliostat_group_rank"],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
         )
@@ -299,7 +296,7 @@ class KinematicsReconstructor:
         )
 
         log.info(
-            "test loss focal spot mean: %.5f, pixel mean: %.5f, kl-div mean: %.5f",
+            "test loss focal spot: %.5f, pixel: %.5f, kl-div: %.5f",
             torch.mean(test_loss_focal_spot).item(),
             torch.mean(test_loss_pixel).item(),
             torch.mean(test_loss_kl_div).item(),
@@ -613,22 +610,6 @@ class KinematicsReconstructor:
                         nan=0.0, posinf=0.0, neginf=0.0
                     )
 
-                    if self.ddp_setup["is_nested"]:
-                        # Reduce gradients within each heliostat group.
-                        for param_group in optimizer.param_groups:
-                            for param in param_group["params"]:
-                                if param.grad is not None:
-                                    param.grad = (
-                                        torch.distributed.nn.functional.all_reduce(
-                                            param.grad,
-                                            op=torch.distributed.ReduceOp.SUM,
-                                            group=self.ddp_setup["process_subgroup"],
-                                        )
-                                    )
-                                    param.grad /= self.ddp_setup[
-                                        "heliostat_group_world_size"
-                                    ]
-
                     optimizer.step()
                     if isinstance(
                         scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
@@ -661,10 +642,7 @@ class KinematicsReconstructor:
                                 scenario=self.scenario,
                                 heliostat_group=heliostat_group,
                                 blocking_active=False,
-                                world_size=self.ddp_setup["heliostat_group_world_size"],
-                                rank=self.ddp_setup["heliostat_group_rank"],
                                 batch_size=self.optimizer_dict[constants.batch_size],
-                                random_seed=self.ddp_setup["heliostat_group_rank"],
                                 dni=self.dni,
                                 bitmap_resolution=self.bitmap_resolution,
                             )
@@ -715,41 +693,12 @@ class KinematicsReconstructor:
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
-        if self.ddp_setup["is_distributed"]:
-            for index, heliostat_group in enumerate(
-                self.scenario.heliostat_field.heliostat_groups
-            ):
-                source = self.ddp_setup["ranks_to_groups_mapping"][index]
-                torch.distributed.broadcast(
-                    heliostat_group.kinematics.rotation_deviation_parameters,
-                    src=source[indices.first_rank_from_group],
-                )
-                torch.distributed.broadcast(
-                    heliostat_group.kinematics.actuators.optimizable_parameters,
-                    src=source[indices.first_rank_from_group],
-                )
-            torch.distributed.all_reduce(
-                final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
-            )
-
-            final_loss_history_all_groups: list[
-                list[dict[str, list[float] | dict[str, torch.Tensor]]]
-            ] = [[] for _ in range(self.ddp_setup["world_size"])]
-            torch.distributed.all_gather_object(
-                final_loss_history_all_groups, loss_history
-            )
-
-            log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
-
-        else:
-            final_loss_history_all_groups = [loss_history]
-
         for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
             heliostat_group.kinematics.rotation_deviation_parameters = (
                 heliostat_group.kinematics.rotation_deviation_parameters.detach()
             )
 
-        return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
+        return final_loss_per_heliostat.detach().cpu(), [loss_history]
 
     def _reconstruct_kinematics_parameters_with_raytracing(
         self,
