@@ -56,9 +56,10 @@ def distribution(device: torch.device) -> torch.Tensor:
 
 
 @pytest.mark.parametrize(
-    "loss, ground_truth_fixture_name, early_stopping_window, scheduler",
+    "loss, ground_truth_fixture_name, early_stopping_window, scheduler, target_area_index",
     [
-        (KLDivergenceLoss(), "distribution", 30, constants.reduce_on_plateau),
+        (KLDivergenceLoss(), "distribution", 30, constants.reduce_on_plateau, 1),
+        (KLDivergenceLoss(), "distribution", 30, constants.cyclic, 3),
     ],
 )
 def test_aim_point_optimizer(
@@ -66,6 +67,7 @@ def test_aim_point_optimizer(
     ground_truth_fixture_name: str,
     early_stopping_window: int,
     scheduler: str,
+    target_area_index: int,
     request: pytest.FixtureRequest,
     ddp_setup_for_testing: DdpSetup,
     device: torch.device,
@@ -148,7 +150,7 @@ def test_aim_point_optimizer(
         scenario=scenario,
         optimization_configuration=optimization_configuration,
         incident_ray_direction=torch.tensor([0.0, 1.0, 0.0, 0.0], device=device),
-        target_area_index=1,
+        target_area_index=target_area_index,
         ground_truth=request.getfixturevalue(ground_truth_fixture_name).to(device),
         dni=800,
         bitmap_resolution=torch.tensor([256, 256], device=device),
@@ -161,9 +163,10 @@ def test_aim_point_optimizer(
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
         expected = torch.load(expected_path, map_location=device, weights_only=True)
-        expected_key = (
-            f"motor_positions_group_{index}_{early_stopping_window}_{device.type}"
-        )
+        expected_key = f"motor_positions_group_{index}_{early_stopping_window}_{device.type}_{target_area_index}"
+
+        expected[expected_key] = heliostat_group.kinematics.motor_positions
+        torch.save(expected, expected_path)
 
         torch.testing.assert_close(
             heliostat_group.kinematics.motor_positions,
