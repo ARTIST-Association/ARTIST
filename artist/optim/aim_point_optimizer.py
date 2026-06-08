@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.optim import training
-from artist.optim.loss import FocalSpotLoss, KLDivergenceLoss, Loss
+from artist.optim.loss import KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import constants, indices
@@ -488,9 +488,6 @@ class AimPointOptimizer:
                 ),
                 device=device,
             )
-
-            if isinstance(loss_definition, FocalSpotLoss):
-                loss = flux_loss
 
             if isinstance(loss_definition, KLDivergenceLoss):
                 # Store references at epoch 0, i.e., baseline flux integral and intercept factors.
