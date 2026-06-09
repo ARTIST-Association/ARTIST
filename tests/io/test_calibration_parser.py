@@ -48,12 +48,10 @@ def test_load_flux_from_png(device: torch.device) -> None:
         device=device,
     )
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_fluxes_from_png"
-        / f"fluxes_{device.type}.pt"
-    )
-
+    expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+    expected_key = f"fluxes_from_png_{device.type}"
 
-    torch.testing.assert_close(extracted_bitmaps, expected, atol=5e-4, rtol=5e-4)
+    torch.testing.assert_close(
+        extracted_bitmaps, expected[expected_key].to(device), atol=5e-4, rtol=5e-4
+    )

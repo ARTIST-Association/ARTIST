@@ -174,6 +174,7 @@ examples/paint_plots/data/
 examples/paint_plots/plots/
 examples/paint_plots/results/
 examples/paint_plots/scenarios/
+examples/field_optimizations/data_dir/
 examples/field_optimizations/data_for_stral/
 examples/field_optimizations/measured_data/
 examples/field_optimizations/plots/

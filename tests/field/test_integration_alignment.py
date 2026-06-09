@@ -157,17 +157,13 @@ def test_integration_alignment(
 
         flux_distributions = flux_distributions + group_bitmaps_per_target
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_bitmaps_integration"
-        / f"{scenario_config}_{device.type}.pt"
-    )
-
+    expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+    expected_key = f"integration_{scenario_config}_{device.type}"
 
     torch.testing.assert_close(
         flux_distributions,
-        expected,
+        expected[expected_key].to(device),
         atol=max(float(flux_distributions.mean().item()) * 0.01, 1e-6),
         rtol=0.01,
     )

@@ -413,17 +413,13 @@ def test_blocking_integration(device: torch.device) -> None:
         device=device,
     )
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_bitmaps_blocking"
-        / f"bitmaps_{device.type}.pt"
-    )
-
+    expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+    expected_key = f"blocking_bitmaps_{device.type}"
 
     torch.testing.assert_close(
         bitmaps_per_heliostat,
-        expected,
+        expected[expected_key].to(device),
         atol=bitmaps_per_heliostat.mean() * 0.01,
         rtol=0.01,
     )
@@ -514,15 +510,16 @@ def test_ray_extinction(device: torch.device) -> None:
         (bitmaps_per_heliostat_no_extinction, bitmaps_per_heliostat_extinction)
     )
 
-    expected_path = (
-        pathlib.Path(ARTIST_ROOT)
-        / "tests/data/expected_bitmaps_ray_extinction"
-        / f"bitmaps_{device.type}.pt"
-    )
-
+    expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
     expected = torch.load(expected_path, map_location=device, weights_only=True)
+    expected_key = f"ray_extinction_bitmaps_{device.type}"
 
-    torch.testing.assert_close(bitmaps, expected, atol=bitmaps.mean() * 0.01, rtol=0.01)
+    torch.testing.assert_close(
+        bitmaps,
+        expected[expected_key].to(device),
+        atol=bitmaps.mean() * 0.01,
+        rtol=0.01,
+    )
     torch.testing.assert_close(
         bitmaps_per_heliostat_no_extinction[0].sum() * (1 - ray_extinction_factor),
         bitmaps_per_heliostat_extinction[0].sum(),

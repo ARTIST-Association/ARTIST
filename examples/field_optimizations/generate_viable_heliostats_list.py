@@ -25,6 +25,10 @@ excluded_heliostats_for_reconstruction : list[str]
     Heliostat names to exclude from the reconstruction process.
 heliostat_list_baseline : list[str]
     List of all heliostat names included in the baseline measurement.
+surface_reconstruction_optimization_configuration : Config
+    Configuration for the surface reconstruction optimization, including the sample limit.
+kinematics_reconstruction_optimization_configuration : Config
+    Configuration for the kinematics reconstruction optimization, including the sample limit.
 """
 
 import argparse
@@ -171,14 +175,13 @@ def find_calibration_data(
 def split_single_heliostat_all_tasks(
     heliostat_data: dict[str, Any],
     random_generator: random.Random,
-    ratio: float,
+    test_fraction: float,
 ) -> tuple[
-    tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]],
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]],
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]],
 ]:
     """
-    Split calibration data for a single heliostat into training, validation and plot sets.
+    Split calibration data for a single heliostat into training and testing sets.
 
     Parameters
     ----------
@@ -186,20 +189,16 @@ def split_single_heliostat_all_tasks(
         Dictionary containing heliostat data with the following keys.
     random_generator : random.Random
         Random number generator used to shuffle the data indices.
-    ratio : float
-        Fraction of samples to include in the training set.
+    test_fraction : float
+        Fraction of samples to include in the testing set.
 
     Returns
     -------
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]]
         Data mapping for the training.
     tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]]
-        Data mapping for the validation.
-    tuple[str, list[pathlib.Path], list[pathlib.Path], list[pathlib.Path]]
-        Data mapping for the plots.
+        Data mapping for the testing.
     """
-    name = heliostat_data["name"]
-
     calibration_properties = heliostat_data["calibrations"]
     kinematics_fluxes = heliostat_data["kinematics_reconstruction_flux_images"]
     surface_fluxes = heliostat_data["surface_reconstruction_flux_images"]
@@ -208,114 +207,121 @@ def split_single_heliostat_all_tasks(
         len(calibration_properties) == len(kinematics_fluxes) == len(surface_fluxes)
     ), "Mismatch in amounts of calibration files!"
 
-    plot_samples = (
-        name,
-        [calibration_properties[0]],
-        [kinematics_fluxes[0]],
-        [surface_fluxes[0]],
-    )
-
     n = len(calibration_properties)
     indices = list(range(n))
     random_generator.shuffle(indices)
-
-    split = int(n * ratio)
-    train_indices = indices[:split]
-    validation_indices = indices[split:]
+    split = n - int(n * test_fraction)
+    testing_indices = indices[split:]
 
     training = (
-        name,
-        [calibration_properties[i] for i in train_indices],
-        [kinematics_fluxes[i] for i in train_indices],
-        [surface_fluxes[i] for i in train_indices],
+        heliostat_data["name"],
+        [calibration_properties[i] for i in indices],
+        [kinematics_fluxes[i] for i in indices],
+        [surface_fluxes[i] for i in indices],
     )
-    validation = (
-        name,
-        [calibration_properties[i] for i in validation_indices],
-        [kinematics_fluxes[i] for i in validation_indices],
-        [surface_fluxes[i] for i in validation_indices],
+    testing = (
+        heliostat_data["name"],
+        [calibration_properties[i] for i in testing_indices],
+        [kinematics_fluxes[i] for i in testing_indices],
+        [surface_fluxes[i] for i in testing_indices],
     )
 
-    return training, validation, plot_samples
+    return training, testing
 
 
 def create_heliostat_data_mappings(
     viable_heliostats: list[Any],
-    heliostats_for_plots: list[str],
-    ratio: float,
     file_path: pathlib.Path,
+    number_of_samples_kinematics: int,
+    number_of_samples_surfaces: int,
+    test_fraction: float = 0.25,
 ) -> None:
     """
-    Create train, validation, and plot data mappings for heliostat reconstruction tasks.
+    Create training and testing data mappings for heliostat reconstruction tasks.
 
-    For each heliostat, calibration measurements are split into training and validation
+    For each heliostat, calibration measurements are split into training and testing
     subsets using a consistent random permutation across calibration properties,
-    kinematics flux images, and surface flux images. Additionally, a single fixed
-    sample (the first measurement before shuffling) is selected for plotting.
+    kinematics flux images, and surface flux images.
 
     Parameters
     ----------
     viable_heliostats : list[dict[str, Any]]
         List of heliostat data dictionaries. Each dictionary must contain:
-    heliostats_for_plots : list[str]
-        List of heliostat names for which plot samples should be generated.
-    ratio : float
-        Fraction of samples used for training.
     file_path : pathlib.Path
         Output path where the resulting mappings will be saved as a JSON file.
+    number_of_samples_kinematics : int
+        Number of samples to consider for the kinematics reconstruction task.
+    number_of_samples_surfaces : int
+        Number of samples to consider for the surface reconstruction task.
+    test_fraction : float
+        Fraction of samples used for training.
     """
     random_generator = random.Random()
 
     training_kinematics_mappings = []
-    validation_kinematics_mappings = []
+    testing_kinematics_mappings = []
     training_surfaces_mappings = []
-    validation_surfaces_mappings = []
-    kinematics_plot_mappings = []
-    surface_plots_mappings = []
+    testing_surfaces_mappings = []
 
-    for heliostat in viable_heliostats:
-        training, validation, plot_sample = split_single_heliostat_all_tasks(
-            heliostat_data=heliostat,
+    for heliostat_data in viable_heliostats:
+        for key in [
+            "calibrations",
+            "kinematics_reconstruction_flux_images",
+            "surface_reconstruction_flux_images",
+            "properties",
+        ]:
+            heliostat_data[key] = heliostat_data[key][:number_of_samples_kinematics]
+        training, testing = split_single_heliostat_all_tasks(
+            heliostat_data=heliostat_data,
             random_generator=random_generator,
-            ratio=ratio,
+            test_fraction=test_fraction,
         )
-
-        name = heliostat["name"]
-
-        _, training_calibration, training_kinematics, training_surfaces = training
-        _, validation_calibration, validation_kinematics, validation_surfaces = (
-            validation
+        heliostat_name, training_calibration, training_kinematics, training_surfaces = (
+            training
         )
-        _, plot_calibration, plot_kinematics, plot_surfaces = plot_sample
-
+        heliostat_name, testing_calibration, testing_kinematics, testing_surfaces = (
+            testing
+        )
         training_kinematics_mappings.append(
-            (name, training_calibration, training_kinematics)
+            (heliostat_name, training_calibration, training_kinematics)
         )
-        validation_kinematics_mappings.append(
-            (name, validation_calibration, validation_kinematics)
+        testing_kinematics_mappings.append(
+            (heliostat_name, testing_calibration, testing_kinematics)
         )
 
+        for key in [
+            "calibrations",
+            "kinematics_reconstruction_flux_images",
+            "surface_reconstruction_flux_images",
+            "properties",
+        ]:
+            heliostat_data[key] = heliostat_data[key][:number_of_samples_surfaces]
+        training, testing = split_single_heliostat_all_tasks(
+            heliostat_data=heliostat_data,
+            random_generator=random_generator,
+            test_fraction=test_fraction,
+        )
+        heliostat_name, training_calibration, training_kinematics, training_surfaces = (
+            training
+        )
+        heliostat_name, testing_calibration, testing_kinematics, testing_surfaces = (
+            testing
+        )
         training_surfaces_mappings.append(
-            (name, training_calibration, training_surfaces)
+            (heliostat_name, training_calibration, training_surfaces)
         )
-        validation_surfaces_mappings.append(
-            (name, validation_calibration, validation_surfaces)
+        testing_surfaces_mappings.append(
+            (heliostat_name, testing_calibration, testing_surfaces)
         )
-
-        if name in heliostats_for_plots:
-            kinematics_plot_mappings.append((name, plot_calibration, plot_kinematics))
-            surface_plots_mappings.append((name, plot_calibration, plot_surfaces))
 
     data_mappings = {
         "kinematics_reconstruction": {
             "training": training_kinematics_mappings,
-            "validation": validation_kinematics_mappings,
-            "plot": kinematics_plot_mappings,
+            "testing": testing_kinematics_mappings,
         },
         "surface_reconstruction": {
             "training": training_surfaces_mappings,
-            "validation": validation_surfaces_mappings,
-            "plot": surface_plots_mappings,
+            "testing": testing_surfaces_mappings,
         },
     }
 
@@ -383,6 +389,12 @@ if __name__ == "__main__":
     heliostat_list_baseline_default = config.get("heliostat_list_baseline", None)
     heliostats_for_plots_default = config.get(
         "heliostats_for_plots", ["AK54", "AM55", "AM56"]
+    )
+    surface_reconstruction_optimization_configuration_default = config.get(
+        "surface_reconstruction_optimization_configuration", {}
+    )
+    kinematics_reconstruction_optimization_configuration_default = config.get(
+        "kinematics_reconstruction_optimization_configuration", {}
     )
 
     parser.add_argument(
@@ -453,6 +465,16 @@ if __name__ == "__main__":
         help="List of heliostat names used for the evaluation plots.",
         default=heliostats_for_plots_default,
     )
+    parser.add_argument(
+        "--surface_reconstruction_optimization_configuration",
+        help="Config.",
+        default=surface_reconstruction_optimization_configuration_default,
+    )
+    parser.add_argument(
+        "--kinematics_reconstruction_optimization_configuration",
+        help="Config.",
+        default=kinematics_reconstruction_optimization_configuration_default,
+    )
 
     # Re-parse the full set of arguments.
     args = parser.parse_args(args=unknown)
@@ -464,6 +486,10 @@ if __name__ == "__main__":
     metadata_file = metadata_dir / args.metadata_file_name
 
     excluded_heliostats: set[str] = set(args.excluded_heliostats_for_reconstruction)
+    surface_optimization_config = args.surface_reconstruction_optimization_configuration
+    kinematics_optimization_config = (
+        args.kinematics_reconstruction_optimization_configuration
+    )
 
     for case in ["baseline", "full_field"]:
         if case == "baseline":
@@ -513,7 +539,7 @@ if __name__ == "__main__":
         # Create dataset splits.
         create_heliostat_data_mappings(
             viable_heliostats=serializable_data,
-            heliostats_for_plots=args.heliostats_for_plots,
-            ratio=0.9,
             file_path=results_dir / case / "dataset_splits.json",
+            number_of_samples_kinematics=kinematics_optimization_config["sample_limit"],
+            number_of_samples_surfaces=surface_optimization_config["sample_limit"],
         )

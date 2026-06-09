@@ -26,7 +26,7 @@ torch.cuda.manual_seed(7)
 
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 348 for the tutorial code.
+# Skip to line 353 for the tutorial code.
 #############################################################################################################
 
 
@@ -402,7 +402,7 @@ heliostat_data_mapping = [
 # heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
 #     base_path=base_path_data,
 #     heliostat_names=heliostat_names_reconstruction,
-#     number_of_measurements=2,
+#     number_of_measurements=4,
 #     image_variant="flux-centered",
 #     randomize=True,
 # )
@@ -411,9 +411,9 @@ heliostat_data_mapping = [
 optimizer_dict = {
     constants.initial_learning_rate: 1e-4,
     constants.tolerance: 1e-5,
-    constants.max_epoch: 100,
+    constants.max_epoch: 200,
     constants.batch_size: 30,
-    constants.log_step: 1,
+    constants.log_step: 3,
     constants.early_stopping_delta: 1e-4,
     constants.early_stopping_patience: 100,
     constants.early_stopping_window: 100,
@@ -449,7 +449,7 @@ data: dict[
     str,
     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ] = {
-    constants.data_parser: PaintCalibrationDataParser(sample_limit=2),
+    constants.data_parser: PaintCalibrationDataParser(sample_limit=4),
     constants.heliostat_data_mapping: heliostat_data_mapping,
 }
 
@@ -502,6 +502,7 @@ with setup_distributed_environment(
         data=data,
         optimization_configuration=optimization_configuration,
         bitmap_resolution=resolution,
+        plot_results=True,
         device=device,
     )
 

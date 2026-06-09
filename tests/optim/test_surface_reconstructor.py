@@ -14,20 +14,20 @@ from artist.util.env import DdpSetup
 
 
 @pytest.mark.parametrize(
-    "loss_class, early_stopping_window, data_parser, scheduler",
+    "loss, early_stopping_window, data_parser, scheduler",
     [
         (
-            KLDivergenceLoss,
+            KLDivergenceLoss(),
             40,
             PaintCalibrationDataParser(),
             constants.reduce_on_plateau,
         ),
-        (PixelLoss, 20, PaintCalibrationDataParser(), constants.cyclic),
-        (PixelLoss, 10, CalibrationDataParser(), constants.cyclic),
+        (PixelLoss(), 10, PaintCalibrationDataParser(), constants.cyclic),
+        (PixelLoss(), 10, CalibrationDataParser(), constants.cyclic),
     ],
 )
 def test_surface_reconstructor(
-    loss_class: Loss,
+    loss: Loss,
     early_stopping_window: int,
     data_parser: CalibrationDataParser | PaintCalibrationDataParser,
     scheduler: str,
@@ -39,8 +39,8 @@ def test_surface_reconstructor(
 
     Parameters
     ----------
-    loss_class : Loss
-        The loss class.
+    loss: Loss
+        The loss definition.
     early_stopping_window : int
         Number of epochs used to estimate loss trend.
     data_parser : CalibrationDataParser
@@ -105,27 +105,16 @@ def test_surface_reconstructor(
                 / "tests/data/field_data/AA39-calibration-properties_1.json",
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-calibration-properties_2.json",
+                pathlib.Path(ARTIST_ROOT)
+                / "tests/data/field_data/AA39-calibration-properties_3.json",
             ],
             [
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-flux-centered_1.png",
                 pathlib.Path(ARTIST_ROOT)
                 / "tests/data/field_data/AA39-flux-centered_2.png",
-            ],
-        ),
-        (
-            "AA31",
-            [
                 pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_1.json",
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-calibration-properties_2.json",
-            ],
-            [
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-flux-centered_1.png",
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/field_data/AA31-flux-centered_2.png",
+                / "tests/data/field_data/AA39-flux-centered_3.png",
             ],
         ),
     ]
@@ -157,25 +146,21 @@ def test_surface_reconstructor(
         data=data,
         optimization_configuration=optimization_configuration,
         device=device,
-    )
-
-    loss_definition = (
-        PixelLoss(scenario=scenario) if loss_class is PixelLoss else KLDivergenceLoss()
+        plot_results=True,
     )
 
     if not isinstance(data_parser, PaintCalibrationDataParser):
         with pytest.raises(NotImplementedError) as exc_info:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_definition=loss_definition, device=device
+                loss_definition=loss, device=device
             )
-
-            assert "Must be overridden!" in str(exc_info.value)
+        assert "Must be overridden!" in str(exc_info.value)
     else:
         old_state = torch.are_deterministic_algorithms_enabled()
         torch.use_deterministic_algorithms(False)
         try:
             _ = surface_reconstructor.reconstruct_surfaces(
-                loss_definition=loss_definition, device=device
+                loss_definition=loss, device=device
             )
         finally:
             torch.use_deterministic_algorithms(old_state)
@@ -183,18 +168,17 @@ def test_surface_reconstructor(
         for index, heliostat_group in enumerate(
             scenario.heliostat_field.heliostat_groups
         ):
-            loss_name = "pixel_loss" if loss_class is PixelLoss else "kl_divergence"
-            expected_path = (
-                pathlib.Path(ARTIST_ROOT)
-                / "tests/data/expected_reconstructed_surfaces"
-                / f"{loss_name}_group_{index}_{early_stopping_window}_{device.type}.pt"
-            )
+            loss_name = "pixel_loss" if isinstance(loss, PixelLoss) else "kl_divergence"
 
+            expected_path = (
+                pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
+            )
             expected = torch.load(expected_path, map_location=device, weights_only=True)
+            expected_key = f"surfaces_{loss_name}_group_{index}_{early_stopping_window}_{device.type}"
 
             torch.testing.assert_close(
                 heliostat_group.nurbs_control_points,
-                expected,
+                expected[expected_key].to(device),
                 atol=5e-3,
                 rtol=5e-3,
             )
