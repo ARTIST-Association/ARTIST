@@ -1,0 +1,38 @@
+# -------------------------------------------------
+# CODECOV CONFIGURATION – place this file at the
+# root of the repository (same level as README.md)
+# -------------------------------------------------
+
+coverage:
+  status:
+    # ----  PROJECT (overall) gate  ----
+    project:
+      default:
+        target: 90               # 90 % overall coverage required
+        informational: false     # Fail the PR if the target is NOT met
+
+    # ----  PATCH (changed lines) gate  ----
+    patch:
+      default:
+        target: 85               # 85 % coverage on the patch required
+        informational: false     # Fail the PR if the target is NOT met
+
+# ----------------------------------------
+# Files / directories to be excluded from
+# coverage calculation
+# ----------------------------------------
+ignore:
+  - "/.figs/*"
+  - "/.github/*"
+  - "/docs/*"
+  - "/examples/*"
+  - "/joss_paper/*"
+  - "/logos/*"
+  - "/tests/*"
+  - "/tutorials/*"
+  - "/.gitignore"
+  - "/*.yaml"
+  - "/.*.md"
+  - "/pyproject.toml"
+  - "/NOTICE"
+  - "/citation.cff"
