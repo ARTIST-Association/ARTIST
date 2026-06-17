@@ -119,7 +119,7 @@ def test_vector_loss(
                 device=device,
             )
         assert (
-            "The vector loss expects reduction_dimensions as keyword argument. Please add this argument."
+            "The vector loss expects 'reduction_dimensions' as keyword argument. Please add this argument."
             in str(exc_info.value)
         )
     else:
