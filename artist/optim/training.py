@@ -324,10 +324,15 @@ def train_test_split(
         1, int(number_of_samples_per_heliostat * test_fraction)
     )
     number_of_train_samples = number_of_samples_per_heliostat - number_of_test_samples
-    starts = torch.arange(number_of_heliostats) * number_of_samples_per_heliostat
-    offsets = torch.arange(number_of_train_samples, number_of_samples_per_heliostat)
+    starts = (
+        torch.arange(number_of_heliostats, device="cpu")
+        * number_of_samples_per_heliostat
+    )
+    offsets = torch.arange(
+        number_of_train_samples, number_of_samples_per_heliostat, device="cpu"
+    )
     train_indices = (
-        torch.arange(0, total_samples, number_of_samples_per_heliostat, device=device)[
+        torch.arange(0, total_samples, number_of_samples_per_heliostat, device="cpu")[
             :, None
         ]
         + torch.arange(number_of_train_samples, device=device)
