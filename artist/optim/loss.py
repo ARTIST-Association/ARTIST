@@ -191,7 +191,7 @@ class FocalSpotLoss(Loss):
                 errors.append(f"Please add '{key}' as keyword argument.")
         if errors:
             raise ValueError(
-                f"The focal spot loss expects '{expected_kwargs}' as keyword arguments. "
+                f"The focal spot loss expects {expected_kwargs} as keyword arguments. "
                 + " ".join(errors)
             )
 
@@ -310,7 +310,7 @@ class PixelLoss(Loss):
                 errors.append(f"Please add '{key}' as keyword argument.")
         if errors:
             raise ValueError(
-                f"The vector loss expects '{expected_kwargs}' as keyword arguments. "
+                f"The vector loss expects {expected_kwargs} as keyword arguments. "
                 + " ".join(errors)
             )
 
