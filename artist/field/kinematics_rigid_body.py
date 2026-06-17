@@ -403,7 +403,8 @@ class RigidBody(Kinematics):
         # n'_e = v_e(θ2) = F2_00 * sin(θ2) - F2_01 * cos(θ2) + F2_02 * 0 = A * sin(θ2) + B * cos(θ2)
         # with A := F2_00 and B := - F2_01
         # In the above equation only θ2 is unknown. It is solved by reducing the expression
-        # to a phase-shifted sinusoid: n'_e = a * sin(θ2 + φ) which results in two possible solutions.
+        # to a phase-shifted sinusoid via n'_e = a * sin(θ2 + φ) with a = sqrt(A^2 + B^2) and φ = atan2(B, A),
+        # which results in two possible solutions:
         second_axis_deviation_00 = second_rotation_axis_deviations[
             :, indices.e, indices.e
         ]
