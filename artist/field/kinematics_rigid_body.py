@@ -400,7 +400,8 @@ class RigidBody(Kinematics):
         # As the first joint rotates around the e-axis, only the n- and u-components change and
         # n'_e = v_e(θ2).
         # Substituting v_e(θ2) back in and considering that the second joint rotates around the u-axis:
-        # n'_e = v_e(θ2) = F2_00 * cos(θ2) - F2_01 * sin(θ2) + F2_02 * 0
+        # n'_e = v_e(θ2) = F2_00 * sin(θ2) - F2_01 * cos(θ2) + F2_02 * 0 = A * sin(θ2) + B * cos(θ2)
+        # with A := F2_00 and B := - F2_01
         # In the above equation only θ2 is unknown. It is solved by reducing the expression
         # to a phase-shifted sinusoid: n'_e = a * sin(θ2 + φ) which results in two possible solutions.
         second_axis_deviation_00 = second_rotation_axis_deviations[
