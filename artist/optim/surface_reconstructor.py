@@ -164,7 +164,7 @@ class SurfaceReconstructor:
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
         Validate the surface reconstruction for a specified heliostat group on the test data.
-        
+
         This validates a surface reconstruction (NURBS-based mirror surface shape + alignment) for a given heliostat group on the test set:
 
         - It builds NURBS surfaces from control points.
