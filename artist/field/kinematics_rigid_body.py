@@ -431,7 +431,7 @@ class RigidBody(Kinematics):
             torch.sin(second_joint_angle_2), torch.cos(second_joint_angle_2)
         )
 
-        # As the second joint angle is now known, the first joint angle can be computed using:
+        # As the second joint angle is now known, the first joint angle can be computed using
         # the expression from above: n' = R_e(θ1) * v(θ2)
         v_1 = (
             second_rotation_axis_deviations
