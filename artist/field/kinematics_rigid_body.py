@@ -335,7 +335,7 @@ class RigidBody(Kinematics):
         This is the inverse kinematics. First the joint angles are computed from the desired normal vector.
         Then the motor positions are computed from the joint angles.
         The inverse kinematics produces two solutions, the valid solution is chosen according to resulting
-        motor positions which must lie within the minimum and maximum allowed motor positions defined within
+        motor positions which must lie within the minimum and maximum allowed motor positions defined in
         the actuator parameters.
 
         Parameters
