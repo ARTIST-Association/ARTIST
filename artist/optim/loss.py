@@ -157,7 +157,7 @@ class FocalSpotLoss(Loss):
         r"""
         Compute the focal spot loss.
 
-        First the focal spots of the prediction and ground truth flux maps are computed, then the loss is computed and reduced
+        First the focal spots of the prediction and ground-truth flux maps are computed, then the loss is computed and reduced
         along the specified dimensions.
 
         Parameters
