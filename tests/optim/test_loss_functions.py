@@ -325,7 +325,7 @@ def test_pixel_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The vector loss expects ['reduction_dimensions'] as keyword arguments. Please add reduction_dimensions as keyword argument."
+            "The vector loss expects ['reduction_dimensions'] as keyword arguments. Please add 'reduction_dimensions' as keyword argument."
             in str(exc_info.value)
         )
 
