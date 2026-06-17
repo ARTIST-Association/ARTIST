@@ -561,7 +561,7 @@ class RigidBody(Kinematics):
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         max_num_iterations : int
-            Maximum number of iterations (default is 2).
+            Maximum number of iterations (default is 4).
         min_eps : float
             Convergence criterion (default is 0.0001).
 
