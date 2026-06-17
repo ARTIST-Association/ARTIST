@@ -528,7 +528,7 @@ def reduce_loss_per_sample(
     -------
     torch.Tensor
         Loss per heliostat.
-        Tensor of shape [number_of_heliostats].
+        Shape is ``[number_of_heliostats]``.
     """
     number_of_heliostats = int(
         loss_per_sample.numel() // number_of_samples_per_heliostat
