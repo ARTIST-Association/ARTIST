@@ -57,7 +57,7 @@ class RigidBody(Kinematics):
     initial_orientation_offsets : torch.Tensor
         Rotation matrix to account for the initial orientation offset between surface mesh and kinematics system.
         Shape is ``[1, 4, 4]``.
-    homogeneous_origin
+    homogeneous_origin : torch.Tensor
         Origin point in 4x4 homogeneous transform matrices.
         Shape is ``[4]``.
 
