@@ -367,7 +367,8 @@ class RigidBody(Kinematics):
         # ref                   : reference direction of the kinematics system (0,-1,0) ENU
         # θ1, θ2                : first_joint_angle, second_joint_angle
         #
-        # This is inverted in the following.
+        # This is inverted in the following, where
+        # θ1 and θ2 are the two unknowns of this inverse problem we want to find out.
 
         first_rotation_axis_deviations = transforms.rotate_n(
             n=self.active_rotation_deviation_parameters[:, indices.first_joint_tilt_n],
