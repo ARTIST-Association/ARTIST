@@ -548,7 +548,7 @@ def test_angle_loss(
         Tensor of variable shape.
     expected : torch.Tensor
         The expected loss.
-        Tensor of shape [number_of_samples].
+        Tensor of shape ``[number_of_samples]``.
     device : torch.device
         The device on which to initialize tensors.
 
