@@ -518,7 +518,7 @@ def reduce_loss_per_sample(
     ----------
     loss_per_sample : torch.Tensor
         Loss per sample.
-        Tensor of shape [number_of_samples].
+        Shape is ``[number_of_samples]``.
     number_of_samples_per_heliostat : int
         Number of samples per heliostat.
     reduction : Callable[..., Any]
