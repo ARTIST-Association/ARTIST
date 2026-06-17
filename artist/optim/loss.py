@@ -112,7 +112,8 @@ class VectorLoss(Loss):
         for key in expected_kwargs:
             if key not in kwargs:
                 raise ValueError(
-                    f"The vector loss expects {key} as keyword argument. Please add this argument."
+                    f"The vector loss expects '{key}' as keyword argument. "
+                    f"Please add this argument."
                 )
 
         loss = self.loss_function(prediction, ground_truth)
@@ -187,10 +188,10 @@ class FocalSpotLoss(Loss):
         errors = []
         for key in expected_kwargs:
             if key not in kwargs:
-                errors.append(f"Please add {key} as keyword argument.")
+                errors.append(f"Please add '{key}' as keyword argument.")
         if errors:
             raise ValueError(
-                f"The focal spot loss expects {expected_kwargs} as keyword arguments. "
+                f"The focal spot loss expects '{expected_kwargs}' as keyword arguments. "
                 + " ".join(errors)
             )
 
@@ -306,10 +307,10 @@ class PixelLoss(Loss):
         errors = []
         for key in expected_kwargs:
             if key not in kwargs:
-                errors.append(f"Please add {key} as keyword argument.")
+                errors.append(f"Please add '{key}' as keyword argument.")
         if errors:
             raise ValueError(
-                f"The vector loss expects {expected_kwargs} as keyword arguments. "
+                f"The vector loss expects '{expected_kwargs}' as keyword arguments. "
                 + " ".join(errors)
             )
 
@@ -383,7 +384,8 @@ class KLDivergenceLoss(Loss):
         for key in expected_kwargs:
             if key not in kwargs:
                 raise ValueError(
-                    f"The KL-divergence loss expects {key} as keyword argument. Please add this argument."
+                    f"The KL-divergence loss expects '{key}' as keyword argument. "
+                    f"Please add this argument."
                 )
 
         eps = 1e-12

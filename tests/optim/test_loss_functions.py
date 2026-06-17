@@ -119,8 +119,8 @@ def test_vector_loss(
                 device=device,
             )
         assert (
-            "The vector loss expects 'reduction_dimensions' as keyword argument. Please add this argument."
-            in str(exc_info.value)
+            "The vector loss expects 'reduction_dimensions' as keyword argument. "
+            "Please add this argument." in str(exc_info.value)
         )
     else:
         result = vector_loss(
@@ -247,7 +247,8 @@ def test_focal_spot_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The focal spot loss expects ['device', 'target_area_indices'] as keyword arguments. Please add device as keyword argument. Please add target_area_indices as keyword argument."
+            "The focal spot loss expects ['device', 'target_area_indices'] as keyword arguments. "
+            "Please add 'device' as keyword argument. Please add 'target_area_indices' as keyword argument."
             in str(exc_info.value)
         )
     else:
@@ -325,7 +326,8 @@ def test_pixel_loss(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The vector loss expects ['reduction_dimensions'] as keyword arguments. Please add 'reduction_dimensions' as keyword argument."
+            "The vector loss expects ['reduction_dimensions'] as keyword arguments. "
+            "Please add 'reduction_dimensions' as keyword argument."
             in str(exc_info.value)
         )
 
@@ -428,8 +430,8 @@ def test_kl_divergence(
                 ground_truth=ground_truth.to(device),
             )
         assert (
-            "The KL-divergence loss expects reduction_dimensions as keyword argument. Please add this argument."
-            in str(exc_info.value)
+            "The KL-divergence loss expects 'reduction_dimensions' as keyword argument. "
+            "Please add this argument." in str(exc_info.value)
         )
     else:
         result = kl_divergence(
