@@ -185,7 +185,7 @@ class KinematicsReconstructor:
         elif (
             self.reconstruction_method == constants.kinematics_reconstruction_alignment
         ):
-            loss, loss_history = self._reconstruct_kinematics_parameters_wih_alignment(
+            loss, loss_history = self._reconstruct_kinematics_parameters_with_alignment(
                 loss_definition=loss_definition,
                 device=device,
             )
@@ -409,7 +409,7 @@ class KinematicsReconstructor:
             plt.savefig(f"heliostat_{heliostat_index}_{plot_name}")
             plt.close(fig)
 
-    def _reconstruct_kinematics_parameters_wih_alignment(
+    def _reconstruct_kinematics_parameters_with_alignment(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
