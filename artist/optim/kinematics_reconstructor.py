@@ -4,11 +4,9 @@ from functools import partial
 from typing import Any, Callable, cast
 
 import torch
-from matplotlib import pyplot as plt
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
-from artist.flux import bitmap
 from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.optim import training
@@ -60,8 +58,6 @@ class KinematicsReconstructor:
         Pixel loss used for validation.
     validation_loss_kl_div : KLDivergenceLoss
         Kullback-Leibler divergence loss used for validation.
-    plot_results : bool
-        Create flux plots in the last epoch of training for each heliostat and all its samples (slow!).
 
     Note
     ----
@@ -86,7 +82,6 @@ class KinematicsReconstructor:
         dni: float | None = None,
         reconstruction_method: str = constants.kinematics_reconstruction_raytracing,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
-        plot_results: bool = False,
     ) -> None:
         """
         Initialize the kinematics optimizer.
@@ -109,8 +104,6 @@ class KinematicsReconstructor:
         bitmap_resolution : torch.Tensor
             The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256, 256])``).
             Shape is ``[2]``.
-        plot_results : bool
-            Create flux plots in the last epoch of training for each heliostat and all its samples (slow!, default is ``False``).
         """
         rank = ddp_setup["rank"]
         if rank == 0:
@@ -138,8 +131,6 @@ class KinematicsReconstructor:
                 f"The kinematics reconstruction method '{reconstruction_method}' is unknown. "
                 f"Please select another reconstruction method and try again!"
             )
-
-        self.plot_results = plot_results
 
     def reconstruct_kinematics(
         self,
@@ -307,107 +298,6 @@ class KinematicsReconstructor:
             "kl_div": test_loss_kl_div,
             "focal_spot_loss": test_loss_focal_spot,
         }
-
-    def _plot_fluxes(
-        self,
-        flux_measured: torch.Tensor,
-        flux_prediction_train: torch.Tensor,
-        flux_prediction_test: torch.Tensor,
-        data_split: training.TrainTestSplit,
-        plot_name: str,
-    ) -> None:
-        """
-        Plot predicted and measured flux maps for each heliostat sample.
-
-        Each row in the generated figure corresponds to one sample of a
-        heliostat, where the left column contains the predicted flux and
-        the right column contains the measured flux.
-        The subplot borders are color-coded to indicate whether a sample
-        belongs to the training samples (green) or testing samples (red)
-        One figure is generated per heliostat.
-
-        Parameters
-        ----------
-        flux_measured : torch.Tensor
-            Ground-truth measured flux maps.
-        flux_prediction_train : torch.Tensor
-            Predicted flux maps of the training samples.
-        flux_prediction_test : torch.Tensor
-            Predicted flux maps of the testing samples.
-        data_split : training.TrainTestSplit
-            Information on the train/test split.
-        plot_name : str
-            Name suffix used when saving the generated plot files.
-        """
-        device = torch.device("cpu")
-
-        flux_predicted = torch.zeros_like(flux_measured, device=device)
-        flux_predicted[data_split.train_indices] = flux_prediction_train
-        flux_predicted[data_split.test_indices] = flux_prediction_test
-        samples_per_heliostat = data_split.number_of_samples_per_heliostat
-        total_samples = flux_measured.shape[0]
-        train_indices = set(data_split.train_indices.tolist())
-        test_indices = set(data_split.test_indices.tolist())
-
-        centers_of_mass_predicted = bitmap.get_center_of_mass(
-            flux_predicted, device=device
-        )
-        centers_of_mass_measured = bitmap.get_center_of_mass(
-            flux_measured, device=device
-        )
-
-        for heliostat_start_index in range(0, total_samples, samples_per_heliostat):
-            fig, axes = plt.subplots(
-                samples_per_heliostat,
-                2,
-                figsize=(8, samples_per_heliostat * 4),
-            )
-            heliostat_index = heliostat_start_index // samples_per_heliostat
-
-            for sample_offset in range(samples_per_heliostat):
-                sample_index = heliostat_start_index + sample_offset
-
-                if sample_index in train_indices:
-                    border_color = "green"
-                    split_name = "TRAIN"
-                elif sample_index in test_indices:
-                    border_color = "red"
-                    split_name = "TEST"
-
-                axes[sample_offset, 0].imshow(flux_predicted[sample_index])
-                axes[sample_offset, 0].set_title(
-                    f"Predicted Flux - Heliostat {heliostat_index} ({split_name})"
-                )
-
-                axes[sample_offset, 1].imshow(flux_measured[sample_index])
-                axes[sample_offset, 1].set_title(
-                    f"Measured Flux - Heliostat {heliostat_index} ({split_name})"
-                )
-
-                for ax in axes[sample_offset, :]:
-                    ax.scatter(
-                        centers_of_mass_measured[sample_index, 0],
-                        centers_of_mass_measured[sample_index, 1],
-                        c="black",
-                        s=30,
-                        marker="o",
-                    )
-                    ax.scatter(
-                        centers_of_mass_predicted[sample_index, 0],
-                        centers_of_mass_predicted[sample_index, 1],
-                        c="red",
-                        s=30,
-                        marker="x",
-                    )
-
-                for spine in axes[sample_offset, :].flat:
-                    for spines in spine.spines.values():
-                        spines.set_edgecolor(border_color)
-                        spines.set_linewidth(4)
-
-            plt.tight_layout()
-            plt.savefig(f"heliostat_{heliostat_index}_{plot_name}")
-            plt.close(fig)
 
     def _reconstruct_kinematics_parameters_with_alignment(
         self,
@@ -629,44 +519,12 @@ class KinematicsReconstructor:
                         )
 
                         with torch.no_grad():
-                            heliostat_group.activate_heliostats(
-                                active_heliostats_mask=data_split.active_heliostats_mask_train,
-                                device=device,
-                            )
-                            heliostat_group.align_surfaces_with_motor_positions(
-                                motor_positions=data_split.motor_positions_train,
-                                active_heliostats_mask=data_split.active_heliostats_mask_train,
-                                device=device,
-                            )
-                            ray_tracer = HeliostatRayTracer(
-                                scenario=self.scenario,
-                                heliostat_group=heliostat_group,
-                                blocking_active=False,
-                                batch_size=self.optimizer_dict[constants.batch_size],
-                                dni=self.dni,
-                                bitmap_resolution=self.bitmap_resolution,
-                            )
-                            flux_prediction_train, _, _, _ = ray_tracer.trace_rays(
-                                incident_ray_directions=data_split.incident_ray_directions_train,
-                                active_heliostats_mask=data_split.active_heliostats_mask_train,
-                                target_area_indices=data_split.target_area_indices_train,
-                                device=device,
-                            )
-                            flux_prediction_test, test_loss = self._validate(
+                            _, test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.mean, dim=-1),
                                 device=device,
                             )
-
-                    if self.plot_results and (is_last_epoch or stop):
-                        self._plot_fluxes(
-                            flux_measured=flux_measured.cpu().detach(),
-                            flux_prediction_train=flux_prediction_train.cpu().detach(),
-                            flux_prediction_test=flux_prediction_test.cpu().detach(),
-                            data_split=data_split,
-                            plot_name=f"alignment_{epoch}",
-                        )
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     if stop:
@@ -938,21 +796,12 @@ class KinematicsReconstructor:
                         )
 
                         with torch.no_grad():
-                            flux_prediction_test, test_loss = self._validate(
+                            _, test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.median, dim=1),
                                 device=device,
                             )
-
-                    if self.plot_results and (is_last_epoch or stop):
-                        self._plot_fluxes(
-                            flux_measured=flux_measured.cpu().detach(),
-                            flux_prediction_train=flux_prediction_train.cpu().detach(),
-                            flux_prediction_test=flux_prediction_test.cpu().detach(),
-                            data_split=data_split,
-                            plot_name=f"raytracing_{epoch}",
-                        )
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     if stop:
