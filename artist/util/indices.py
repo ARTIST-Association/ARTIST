@@ -320,3 +320,5 @@ kinematics_type_index = 0
 """Index of the kinematics type string in the heliostat group type list."""
 actuator_type_index = 1
 """Index of the actuator type string in the heliostat group type list."""
+squeeze_index = 0
+"""Index used to remove a singleton dimension via indexing."""

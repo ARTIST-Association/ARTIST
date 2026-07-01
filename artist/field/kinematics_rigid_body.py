@@ -1,9 +1,15 @@
+import logging
+
 import torch
 
+from artist.field.actuators import Actuators
 from artist.field.kinematics import Kinematics
-from artist.geometry import rotations, transforms
+from artist.geometry import coordinates, rotations, transforms
 from artist.util import constants, indices, type_registry
 from artist.util.env import get_device
+
+log = logging.getLogger(__name__)
+"""A logger for the rigid body kinematics."""
 
 
 class RigidBody(Kinematics):
@@ -43,11 +49,17 @@ class RigidBody(Kinematics):
     active_motor_positions : torch.Tensor
         The motor positions of active heliostats.
         Shape is ``[number_of_active_heliostats, 2]``.
-    artist_standard_orientation : torch.Tensor
-        The standard orientation of the kinematics.
-        Shape is ``[4]``.
     actuators : Actuators
         The actuators used in the kinematics.
+    kinematics_standard_orientation : torch.Tensor
+        Standard orientation of the kinematics system: south (0, -1, 0, 0) in homogeneous ENU.
+        Shape is ``[4]``.
+    initial_orientation_offsets : torch.Tensor
+        Rotation matrix to account for the initial orientation offset between surface mesh and kinematics system.
+        Shape is ``[1, 4, 4]``.
+    homogeneous_origin : torch.Tensor
+        Origin point in 4x4 homogeneous transform matrices.
+        Shape is ``[4]``.
 
     Methods
     -------
@@ -149,11 +161,7 @@ class RigidBody(Kinematics):
             self.motor_positions, device=device
         )
 
-        self.artist_standard_orientation = torch.tensor(
-            [0.0, -1.0, 0.0, 0.0], device=device
-        )
-
-        self.actuators = type_registry.actuator_type_mapping[
+        self.actuators: Actuators = type_registry.actuator_type_mapping[
             actuator_parameters_non_optimizable[
                 0, indices.actuator_type, indices.actuator_one_index
             ].item()
@@ -163,6 +171,26 @@ class RigidBody(Kinematics):
             device=device,
         )
 
+        # The surface points and normals are always sampled from a model (converted NURBS from deflectometry or ideal NURBS) that lays
+        # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since the kinematics in ARTIST expects the
+        # points and normals to be initially oriented to the south, an extra rotation needs to be applied. The orientations of the
+        # two systems are defined here.
+        self.kinematics_standard_orientation = torch.tensor(
+            [0.0, -1.0, 0.0, 0.0], device=device
+        )
+        sampled_surface_orientation = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
+        east_angles, north_angles, up_angles = rotations.decompose_rotations(
+            initial_vector=sampled_surface_orientation[None, :],
+            target_vector=self.kinematics_standard_orientation,
+        )
+        self.initial_orientation_offsets = (
+            transforms.rotate_e(e=east_angles, device=device)
+            @ transforms.rotate_n(n=north_angles, device=device)
+            @ transforms.rotate_u(u=up_angles, device=device)
+        )
+
+        self.homogeneous_origin = torch.tensor([0.0, 0.0, 0.0, 1.0], device=device)
+
     def _compute_orientations_from_motor_positions(
         self,
         motor_positions: torch.Tensor,
@@ -170,6 +198,8 @@ class RigidBody(Kinematics):
     ) -> torch.Tensor:
         """
         Compute orientation matrices from given motor positions without initial orientation offsets.
+
+        This is the forward kinematics.
 
         Parameters
         ----------
@@ -187,12 +217,14 @@ class RigidBody(Kinematics):
             The orientation matrices.
             Shape is ``[number_of_active_heliostats, 4, 4]``.
         """
+        device = get_device(device=device)
+
         joint_angles = self.actuators.motor_positions_to_angles(
             motor_positions=motor_positions,
             device=device,
         )
 
-        initial_orientations = torch.eye(4, device=device).unsqueeze(0)
+        initial_orientations = torch.eye(4, device=device)[None]
 
         # Account for positions.
         initial_orientations = initial_orientations @ transforms.translate_enu(
@@ -291,71 +323,28 @@ class RigidBody(Kinematics):
 
         return orientations
 
-    def _apply_initial_orientation_offsets(
-        self, orientations: torch.Tensor, device: torch.device | None = None
-    ) -> torch.Tensor:
-        """
-        Apply the initial orientation offsets to the given orientation matrices.
-
-        Parameters
-        ----------
-        orientations : torch.Tensor
-            The orientation matrices.
-            Shape is ``[number_of_active_heliostats, 4, 4]``.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        torch.Tensor
-            The orientation matrices with the initial orientation offset.
-            Shape is ``[number_of_active_heliostats, 4, 4]``.
-        """
-        # The surface points and normals are always sampled from a model (converted NURBS from deflectometry or ideal NURBS) that lays
-        # flat on the ground, i.e., the surface normals are pointing upwards [0.0, 0.0, 1.0]. Since ARTIST expects the points and normals
-        # to be initially oriented to the south, an extra rotation needs to be applied.
-        sampled_surface_model_orientation = torch.tensor(
-            [[0.0, 0.0, 1.0, 0.0]], device=device
-        ).expand(self.number_of_active_heliostats, 4)
-        east_angles, north_angles, up_angles = rotations.decompose_rotations(
-            initial_vector=sampled_surface_model_orientation,
-            target_vector=self.artist_standard_orientation,
-        )
-
-        orientations_with_initial_orientation_offsets = (
-            orientations
-            @ transforms.rotate_e(e=east_angles, device=device)
-            @ transforms.rotate_n(n=north_angles, device=device)
-            @ transforms.rotate_u(u=up_angles, device=device)
-        )
-
-        return orientations_with_initial_orientation_offsets
-
-    def incident_ray_directions_to_orientations(
+    def _compute_motor_positions_from_normal(
         self,
-        incident_ray_directions: torch.Tensor,
-        aim_points: torch.Tensor,
+        normals: torch.Tensor,
+        epsilon: float = 1e-8,
         device: torch.device | None = None,
-        max_num_iterations: int = 2,
-        min_eps: float = 0.0001,
     ) -> torch.Tensor:
         """
-        Compute orientation matrices given incident ray directions.
+        Compute the motor positions from a normal vector.
+
+        This is the inverse kinematics. First the joint angles are computed from the desired normal vector.
+        Then the motor positions are computed from the joint angles.
+        The inverse kinematics produces two solutions, the valid solution is chosen according to resulting
+        motor positions which must lie within the minimum and maximum allowed motor positions defined in
+        the actuator parameters.
 
         Parameters
         ----------
-        incident_ray_directions : torch.Tensor
-            The directions of the incident rays as seen from the heliostats.
+        normals : torch.Tensor
+            Concentrator normals.
             Shape is ``[number_of_active_heliostats, 4]``.
-        aim_points : torch.Tensor
-            The aim points for the active heliostats.
-            Shape is ``[number_of_active_heliostats, 4]``.
-        max_num_iterations : int
-            Maximum number of iterations (default is 2).
-        min_eps : float
-            Convergence criterion (default is 0.0001).
+        epsilon : float
+            Small value to avoid divisions by zero (default is 1e-8).
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -364,124 +353,159 @@ class RigidBody(Kinematics):
         Returns
         -------
         torch.Tensor
-            The orientation matrices.
-            Shape is ``[number_of_active_heliostats, 4, 4]``.
+            The joint angles.
+            Shape is ``[number_of_active_heliostats, 2]``.
         """
         device = get_device(device=device)
 
-        motor_positions = torch.zeros(
-            (
-                self.number_of_active_heliostats,
-                constants.rigid_body_number_of_actuators,
-            ),
+        # The forward kinematics model:
+        # n = R_n(τ1n) * R_u(τ1u) * R_e(θ1) * R_e(τ2e) * R_n(τ2n) * R_u(θ2) * ref
+        # where
+        # n                     : normal
+        # R                     : rotation matrices
+        # τ1n, τ1u, τ2e, τ2n    : rotation_deviations for both axes
+        # ref                   : reference direction of the kinematics system (0,-1,0) ENU
+        # θ1, θ2                : first_joint_angle, second_joint_angle
+        #
+        # This is inverted in the following, where
+        # θ1 and θ2 are the two unknowns of this inverse problem we want to find out.
+
+        first_rotation_axis_deviations = transforms.rotate_n(
+            n=self.active_rotation_deviation_parameters[:, indices.first_joint_tilt_n],
+            device=device,
+        ) @ transforms.rotate_u(
+            u=self.active_rotation_deviation_parameters[:, indices.first_joint_tilt_u],
             device=device,
         )
-        last_iteration_loss = None
 
-        for _ in range(max_num_iterations):
-            orientations = self._compute_orientations_from_motor_positions(
-                motor_positions=motor_positions, device=device
-            )
-
-            concentrator_normals = orientations @ torch.tensor(
-                [0, -1, 0, 0], dtype=torch.float32, device=device
-            )
-            concentrator_origins = orientations @ torch.tensor(
-                [0, 0, 0, 1], dtype=torch.float32, device=device
-            )
-
-            # Compute desired normals.
-            desired_reflection_directions = torch.nn.functional.normalize(
-                aim_points - concentrator_origins, p=2, dim=1
-            )
-            desired_concentrator_normals = torch.nn.functional.normalize(
-                -incident_ray_directions + desired_reflection_directions, p=2, dim=1
-            )
-
-            # Compute loss.
-            loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(
-                dim=0
-            )
-
-            # Stop if converged.
-            if isinstance(last_iteration_loss, torch.Tensor):
-                eps = torch.abs(last_iteration_loss - loss)
-                if torch.any(eps <= min_eps):
-                    break
-            last_iteration_loss = loss
-
-            # Analytical solution for joint angles.
-            joint_angles_1 = -torch.arcsin(
-                torch.clamp(
-                    -desired_concentrator_normals[:, indices.e]
-                    / torch.cos(
-                        self.active_translation_deviation_parameters[
-                            :, indices.second_joint_translation_n
-                        ]
-                    ),
-                    min=-1,
-                    max=1,
-                )
-            )
-
-            a = -torch.cos(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.cos(joint_angles_1) + torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_n
-                ]
-            ) * torch.sin(joint_angles_1)
-            b = -torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.cos(joint_angles_1) - torch.cos(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_e
-                ]
-            ) * torch.sin(
-                self.active_translation_deviation_parameters[
-                    :, indices.second_joint_translation_n
-                ]
-            ) * torch.sin(joint_angles_1)
-
-            joint_angles_0 = (
-                torch.arctan2(
-                    a * -desired_concentrator_normals[:, indices.u]
-                    - b * -desired_concentrator_normals[:, indices.n],
-                    a * -desired_concentrator_normals[:, indices.n]
-                    + b * -desired_concentrator_normals[:, indices.u],
-                )
-                - torch.pi
-            )
-
-            joint_angles = torch.stack(
-                [
-                    joint_angles_0,
-                    joint_angles_1,
-                ],
-                dim=1,
-            )
-
-            motor_positions = self.actuators.angles_to_motor_positions(
-                angles=joint_angles, device=device
-            )
-
-        orientations_with_initial_orientation_offsets = (
-            self._apply_initial_orientation_offsets(
-                orientations=orientations, device=device
-            )
+        second_rotation_axis_deviations = transforms.rotate_e(
+            e=self.active_rotation_deviation_parameters[:, indices.second_joint_tilt_e],
+            device=device,
+        ) @ transforms.rotate_n(
+            n=self.active_rotation_deviation_parameters[:, indices.second_joint_tilt_n],
+            device=device,
         )
 
-        self.active_motor_positions = motor_positions
+        # Factor out first-actuator rotation deviations:
+        # n' := F1^T * n
+        # where: F1 = R_n(τ1n) * R_u(τ1u)
+        # This transforms the target normal into the intermediate frame where only (θ1, θ2) remain unknown.
+        normal_after_first_deviation = (
+            first_rotation_axis_deviations.transpose(-1, -2) @ normals[:, :, None]
+        )[:, :, indices.squeeze_index]
 
-        return orientations_with_initial_orientation_offsets
+        # Reduced kinematics after removing first joint rotation deviations:
+        # n' = R_e(θ1) * v(θ2),      with v(θ2) := F2 R_u(θ2) * ref
+        # where: F2 = R_e(τ2e) * R_n(τ2n).
+        # As the first joint rotates around the e-axis, only the n- and u-components change and
+        # n'_e = v_e(θ2).
+        # Substituting v_e(θ2) back in and considering that the second joint rotates around the u-axis:
+        # n'_e = v_e(θ2) = F2_00 * sin(θ2) - F2_01 * cos(θ2) + F2_02 * 0 = A * sin(θ2) + B * cos(θ2)
+        # with A := F2_00 and B := - F2_01
+        # In the above equation only θ2 is unknown. It is solved by reducing the expression
+        # to a phase-shifted sinusoid via n'_e = a * sin(θ2 + φ) with a = sqrt(A^2 + B^2) and φ = atan2(B, A),
+        # which results in two possible solutions:
+        second_axis_deviation_00 = second_rotation_axis_deviations[
+            :, indices.e, indices.e
+        ]
+        second_axis_deviation_01 = second_rotation_axis_deviations[
+            :, indices.e, indices.n
+        ]
+
+        denominator = torch.sqrt(
+            second_axis_deviation_00**2 + second_axis_deviation_01**2
+        )
+        phi = torch.atan2(-second_axis_deviation_01, second_axis_deviation_00)
+
+        ratio = torch.clamp(
+            (normal_after_first_deviation[:, indices.e] / (denominator + epsilon)),
+            -1.0 + epsilon,
+            1.0 - epsilon,
+        )
+        second_joint_angle_1 = torch.arcsin(ratio) - phi
+        second_joint_angle_2 = torch.pi - torch.arcsin(ratio) - phi
+
+        # Wrap both solutions into [-pi, pi].
+        second_joint_angle_1 = torch.atan2(
+            torch.sin(second_joint_angle_1), torch.cos(second_joint_angle_1)
+        )
+        second_joint_angle_2 = torch.atan2(
+            torch.sin(second_joint_angle_2), torch.cos(second_joint_angle_2)
+        )
+
+        # As the second joint angle is now known, the first joint angle can be computed using
+        # the expression from above: n' = R_e(θ1) * v(θ2)
+        v_1 = (
+            second_rotation_axis_deviations
+            @ transforms.rotate_u(second_joint_angle_1, device=device)
+            @ self.kinematics_standard_orientation
+        )
+        first_joint_angle_1 = torch.atan2(
+            v_1[:, indices.n] * normal_after_first_deviation[:, indices.u]
+            - v_1[:, indices.u] * normal_after_first_deviation[:, indices.n],
+            v_1[:, indices.n] * normal_after_first_deviation[:, indices.n]
+            + v_1[:, indices.u] * normal_after_first_deviation[:, indices.u],
+        )
+        v_2 = (
+            second_rotation_axis_deviations
+            @ transforms.rotate_u(second_joint_angle_2, device=device)
+            @ self.kinematics_standard_orientation
+        )
+        first_joint_angle_2 = torch.atan2(
+            v_2[:, indices.n] * normal_after_first_deviation[:, indices.u]
+            - v_2[:, indices.u] * normal_after_first_deviation[:, indices.n],
+            v_2[:, indices.n] * normal_after_first_deviation[:, indices.n]
+            + v_2[:, indices.u] * normal_after_first_deviation[:, indices.u],
+        )
+
+        # Wrap both solutions into [-pi, pi].
+        first_joint_angle_1 = torch.atan2(
+            torch.sin(first_joint_angle_1), torch.cos(first_joint_angle_1)
+        )
+        first_joint_angle_2 = torch.atan2(
+            torch.sin(first_joint_angle_2), torch.cos(first_joint_angle_2)
+        )
+
+        # Determine possible motor positions.
+        motor_positions_1 = self.actuators.angles_to_motor_positions(
+            angles=torch.stack([first_joint_angle_1, second_joint_angle_1], dim=-1),
+            device=device,
+        )
+        motor_positions_2 = self.actuators.angles_to_motor_positions(
+            angles=torch.stack([first_joint_angle_2, second_joint_angle_2], dim=-1),
+            device=device,
+        )
+
+        # Determine valid solution. Prefer motor_positions_1 when valid, otherwise use motor_positions_2.
+        min_pos = self.actuators.active_non_optimizable_parameters[
+            :, indices.actuator_min_motor_position
+        ]
+        max_pos = self.actuators.active_non_optimizable_parameters[
+            :, indices.actuator_max_motor_position
+        ]
+        valid_1 = (motor_positions_1 >= min_pos) & (motor_positions_1 <= max_pos)
+        valid_2 = (motor_positions_2 >= min_pos) & (motor_positions_2 <= max_pos)
+
+        solution_1_valid = valid_1.all(dim=1)
+        solution_2_valid = valid_2.all(dim=1)
+
+        # Detect active heliostats where neither solution works.
+        invalid_rows = torch.nonzero(~(solution_1_valid | solution_2_valid))[
+            :, indices.squeeze_index
+        ]
+
+        if invalid_rows.numel() > 0:
+            log.warning(
+                f"No valid motor position combination for active heliostat number(s): {invalid_rows.tolist()}."
+            )
+
+        motor_positions = torch.where(
+            solution_1_valid[:, None],
+            motor_positions_1,
+            motor_positions_2,
+        )
+
+        return motor_positions
 
     def motor_positions_to_orientations(
         self, motor_positions: torch.Tensor, device: torch.device | None = None
@@ -511,10 +535,100 @@ class RigidBody(Kinematics):
             motor_positions=motor_positions, device=device
         )
 
-        orientations_with_initial_orientation_offsets = (
-            self._apply_initial_orientation_offsets(
-                orientations=orientations, device=device
-            )
-        )
+        return orientations @ self.initial_orientation_offsets
 
-        return orientations_with_initial_orientation_offsets
+    def incident_ray_directions_to_orientations(
+        self,
+        incident_ray_directions: torch.Tensor,
+        aim_points: torch.Tensor,
+        device: torch.device | None = None,
+        max_num_iterations: int = 4,
+        min_eps: float = 0.0001,
+    ) -> torch.Tensor:
+        """
+        Compute orientation matrices given incident ray directions.
+
+        Parameters
+        ----------
+        incident_ray_directions : torch.Tensor
+            The directions of the incident rays as seen from the heliostats.
+            Shape is ``[number_of_active_heliostats, 4]``.
+        aim_points : torch.Tensor
+            The aim points for the active heliostats.
+            Shape is ``[number_of_active_heliostats, 4]``.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+        max_num_iterations : int
+            Maximum number of iterations (default is 4).
+        min_eps : float
+            Convergence criterion (default is 0.0001).
+
+        Returns
+        -------
+        torch.Tensor
+            The orientation matrices.
+            Shape is ``[number_of_active_heliostats, 4, 4]``.
+        """
+        device = get_device(device=device)
+
+        motor_positions = torch.zeros(
+            (
+                self.number_of_active_heliostats,
+                constants.rigid_body_number_of_actuators,
+            ),
+            device=device,
+        )
+        last_iteration_loss = None
+
+        for _ in range(max_num_iterations):
+            # Forward kinematics to get orientation from initial motor positions.
+            orientations = self._compute_orientations_from_motor_positions(
+                motor_positions=motor_positions,
+                device=device,
+            )
+
+            # The kinematic system is calibrated such that the mirror normals point south (0, -1, 0) ENU in its reference position.
+            concentrator_normals = orientations @ self.kinematics_standard_orientation
+            concentrator_origins = orientations @ self.homogeneous_origin
+
+            # Calculate desired normal from ray direction and aim point.
+            desired_reflection_directions = torch.nn.functional.normalize(
+                aim_points[:, : indices.slice_fourth_dimension]
+                - concentrator_origins[:, : indices.slice_fourth_dimension],
+                p=2,
+                dim=1,
+                eps=1e-8,
+            )
+            desired_concentrator_normals = torch.nn.functional.normalize(
+                -incident_ray_directions[:, : indices.slice_fourth_dimension]
+                + desired_reflection_directions,
+                p=2,
+                dim=1,
+                eps=1e-8,
+            )
+            desired_concentrator_normals = (
+                coordinates.convert_3d_directions_to_4d_format(
+                    desired_concentrator_normals, device=device
+                )
+            )
+            loss = torch.abs(desired_concentrator_normals - concentrator_normals).mean(
+                dim=-1
+            )
+
+            # Stop if converged.
+            if isinstance(last_iteration_loss, torch.Tensor):
+                eps = torch.abs(last_iteration_loss - loss)
+                if torch.all(eps <= min_eps):
+                    break
+            last_iteration_loss = loss
+
+            # Use inverse kinematics to update motor positions given the desired normal vector.
+            motor_positions = self._compute_motor_positions_from_normal(
+                normals=desired_concentrator_normals, device=device
+            )
+
+        self.active_motor_positions = motor_positions
+
+        return orientations @ self.initial_orientation_offsets

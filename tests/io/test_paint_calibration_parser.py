@@ -19,7 +19,7 @@ from artist.io import PaintCalibrationDataParser
                         pathlib.Path(ARTIST_ROOT)
                         / "tests/data/field_data/AA39-calibration-properties_1.json",
                         pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_2.json",
+                        / "tests/data/field_data/AA39-calibration-properties_3.json",
                     ],
                 )
             ],
@@ -55,7 +55,7 @@ from artist.io import PaintCalibrationDataParser
                         pathlib.Path(ARTIST_ROOT)
                         / "tests/data/field_data/AA39-calibration-properties_1.json",
                         pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_2.json",
+                        / "tests/data/field_data/AA39-calibration-properties_3.json",
                     ],
                 )
             ],
@@ -110,7 +110,7 @@ from artist.io import PaintCalibrationDataParser
                         pathlib.Path(ARTIST_ROOT)
                         / "tests/data/field_data/AA39-calibration-properties_1.json",
                         pathlib.Path(ARTIST_ROOT)
-                        / "tests/data/field_data/AA39-calibration-properties_2.json",
+                        / "tests/data/field_data/AA39-calibration-properties_3.json",
                     ],
                 )
             ],

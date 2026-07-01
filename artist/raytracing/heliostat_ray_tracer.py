@@ -433,7 +433,7 @@ class HeliostatRayTracer:
                 )
 
             # The variable blocked is all zeros if there is no blocking at all in the scene.
-            # If blocking was activated in the HeliostatRaytracer, blocking will be computed.
+            # If blocking was activated in the HeliostatRayTracer, blocking will be computed.
             number_of_heliostats, number_of_rays, number_of_points = (
                 intersection_distances_target.shape
             )
