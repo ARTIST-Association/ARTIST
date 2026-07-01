@@ -1186,7 +1186,6 @@ def full_field_optimizations(
                 dni=baseline_dni,
                 optimization_configuration=optimization_configuration_kinematics,
                 reconstruction_method=constants.kinematics_reconstruction_alignment,
-                plot_results=True,
             )
             (
                 kinematics_reconstruction_final_loss_per_heliostat,
@@ -1212,7 +1211,6 @@ def full_field_optimizations(
                 dni=baseline_dni,
                 optimization_configuration=optimization_configuration_kinematics,
                 reconstruction_method=constants.kinematics_reconstruction_raytracing,
-                plot_results=True,
             )
             (
                 kinematics_reconstruction_final_loss_per_heliostat,

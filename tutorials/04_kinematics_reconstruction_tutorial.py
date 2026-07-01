@@ -393,7 +393,6 @@ with setup_distributed_environment(
         optimization_configuration=optimization_configuration,
         reconstruction_method=constants.kinematics_reconstruction_alignment,
         bitmap_resolution=resolution,
-        plot_results=True,
     )
     # Reconstruct the kinematics.
     final_loss_per_heliostat = kinematics_reconstructor.reconstruct_kinematics(

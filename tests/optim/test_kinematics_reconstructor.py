@@ -205,7 +205,6 @@ def test_kinematics_reconstructor(
                 data=data,
                 optimization_configuration=optimization_configuration,
                 reconstruction_method=reconstruction_method,
-                plot_results=True,
             )
 
             # Reconstruct the kinematics.
