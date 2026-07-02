@@ -124,81 +124,53 @@ class AimPointOptimizer:
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
 
-    def optimize(
-        self,
-        loss_definition: Loss,
-        device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, dict[str, list], torch.Tensor, torch.Tensor, torch.Tensor]:
-        r"""
-        Optimize the motor positions for optimal aim points.
+    def _initialize_group_parameters(
+        self, device: torch.device
+    ) -> tuple[
+        list[torch.nn.Parameter],
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[torch.Tensor],
+        list[torch.Tensor],
+        torch.Tensor,
+    ]:
+        """
+        Pre-align all heliostat groups and set up their reparameterized motor positions.
 
-        The motor positions are optimized through a reparameterization to ensure stable training
-        across different heliostats with widely varying initial motor positions and ranges. Motor
-        positions can range from 0 to up to ~80000. Instead of directly optimizing the absolute
-        motor positions, which can differ in magnitudes, an unconstrained parameter is optimized.
-        Directly optimizing the absolute motor positions would have very different effects depending
-        on the scale of the motors. For small initial motor positions (e.g. ~100), a gradient update
-        of size 10 may cause a ~10% relative change, drastically altering the motor positions of this
-        heliostat. For large initial motor positions (e.g. ~50000), the same optimizer step would
-        correspond to only a 0.02% relative change in motor positions, effectively freezing the
-        optimization of this heliostat. This mismatch makes it impossible to choose a single learning
-        rate that works robustly across all heliostats.
-        Reparameterizing the motor positions to be optimized defines the optimizable parameter as:
-
-        .. math::
-
-            \text{motor\_positions\_optimized} = \tanh(
-                \text{torch.nn.Parameter(optimizable\_parameter)}
-            )
-
-        The true motor positions can be reconstructed by:
-
-        .. math::
-
-            \text{motor\_positions} = \text{initial\_motor\_positions} +
-            \text{motor\_positions\_normalized} \cdot \text{scale}
-
-        where scale defines the range (e.g. up to ~80000) for adjustments.
-        By optimizing reparameterized instead of raw motor positions, every heliostat sees updates
-        of comparable relative magnitude, regardless of the absolute size of its motors positions.
+        Each group is aligned once to the given incident ray direction and target to obtain the
+        initial motor positions. The optimizable parameter is a zero-initialized reparameterization
+        of the motor positions (see :meth:`optimize`).
 
         Parameters
         ----------
-        loss_definition : Loss
-            The definition of the loss function and pre-processing of the prediction.
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
+        device : torch.device
+            The device on which to perform computations or load tensors and models.
 
         Returns
         -------
+        list[torch.nn.Parameter]
+            The optimizable reparameterized motor position parameters per group.
+        list[torch.Tensor]
+            The reparameterization scales per group.
+        list[torch.Tensor]
+            The initial motor positions per group.
+        list[torch.Tensor]
+            The active heliostats masks per group.
+        list[torch.Tensor]
+            The target area indices per group.
+        list[torch.Tensor]
+            The incident ray directions per group.
         torch.Tensor
-            Final loss of the aim point optimization.
-        dict[str, list]
-            Loss history over epochs, with keys ``"total_loss"``, ``"flux_loss"``,
-            ``"local_flux_constraint"``, ``"intercept_constraint"``, ``"flux_integral_constraint"``,
-            and ``"flux_integral"``. Each value is a list of per-epoch scalar floats.
-        torch.Tensor
-            Final intercept factors for each heliostat.
-        torch.Tensor
-            Final fraction of rays hitting the target, neglecting blocking effects, for each heliostat.
-        torch.Tensor
-            Final fraction of rays not being blocked, for each heliostat.
+            Offsets mapping group-local heliostat indices to global-flat index positions.
         """
-        device = get_device(device)
-        rank = self.ddp_setup["rank"]
+        optimizable_parameters_all_groups: list[torch.nn.Parameter] = []
+        scales_all_groups: list[torch.Tensor] = []
+        initial_motor_positions_all_groups: list[torch.Tensor] = []
 
-        if rank == 0:
-            log.info("Start the aim point optimization.")
-
-        optimizable_parameters_all_groups = []
-        scales_all_groups = []
-        initial_motor_positions_all_groups = []
-
-        active_heliostats_masks_all_groups = []
-        target_area_indices_all_groups = []
-        incident_ray_directions_all_groups = []
+        active_heliostats_masks_all_groups: list[torch.Tensor] = []
+        target_area_indices_all_groups: list[torch.Tensor] = []
+        incident_ray_directions_all_groups: list[torch.Tensor] = []
 
         # Map group-local heliostat indices to global-flat index positions.
         group_offsets = torch.cat(
@@ -275,6 +247,36 @@ class AimPointOptimizer:
                 )
             )
 
+        return (
+            optimizable_parameters_all_groups,
+            scales_all_groups,
+            initial_motor_positions_all_groups,
+            active_heliostats_masks_all_groups,
+            target_area_indices_all_groups,
+            incident_ray_directions_all_groups,
+            group_offsets,
+        )
+
+    def _setup_optimizer_scheduler_early_stopping(
+        self, optimizable_parameters_all_groups: list[torch.nn.Parameter]
+    ) -> tuple[torch.optim.Optimizer, LRScheduler, training.EarlyStopping]:
+        """
+        Create the optimizer, learning rate scheduler, and early stopping.
+
+        Parameters
+        ----------
+        optimizable_parameters_all_groups : list[torch.nn.Parameter]
+            The optimizable reparameterized motor position parameters per group.
+
+        Returns
+        -------
+        torch.optim.Optimizer
+            The Adam optimizer over all group parameter tensors.
+        LRScheduler
+            The learning rate scheduler.
+        training.EarlyStopping
+            The early stopping monitor.
+        """
         # Create one Adam optimizer over all group parameter tensors.
         optimizer = torch.optim.Adam(
             optimizable_parameters_all_groups,
@@ -298,6 +300,25 @@ class AimPointOptimizer:
             relative=True,
         )
 
+        return optimizer, scheduler, early_stopper
+
+    def _get_target_plane_dimensions(self, device: torch.device) -> torch.Tensor:
+        """
+        Determine the target plane dimensions for the optimization target.
+
+        Handles both planar and cylindrical target areas.
+
+        Parameters
+        ----------
+        device : torch.device
+            The device on which to perform computations or load tensors and models.
+
+        Returns
+        -------
+        torch.Tensor
+            The width and height of the target plane.
+            Shape is ``[2]``.
+        """
         target_plane_dimensions = torch.empty(2, device=device)
         target_areas, index = self.scenario.solar_tower.index_to_target_area[
             self.target_area_index
@@ -323,6 +344,469 @@ class AimPointOptimizer:
             target_plane_dimensions[indices.target_area_height] = target_areas.heights[  # type: ignore[attr-defined]
                 cylinder_indices
             ]
+
+        return target_plane_dimensions
+
+    def _align_all_groups(
+        self,
+        optimizer: torch.optim.Optimizer,
+        initial_motor_positions_all_groups: list[torch.Tensor],
+        scales_all_groups: list[torch.Tensor],
+        active_heliostats_masks_all_groups: list[torch.Tensor],
+        device: torch.device,
+    ) -> None:
+        """
+        Align all heliostat groups on this rank from the reparameterized motor positions.
+
+        The true motor positions are reconstructed from the ``tanh``-reparameterized parameters
+        so that blocking can be computed correctly during ray tracing.
+
+        Parameters
+        ----------
+        optimizer : torch.optim.Optimizer
+            The optimizer holding the reparameterized motor position parameters.
+        initial_motor_positions_all_groups : list[torch.Tensor]
+            The initial motor positions per group.
+        scales_all_groups : list[torch.Tensor]
+            The reparameterization scales per group.
+        active_heliostats_masks_all_groups : list[torch.Tensor]
+            The active heliostats masks per group.
+        device : torch.device
+            The device on which to perform computations or load tensors and models.
+        """
+        rank = self.ddp_setup["rank"]
+
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+            heliostat_alignment_group: HeliostatGroup = (
+                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+            )
+
+            # Reconstruct true motor positions from reparameterized version.
+            motor_positions_normalized = torch.tanh(
+                optimizer.param_groups[indices.optimizer_param_group_0]["params"][
+                    heliostat_group_index
+                ]
+            )
+            heliostat_alignment_group.kinematics.motor_positions = (
+                initial_motor_positions_all_groups[heliostat_group_index]
+                + motor_positions_normalized * scales_all_groups[heliostat_group_index]
+            )
+
+            heliostat_alignment_group.activate_heliostats(
+                active_heliostats_mask=active_heliostats_masks_all_groups[
+                    heliostat_group_index
+                ],
+                device=device,
+            )
+
+            # Align heliostats.
+            heliostat_alignment_group.align_surfaces_with_motor_positions(
+                motor_positions=heliostat_alignment_group.kinematics.active_motor_positions,
+                active_heliostats_mask=active_heliostats_masks_all_groups[
+                    heliostat_group_index
+                ],
+                device=device,
+            )
+
+    def _trace_and_accumulate_flux(
+        self,
+        active_heliostats_masks_all_groups: list[torch.Tensor],
+        target_area_indices_all_groups: list[torch.Tensor],
+        incident_ray_directions_all_groups: list[torch.Tensor],
+        group_offsets: torch.Tensor,
+        device: torch.device,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Ray trace all heliostat groups on this rank and accumulate the flux on the target.
+
+        Parameters
+        ----------
+        active_heliostats_masks_all_groups : list[torch.Tensor]
+            The active heliostats masks per group.
+        target_area_indices_all_groups : list[torch.Tensor]
+            The target area indices per group.
+        incident_ray_directions_all_groups : list[torch.Tensor]
+            The incident ray directions per group.
+        group_offsets : torch.Tensor
+            Offsets mapping group-local heliostat indices to global-flat index positions.
+        device : torch.device
+            The device on which to perform computations or load tensors and models.
+
+        Returns
+        -------
+        torch.Tensor
+            The accumulated flux distribution on the target.
+        torch.Tensor
+            The intercept factors per heliostat.
+        torch.Tensor
+            The on-target factors per heliostat.
+        torch.Tensor
+            The blocking factors per heliostat.
+        """
+        rank = self.ddp_setup["rank"]
+
+        total_flux = torch.zeros(
+            (
+                int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
+            ),
+            device=device,
+        )
+        intercept_factors = torch.zeros(
+            (sum(actives.sum() for actives in active_heliostats_masks_all_groups)),
+            device=device,
+        )
+        on_target_factors = torch.zeros_like(intercept_factors, device=device)
+        blocking_factors = torch.zeros_like(intercept_factors, device=device)
+
+        # Trace rays and accumulate fluxes.
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+            heliostat_group: HeliostatGroup = (
+                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+            )
+
+            # Create a ray tracer.
+            ray_tracer = HeliostatRayTracer(
+                scenario=self.scenario,
+                heliostat_group=heliostat_group,
+                blocking_active=True,
+                world_size=self.ddp_setup["heliostat_group_world_size"],
+                rank=self.ddp_setup["heliostat_group_rank"],
+                batch_size=self.optimizer_dict["batch_size"],
+                random_seed=self.ddp_setup["heliostat_group_rank"],
+                bitmap_resolution=self.bitmap_resolution,
+                dni=self.dni,
+            )
+
+            # Perform heliostat-based ray tracing.
+            (
+                flux_distributions,
+                intercept_factor,
+                on_target_factor,
+                blocking_factor,
+            ) = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions_all_groups[
+                    heliostat_group_index
+                ],
+                active_heliostats_mask=active_heliostats_masks_all_groups[
+                    heliostat_group_index
+                ],
+                target_area_indices=target_area_indices_all_groups[
+                    heliostat_group_index
+                ],
+                device=device,
+            )
+            sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+            flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
+                bitmaps_per_heliostat=flux_distributions,
+                target_area_indices=target_area_indices_all_groups[
+                    heliostat_group_index
+                ][sample_indices_for_local_rank],
+                device=device,
+            )[self.target_area_index]
+            total_flux = total_flux + flux_distribution_on_target
+
+            global_indices = (
+                group_offsets[heliostat_group_index] + sample_indices_for_local_rank
+            )
+            intercept_factors[global_indices] = intercept_factor
+            on_target_factors[global_indices] = on_target_factor
+            blocking_factors[global_indices] = blocking_factor
+
+        if self.ddp_setup["is_distributed"]:
+            total_flux = torch.distributed.nn.functional.all_reduce(
+                total_flux,
+                op=torch.distributed.ReduceOp.SUM,
+            )
+
+        return total_flux, intercept_factors, on_target_factors, blocking_factors
+
+    def _compute_kl_constraints(
+        self,
+        flux_loss: torch.Tensor,
+        total_flux: torch.Tensor,
+        intercept_factors: torch.Tensor,
+        epoch: int,
+        flux_integral_reference: torch.Tensor | float,
+        intercept_factors_reference: torch.Tensor | float,
+        lambda_flux_integral: torch.Tensor | float,
+        lambda_intercept: torch.Tensor | float,
+        lambda_local_flux: torch.Tensor | float,
+        rho_flux_integral: float,
+        rho_intercept: float,
+        rho_local_flux: float,
+        max_flux_density_per_pixel: torch.Tensor,
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor | float,
+        torch.Tensor | float,
+        torch.Tensor | float,
+        torch.Tensor | float,
+        torch.Tensor | float,
+    ]:
+        """
+        Compute the Augmented-Lagrangian constraints and the total loss for a KL-divergence loss.
+
+        Three constraints are added: one that maximizes the flux integral, one that maximizes the
+        intercept factor, and one that constrains the local maximum intensity. The Augmented-Lagrangian
+        multipliers are updated and returned so that their state persists across epochs.
+
+        Parameters
+        ----------
+        flux_loss : torch.Tensor
+            The flux loss between predicted and target flux.
+        total_flux : torch.Tensor
+            The accumulated flux distribution on the target.
+        intercept_factors : torch.Tensor
+            The intercept factors per heliostat.
+        epoch : int
+            The current epoch. References are captured in the first epoch.
+        flux_integral_reference : torch.Tensor | float
+            The reference flux integral captured in the first epoch.
+        intercept_factors_reference : torch.Tensor | float
+            The reference intercept factors captured in the first epoch.
+        lambda_flux_integral : torch.Tensor | float
+            The current flux integral multiplier.
+        lambda_intercept : torch.Tensor | float
+            The current intercept multiplier.
+        lambda_local_flux : torch.Tensor | float
+            The current local flux multiplier.
+        rho_flux_integral : float
+            The penalty parameter of the flux integral constraint.
+        rho_intercept : float
+            The penalty parameter of the intercept constraint.
+        rho_local_flux : float
+            The penalty parameter of the local flux constraint.
+        max_flux_density_per_pixel : torch.Tensor
+            The maximum allowed flux density per pixel.
+
+        Returns
+        -------
+        torch.Tensor
+            The total loss.
+        torch.Tensor
+            The flux integral constraint.
+        torch.Tensor
+            The intercept factor constraint.
+        torch.Tensor
+            The local flux constraint.
+        torch.Tensor | float
+            The (possibly updated) reference flux integral.
+        torch.Tensor | float
+            The (possibly updated) reference intercept factors.
+        torch.Tensor | float
+            The updated flux integral multiplier.
+        torch.Tensor | float
+            The updated intercept multiplier.
+        torch.Tensor | float
+            The updated local flux multiplier.
+        """
+        # Store references at epoch 0, i.e., baseline flux integral and intercept factors.
+        if epoch == 0:
+            flux_integral_reference = total_flux.sum().detach()
+            intercept_factors_reference = intercept_factors.detach()
+        # Add Augmented-Lagrangian constraints to ensure that flux integral is maximized,
+        # i.e., intensity increases or stays the same.
+        # Violation if current integral < reference
+        flux_integral_difference = (flux_integral_reference - total_flux.sum()) / (
+            flux_integral_reference + self.epsilon
+        )
+        flux_integral_difference_clamped = torch.clamp(
+            flux_integral_difference, min=0.0
+        )
+        flux_integral_constraint = (
+            lambda_flux_integral * flux_integral_difference_clamped
+            + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
+        )
+
+        # Add Augmented-Lagrangian constraint to ensure that spillage is reduced.
+        # Violation if current intercept < reference (per heliostat, then mean)
+        intercept_factors_differences = (
+            intercept_factors_reference - intercept_factors
+        ) / (intercept_factors_reference + self.epsilon)
+        intercept_factors_differences_clamped = torch.clamp(
+            intercept_factors_differences, min=0.0
+        )
+        intercept_factor_constraint = (
+            lambda_intercept * intercept_factors_differences_clamped
+            + 0.5 * rho_intercept * intercept_factors_differences_clamped**2
+        ).mean()
+
+        # Add Augmented-Lagrangian constraint to ensure that local heat spikes are avoided.
+        # Violation where any pixel > max. allowed density.
+        local_flux_violation = (total_flux - max_flux_density_per_pixel.detach()) / (
+            max_flux_density_per_pixel.detach() + self.epsilon
+        )
+        local_flux_violation_clamped = torch.clamp(local_flux_violation, min=0.0)
+        local_flux_constraint = torch.max(
+            lambda_local_flux * local_flux_violation_clamped
+            + 0.5 * rho_local_flux * local_flux_violation_clamped**2
+        )
+
+        loss = (
+            flux_loss
+            + flux_integral_constraint
+            + intercept_factor_constraint
+            + local_flux_constraint
+        )
+        # Update lambda multipliers.
+        with torch.no_grad():
+            lambda_local_flux = torch.clamp(
+                lambda_local_flux + rho_local_flux * local_flux_violation.max(),
+                min=0.0,
+            )
+            lambda_intercept = torch.clamp(
+                lambda_intercept + rho_intercept * intercept_factors_differences.mean(),
+                min=0.0,
+            )
+            lambda_flux_integral = torch.clamp(
+                lambda_flux_integral + rho_flux_integral * flux_integral_difference,
+                min=0.0,
+            )
+
+        return (
+            loss,
+            flux_integral_constraint,
+            intercept_factor_constraint,
+            local_flux_constraint,
+            flux_integral_reference,
+            intercept_factors_reference,
+            lambda_flux_integral,
+            lambda_intercept,
+            lambda_local_flux,
+        )
+
+    def _synchronize_distributed_gradients(
+        self, optimizer: torch.optim.Optimizer
+    ) -> None:
+        """
+        Reduce and average gradients across all ranks in the global process group.
+
+        This is a no-op when not running in distributed mode.
+
+        Parameters
+        ----------
+        optimizer : torch.optim.Optimizer
+            The optimizer whose parameter gradients are synchronized.
+        """
+        if self.ddp_setup[constants.is_distributed]:  # type: ignore
+            for param_group in optimizer.param_groups:
+                for param in param_group["params"]:
+                    if param.grad is not None:
+                        torch.distributed.all_reduce(
+                            param.grad, op=torch.distributed.ReduceOp.SUM
+                        )
+                        # Average the gradients.
+                        param.grad /= self.ddp_setup[constants.world_size]  # type: ignore
+
+    def _broadcast_motor_positions(self) -> None:
+        """
+        Broadcast the final motor positions of each heliostat group from its source rank.
+
+        This is a no-op when not running in distributed mode.
+        """
+        rank = self.ddp_setup["rank"]
+
+        if self.ddp_setup["is_distributed"]:
+            for index, heliostat_group in enumerate(
+                self.scenario.heliostat_field.heliostat_groups
+            ):
+                source = self.ddp_setup["ranks_to_groups_mapping"][index]
+                torch.distributed.broadcast(
+                    heliostat_group.kinematics.motor_positions,
+                    src=source[indices.first_rank_from_group],
+                )
+
+            log.info(f"Rank: {rank}, synchronized after aim point optimization.")
+
+    def optimize(
+        self,
+        loss_definition: Loss,
+        device: torch.device | None = None,
+    ) -> tuple[torch.Tensor, dict[str, list], torch.Tensor, torch.Tensor, torch.Tensor]:
+        r"""
+        Optimize the motor positions for optimal aim points.
+
+        The motor positions are optimized through a reparameterization to ensure stable training
+        across different heliostats with widely varying initial motor positions and ranges. Motor
+        positions can range from 0 to up to ~80000. Instead of directly optimizing the absolute
+        motor positions, which can differ in magnitudes, an unconstrained parameter is optimized.
+        Directly optimizing the absolute motor positions would have very different effects depending
+        on the scale of the motors. For small initial motor positions (e.g. ~100), a gradient update
+        of size 10 may cause a ~10% relative change, drastically altering the motor positions of this
+        heliostat. For large initial motor positions (e.g. ~50000), the same optimizer step would
+        correspond to only a 0.02% relative change in motor positions, effectively freezing the
+        optimization of this heliostat. This mismatch makes it impossible to choose a single learning
+        rate that works robustly across all heliostats.
+        Reparameterizing the motor positions to be optimized defines the optimizable parameter as:
+
+        .. math::
+
+            \text{motor\_positions\_optimized} = \tanh(
+                \text{torch.nn.Parameter(optimizable\_parameter)}
+            )
+
+        The true motor positions can be reconstructed by:
+
+        .. math::
+
+            \text{motor\_positions} = \text{initial\_motor\_positions} +
+            \text{motor\_positions\_normalized} \cdot \text{scale}
+
+        where scale defines the range (e.g. up to ~80000) for adjustments.
+        By optimizing reparameterized instead of raw motor positions, every heliostat sees updates
+        of comparable relative magnitude, regardless of the absolute size of its motors positions.
+
+        Parameters
+        ----------
+        loss_definition : Loss
+            The definition of the loss function and pre-processing of the prediction.
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+
+        Returns
+        -------
+        torch.Tensor
+            Final loss of the aim point optimization.
+        dict[str, list]
+            Loss history over epochs, with keys ``"total_loss"``, ``"flux_loss"``,
+            ``"local_flux_constraint"``, ``"intercept_constraint"``, ``"flux_integral_constraint"``,
+            and ``"flux_integral"``. Each value is a list of per-epoch scalar floats.
+        torch.Tensor
+            Final intercept factors for each heliostat.
+        torch.Tensor
+            Final fraction of rays hitting the target, neglecting blocking effects, for each heliostat.
+        torch.Tensor
+            Final fraction of rays not being blocked, for each heliostat.
+        """
+        device = get_device(device)
+        rank = self.ddp_setup["rank"]
+
+        if rank == 0:
+            log.info("Start the aim point optimization.")
+
+        (
+            optimizable_parameters_all_groups,
+            scales_all_groups,
+            initial_motor_positions_all_groups,
+            active_heliostats_masks_all_groups,
+            target_area_indices_all_groups,
+            incident_ray_directions_all_groups,
+            group_offsets,
+        ) = self._initialize_group_parameters(device=device)
+
+        optimizer, scheduler, early_stopper = (
+            self._setup_optimizer_scheduler_early_stopping(
+                optimizable_parameters_all_groups=optimizable_parameters_all_groups
+            )
+        )
+
+        target_plane_dimensions = self._get_target_plane_dimensions(device=device)
 
         # Set up constraints.
         flux_integral_reference = 0.0
@@ -359,121 +843,25 @@ class AimPointOptimizer:
         ):
             optimizer.zero_grad()
 
-            total_flux = torch.zeros(
-                (
-                    int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
-                    int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
-                ),
+            # Align all heliostats such that blocking can be computed correctly.
+            self._align_all_groups(
+                optimizer=optimizer,
+                initial_motor_positions_all_groups=initial_motor_positions_all_groups,
+                scales_all_groups=scales_all_groups,
+                active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
                 device=device,
             )
-            intercept_factors = torch.zeros(
-                (sum(actives.sum() for actives in active_heliostats_masks_all_groups)),
-                device=device,
+
+            # Trace rays and accumulate fluxes.
+            total_flux, intercept_factors, on_target_factors, blocking_factors = (
+                self._trace_and_accumulate_flux(
+                    active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
+                    target_area_indices_all_groups=target_area_indices_all_groups,
+                    incident_ray_directions_all_groups=incident_ray_directions_all_groups,
+                    group_offsets=group_offsets,
+                    device=device,
+                )
             )
-            on_target_factors = torch.zeros_like(intercept_factors, device=device)
-            blocking_factors = torch.zeros_like(intercept_factors, device=device)
-
-            # First per-group loop: Align all heliostats such that blocking can be computed correctly.
-            for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][
-                rank
-            ]:
-                heliostat_alignment_group: HeliostatGroup = (
-                    self.scenario.heliostat_field.heliostat_groups[
-                        heliostat_group_index
-                    ]
-                )
-
-                # Reconstruct true motor positions from reparameterized version.
-                motor_positions_normalized = torch.tanh(
-                    optimizer.param_groups[indices.optimizer_param_group_0]["params"][
-                        heliostat_group_index
-                    ]
-                )
-                heliostat_alignment_group.kinematics.motor_positions = (
-                    initial_motor_positions_all_groups[heliostat_group_index]
-                    + motor_positions_normalized
-                    * scales_all_groups[heliostat_group_index]
-                )
-
-                heliostat_alignment_group.activate_heliostats(
-                    active_heliostats_mask=active_heliostats_masks_all_groups[
-                        heliostat_group_index
-                    ],
-                    device=device,
-                )
-
-                # Align heliostats.
-                heliostat_alignment_group.align_surfaces_with_motor_positions(
-                    motor_positions=heliostat_alignment_group.kinematics.active_motor_positions,
-                    active_heliostats_mask=active_heliostats_masks_all_groups[
-                        heliostat_group_index
-                    ],
-                    device=device,
-                )
-
-            # Second per-group loop: Trace rays and accumulate fluxes.
-            for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][
-                rank
-            ]:
-                heliostat_group: HeliostatGroup = (
-                    self.scenario.heliostat_field.heliostat_groups[
-                        heliostat_group_index
-                    ]
-                )
-
-                # Create a ray tracer.
-                ray_tracer = HeliostatRayTracer(
-                    scenario=self.scenario,
-                    heliostat_group=heliostat_group,
-                    blocking_active=True,
-                    world_size=self.ddp_setup["heliostat_group_world_size"],
-                    rank=self.ddp_setup["heliostat_group_rank"],
-                    batch_size=self.optimizer_dict["batch_size"],
-                    random_seed=self.ddp_setup["heliostat_group_rank"],
-                    bitmap_resolution=self.bitmap_resolution,
-                    dni=self.dni,
-                )
-
-                # Perform heliostat-based ray tracing.
-                (
-                    flux_distributions,
-                    intercept_factor,
-                    on_target_factor,
-                    blocking_factor,
-                ) = ray_tracer.trace_rays(
-                    incident_ray_directions=incident_ray_directions_all_groups[
-                        heliostat_group_index
-                    ],
-                    active_heliostats_mask=active_heliostats_masks_all_groups[
-                        heliostat_group_index
-                    ],
-                    target_area_indices=target_area_indices_all_groups[
-                        heliostat_group_index
-                    ],
-                    device=device,
-                )
-                sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
-                flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
-                    bitmaps_per_heliostat=flux_distributions,
-                    target_area_indices=target_area_indices_all_groups[
-                        heliostat_group_index
-                    ][sample_indices_for_local_rank],
-                    device=device,
-                )[self.target_area_index]
-                total_flux = total_flux + flux_distribution_on_target
-
-                global_indices = (
-                    group_offsets[heliostat_group_index] + sample_indices_for_local_rank
-                )
-                intercept_factors[global_indices] = intercept_factor
-                on_target_factors[global_indices] = on_target_factor
-                blocking_factors[global_indices] = blocking_factor
-
-            if self.ddp_setup["is_distributed"]:
-                total_flux = torch.distributed.nn.functional.all_reduce(
-                    total_flux,
-                    op=torch.distributed.ReduceOp.SUM,
-                )
 
             # Flux loss: Compare predicted total flux vs. ground truth.
             flux_loss = loss_definition(
@@ -490,85 +878,35 @@ class AimPointOptimizer:
             )
 
             if isinstance(loss_definition, KLDivergenceLoss):
-                # Store references at epoch 0, i.e., baseline flux integral and intercept factors.
-                if epoch == 0:
-                    flux_integral_reference = total_flux.sum().detach()
-                    intercept_factors_reference = intercept_factors.detach()
-                # Add Augmented-Lagrangian constraints to ensure that flux integral is maximized,
-                # i.e., intensity increases or stays the same.
-                # Violation if current integral < reference
-                flux_integral_difference = (
-                    flux_integral_reference - total_flux.sum()
-                ) / (flux_integral_reference + self.epsilon)
-                flux_integral_difference_clamped = torch.clamp(
-                    flux_integral_difference, min=0.0
+                (
+                    loss,
+                    flux_integral_constraint,
+                    intercept_factor_constraint,
+                    local_flux_constraint,
+                    flux_integral_reference,
+                    intercept_factors_reference,
+                    lambda_flux_integral,
+                    lambda_intercept,
+                    lambda_local_flux,
+                ) = self._compute_kl_constraints(
+                    flux_loss=flux_loss,
+                    total_flux=total_flux,
+                    intercept_factors=intercept_factors,
+                    epoch=epoch,
+                    flux_integral_reference=flux_integral_reference,
+                    intercept_factors_reference=intercept_factors_reference,
+                    lambda_flux_integral=lambda_flux_integral,
+                    lambda_intercept=lambda_intercept,
+                    lambda_local_flux=lambda_local_flux,
+                    rho_flux_integral=rho_flux_integral,
+                    rho_intercept=rho_intercept,
+                    rho_local_flux=rho_local_flux,
+                    max_flux_density_per_pixel=max_flux_density_per_pixel,
                 )
-                flux_integral_constraint = (
-                    lambda_flux_integral * flux_integral_difference_clamped
-                    + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
-                )
-
-                # Add Augmented-Lagrangian constraint to ensure that spillage is reduced.
-                # Violation if current intercept < reference (per heliostat, then mean)
-                intercept_factors_differences = (
-                    intercept_factors_reference - intercept_factors
-                ) / (intercept_factors_reference + self.epsilon)
-                intercept_factors_differences_clamped = torch.clamp(
-                    intercept_factors_differences, min=0.0
-                )
-                intercept_factor_constraint = (
-                    lambda_intercept * intercept_factors_differences_clamped
-                    + 0.5 * rho_intercept * intercept_factors_differences_clamped**2
-                ).mean()
-
-                # Add Augmented-Lagrangian constraint to ensure that local heat spikes are avoided.
-                # Violation where any pixel > max. allowed density.
-                local_flux_violation = (
-                    total_flux - max_flux_density_per_pixel.detach()
-                ) / (max_flux_density_per_pixel.detach() + self.epsilon)
-                local_flux_violation_clamped = torch.clamp(
-                    local_flux_violation, min=0.0
-                )
-                local_flux_constraint = torch.max(
-                    lambda_local_flux * local_flux_violation_clamped
-                    + 0.5 * rho_local_flux * local_flux_violation_clamped**2
-                )
-
-                loss = (
-                    flux_loss
-                    + flux_integral_constraint
-                    + intercept_factor_constraint
-                    + local_flux_constraint
-                )
-                # Update lambda multipliers.
-                with torch.no_grad():
-                    lambda_local_flux = torch.clamp(
-                        lambda_local_flux + rho_local_flux * local_flux_violation.max(),
-                        min=0.0,
-                    )
-                    lambda_intercept = torch.clamp(
-                        lambda_intercept
-                        + rho_intercept * intercept_factors_differences.mean(),
-                        min=0.0,
-                    )
-                    lambda_flux_integral = torch.clamp(
-                        lambda_flux_integral
-                        + rho_flux_integral * flux_integral_difference,
-                        min=0.0,
-                    )
 
             loss.backward()
 
-            # Reduce gradients across all ranks (global process group).
-            if self.ddp_setup[constants.is_distributed]:  # type: ignore
-                for param_group in optimizer.param_groups:
-                    for param in param_group["params"]:
-                        if param.grad is not None:
-                            torch.distributed.all_reduce(
-                                param.grad, op=torch.distributed.ReduceOp.SUM
-                            )
-                            # Average the gradients.
-                            param.grad /= self.ddp_setup[constants.world_size]  # type: ignore
+            self._synchronize_distributed_gradients(optimizer=optimizer)
 
             optimizer.step()
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
@@ -624,17 +962,7 @@ class AimPointOptimizer:
         log.info(f"Rank: {rank}, aim points optimized.")
 
         # Broadcast final motor positions for each heliostat group from source rank to others.
-        if self.ddp_setup["is_distributed"]:
-            for index, heliostat_group in enumerate(
-                self.scenario.heliostat_field.heliostat_groups
-            ):
-                source = self.ddp_setup["ranks_to_groups_mapping"][index]
-                torch.distributed.broadcast(
-                    heliostat_group.kinematics.motor_positions,
-                    src=source[indices.first_rank_from_group],
-                )
-
-            log.info(f"Rank: {rank}, synchronized after aim point optimization.")
+        self._broadcast_motor_positions()
 
         return (
             loss.detach().cpu(),
