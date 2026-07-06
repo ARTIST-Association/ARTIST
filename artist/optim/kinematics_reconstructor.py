@@ -167,11 +167,9 @@ class KinematicsReconstructor:
         device = get_device(device=device)
 
         if self.reconstruction_method == constants.kinematics_reconstruction_raytracing:
-            loss, loss_history = (
-                self._reconstruct_kinematics_flux_driven(
-                    loss_definition=loss_definition,
-                    device=device,
-                )
+            loss, loss_history = self._reconstruct_kinematics_flux_driven(
+                loss_definition=loss_definition,
+                device=device,
             )
         elif (
             self.reconstruction_method == constants.kinematics_reconstruction_alignment
@@ -846,7 +844,7 @@ class KinematicsReconstructor:
                         )
 
                         with torch.no_grad():
-                            _, test_loss = self._validate(
+                            test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.mean, dim=-1),
@@ -1013,7 +1011,7 @@ class KinematicsReconstructor:
                         )
 
                         with torch.no_grad():
-                            _, test_loss = self._validate(
+                            test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 reduction=partial(torch.median, dim=1),

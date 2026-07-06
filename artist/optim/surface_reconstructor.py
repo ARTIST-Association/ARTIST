@@ -4,7 +4,6 @@ from functools import partial
 from typing import Any, cast
 
 import torch
-from matplotlib import pyplot as plt
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
