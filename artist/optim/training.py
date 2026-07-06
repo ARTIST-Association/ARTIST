@@ -335,7 +335,7 @@ def train_test_split(
         torch.arange(0, total_samples, number_of_samples_per_heliostat, device="cpu")[
             :, None
         ]
-        + torch.arange(number_of_train_samples, device=device)
+        + torch.arange(number_of_train_samples, device="cpu")
     ).reshape(-1)
     test_indices = (starts[:, None] + offsets).reshape(-1)
 
