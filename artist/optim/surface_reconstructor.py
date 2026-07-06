@@ -161,7 +161,7 @@ class SurfaceReconstructor:
         data_split: training.TrainTestSplit,
         evaluation_points: torch.Tensor,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    ) -> dict[str, torch.Tensor]:
         """
         Validate the surface reconstruction for a specified heliostat group on the test data.
 
@@ -190,9 +190,6 @@ class SurfaceReconstructor:
 
         Returns
         -------
-        torch.Tensor
-            Predicted flux distributions for the local validation samples.
-            Shape is ``[number_of_local_test_samples, height, width]``.
         dict[str, torch.Tensor]
             Test losses per sample.
         """
@@ -301,88 +298,10 @@ class SurfaceReconstructor:
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return cropped_flux_distributions, {
+        return {
             "pixel_loss": test_loss_pixel,
             "kl_div": test_loss_kl_div,
         }
-
-    def _plot_fluxes(
-        self,
-        flux_measured: torch.Tensor,
-        flux_prediction_train: torch.Tensor,
-        flux_prediction_test: torch.Tensor,
-        data_split: training.TrainTestSplit,
-        plot_name: str,
-    ) -> None:
-        """
-        Plot predicted and measured flux maps for each heliostat sample.
-
-        Each row in the generated figure corresponds to one sample of a
-        heliostat, where the left column contains the predicted flux and
-        the right column contains the measured flux.
-        The subplot borders are color-coded to indicate whether a sample
-        belongs to the training samples (green) or testing samples (red)
-        One figure is generated per heliostat.
-
-        Parameters
-        ----------
-        flux_measured : torch.Tensor
-            Ground-truth measured flux maps.
-        flux_prediction_train : torch.Tensor
-            Predicted flux maps of the training samples.
-        flux_prediction_test : torch.Tensor
-            Predicted flux maps of the testing samples.
-        data_split : training.TrainTestSplit
-            Information on the train/test split.
-        plot_name : str
-            Name suffix used when saving the generated plot files.
-        """
-        device = torch.device("cpu")
-
-        flux_predicted = torch.zeros_like(flux_measured, device=device)
-        flux_predicted[data_split.train_indices] = flux_prediction_train
-        flux_predicted[data_split.test_indices] = flux_prediction_test
-        samples_per_heliostat = data_split.number_of_samples_per_heliostat
-        total_samples = flux_measured.shape[0]
-        train_indices = set(data_split.train_indices.tolist())
-        test_indices = set(data_split.test_indices.tolist())
-
-        for heliostat_start_index in range(0, total_samples, samples_per_heliostat):
-            fig, axes = plt.subplots(
-                samples_per_heliostat,
-                2,
-                figsize=(8, samples_per_heliostat * 4),
-            )
-            heliostat_index = heliostat_start_index // samples_per_heliostat
-
-            for sample_offset in range(samples_per_heliostat):
-                sample_index = heliostat_start_index + sample_offset
-
-                if sample_index in train_indices:
-                    border_color = "green"
-                    split_name = "TRAIN"
-                elif sample_index in test_indices:
-                    border_color = "red"
-                    split_name = "TEST"
-
-                axes[sample_offset, 0].imshow(flux_predicted[sample_index])
-                axes[sample_offset, 0].set_title(
-                    f"Predicted Flux - Heliostat {heliostat_index} ({split_name})"
-                )
-
-                axes[sample_offset, 1].imshow(flux_measured[sample_index])
-                axes[sample_offset, 1].set_title(
-                    f"Measured Flux - Heliostat {heliostat_index} ({split_name})"
-                )
-
-                for spine in axes[sample_offset, :].flat:
-                    for spines in spine.spines.values():
-                        spines.set_edgecolor(border_color)
-                        spines.set_linewidth(4)
-
-            plt.tight_layout()
-            plt.savefig(f"heliostat_{heliostat_index}_{plot_name}")
-            plt.close(fig)
 
     def _initialize_reconstruction_bookkeeping(
         self, device: torch.device
@@ -1166,21 +1085,12 @@ class SurfaceReconstructor:
                         )
 
                         with torch.no_grad():
-                            flux_prediction_test, test_loss = self._validate(
+                            test_loss = self._validate(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
                                 evaluation_points=evaluation_points,
                                 device=device,
                             )
-
-                    if self.plot_results and (is_last_epoch or stop):
-                        self._plot_fluxes(
-                            flux_measured=flux_measured.cpu().detach(),
-                            flux_prediction_train=cropped_flux_predictions.cpu().detach(),
-                            flux_prediction_test=flux_prediction_test.cpu().detach(),
-                            data_split=data_split,
-                            plot_name=f"{epoch}",
-                        )
 
                     # Early stopping when loss did not improve for a predefined number of epochs.
                     if stop:

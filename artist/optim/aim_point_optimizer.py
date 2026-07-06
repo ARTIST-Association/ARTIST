@@ -182,7 +182,7 @@ class AimPointOptimizer:
             ]
         )
 
-        # Per-group pre-alignment and parameterization
+        # Per-group pre-alignment.
         for group_index, group in enumerate(
             self.scenario.heliostat_field.heliostat_groups
         ):
@@ -358,8 +358,7 @@ class AimPointOptimizer:
         """
         Align all heliostat groups on this rank from the reparameterized motor positions.
 
-        The true motor positions are reconstructed from the ``tanh``-reparameterized parameters
-        so that blocking can be computed correctly during ray tracing.
+        The true motor positions are reconstructed from the ``tanh``-reparameterized parameters.
 
         Parameters
         ----------
@@ -843,7 +842,7 @@ class AimPointOptimizer:
         ):
             optimizer.zero_grad()
 
-            # Align all heliostats such that blocking can be computed correctly.
+            # Align all heliostats from all groups.
             self._align_all_groups(
                 optimizer=optimizer,
                 initial_motor_positions_all_groups=initial_motor_positions_all_groups,

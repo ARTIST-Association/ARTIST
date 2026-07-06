@@ -168,7 +168,7 @@ class KinematicsReconstructor:
 
         if self.reconstruction_method == constants.kinematics_reconstruction_raytracing:
             loss, loss_history = (
-                self._reconstruct_kinematics_parameters_with_raytracing(
+                self._reconstruct_kinematics_flux_driven(
                     loss_definition=loss_definition,
                     device=device,
                 )
@@ -176,7 +176,7 @@ class KinematicsReconstructor:
         elif (
             self.reconstruction_method == constants.kinematics_reconstruction_alignment
         ):
-            loss, loss_history = self._reconstruct_kinematics_parameters_with_alignment(
+            loss, loss_history = self._reconstruct_kinematics_alignment_driven(
                 loss_definition=loss_definition,
                 device=device,
             )
@@ -189,7 +189,7 @@ class KinematicsReconstructor:
         data_split: training.TrainTestSplit,
         reduction: Callable[..., Any],
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    ) -> dict[str, torch.Tensor]:
         """
         Validate the kinematic reconstruction for a specified heliostat group on the test data.
 
@@ -208,9 +208,6 @@ class KinematicsReconstructor:
 
         Returns
         -------
-        torch.Tensor
-            Predicted flux distributions for the local validation samples.
-            Shape is ``[number_of_local_test_samples, height, width]``.
         dict[str, torch.Tensor]
             Test losses per sample.
         """
@@ -293,7 +290,7 @@ class KinematicsReconstructor:
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return flux_prediction, {
+        return {
             "pixel_loss": test_loss_pixel,
             "kl_div": test_loss_kl_div,
             "focal_spot_loss": test_loss_focal_spot,
@@ -709,7 +706,7 @@ class KinematicsReconstructor:
 
         return final_loss_history_all_groups
 
-    def _reconstruct_kinematics_parameters_with_alignment(
+    def _reconstruct_kinematics_alignment_driven(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
@@ -888,7 +885,7 @@ class KinematicsReconstructor:
 
         return final_loss_per_heliostat.detach().cpu(), [loss_history]
 
-    def _reconstruct_kinematics_parameters_with_raytracing(
+    def _reconstruct_kinematics_flux_driven(
         self,
         loss_definition: Loss,
         device: torch.device | None = None,
@@ -896,7 +893,7 @@ class KinematicsReconstructor:
         torch.Tensor, list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
     ]:
         """
-        Reconstruct the kinematics parameters using ray tracing.
+        Reconstruct the kinematics parameters using ray tracing and comparing fluxes.
 
         This reconstruction method optimizes the kinematics parameters by extracting the focal points
         of calibration images and using heliostat-tracing.
