@@ -123,27 +123,30 @@ def bitmap_coordinates_to_target_coordinates(
     target_area_indices: torch.Tensor,
     device: torch.device | None = None,
 ) -> torch.Tensor:
-    """
+    r"""
     Convert bitmap pixel coordinates to 4D homogeneous world coordinates on the target surface.
 
     For planar target areas the pixel coordinates are mapped linearly to target plane coordinates.
     For cylindrical target areas the pixel coordinates are mapped to cylindrical surface coordinates
     using the cylinder's radius, opening angle, height, axis, and normal.
 
-    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
+    Bitmaps and the resolution are conceptually defined as: [W, H] # width, height\n
     Tensor memory layout follows PyTorch convention: [H, W] # height, width
 
     The bitmap is treated as a discrete image grid with resolution:
-        - bitmap_resolution = [width, height]
+        - ``bitmap_resolution = [width, height]``
+
     Pixel coordinates follow image indexing conventions:
-        - bitmap_coordinates[..., e] ∈ [0, W-1]
-        - bitmap_coordinates[..., u] ∈ [0, H-1]
+        - ``bitmap_coordinates[..., e]`` ∈ [0, W-1]
+        - ``bitmap_coordinates[..., u]`` ∈ [0, H-1]
+
     They are interpreted as centered pixels:
         - (e + 0.5) / W
         - (u + 0.5) / H
+
     This ensures each pixel represents its spatial cell center rather than its corner.
 
-    The e-axis is intentionally flipped (0.5 - e_norm) to match the desired bitmap orientation.
+    The e-axis is intentionally flipped (0.5 - ``e_norm``) to match the desired bitmap orientation.
     This means: increasing bitmap e → decreases world e.
 
     Parameters
