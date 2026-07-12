@@ -165,9 +165,6 @@ def test_aim_point_optimizer(
         expected = torch.load(expected_path, map_location=device, weights_only=True)
         expected_key = f"motor_positions_group_{index}_{early_stopping_window}_{device.type}_{target_area_index}"
 
-        expected[expected_key] = heliostat_group.kinematics.motor_positions
-        torch.save(expected, expected_path)
-
         torch.testing.assert_close(
             heliostat_group.kinematics.motor_positions,
             expected[expected_key].to(device),

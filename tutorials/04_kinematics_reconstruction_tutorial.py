@@ -235,9 +235,7 @@ def create_plots(
 
             plt.subplots_adjust(wspace=0.05)
             plt.show()
-            plt.savefig(
-                f"./ignored/fixed/heliostat_{i}_in_group_{group_index}_calibration.png"
-            )
+            plt.savefig(f"heliostat_{i}_in_group_{group_index}_calibration.png")
 
 
 #############################################################################################################
