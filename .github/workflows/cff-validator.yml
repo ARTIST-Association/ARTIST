@@ -1,10 +1,20 @@
+name: CITATION.cff
+
 on:
   push:
+    branches:
+      - main
     paths:
       - CITATION.cff
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - CITATION.cff
+
   workflow_dispatch:
 
-name: CITATION.cff
 jobs:
   Validate-CITATION-cff:
     runs-on: ubuntu-latest
