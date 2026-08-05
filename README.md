@@ -16,6 +16,7 @@
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ARTIST-Association/ARTIST/main.svg)](https://results.pre-commit.ci/latest/github/ARTIST-Association/ARTIST/main)
 [![Documentation Status](https://readthedocs.org/projects/artist/badge/?version=latest)](https://artist.readthedocs.io/en/latest/?badge=latest)
 [![](https://img.shields.io/badge/Contact-artist%40lists.kit.edu-orange?label=Contact)](artist@lists.kit.edu)
+[![CITATION.cff](https://github.com/ARTIST-Association/ARTIST/actions/workflows/cff-validator.yml/badge.svg)](https://github.com/ARTIST-Association/ARTIST/actions/workflows/cff-validator.yml)
 
 
 ## What ``ARTIST`` can do for you
