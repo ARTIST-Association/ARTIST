@@ -10,7 +10,7 @@ import artist
 
 def test_version_from_distribution_metadata(monkeypatch) -> None:
     """Use the version from the artist-csp distribution metadata."""
-    expected_version = "1.2.3"
+    expected_version = "2.0.0"
     requested_distributions: list[str] = []
 
     def fake_version(distribution_name: str) -> str:
