@@ -12,10 +12,10 @@ jobs:
       version: ${{ steps.set-version.outputs.version }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: '3.x'
 
@@ -60,7 +60,7 @@ jobs:
 
     steps:
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -103,7 +103,7 @@ jobs:
           throw "Failed to install after $maxAttempts attempts"
         }
     - name: Checkout repository (for tests)
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
     - name: Run tests with coverage
       run: |
         python --version
