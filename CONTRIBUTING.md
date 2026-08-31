@@ -99,6 +99,7 @@ as shown below. Do not include attributes and methods of the parent class explic
              Description of method.
          """
 
+
      class ChildClass(ParentClass):
          """
          The docstring for the child class.
