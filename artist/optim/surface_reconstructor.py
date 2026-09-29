@@ -1,13 +1,8 @@
-from datetime import datetime
 import logging
-import math
-import os
 import pathlib
-import time
 from functools import partial
 from typing import Any, cast
 
-from matplotlib import pyplot as plt
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
@@ -98,11 +93,12 @@ class SurfaceReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        case,
         dni: float | None = None,
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         epsilon: float | None = 1e-12,
+        plot_results: bool = False,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize the surface reconstructor.
@@ -136,8 +132,10 @@ class SurfaceReconstructor:
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
         """
-        device = ddp_setup["device"]
+        device = get_device(device=device)
+
         rank = ddp_setup["rank"]
+
         if rank == 0:
             log.info("Create a surface reconstructor.")
 
@@ -151,10 +149,10 @@ class SurfaceReconstructor:
         self.dni = dni
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
+        self.plot_results = plot_results
 
-        self.case=case
-        self.batch_size_outer = self.optimizer_dict[constants.batch_size_outer]
-
+        self.validation_loss_pixel = PixelLoss()
+        self.validation_loss_kl_div = KLDivergenceLoss()
 
     def _validate(
         self,
@@ -299,7 +297,10 @@ class SurfaceReconstructor:
             torch.mean(test_loss_kl_div).item(),
         )
 
-        return cropped_flux_distributions, test_loss_kl_div
+        return {
+            "pixel_loss": test_loss_pixel,
+            "kl_div": test_loss_kl_div,
+        }
 
     def _initialize_reconstruction_bookkeeping(
         self, device: torch.device
@@ -340,7 +341,7 @@ class SurfaceReconstructor:
         return final_loss_per_heliostat, final_loss_start_indices
 
     def _parse_group_calibration_data(
-        self, batch_data, heliostat_group: HeliostatGroup, device: torch.device
+        self, heliostat_group: HeliostatGroup, device: torch.device
     ) -> tuple[
         torch.Tensor,
         torch.Tensor,
@@ -365,10 +366,10 @@ class SurfaceReconstructor:
             The measured flux, measured focal spots, incident ray directions, motor positions,
             active heliostats mask, and target area indices.
         """
-        parser = cast(CalibrationDataParser, batch_data[constants.data_parser])
+        parser = cast(CalibrationDataParser, self.data[constants.data_parser])
         heliostat_mapping = cast(
             list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            batch_data[constants.heliostat_data_mapping],
+            self.data[constants.heliostat_data_mapping],
         )
         return parser.parse_data_for_reconstruction(
             heliostat_data_mapping=heliostat_mapping,
@@ -789,6 +790,7 @@ class SurfaceReconstructor:
     def _synchronize_reconstruction_across_ranks(
         self,
         final_loss_per_heliostat: torch.Tensor,
+        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]],
     ) -> list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]:
         """
         Synchronize the reconstruction results across all distributed ranks.
@@ -823,8 +825,19 @@ class SurfaceReconstructor:
             torch.distributed.all_reduce(
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
+            final_loss_history_all_groups: list[
+                list[dict[str, list[float] | dict[str, torch.Tensor]]]
+            ] = [[] for _ in range(self.ddp_setup["world_size"])]
+            torch.distributed.all_gather_object(
+                final_loss_history_all_groups, loss_history
+            )
 
             log.info(f"Rank: {rank}, synchronized after surface reconstruction.")
+
+        else:
+            final_loss_history_all_groups = [loss_history]
+
+        return final_loss_history_all_groups
 
     def reconstruct_surfaces(
         self,
@@ -864,7 +877,7 @@ class SurfaceReconstructor:
               In non-distributed mode, this is a single-rank container: ``[local_group_histories]``.
         """
         device = get_device(device=device)
-        rank = self.ddp_setup[constants.rank]
+        rank = self.ddp_setup["rank"]
 
         if rank == 0:
             log.info("Beginning surface reconstruction.")
@@ -873,282 +886,254 @@ class SurfaceReconstructor:
             self._initialize_reconstruction_bookkeeping(device=device)
         )
 
-        data_mappings = self.data[constants.heliostat_data_mapping]
+        # Rank-local history: one dict per processed heliostat group.
+        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]] = []
 
-        for i in range(0, len(data_mappings), self.batch_size_outer):
-            batch_data = {
-                constants.data_parser: self.data[constants.data_parser],
-                constants.heliostat_data_mapping: data_mappings[i : i + self.batch_size_outer],
-                constants.validation_sample_fraction: self.data[constants.validation_sample_fraction]
-            }
+        # Process only groups assigned to this rank.
+        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+            heliostat_group: HeliostatGroup = (
+                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+            )
 
-            print(f"samples: {self.data[constants.data_parser].sample_limit}, batch: {i}")
+            (
+                flux_measured,
+                focal_spots_measured,
+                incident_ray_directions,
+                motor_positions,
+                active_heliostats_mask,
+                target_area_indices,
+            ) = self._parse_group_calibration_data(
+                heliostat_group=heliostat_group, device=device
+            )
 
-            # Process only groups assigned to this rank.
-            for heliostat_group_index in self.ddp_setup[constants.groups_to_ranks_mapping][rank]:
-                heliostat_group: HeliostatGroup = (
-                    self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+            # Skip groups with no active heliostats.
+            if active_heliostats_mask.sum() > 0:
+                data_split: training.TrainTestSplit = training.train_test_split(
+                    active_heliostats_mask=active_heliostats_mask,
+                    flux_measured=flux_measured,
+                    focal_spots_measured=focal_spots_measured,
+                    incident_ray_directions=incident_ray_directions,
+                    motor_positions=motor_positions,
+                    target_area_indices=target_area_indices,
+                    device=device,
                 )
-
-                (
-                    flux_measured,
-                    focal_spots_measured,
-                    incident_ray_directions,
-                    motor_positions,
-                    active_heliostats_mask,
-                    target_area_indices,
-                ) = self._parse_group_calibration_data(
-                    batch_data=batch_data, heliostat_group=heliostat_group, device=device
-                )
-
-                # Skip groups with no active heliostats.
-                if active_heliostats_mask.sum() > 0:
-                    
-                    if (len(data_mappings) != len(heliostat_group.names)):
-                        log.warning("Not all heliostats in this group are being reconstructed!")
-
-                    data_split: training.TrainTestSplit = training.train_test_split(
+                evaluation_points, original_control_points = (
+                    self._create_evaluation_grid_and_reference_points(
+                        heliostat_group=heliostat_group,
                         active_heliostats_mask=active_heliostats_mask,
-                        flux_measured=flux_measured,
-                        focal_spots_measured=focal_spots_measured,
-                        incident_ray_directions=incident_ray_directions,
-                        motor_positions=motor_positions,
-                        target_area_indices=target_area_indices,
-                        test_fraction=batch_data[constants.validation_sample_fraction],
                         device=device,
                     )
-                    evaluation_points, original_control_points = (
-                        self._create_evaluation_grid_and_reference_points(
-                            heliostat_group=heliostat_group,
-                            active_heliostats_mask=active_heliostats_mask,
-                            device=device,
+                )
+
+                optimizer, scheduler, early_stopper = (
+                    self._setup_optimizer_scheduler_early_stopping(
+                        heliostat_group=heliostat_group
+                    )
+                )
+
+                # Set up Augmented-Lagrangian constraint for energy conservation.
+                flux_integrals_reference = torch.zeros_like(active_heliostats_mask)
+                lambda_flux_integral = 0.0
+                rho_flux_integral = self.constraint_dict[constants.rho_flux_integral]
+                energy_tolerance = self.constraint_dict[constants.energy_tolerance]
+                # Set up regularizers: Keep reconstructed surface smooth and close to ideal/original.
+                ideal_surface_regularizer = IdealSurfaceRegularizer(
+                    reduction_dimensions=(1,)
+                )
+                smoothness_regularizer = SmoothnessRegularizer(
+                    reduction_dimensions=(1,)
+                )
+                weight_smoothness = self.constraint_dict[constants.weight_smoothness]
+                weight_ideal_surface = self.constraint_dict[
+                    constants.weight_ideal_surface
+                ]
+
+                # Set up per-epoch logging/history buffers.
+                total_loss_history = []
+                flux_loss_history = []
+                flux_integral_history = []
+                smoothness_history = []
+                ideal_history = []
+                flux_integral = []
+
+                # Start the optimization.
+                total_loss = torch.inf
+                epoch = 0
+                log_step = (
+                    self.optimizer_dict[constants.max_epoch]
+                    if self.optimizer_dict[constants.log_step] == 0
+                    else self.optimizer_dict[constants.log_step]
+                )
+                while (
+                    total_loss > float(self.optimizer_dict[constants.tolerance])
+                    and epoch <= self.optimizer_dict[constants.max_epoch]
+                ):
+                    optimizer.zero_grad()
+
+                    (
+                        cropped_flux_predictions,
+                        sample_indices_for_local_rank,
+                        local_indices,
+                    ) = self._predict_flux(
+                        heliostat_group=heliostat_group,
+                        evaluation_points=evaluation_points,
+                        data_split=data_split,
+                        device=device,
+                    )
+
+                    # Compute loss from prediction vs. measured flux.
+                    flux_loss_per_sample = loss_definition(
+                        prediction=cropped_flux_predictions,
+                        ground_truth=data_split.flux_measured_train[
+                            sample_indices_for_local_rank
+                        ],
+                        target_area_indices=data_split.target_area_indices_train[
+                            sample_indices_for_local_rank
+                        ],
+                        reduction_dimensions=(
+                            indices.batched_bitmap_e,
+                            indices.batched_bitmap_u,
+                        ),
+                        device=device,
+                    )
+
+                    flux_loss_per_heliostat = reduce_loss_per_sample(
+                        loss_per_sample=flux_loss_per_sample,
+                        number_of_samples_per_heliostat=data_split.number_of_train_samples,
+                        reduction=partial(torch.mean, dim=-1),
+                    )
+
+                    # Add Augmented-Lagrangian constraint to ensure that flux integral is conserved,
+                    # i.e., intensity does not get lost.
+                    if epoch == 0:
+                        flux_integrals_reference = cropped_flux_predictions.sum(
+                            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
+                        ).detach()
+                    (
+                        flux_integrals_constraint,
+                        flux_integrals_relative_differences,
+                        flux_constraint_per_heliostat,
+                    ) = self._compute_flux_integral_constraint(
+                        cropped_flux_predictions=cropped_flux_predictions,
+                        flux_integrals_reference=flux_integrals_reference,
+                        lambda_flux_integral=lambda_flux_integral,
+                        rho_flux_integral=rho_flux_integral,
+                        energy_tolerance=energy_tolerance,
+                        data_split=data_split,
+                    )
+
+                    # Regularization terms.
+                    (
+                        alpha,
+                        smoothness_loss_per_heliostat,
+                        beta,
+                        ideal_surface_loss_per_heliostat,
+                    ) = self._compute_regularization_terms(
+                        heliostat_group=heliostat_group,
+                        original_control_points=original_control_points,
+                        local_indices=local_indices,
+                        data_split=data_split,
+                        flux_loss_per_heliostat=flux_loss_per_heliostat,
+                        smoothness_regularizer=smoothness_regularizer,
+                        ideal_surface_regularizer=ideal_surface_regularizer,
+                        weight_smoothness=weight_smoothness,
+                        weight_ideal_surface=weight_ideal_surface,
+                        device=device,
+                    )
+
+                    # Final per-heliostat loss
+                    total_loss_per_heliostat = (
+                        flux_loss_per_heliostat
+                        + flux_integrals_constraint
+                        + alpha * smoothness_loss_per_heliostat
+                        + beta * ideal_surface_loss_per_heliostat
+                    )
+
+                    total_loss = torch.mean(total_loss_per_heliostat)
+
+                    total_loss.backward()
+
+                    # Update Augmented-Lagrangian multiplier.
+                    with torch.no_grad():
+                        lambda_flux_integral = torch.clamp(
+                            lambda_flux_integral
+                            + rho_flux_integral * flux_constraint_per_heliostat,
+                            min=0.0,
                         )
+
+                    self._synchronize_and_lock_gradients(
+                        optimizer=optimizer, device=device
                     )
 
-                    optimizer, scheduler, early_stopper = (
-                        self._setup_optimizer_scheduler_early_stopping(
-                            heliostat_group=heliostat_group
-                        )
-                    )
-
-                    # Set up Augmented-Lagrangian constraint for energy conservation.
-                    flux_integrals_reference = torch.zeros_like(active_heliostats_mask)
-                    lambda_flux_integral = 0.0
-                    rho_flux_integral = self.constraint_dict[constants.rho_flux_integral]
-                    energy_tolerance = self.constraint_dict[constants.energy_tolerance]
-                    # Set up regularizers: Keep reconstructed surface smooth and close to ideal/original.
-                    ideal_surface_regularizer = IdealSurfaceRegularizer(
-                        reduction_dimensions=(1,)
-                    )
-                    smoothness_regularizer = SmoothnessRegularizer(
-                        reduction_dimensions=(1,)
-                    )
-                    weight_smoothness = self.constraint_dict[constants.weight_smoothness]
-                    weight_ideal_surface = self.constraint_dict[
-                        constants.weight_ideal_surface
-                    ]
-
-                    # Start the optimization.
-                    total_loss = torch.inf
-                    epoch = 0
-                    log_step = (
-                        self.optimizer_dict[constants.max_epoch]
-                        if self.optimizer_dict[constants.log_step] == 0
-                        else self.optimizer_dict[constants.log_step]
-                    )
-                    while (
-                        total_loss > float(self.optimizer_dict[constants.tolerance])
-                        and epoch <= self.optimizer_dict[constants.max_epoch]
+                    optimizer.step()
+                    if isinstance(
+                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
                     ):
-                        optimizer.zero_grad()
+                        scheduler.step(total_loss.detach())
+                    else:
+                        scheduler.step()
 
-                        (
-                            cropped_flux_predictions,
-                            sample_indices_for_local_rank,
-                            local_indices,
-                        ) = self._predict_flux(
-                            heliostat_group=heliostat_group,
-                            evaluation_points=evaluation_points,
-                            data_split=data_split,
-                            device=device,
+                    is_last_epoch = (
+                        epoch == self.optimizer_dict[constants.max_epoch] - 1
+                    )
+                    stop = early_stopper.step(total_loss.item())
+
+                    if epoch % log_step == 0 or is_last_epoch or stop:
+                        log.info(
+                            f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}",
                         )
 
-                        # Compute loss from prediction vs. measured flux.
-                        flux_loss_per_sample = loss_definition(
-                            prediction=cropped_flux_predictions,
-                            ground_truth=data_split.flux_measured_train[
-                                sample_indices_for_local_rank
-                            ],
-                            target_area_indices=data_split.target_area_indices_train[
-                                sample_indices_for_local_rank
-                            ],
-                            reduction_dimensions=(
-                                indices.batched_bitmap_e,
-                                indices.batched_bitmap_u,
-                            ),
-                            device=device,
-                        )
-
-                        flux_loss_per_heliostat = reduce_loss_per_sample(
-                            loss_per_sample=flux_loss_per_sample,
-                            number_of_samples_per_heliostat=data_split.number_of_train_samples,
-                            reduction=partial(torch.mean, dim=-1),
-                        )
-
-                        # Add Augmented-Lagrangian constraint to ensure that flux integral is conserved,
-                        # i.e., intensity does not get lost.
-                        if epoch == 0:
-                            flux_integrals_reference = cropped_flux_predictions.sum(
-                                dim=(indices.batched_bitmap_e, indices.batched_bitmap_u)
-                            ).detach()
-                        (
-                            flux_integrals_constraint,
-                            flux_integrals_relative_differences,
-                            flux_constraint_per_heliostat,
-                        ) = self._compute_flux_integral_constraint(
-                            cropped_flux_predictions=cropped_flux_predictions,
-                            flux_integrals_reference=flux_integrals_reference,
-                            lambda_flux_integral=lambda_flux_integral,
-                            rho_flux_integral=rho_flux_integral,
-                            energy_tolerance=energy_tolerance,
-                            data_split=data_split,
-                        )
-
-                        # Regularization terms.
-                        (
-                            alpha,
-                            smoothness_loss_per_heliostat,
-                            beta,
-                            ideal_surface_loss_per_heliostat,
-                        ) = self._compute_regularization_terms(
-                            heliostat_group=heliostat_group,
-                            original_control_points=original_control_points,
-                            local_indices=local_indices,
-                            data_split=data_split,
-                            flux_loss_per_heliostat=flux_loss_per_heliostat,
-                            smoothness_regularizer=smoothness_regularizer,
-                            ideal_surface_regularizer=ideal_surface_regularizer,
-                            weight_smoothness=weight_smoothness,
-                            weight_ideal_surface=weight_ideal_surface,
-                            device=device,
-                        )
-
-                        # Final per-heliostat loss
-                        total_loss_per_heliostat = (
-                            flux_loss_per_heliostat
-                            + flux_integrals_constraint
-                            + alpha * smoothness_loss_per_heliostat
-                            + beta * ideal_surface_loss_per_heliostat
-                        )
-
-                        total_loss = torch.mean(total_loss_per_heliostat)
-
-                        total_loss.backward()
-
-                        # Update Augmented-Lagrangian multiplier.
                         with torch.no_grad():
-                            lambda_flux_integral = torch.clamp(
-                                lambda_flux_integral
-                                + rho_flux_integral * flux_constraint_per_heliostat,
-                                min=0.0,
+                            test_loss = self._validate(
+                                heliostat_group=heliostat_group,
+                                data_split=data_split,
+                                evaluation_points=evaluation_points,
+                                device=device,
                             )
 
-                        self._synchronize_and_lock_gradients(
-                            optimizer=optimizer, device=device
-                        )
+                    # Early stopping when loss did not improve for a predefined number of epochs.
+                    if stop:
+                        log.info(f"Early stopping at epoch {epoch}.")
+                        break
 
-                        optimizer.step()
-                        if isinstance(
-                            scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
-                        ):
-                            scheduler.step(total_loss.detach())
-                        else:
-                            scheduler.step()
-                        
-                        stop = early_stopper.step(total_loss.item())
+                    total_loss_history.append(total_loss.detach().cpu().item())
+                    flux_loss_history.append(
+                        flux_loss_per_heliostat.mean().detach().cpu().item()
+                    )
+                    flux_integral.append(
+                        flux_integrals_relative_differences.mean().detach().cpu().item()
+                    )
+                    smoothness_history.append(
+                        (alpha * smoothness_loss_per_heliostat)
+                        .mean()
+                        .detach()
+                        .cpu()
+                        .item()
+                    )
+                    ideal_history.append(
+                        (beta * ideal_surface_loss_per_heliostat)
+                        .mean()
+                        .detach()
+                        .cpu()
+                        .item()
+                    )
+                    flux_integral_history.append(
+                        flux_integrals_constraint.mean().detach().cpu().item()
+                    )
 
-                        if epoch % log_step == 0 or stop:
-                            log.info(
-                                f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[0]['lr']}",
-                            )                            
-                            # print(
-                            #     f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[0]['lr']}",
-                            # )
+                    epoch += 1
 
-
-                        #     with torch.no_grad():
-                        #         test_fluxes, test_loss = self._validate(
-                        #             heliostat_group=heliostat_group,
-                        #             data_split=data_split,
-                        #             evaluation_points=evaluation_points,
-                        #             device=device,
-                        #         )
-                        
-                        # Early stopping when loss did not improve for a predefined number of epochs.
-                        if stop:
-                            log.info(f"Early stopping at epoch {epoch}.")
-                            break
-
-                        if epoch == 0:
-                            save_dir = pathlib.Path(
-                                f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction"
-                            )
-                            os.makedirs(save_dir, exist_ok=True)
-                            results = {
-                                "control_points": torch.zeros_like(heliostat_group.nurbs_control_points.detach().cpu()),
-                                "training_loss": [],
-                                "target_area_indices": []
-                            }
-                            for e in range(0, self.optimizer_dict[constants.max_epoch]+1, 50):
-                                file_path = save_dir / f"results_{e}_{data_split.number_of_train_samples}.pt"
-                                if not file_path.exists():
-                                    torch.save(results, file_path)
-
-                        if epoch % 50 == 0:
-                            results = torch.load(f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction/results_{epoch}_{data_split.number_of_train_samples}.pt")
-                            results["control_points"][active_heliostats_mask!=0] = heliostat_group.nurbs_control_points[active_heliostats_mask!=0].detach().cpu()
-                            results["training_loss"].append(flux_loss_per_sample.detach().cpu().tolist())
-                            results["target_area_indices"].append(data_split.target_area_indices_train.detach().cpu().tolist())
-                            torch.save(results, f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction/results_{epoch}_{data_split.number_of_train_samples}.pt")
-
-                            # tensor1 = cropped_flux_predictions
-                            # tensor2 = data_split.flux_measured_train
-
-                            # batch_size = 4
-
-                            # for batch_start in range(0, 15*4, batch_size):
-                            #     batch_end = batch_start + batch_size
-
-                            #     fig, axes = plt.subplots(
-                            #         batch_size, 2,
-                            #         figsize=(4, 15)
-                            #     )
-
-                            #     for row, idx in enumerate(range(batch_start, batch_end)):
-                            #         # Move to CPU and convert to numpy
-                            #         img1 = tensor1[idx].detach().cpu().numpy()
-                            #         img2 = tensor2[idx].detach().cpu().numpy()
-
-                            #         # Tensor 1 - left
-                            #         axes[row, 0].imshow(img1, cmap="gray")
-                            #         axes[row, 0].set_title(f"Tensor 1 — Index {idx}")
-                            #         axes[row, 0].axis("off")
-
-                            #         # Tensor 2 - right
-                            #         axes[row, 1].imshow(img2, cmap="gray")
-                            #         axes[row, 1].set_title(f"Tensor 2 — Index {idx}")
-                            #         axes[row, 1].axis("off")
-
-                            #     fig.suptitle(
-                            #         f"Batch {batch_start // batch_size + 1} "
-                            #         f"(indices {batch_start}–{batch_end - 1})",
-                            #         fontsize=16
-                            #     )
-
-                            #     plt.tight_layout()
-                            #     plt.savefig(f"heliostat_{batch_start}_{epoch}_{i}")
-
-                        epoch += 1
+                loss_history.append(
+                    {
+                        "total_loss": total_loss_history,
+                        "flux_loss": flux_loss_history,
+                        "smoothness_regularizer": smoothness_history,
+                        "ideal_regularizer": ideal_history,
+                        "flux_integral": flux_integral,
+                        "flux_integral_constraint": flux_integral_history,
+                        "test_loss": test_loss,
+                    }
+                )
 
                 global_active_indices = torch.nonzero(
                     active_heliostats_mask != 0, as_tuple=True
@@ -1165,13 +1150,14 @@ class SurfaceReconstructor:
 
                 log.info(f"Rank: {rank}, Surfaces reconstructed.")
 
-        self._synchronize_reconstruction_across_ranks(
+        final_loss_history_all_groups = self._synchronize_reconstruction_across_ranks(
             final_loss_per_heliostat=final_loss_per_heliostat,
+            loss_history=loss_history,
         )
 
         self.scenario.heliostat_field.update_surfaces(device=device)
 
-        return final_loss_per_heliostat.detach().cpu(), None
+        return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
 
     @staticmethod
     def lock_control_points_on_outer_edges(
@@ -1236,86 +1222,3 @@ class SurfaceReconstructor:
             )
 
             return fixed_gradients
-
-
-
-
-    def _plot_fluxes(
-        self,
-        flux_measured: torch.Tensor,
-        flux_prediction_train: torch.Tensor,
-        flux_prediction_test: torch.Tensor,
-        data_split: training.TrainTestSplit,
-        plot_name: str,
-    ) -> None:
-        """
-        Plot predicted and measured flux maps for each heliostat sample.
-
-        Each row in the generated figure corresponds to one sample of a
-        heliostat, where the left column contains the predicted flux and
-        the right column contains the measured flux.
-        The subplot borders are color-coded to indicate whether a sample
-        belongs to the training samples (green) or testing samples (red)
-        One figure is generated per heliostat.
-
-        Parameters
-        ----------
-        flux_measured : torch.Tensor
-            Ground-truth measured flux maps.
-        flux_prediction_train : torch.Tensor
-            Predicted flux maps of the training samples.
-        flux_prediction_test : torch.Tensor
-            Predicted flux maps of the testing samples.
-        data_split : training.TrainTestSplit
-            Information on the train/test split.
-        plot_name : str
-            Name suffix used when saving the generated plot files.
-        """
-        device = torch.device("cuda:0")
-
-        flux_predicted = torch.zeros_like(flux_measured, device=device)
-        flux_predicted[data_split.train_indices] = flux_prediction_train
-        flux_predicted[data_split.test_indices] = flux_prediction_test
-        samples_per_heliostat = data_split.number_of_samples_per_heliostat
-        total_samples = flux_measured.shape[0]
-        train_indices = set(data_split.train_indices.tolist())
-        test_indices = set(data_split.test_indices.tolist())
-
-        for heliostat_start_index in range(0, total_samples, samples_per_heliostat):
-            fig, axes = plt.subplots(
-                samples_per_heliostat,
-                2,
-                figsize=(8, samples_per_heliostat * 4),
-            )
-            heliostat_index = heliostat_start_index // samples_per_heliostat
-
-            for sample_offset in range(samples_per_heliostat):
-                sample_index = heliostat_start_index + sample_offset
-
-                if sample_index in train_indices:
-                    border_color = "green"
-                    split_name = "TRAIN"
-                elif sample_index in test_indices:
-                    border_color = "red"
-                    split_name = "TEST"
-
-                axes[sample_offset, 0].imshow(flux_predicted[sample_index].cpu().detach())
-                axes[sample_offset, 0].set_title(
-                    f"Predicted Flux - Heliostat {heliostat_index} ({split_name})"
-                )
-
-                axes[sample_offset, 1].imshow(flux_measured[sample_index].cpu().detach())
-                axes[sample_offset, 1].set_title(
-                    f"Measured Flux - Heliostat {heliostat_index} ({split_name})"
-                )
-
-                for spine in axes[sample_offset, :].flat:
-                    for spines in spine.spines.values():
-                        spines.set_edgecolor(border_color)
-                        spines.set_linewidth(4)
-
-            plt.tight_layout()
-            plt.savefig(
-                f"/workVERLEIHNIX/mb/ARTIST/dissertation/plots/surface_plots/heliostat_{heliostat_index}_{plot_name}"
-            )
-            plt.close(fig)
