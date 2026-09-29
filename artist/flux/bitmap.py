@@ -19,7 +19,9 @@ def get_center_of_mass(
     Bitmaps and the resolution are conceptually defined as: [W, H] # width, height
     Tensor memory layout follows PyTorch convention: [H, W] # height, width
 
-    First determine the indices of the bitmap center of mass.
+    First determine the pixel indices of the bitmap center of mass.
+    Pixel indices are converted from the pixel-index coordinate system 
+    to pixel-center coordinates by adding ``0.5``.
     Next determine the position (coordinates) of the center of mass on the target.
 
     Returns (0.0, 0.0) for empty fluxes.
@@ -52,8 +54,8 @@ def get_center_of_mass(
         + 1e-8
     )
 
-    e_coords = torch.linspace(0, width_e - 1, width_e, device=device)
-    u_coords = torch.linspace(0, height_u - 1, height_u, device=device)
+    e_coords = torch.linspace(0, width_e - 1, width_e, device=device) + 0.5
+    u_coords = torch.linspace(0, height_u - 1, height_u, device=device) + 0.5
 
     # meshgrid in (u, e) order because tensor is [u, e].
     u_grid, e_grid = torch.meshgrid(u_coords, e_coords, indexing="ij")
