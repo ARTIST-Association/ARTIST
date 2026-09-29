@@ -404,6 +404,7 @@ def test_blocking_integration(device: torch.device) -> None:
         heliostat_group=heliostat_group,
         blocking_active=True,
         batch_size=10,
+        device=device
     )
 
     bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
@@ -486,6 +487,7 @@ def test_ray_extinction(device: torch.device) -> None:
         heliostat_group=heliostat_group,
         blocking_active=True,
         batch_size=10,
+        device=device
     )
 
     ray_extinction_factor = 0.9

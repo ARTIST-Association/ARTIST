@@ -245,6 +245,7 @@ class SurfaceReconstructor:
             random_seed=self.ddp_setup["heliostat_group_rank"],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
+            device=device
         )
 
         flux_prediction, _, _, _ = ray_tracer.trace_rays(
@@ -564,6 +565,7 @@ class SurfaceReconstructor:
             random_seed=self.ddp_setup["heliostat_group_rank"],
             bitmap_resolution=self.bitmap_resolution,
             dni=self.dni,
+            device=device
         )
 
         # Perform heliostat-based ray tracing to obtain simulated flux from current reconstructed surfaces.

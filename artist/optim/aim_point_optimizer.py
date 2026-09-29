@@ -475,6 +475,7 @@ class AimPointOptimizer:
                 random_seed=self.ddp_setup["heliostat_group_rank"],
                 bitmap_resolution=self.bitmap_resolution,
                 dni=self.dni,
+                device=device
             )
 
             # Perform heliostat-based ray tracing.

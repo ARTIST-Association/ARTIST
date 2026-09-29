@@ -229,6 +229,7 @@ class KinematicsReconstructor:
             batch_size=self.optimizer_dict[constants.batch_size],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
+            device=device
         )
 
         flux_prediction, _, _, _ = ray_tracer.trace_rays(
@@ -587,6 +588,7 @@ class KinematicsReconstructor:
             random_seed=self.ddp_setup["heliostat_group_rank"],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
+            device=device
         )
 
         flux_prediction_train, _, _, _ = ray_tracer.trace_rays(

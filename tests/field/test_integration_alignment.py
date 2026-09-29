@@ -139,6 +139,7 @@ def test_integration_alignment(
             blocking_active=False,
             bitmap_resolution=bitmap_resolution,
             batch_size=10,
+            device=device
         )
 
         # Perform heliostat-based ray tracing.
