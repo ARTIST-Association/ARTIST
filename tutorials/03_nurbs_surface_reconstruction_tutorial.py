@@ -4,15 +4,16 @@ import logging
 import pathlib
 
 import h5py
+from matplotlib.ticker import FormatStrFormatter
 import torch
 from matplotlib import pyplot as plt
 
+from artist.flux import bitmap
 from artist.io import (
     CalibrationDataParser,
     PaintCalibrationDataParser,
     paint_scenario_parser,
 )
-from artist.nurbs import NURBSSurfaces, create_nurbs_evaluation_grid
 from artist.optim import SurfaceReconstructor
 from artist.optim.loss import KLDivergenceLoss
 from artist.raytracing import HeliostatRayTracer
@@ -23,307 +24,93 @@ from artist.util.env import get_device, setup_distributed_environment
 torch.manual_seed(7)
 torch.cuda.manual_seed(7)
 
-
 #############################################################################################################
 # Define helper functions for the plots.
-# Skip to line 353 for the tutorial code.
+# Skip to line 270 for the tutorial code.
 #############################################################################################################
 
-
-def plot_surface_points_and_angle_map(
-    surface_points: torch.Tensor,
-    surface_normals: torch.Tensor,
-    reference_direction: torch.Tensor,
-    name: str,
-) -> None:
-    """
-    Plot the surface points and an angle map comparing surface normals against a given reference direction.
-
-    The function creates a side-by-side plot. The subplot on the left plots the surface points of each facet as a
-    scatter plot, where the color represents the z-value. The subplot on the right is an angle map (in radians) of
-    the surface normals relative to a reference vector.
-
-    Parameters
-    ----------
-    surface_points : torch.Tensor
-        The surface points for one heliostat.
-        Shape is [1, number_of_combined_surface_points_all_facets, 4].
-    surface_normals : torch.Tensor
-        The surface normals for one heliostat.
-        Shape is [1, number_of_combined_surface_points_all_facets, 4].
-    reference_direction : torch.Tensor
-        The reference direction.
-        Shape is [4].
-    name : str
-        The name or index of the heliostat.
-    """
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
-    normals = (
-        (
-            surface_normals[..., : indices.slice_fourth_dimension]
-            / torch.linalg.norm(
-                surface_normals[..., : indices.slice_fourth_dimension],
-                axis=-1,
-                keepdims=True,
-            )
-        )
-        .cpu()
-        .detach()
-    )
-    reference = (
-        (
-            reference_direction[..., : indices.slice_fourth_dimension]
-            / torch.linalg.norm(
-                reference_direction[..., : indices.slice_fourth_dimension]
-            )
-        )
-        .cpu()
-        .detach()
-    )
-
-    sc1 = sc2 = None
-
-    for facet_points, facet_normals in zip(surface_points.cpu().detach(), normals):
-        x, y, z = (
-            facet_points[:, indices.e].cpu().detach(),
-            facet_points[:, indices.n].cpu().detach(),
-            facet_points[:, indices.u].cpu().detach(),
-        )
-
-        # Surface points scatter plot.
-        sc1 = axes[0].scatter(x, y, c=z, cmap="viridis")
-
-        # Angle map scatter plot.
-        cos_theta = facet_normals @ reference
-        angles = torch.arccos(torch.clip(cos_theta, -1.0, 1.0))
-        sc2 = axes[1].scatter(x, y, c=angles.numpy(), cmap="plasma", vmin=0, vmax=0.02)
-
-    # Titles
-    axes[0].set_title("Surface points")
-    axes[1].set_title("Angle map normals")
-
-    # Add only one colorbar per subplot
-    plt.colorbar(sc1, ax=axes[0], fraction=0.046, pad=0.04, label="Z-coordinate")
-    plt.colorbar(sc2, ax=axes[1], fraction=0.046, pad=0.04, label="Angle (radians)")
-
-    plt.tight_layout()
-    plt.savefig(f"2d_points_and_normals_{name}.png")
-    plt.clf()
-    plt.close()
-
-
-def plot_multiple_fluxes(
-    reconstructed: torch.Tensor,
-    references: torch.Tensor,
-    name: str,
-) -> None:
-    """
-    Plot and compare multiple flux images against their corresponding references.
-
-    For each index i the reconstructed image is on the left and the reference image is on the right.
-
-    Parameters
-    ----------
-    reconstructed : torch.Tensor
-        The flux density distributions ray-traced on the reconstructed surfaces.
-        Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-    references : torch.Tensor
-        The flux density distribution references.
-        Shape is [number_of_samples, bitmap_resolution_e, bitmap_resolution_u].
-    name : str
-        The name or index of the heliostat_group.
-    """
-    fig1, axes1 = plt.subplots(nrows=reconstructed.shape[0], ncols=2, figsize=(24, 72))
-    for i in range(reconstructed.shape[0]):
-        axes1[i, 0].imshow(reconstructed[i].cpu().detach(), cmap="gray")
-        axes1[i, 0].axis("off")
-
-        axes1[i, 1].imshow(references[i].cpu().detach(), cmap="gray")
-        axes1[i, 1].axis("off")
-    plt.tight_layout()
-    plt.savefig(f"flux_comparison_{name}.png")
-    plt.clf()
-    plt.close()
-
-
-def create_surface_plots(name: str) -> None:
-    """
-    Create data to plot the surface points and angle map.
-
-    Parameters
-    ----------
-    name : str
-        The name for the plots.
-    """
-    # Plot the surface points and angle map.
-    for heliostat_group_index, heliostat_group in enumerate(
-        scenario.heliostat_field.heliostat_groups
-    ):
-        for heliostat_index in range(heliostat_group.number_of_heliostats):
-            # Create evaluation points.
-            evaluation_points = (
-                create_nurbs_evaluation_grid(
-                    number_of_evaluation_points=torch.tensor([50, 50], device=device),
-                    device=device,
-                )
-                .unsqueeze(indices.heliostat_dimension)
-                .unsqueeze(indices.facet_index_unbatched)
-                .expand(
-                    1,
-                    heliostat_group.number_of_facets_per_heliostat,
-                    -1,
-                    -1,
-                )
-            )
-
-            # Create NURBS surface of selected heliostat.
-            temporary_nurbs = NURBSSurfaces(
-                degrees=heliostat_group.nurbs_degrees,
-                control_points=heliostat_group.nurbs_control_points[
-                    heliostat_index
-                ].unsqueeze(indices.heliostat_dimension),
-                device=device,
-            )
-
-            # Calculate new surface points and normals for this heliostat.
-            temporary_points, temporary_normals = (
-                temporary_nurbs.calculate_surface_points_and_normals(
-                    evaluation_points=evaluation_points,
-                    canting=heliostat_group.canting[heliostat_index].unsqueeze(
-                        indices.heliostat_dimension
-                    ),
-                    facet_translations=heliostat_group.facet_translations[
-                        heliostat_index
-                    ].unsqueeze(indices.heliostat_dimension),
-                    device=device,
-                )
-            )
-
-            # Create the plot.
-            plot_surface_points_and_angle_map(
-                surface_points=temporary_points[indices.first_heliostat],
-                surface_normals=temporary_normals[indices.first_heliostat],
-                reference_direction=torch.tensor([0.0, 0.0, 1.0, 0.0], device=device),
-                name=f"{name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}_heliostat_{heliostat_group.names[heliostat_index]}",
-            )
-
-
-def create_flux_plots(
-    heliostat_names: list[str],
-    number_of_plots_per_heliostat: int,
-    base_path_data: str,
+def create_fluxes(
     data_parser: CalibrationDataParser,
+    heliostat_data_mapping: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
     resolution: torch.Tensor,
-    plot_name: str,
-) -> None:
+    align_method: str
+) -> tuple[list[torch.Tensor], list[torch.Tensor], list[torch.Tensor], list[str]]:
     """
     Create data to plot the heliostat fluxes.
 
     Parameters
     ----------
-    heliostat_names : list[str]
-        The names of all heliostats to be plotted.
-    number_of_plots_per_heliostat : int
-        The number of flux plots for each heliostat.
-    base_path_data : str
-        The path to the data directory from which to load heliostat field calibration data.
     data_parser : CalibrationDataParser
-        The data parser used to load calibration data from files.
+        Data parser used to load calibration data from files.
+    heliostat_data_mapping : list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
+        Mapping from heliostats to calibration data files.
     resolution : torch.Tensor
         Bitmap resolution.
-    plot_name : str
-        The name for the plots.
-    """
-    # Load reference data.
-    validation_heliostat_data_mapping = (
-        paint_scenario_parser.build_heliostat_data_mapping(
-            base_path=base_path_data,
-            heliostat_names=heliostat_names,
-            number_of_measurements=number_of_plots_per_heliostat,
-            image_variant="flux-centered",
-            randomize=True,
-        )
-    )
+    align_method : str
+        Method to align the heliostats.
 
-    for heliostat_group_index, heliostat_group in enumerate(
-        scenario.heliostat_field.heliostat_groups
-    ):
+    Returns
+    -------
+    list[torch.Tensor]
+        Cropped bitmaps per heliostat.
+    list[torch.Tensor]
+        Bitmaps per heliostat.
+    list[torch.Tensor]
+        Measured flux bitmap.
+    list[str]
+        Names of the heliostats.
+    """
+    cropped_bitmaps_all = []
+    bitmaps_all = []
+    measured_bitmaps = []
+    heliostat_names = []
+
+    for heliostat_group in scenario.heliostat_field.heliostat_groups:
         (
-            validation_measured_flux_distributions,
+            measured_flux,
             _,
-            validation_incident_ray_directions,
-            _,
-            validation_active_heliostats_mask,
-            validation_target_area_indices,
+            incident_ray_directions,
+            motor_positions,
+            active_heliostats_mask,
+            target_area_indices,
         ) = data_parser.parse_data_for_reconstruction(
-            heliostat_data_mapping=validation_heliostat_data_mapping,
+            heliostat_data_mapping=heliostat_data_mapping,
             heliostat_group=heliostat_group,
             scenario=scenario,
             bitmap_resolution=resolution,
             device=device,
         )
 
-        if validation_active_heliostats_mask.sum() > 0:
+        if active_heliostats_mask.sum() > 0:
+            measured_bitmaps.append(measured_flux)
+
             # Activate heliostats.
             heliostat_group.activate_heliostats(
-                active_heliostats_mask=validation_active_heliostats_mask,
+                active_heliostats_mask=active_heliostats_mask,
                 device=device,
             )
 
-            # Create surfaces for all samples.
-            validation_nurbs = NURBSSurfaces(
-                degrees=heliostat_group.nurbs_degrees,
-                control_points=heliostat_group.active_nurbs_control_points,
-                uniform=True,
-                device=device,
-            )
-
-            # Create evaluation points for all samples.
-            validation_evaluation_points = (
-                create_nurbs_evaluation_grid(
-                    number_of_evaluation_points=torch.tensor([50, 50], device=device),
+            if align_method == "motor_pos":
+                # Align heliostats.
+                heliostat_group.align_surfaces_with_motor_positions(
+                    motor_positions=motor_positions,
+                    active_heliostats_mask=active_heliostats_mask,
                     device=device,
                 )
-                .unsqueeze(indices.heliostat_dimension)
-                .unsqueeze(indices.facet_index_unbatched)
-                .expand(
-                    validation_active_heliostats_mask.sum(),
-                    heliostat_group.number_of_facets_per_heliostat,
-                    -1,
-                    -1,
-                )
-            )
-
-            # Calculate new surface points and normals for all samples.
-            validation_surface_points, validation_surface_normals = (
-                validation_nurbs.calculate_surface_points_and_normals(
-                    evaluation_points=validation_evaluation_points,
-                    canting=heliostat_group.active_canting,
-                    facet_translations=heliostat_group.active_facet_translations,
+            elif align_method == "incident_ray":
+                # Align heliostats.
+                heliostat_group.align_surfaces_with_incident_ray_directions(
+                    aim_points=scenario.solar_tower.get_centers_of_target_areas(
+                        target_area_indices=target_area_indices, device=device
+                    ),
+                    incident_ray_directions=incident_ray_directions,
+                    active_heliostats_mask=active_heliostats_mask,
                     device=device,
                 )
-            )
 
-            heliostat_group.active_surface_points = validation_surface_points.reshape(
-                validation_active_heliostats_mask.sum(), -1, 4
-            )
-            heliostat_group.active_surface_normals = validation_surface_normals.reshape(
-                validation_active_heliostats_mask.sum(), -1, 4
-            )
-
-            # Align heliostats.
-            heliostat_group.align_surfaces_with_incident_ray_directions(
-                aim_points=scenario.solar_tower.get_centers_of_target_areas(
-                    target_area_indices=validation_target_area_indices, device=device
-                ),
-                incident_ray_directions=validation_incident_ray_directions,
-                active_heliostats_mask=validation_active_heliostats_mask,
-                device=device,
-            )
-
-            # Create a ray tracer and reduce number of rays in scenario light source.
-            scenario.set_number_of_rays(number_of_rays=10)
-            validation_ray_tracer = HeliostatRayTracer(
+            # Create a ray tracer.
+            scenario.set_number_of_rays(number_of_rays=500)
+            ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
                 blocking_active=False,
@@ -332,21 +119,151 @@ def create_flux_plots(
             )
 
             # Perform heliostat-based ray tracing.
-            validation_bitmaps_per_heliostat, _, _, _ = (
-                validation_ray_tracer.trace_rays(
-                    incident_ray_directions=validation_incident_ray_directions,
-                    active_heliostats_mask=validation_active_heliostats_mask,
-                    target_area_indices=validation_target_area_indices,
-                    device=device,
-                )
+            bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
+                incident_ray_directions=incident_ray_directions,
+                active_heliostats_mask=active_heliostats_mask,
+                target_area_indices=target_area_indices,
+                device=device,
             )
 
-            # Create the plots.
-            plot_multiple_fluxes(
-                validation_bitmaps_per_heliostat,
-                validation_measured_flux_distributions,
-                name=f"{plot_name}_rank_{ddp_setup['rank']}_heliostat_group_{heliostat_group_index}",
+            cropped_bitmaps = bitmap.crop_flux_distributions_around_center(
+                flux_distributions=bitmaps_per_heliostat.detach(),
+                solar_tower=scenario.solar_tower,
+                target_area_indices=target_area_indices.detach(),
+                device=device,
             )
+            cropped_bitmaps_all.append(cropped_bitmaps)
+            bitmaps_all.append(bitmaps_per_heliostat)
+            heliostat_names.append(
+                [
+                    name
+                    for name, count in zip(
+                        heliostat_group.names, active_heliostats_mask.tolist()
+                    )
+                    for _ in range(count)
+                ]
+            )
+
+    return cropped_bitmaps_all, bitmaps_all, measured_bitmaps, heliostat_names
+
+
+def plot_fluxes(
+    fluxes_before: list[torch.Tensor],
+    fluxes_after: list[torch.Tensor],
+    fluxes_measured: list[torch.Tensor],
+    flux_labels: list[list[str]],
+) -> None:
+    """
+    Plot the fluxes.
+
+    Parameters
+    ----------
+    fluxes_before : list[torch.Tensor]
+        Fluxes before the surface reconstruction.
+    fluxes_after : list[torch.Tensor]
+        Fluxes after the surface reconstruction.
+    fluxes_measured : list[torch.Tensor]
+        Measured flux references.
+    flux_labels : list[list[str]]
+        Labels for every heliostat in each group.
+    """
+    fontsize = 6
+    eps = 1e-8
+    dims = (indices.batched_bitmap_e, indices.batched_bitmap_u)
+
+    for group_index, (flux_before, flux_after, flux_measured, flux_label) in enumerate(
+        zip(fluxes_before, fluxes_after, fluxes_measured, flux_labels)
+    ):
+        normalized_after = flux_after / flux_after.sum(dim=dims, keepdim=True).clamp_min(eps)
+        normalized_measured = flux_measured / flux_measured.sum(dim=dims, keepdim=True).clamp_min(eps)
+        normalized_before = flux_before / flux_after.sum(dim=dims, keepdim=True).clamp_min(eps)
+        
+        all_vals = torch.cat(
+            [
+                torch.cat([x.flatten() for x in normalized_before]),
+                torch.cat([x.flatten() for x in normalized_after]),
+                torch.cat([x.flatten() for x in normalized_measured]),
+            ]
+        )
+        vmin = all_vals.min().item()
+        vmax = all_vals.max().item()
+
+        n_heliostats = len(flux_before)
+        n_cols = 3
+
+        fig, axes = plt.subplots(
+            nrows=n_heliostats,
+            ncols=n_cols,
+            figsize=(4, 3)
+        )
+
+        if n_heliostats == 1:
+            axes = axes[None, :]
+
+        axes[0, 0].set_title("a) Before\nreconstruction", fontsize=fontsize)
+        axes[0, 1].set_title(
+            "b) After\nreconstruction",
+            fontsize=fontsize,
+        )
+        axes[0, 2].set_title("c) Measured\nreference", fontsize=fontsize)
+
+        mappable = None
+        for i in range(n_heliostats):
+            mappable = axes[i, 0].imshow(
+                normalized_before[i].detach().cpu(),
+                cmap="hot",
+                vmin=vmin,
+                vmax=vmax,
+            )
+            axes[i, 0].axis("off")
+
+            axes[i, 1].imshow(
+                normalized_after[i].detach().cpu(),
+                cmap="hot",
+                vmin=vmin,
+                vmax=vmax,
+            )
+            axes[i, 1].axis("off")
+
+            axes[i, 2].imshow(
+                normalized_measured[i].detach().cpu(),
+                cmap="gray",
+                vmin=vmin,
+                vmax=vmax,
+            )
+            axes[i, 2].axis("off")
+
+        for i, label in enumerate(flux_label):
+            ax = axes[i, 0]
+            ax.text(
+                -0.1,
+                0.5,
+                label,
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                fontsize=fontsize,
+                rotation=90,
+            )
+
+        cbar = fig.colorbar(
+            mappable,
+            ax=axes,
+            aspect=30,
+        )
+        cbar.set_label(
+            "Flux intensity in normalized flux units",
+            fontsize=fontsize,
+        )
+        cbar.ax.tick_params(labelsize=fontsize)
+        cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1e'))
+
+        plt.savefig(
+            f"reconstruction_surfaces_group_{group_index}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
+        plt.close(fig)
 
 
 #############################################################################################################
@@ -363,8 +280,7 @@ device = get_device()
 # Specify the path to your scenario.h5 file and specify the configuration.
 scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
 base_path_data = "base/path/data"
-heliostat_names_reconstruction = ["heliostat_1"]
-heliostat_names_plots = ["heliostat_1", "..."]
+heliostat_names = ["heliostat_1", "..."]
 
 # Also specify the heliostats to be calibrated and the paths to your calibration-properties.json files.
 # Please use the following style: list[tuple[str, list[pathlib.Path], list[pathlib.Path]]]
@@ -395,35 +311,34 @@ heliostat_data_mapping = [
             # ....
         ],
     ),
-    # ...
 ]
 
 # Or if you have a directory with downloaded data use this code to create a mapping.
 # heliostat_data_mapping = paint_scenario_parser.build_heliostat_data_mapping(
 #     base_path=base_path_data,
-#     heliostat_names=heliostat_names_reconstruction,
-#     number_of_measurements=4,
+#     heliostat_names=heliostat_names,
+#     number_of_measurements=5,
 #     image_variant="flux-centered",
 #     randomize=True,
 # )
 
 # Configure the optimization.
 optimizer_dict = {
-    constants.initial_learning_rate: 1e-4,
+    constants.initial_learning_rate: 1e-5,
     constants.tolerance: 1e-5,
-    constants.max_epoch: 200,
+    constants.max_epoch: 400,
     constants.batch_size: 30,
-    constants.log_step: 3,
+    constants.log_step: 10,
     constants.early_stopping_delta: 1e-4,
     constants.early_stopping_patience: 100,
     constants.early_stopping_window: 100,
 }
 # Configure the learning rate scheduler.
 scheduler_dict = {
-    constants.scheduler_type: constants.exponential,
+    constants.scheduler_type: constants.cyclic,
     constants.gamma: 0.99,
     constants.lr_min: 1e-6,
-    constants.lr_max: 1e-2,
+    constants.lr_max: 0.0001,
     constants.step_size_up: 100,
     constants.reduce_factor: 0.5,
     constants.patience: 10,
@@ -449,8 +364,9 @@ data: dict[
     str,
     CalibrationDataParser | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
 ] = {
-    constants.data_parser: PaintCalibrationDataParser(sample_limit=4),
+    constants.data_parser: PaintCalibrationDataParser(sample_limit=8),
     constants.heliostat_data_mapping: heliostat_data_mapping,
+    constants.validation_sample_fraction: 0.2,
 }
 
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -478,21 +394,18 @@ with setup_distributed_environment(
     # Another possibility would be the pixel loss:
     # loss_definition = PixelLoss(scenario=scenario)
 
-    scenario.set_number_of_rays(number_of_rays=170)
+    scenario.set_number_of_rays(number_of_rays=190)
     resolution = torch.tensor([256, 256], device=device)
 
     # Visualize the surfaces and flux distributions from the initial heliostats.
-    number_of_plots_per_heliostat = 2
-    create_surface_plots(name="ideal")
-    create_flux_plots(
-        heliostat_names=heliostat_names_plots,
-        number_of_plots_per_heliostat=number_of_plots_per_heliostat,
-        base_path_data=base_path_data,
-        data_parser=PaintCalibrationDataParser(
-            sample_limit=number_of_plots_per_heliostat
-        ),
+    bitmaps_before, bitmaps_before_uncropped, bitmaps_measured, heliostat_names = create_fluxes(
+        data_parser=PaintCalibrationDataParser(sample_limit=1),
+        heliostat_data_mapping=[
+            (heliostat[0], heliostat[1][-1:], heliostat[2][-1:])
+            for heliostat in heliostat_data_mapping
+        ],
         resolution=resolution,
-        plot_name="ideal",
+        align_method="incident_ray"
     )
 
     # Create the surface reconstructor.
@@ -502,7 +415,6 @@ with setup_distributed_environment(
         data=data,
         optimization_configuration=optimization_configuration,
         bitmap_resolution=resolution,
-        plot_results=True,
         device=device,
     )
 
@@ -515,12 +427,19 @@ with setup_distributed_environment(
 print(f"rank {ddp_setup['rank']}, final loss per heliostat {final_loss_per_heliostat}")
 
 # Visualize the surfaces and flux distributions from the reconstructed heliostats.
-create_surface_plots(name="reconstructed")
-create_flux_plots(
-    heliostat_names=heliostat_names_plots,
-    number_of_plots_per_heliostat=number_of_plots_per_heliostat,
-    base_path_data=base_path_data,
-    data_parser=PaintCalibrationDataParser(sample_limit=number_of_plots_per_heliostat),
+bitmaps_after, bitmaps_after_uncropped, bitmaps_measured, flux_labels = create_fluxes(
+    data_parser=PaintCalibrationDataParser(sample_limit=1),
+    heliostat_data_mapping=[
+        (heliostat[0], heliostat[1][-1:], heliostat[2][-1:])
+        for heliostat in heliostat_data_mapping
+    ],
     resolution=resolution,
-    plot_name="reconstructed",
+    align_method="incident_ray"
+)
+
+plot_fluxes(
+    fluxes_before=bitmaps_before,
+    fluxes_after=bitmaps_after,
+    fluxes_measured=bitmaps_measured,
+    flux_labels=flux_labels,
 )
