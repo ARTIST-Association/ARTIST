@@ -9,7 +9,7 @@ from artist.raytracing import blocking, geometry
 from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
 from artist.scenario.scenario import Scenario
 from artist.scene.rays import Rays
-from artist.util import indices
+from artist.util import constants, indices
 from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
@@ -45,14 +45,21 @@ class HeliostatRayTracer:
     bitmap_resolution : torch.Tensor
         The resolution of the bitmap in both directions.
         Shape is ``[2]``.
+    blocking_primitive_corners : torch.Tensor
+        The blocking plane corners.
+        Shape is ``[number_of_heliostats, 4, 4]``.
+    blocking_primitive_spans : torch.Tensor
+        The blocking plane spans in u and v direction.
+        Shape is ``[number_of_heliostats, 2, 4]``.
+    blocking_primitive_normals : torch.Tensor
+        The blocking plane normals.
+        Shape is ``[number_of_heliostats, 4]``.
+    lbvh : dict[str, torch.Tensor]
+        Linear bounding volume hierarchies as radix tree.
+    max_tree_depth : int
+        Maximum depth of the LBVH tree.
     ray_magnitude : float
         Magnitude of each single ray.
-    blocking_heliostat_surfaces : torch.Tensor
-        The heliostat surfaces considered during blocking calculations.
-        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
-    blocking_heliostat_surfaces_active : torch.Tensor
-        The aligned heliostat surfaces considered during blocking calculations.
-        Shape is ``[number_of_heliostats, number_of_combined_surface_points_all_facets, 4]``.
 
     Methods
     -------
@@ -84,6 +91,7 @@ class HeliostatRayTracer:
             ]
         ),
         dni: float | None = None,
+        device: torch.device | None = None,
     ) -> None:
         """
         Initialize the heliostat ray tracer.
@@ -115,7 +123,13 @@ class HeliostatRayTracer:
             Shape is ``[2]``.
         dni : float | None
             Direct normal irradiance in W/m^2 (default is None -> ray magnitude = 1.0).
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
         """
+        device = get_device(device=device)
+        
         self.scenario = scenario
         self.heliostat_group = heliostat_group
         self.blocking_active = blocking_active
@@ -157,16 +171,8 @@ class HeliostatRayTracer:
         self.bitmap_resolution = bitmap_resolution
 
         if self.blocking_active:
-            self.blocking_heliostat_surfaces = torch.cat(
-                [
-                    group.surface_points
-                    for group in self.scenario.heliostat_field.heliostat_groups
-                ]
-            )
+            # Compute the heliostat blocking primitives.
             blocking_heliostat_surfaces_active_list = []
-            self.blocking_heliostat_surfaces_active = torch.zeros_like(
-                self.blocking_heliostat_surfaces
-            )
             for group in self.scenario.heliostat_field.heliostat_groups:
                 surfaces = group.surface_points + group.positions.unsqueeze(1)
                 mask = group.active_heliostats_mask.bool()
@@ -178,8 +184,26 @@ class HeliostatRayTracer:
                         "Using horizontal heliostats as blocking planes."
                     )
                 blocking_heliostat_surfaces_active_list.append(surfaces)
-            self.blocking_heliostat_surfaces_active = torch.cat(
+            blocking_heliostat_surfaces_active = torch.cat(
                 blocking_heliostat_surfaces_active_list
+            )
+
+            (
+                self.blocking_primitives_corners,
+                self.blocking_primitives_spans,
+                self.blocking_primitives_normals,
+            ) = blocking.create_blocking_primitives_rectangles_by_index(
+                blocking_heliostats_active_surface_points=blocking_heliostat_surfaces_active,
+                device=device,
+            )
+
+            # Build Linear Bounding Volume Hierarchy as acceleration structure for blocking.
+            self.lbvh = blocking.build_linear_bounding_volume_hierarchies(
+                blocking_primitives_corners=self.blocking_primitives_corners, device=device
+            )
+            self.max_tree_depth = blocking.compute_lbvh_max_depth(
+                left=self.lbvh[constants.left_node], 
+                right=self.lbvh[constants.right_node]
             )
 
         if dni is not None:
@@ -293,17 +317,6 @@ class HeliostatRayTracer:
         intercept_factor = torch.empty(active_heliostats_mask.sum(), device=device)
         on_target_factor = torch.empty(active_heliostats_mask.sum(), device=device)
         blocking_factor = torch.empty(active_heliostats_mask.sum(), device=device)
-
-        if self.blocking_active:
-            # Compute the heliostat blocking primitives.
-            (
-                blocking_primitives_corners,
-                blocking_primitives_spans,
-                blocking_primitives_normals,
-            ) = blocking.create_blocking_primitives_rectangles_by_index(
-                blocking_heliostats_active_surface_points=self.blocking_heliostat_surfaces_active,
-                device=device,
-            )
 
         self.heliostat_group.preferred_reflection_directions = geometry.reflect(
             incident_ray_directions=incident_ray_directions[:, None, :],
@@ -441,11 +454,13 @@ class HeliostatRayTracer:
 
                 # Filter out the blocking primitives that are relevant for blocking.
                 filtered_blocking_primitive_indices = blocking.lbvh_filter_blocking_planes(
+                    lbvh=self.lbvh,
+                    max_tree_depth=self.max_tree_depth,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
                     ],
                     ray_directions=rays.ray_directions,
-                    blocking_primitives_corners=blocking_primitives_corners,
+                    blocking_primitives_corners=self.blocking_primitives_corners,
                     ray_to_heliostat_mapping=ray_to_heliostat_mapping,
                     intersection_distances_target=intersection_distances_target,
                     device=device,
@@ -457,13 +472,13 @@ class HeliostatRayTracer:
                             active_heliostats_mask_batch
                         ],
                         ray_directions=rays.ray_directions,
-                        blocking_primitives_corners=blocking_primitives_corners[
+                        blocking_primitives_corners=self.blocking_primitives_corners[
                             filtered_blocking_primitive_indices
                         ],
-                        blocking_primitives_spans=blocking_primitives_spans[
+                        blocking_primitives_spans=self.blocking_primitives_spans[
                             filtered_blocking_primitive_indices
                         ],
-                        blocking_primitives_normals=blocking_primitives_normals[
+                        blocking_primitives_normals=self.blocking_primitives_normals[
                             filtered_blocking_primitive_indices
                         ],
                         epsilon=1e-12,

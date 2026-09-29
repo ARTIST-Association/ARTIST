@@ -830,6 +830,8 @@ def compute_lbvh_max_depth(
 
 @torch.no_grad()
 def lbvh_filter_blocking_planes(
+    lbvh: dict[str, torch.Tensor],
+    max_tree_depth: int,
     points_at_ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
     blocking_primitives_corners: torch.Tensor,
@@ -842,6 +844,10 @@ def lbvh_filter_blocking_planes(
 
     Parameters
     ----------
+    lbvh : dict[str, torch.Tensor]
+        Linear bounding volume hierarchies as radix tree.
+    max_tree_depth : int
+        Maximum depth of the LBVH tree.
     points_at_ray_origins : torch.Tensor
         Origin points of the rays, i.e., the surface points, expanded in the ray dimension.
         Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
@@ -870,10 +876,6 @@ def lbvh_filter_blocking_planes(
     """
     device = get_device(device=device)
 
-    lbvh = build_linear_bounding_volume_hierarchies(
-        blocking_primitives_corners=blocking_primitives_corners, device=device
-    )
-
     left = lbvh[constants.left_node]
     right = lbvh[constants.right_node]
     aabb_min = lbvh[constants.aabb_min]
@@ -892,8 +894,6 @@ def lbvh_filter_blocking_planes(
 
     total_number_of_rays = ray_origins.shape[0]
     number_of_primitives = blocking_primitives_corners.shape[0]
-
-    max_tree_depth = compute_lbvh_max_depth(left=left, right=right)
 
     node_traversal_stack = torch.full(
         (total_number_of_rays, max_tree_depth),
