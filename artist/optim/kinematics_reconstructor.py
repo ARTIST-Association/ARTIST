@@ -1,22 +1,26 @@
+from datetime import datetime
 import logging
+import os
 import pathlib
 from functools import partial
 from typing import Any, Callable, cast
 
+from matplotlib import pyplot as plt
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
+from artist.flux import bitmap
 from artist.geometry import coordinates
 from artist.io.calibration_parser import CalibrationDataParser
 from artist.optim import training
 from artist.optim.loss import (
+    AngleLoss,
     FocalSpotLoss,
-    KLDivergenceLoss,
     Loss,
-    PixelLoss,
     reduce_loss_per_sample,
 )
+from artist.raytracing.geometry import reflect
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import constants, indices
@@ -79,6 +83,7 @@ class KinematicsReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
+        case: str,
         dni: float | None = None,
         reconstruction_method: str = constants.kinematics_reconstruction_raytracing,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
@@ -105,6 +110,7 @@ class KinematicsReconstructor:
             The resolution of all bitmaps during reconstruction (default is ``torch.tensor([256, 256])``).
             Shape is ``[2]``.
         """
+        device = ddp_setup["device"]
         rank = ddp_setup["rank"]
         if rank == 0:
             log.info("Create a kinematics reconstructor.")
@@ -115,11 +121,11 @@ class KinematicsReconstructor:
         self.optimizer_dict = optimization_configuration[constants.optimization]
         self.scheduler_dict = optimization_configuration[constants.scheduler]
         self.dni = dni
-        self.bitmap_resolution = bitmap_resolution
+        self.bitmap_resolution = bitmap_resolution.to(device)
 
+        self.case=case
+        self.batch_size_outer = self.optimizer_dict[constants.batch_size_outer]
         self.validation_loss_focal_spot = FocalSpotLoss(scenario=self.scenario)
-        self.validation_loss_pixel = PixelLoss()
-        self.validation_loss_kl_div = KLDivergenceLoss()
 
         if reconstruction_method in [
             constants.kinematics_reconstruction_raytracing,
@@ -131,6 +137,7 @@ class KinematicsReconstructor:
                 f"The kinematics reconstruction method '{reconstruction_method}' is unknown. "
                 f"Please select another reconstruction method and try again!"
             )
+        
 
     def reconstruct_kinematics(
         self,
@@ -203,11 +210,6 @@ class KinematicsReconstructor:
             The device on which to perform computations or load tensors and models (default is None).
             If None, ARTIST will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-
-        Returns
-        -------
-        dict[str, torch.Tensor]
-            Test losses per sample.
         """
         device = get_device(device=device)
 
@@ -248,21 +250,29 @@ class KinematicsReconstructor:
             ],
             device=device,
         )
-        loss_pixel_per_sample = self.validation_loss_pixel(
-            prediction=flux_prediction,
-            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
-            reduction_dimensions=(
-                1,
-                2,
-            ),
+
+        heliostat_group.activate_heliostats(
+            active_heliostats_mask=data_split.active_heliostats_mask_test,
+            device=device,
         )
-        loss_kl_div_per_sample = self.validation_loss_kl_div(
-            prediction=flux_prediction,
-            ground_truth=data_split.flux_measured_test[indices_for_local_rank],
-            reduction_dimensions=(
-                1,
-                2,
-            ),
+        orientations = heliostat_group.kinematics.motor_positions_to_orientations(
+            motor_positions=data_split.motor_positions_test,
+            device=device,
+        )
+        normals_predicted = orientations @ torch.tensor(
+            [0.0, 0.0, 1.0, 0.0], device=device
+        )
+        normals_measured = self._compute_measured_normals(
+            heliostat_group=heliostat_group,
+            focal_spots_measured=data_split.focal_spots_measured_test,
+            incident_ray_directions=data_split.incident_ray_directions_test,
+            active_heliostats_mask=data_split.active_heliostats_mask_test,
+            device=device
+        )
+        loss_definition = AngleLoss()
+        angle_loss_normal = loss_definition(
+            prediction=normals_predicted,
+            ground_truth=normals_measured,
         )
 
         test_loss_focal_spot = reduce_loss_per_sample(
@@ -270,29 +280,21 @@ class KinematicsReconstructor:
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
             reduction=reduction,
         )
-        test_loss_pixel = reduce_loss_per_sample(
-            loss_per_sample=loss_pixel_per_sample,
-            number_of_samples_per_heliostat=data_split.number_of_test_samples,
-            reduction=reduction,
-        )
-        test_loss_kl_div = reduce_loss_per_sample(
-            loss_per_sample=loss_kl_div_per_sample,
+        test_loss_tracking = reduce_loss_per_sample(
+            loss_per_sample=angle_loss_normal,
             number_of_samples_per_heliostat=data_split.number_of_test_samples,
             reduction=reduction,
         )
 
-        log.info(
-            "test loss focal spot: %.5f, pixel: %.5f, kl-div: %.5f",
-            torch.mean(test_loss_focal_spot).item(),
-            torch.mean(test_loss_pixel).item(),
-            torch.mean(test_loss_kl_div).item(),
+        print(
+            f"validation loss focal spot: {torch.mean(test_loss_focal_spot).item():.5f} meters",
         )
+        print(
+            f"validation tracking errors: {(torch.mean(test_loss_tracking).item() * 1000.0):.5f} mrad",
+        )
+        
+        return loss_focal_spot_per_sample, flux_prediction
 
-        return {
-            "pixel_loss": test_loss_pixel,
-            "kl_div": test_loss_kl_div,
-            "focal_spot_loss": test_loss_focal_spot,
-        }
 
     def _initialize_reconstruction_bookkeeping(
         self, device: torch.device
@@ -330,7 +332,7 @@ class KinematicsReconstructor:
         return final_loss_per_heliostat, final_loss_start_indices
 
     def _parse_group_calibration_data(
-        self, heliostat_group: HeliostatGroup, device: torch.device
+        self, batch_data, heliostat_group: HeliostatGroup, device: torch.device
     ) -> tuple[
         torch.Tensor,
         torch.Tensor,
@@ -355,10 +357,10 @@ class KinematicsReconstructor:
             The measured flux, measured focal spots, incident ray directions, motor positions,
             active heliostats mask, and target area indices.
         """
-        parser = cast(CalibrationDataParser, self.data[constants.data_parser])
+        parser = cast(CalibrationDataParser, batch_data[constants.data_parser])
         heliostat_mapping = cast(
             list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
-            self.data[constants.heliostat_data_mapping],
+            batch_data[constants.heliostat_data_mapping],
         )
         return parser.parse_data_for_reconstruction(
             heliostat_data_mapping=heliostat_mapping,
@@ -390,12 +392,18 @@ class KinematicsReconstructor:
         training.EarlyStopping
             The early stopping monitor.
         """
+        # optimizer_params = [
+        #     {
+        #         "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
+        #         "lr": self.optimizer_dict[
+        #             constants.initial_learning_rate_rotation_deviation
+        #         ],
+        #     }
+        # ]
         optimizer_params = [
             {
                 "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-                "lr": self.optimizer_dict[
-                    constants.initial_learning_rate_rotation_deviation
-                ],
+                "lr": 4e-5
             }
         ]
 
@@ -530,7 +538,7 @@ class KinematicsReconstructor:
 
         loss = torch.mean(loss_per_heliostat)
 
-        return loss, loss_per_heliostat
+        return loss, loss_per_heliostat, loss_per_sample
 
     def _compute_raytracing_loss(
         self,
@@ -614,12 +622,12 @@ class KinematicsReconstructor:
         loss_per_heliostat = reduce_loss_per_sample(
             loss_per_sample=loss_per_sample,
             number_of_samples_per_heliostat=data_split.number_of_train_samples,
-            reduction=partial(torch.median, dim=1),
+            reduction=partial(torch.mean, dim=-1),
         )
 
         loss = torch.mean(loss_per_heliostat)
 
-        return loss, loss_per_heliostat, sample_indices_for_local_rank
+        return loss, loss_per_heliostat, sample_indices_for_local_rank, loss_per_sample
 
     def _synchronize_gradients_nested_ddp(
         self, optimizer: torch.optim.Optimizer
@@ -650,7 +658,6 @@ class KinematicsReconstructor:
     def _synchronize_reconstruction_across_ranks(
         self,
         final_loss_per_heliostat: torch.Tensor,
-        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]],
     ) -> list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]:
         """
         Synchronize the reconstruction results across all distributed ranks.
@@ -663,13 +670,6 @@ class KinematicsReconstructor:
         final_loss_per_heliostat : torch.Tensor
             The final loss per heliostat on the local rank.
             Shape is ``[total_number_of_heliostats_in_scenario]``.
-        loss_history : list[dict[str, list[float] | dict[str, torch.Tensor]]]
-            The local rank's loss histories per heliostat group.
-
-        Returns
-        -------
-        list[list[dict[str, list[float] | dict[str, torch.Tensor]]]]
-            Loss histories grouped by rank.
         """
         rank = self.ddp_setup["rank"]
 
@@ -690,19 +690,8 @@ class KinematicsReconstructor:
                 final_loss_per_heliostat, op=torch.distributed.ReduceOp.MIN
             )
 
-            final_loss_history_all_groups: list[
-                list[dict[str, list[float] | dict[str, torch.Tensor]]]
-            ] = [[] for _ in range(self.ddp_setup["world_size"])]
-            torch.distributed.all_gather_object(
-                final_loss_history_all_groups, loss_history
-            )
-
             log.info(f"Rank: {rank}, synchronized after kinematics reconstruction.")
 
-        else:
-            final_loss_history_all_groups = [loss_history]
-
-        return final_loss_history_all_groups
 
     def _reconstruct_kinematics_alignment_driven(
         self,
@@ -748,120 +737,160 @@ class KinematicsReconstructor:
         final_loss_per_heliostat, final_loss_start_indices = (
             self._initialize_reconstruction_bookkeeping(device=device)
         )
-        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]] = []
+    
+        data_mappings = self.data[
+            constants.heliostat_data_mapping
+        ]
 
-        # Iterate heliostat groups assigned to this rank.
-        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-            heliostat_group: HeliostatGroup = (
-                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-            )
-            (
-                flux_measured,
-                focal_spots_measured,
-                incident_ray_directions,
-                motor_positions,
-                active_heliostats_mask,
-                target_area_indices,
-            ) = self._parse_group_calibration_data(
-                heliostat_group=heliostat_group, device=device
-            )
+        for i in range(0, len(data_mappings), self.batch_size_outer):
+            batch_data = {
+                constants.data_parser: self.data[constants.data_parser],
+                constants.heliostat_data_mapping: data_mappings[i : i + self.batch_size_outer],
+                constants.validation_sample_fraction: self.data[constants.validation_sample_fraction]
+            }
+            print(i)
 
-            # Skip groups with no active heliostats.
-            if active_heliostats_mask.sum() > 0:
-                data_split: training.TrainTestSplit = training.train_test_split(
-                    active_heliostats_mask=active_heliostats_mask,
-                    flux_measured=flux_measured,
-                    focal_spots_measured=focal_spots_measured,
-                    incident_ray_directions=incident_ray_directions,
-                    motor_positions=motor_positions,
-                    target_area_indices=target_area_indices,
-                    device=device,
-                )
-                # Calculate focal spot from measured flux.
-                normals_measured = self._compute_measured_normals(
-                    heliostat_group=heliostat_group,
-                    focal_spots_measured=focal_spots_measured,
-                    incident_ray_directions=incident_ray_directions,
-                    active_heliostats_mask=active_heliostats_mask,
-                    device=device,
+            # Process only groups assigned to this rank.
+            for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
+                heliostat_group: HeliostatGroup = (
+                    self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
                 )
 
-                # Set up optimizer, scheduler, and early stopping.
-                optimizer, scheduler, early_stopper = (
-                    self._setup_optimizer_scheduler_early_stopping(
-                        heliostat_group=heliostat_group
+                (
+                    flux_measured,
+                    focal_spots_measured,
+                    incident_ray_directions,
+                    motor_positions,
+                    active_heliostats_mask,
+                    target_area_indices,
+                ) = self._parse_group_calibration_data(
+                    batch_data=batch_data, heliostat_group=heliostat_group, device=device
+                )
+
+                # Skip groups with no active heliostats.
+                if active_heliostats_mask.sum() > 0:
+
+                    if (len(data_mappings) != len(heliostat_group.names)):
+                        log.warning("Not all heliostats in this group are being reconstructed!")
+
+                    data_split: training.TrainTestSplit = training.train_test_split(
+                        active_heliostats_mask=active_heliostats_mask,
+                        flux_measured=flux_measured,
+                        focal_spots_measured=focal_spots_measured,
+                        incident_ray_directions=incident_ray_directions,
+                        motor_positions=motor_positions,
+                        target_area_indices=target_area_indices,
+                        test_fraction=self.data[constants.validation_sample_fraction],
+                        device=device,
                     )
-                )
-
-                loss_history_list = []
-
-                # Start the optimization.
-                loss = torch.inf
-                epoch = 0
-                log_step = (
-                    self.optimizer_dict[constants.max_epoch]
-                    if self.optimizer_dict[constants.log_step] == 0
-                    else self.optimizer_dict[constants.log_step]
-                )
-                while (
-                    loss > float(self.optimizer_dict[constants.tolerance])
-                    and epoch <= self.optimizer_dict[constants.max_epoch]
-                ):
-                    optimizer.zero_grad()
-
-                    loss, loss_per_heliostat = self._compute_alignment_loss(
+                    # Calculate focal spot from measured flux.
+                    normals_measured = self._compute_measured_normals(
                         heliostat_group=heliostat_group,
-                        data_split=data_split,
-                        loss_definition=loss_definition,
-                        normals_measured=normals_measured,
+                        focal_spots_measured=focal_spots_measured,
+                        incident_ray_directions=incident_ray_directions,
+                        active_heliostats_mask=active_heliostats_mask,
                         device=device,
                     )
 
-                    loss.backward()
-
-                    # Severely misaligned heliostat samples produce nan gradients. These are set to zero and the
-                    # sample has no influence on the training epoch.
-                    optimizer.param_groups[0]["params"][0].grad.nan_to_num_(
-                        nan=0.0, posinf=0.0, neginf=0.0
+                    # Set up optimizer, scheduler, and early stopping.
+                    optimizer, _, early_stopper = (
+                        self._setup_optimizer_scheduler_early_stopping(
+                            heliostat_group=heliostat_group
+                        )
                     )
 
-                    optimizer.step()
-                    if isinstance(
-                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                        optimizer,
+                        max_lr=4e-3,
+                        total_steps=self.optimizer_dict[constants.max_epoch] + 1,
+                        pct_start=0.15,
+                        anneal_strategy="cos",
+                        div_factor=100,
+                        final_div_factor=10,
+                    )
+
+                    # Start the optimization.
+                    loss = torch.inf
+                    epoch = 0
+                    log_step = (
+                        self.optimizer_dict[constants.max_epoch]
+                        if self.optimizer_dict[constants.log_step] == 0
+                        else self.optimizer_dict[constants.log_step]
+                    )
+                    while (
+                        loss > float(self.optimizer_dict[constants.tolerance])
+                        and epoch <= self.optimizer_dict[constants.max_epoch]
                     ):
-                        scheduler.step(loss.detach())
-                    else:
-                        scheduler.step()
+                        optimizer.zero_grad()
 
-                    is_last_epoch = (
-                        epoch == self.optimizer_dict[constants.max_epoch] - 1
-                    )
-                    stop = early_stopper.step(loss.item())
-
-                    if epoch % log_step == 0 or is_last_epoch or stop:
-                        log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}",
+                        loss, loss_per_heliostat, loss_per_sample = self._compute_alignment_loss(
+                            heliostat_group=heliostat_group,
+                            data_split=data_split,
+                            loss_definition=loss_definition,
+                            normals_measured=normals_measured,
+                            device=device,
                         )
 
-                        with torch.no_grad():
-                            test_loss = self._validate(
-                                heliostat_group=heliostat_group,
-                                data_split=data_split,
-                                reduction=partial(torch.mean, dim=-1),
-                                device=device,
+                        loss.backward()
+
+                        optimizer.step()
+                        # if isinstance(
+                        #     scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                        # ):
+                        #     scheduler.step(loss.detach())
+                        # else:
+                        #     scheduler.step()
+                        if epoch < 3000:
+                            scheduler.step()
+                        else:
+                            # Freeze at whatever LR you choose
+                            for group in optimizer.param_groups:
+                                group["lr"] = 0.0018
+                        
+
+                        stop = early_stopper.step(loss.item())
+
+                        if epoch % log_step == 0 or stop:
+                            log.info(
+                                f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                             )
 
-                    # Early stopping when loss did not improve for a predefined number of epochs.
-                    if stop:
-                        log.info(f"Early stopping at epoch {epoch}.")
-                        break
+                            # with torch.no_grad():
+                            #     test_loss, flux_test = self._validate(
+                            #         heliostat_group=heliostat_group,
+                            #         data_split=data_split,
+                            #         reduction=partial(torch.mean, dim=-1),
+                            #         device=device,
+                            #     )
+                        
+                        # Early stopping when loss did not improve for a predefined number of epochs.
+                        if stop:
+                            log.info(f"Early stopping at epoch {epoch}.")
+                            break
 
-                    loss_history_list.append(loss.detach().cpu().item())
-                    epoch += 1
+                        if epoch == 0:
+                            save_dir = pathlib.Path(
+                                f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction"
+                            )
+                            os.makedirs(save_dir, exist_ok=True)
+                            results = {
+                                "deviation_params": torch.zeros_like(heliostat_group.kinematics.rotation_deviation_parameters.detach().cpu()),
+                                "training_loss": [],
+                                "target_area_indices": []
+                            }
+                            for e in range(0, self.optimizer_dict[constants.max_epoch]+1, 1000):
+                                file_path = save_dir / f"results_alignment_{e}_{data_split.number_of_train_samples}.pt"
+                                if not file_path.exists():
+                                    torch.save(results, file_path)
 
-                loss_history.append(
-                    {"total_loss": loss_history_list, "test_loss": test_loss}
-                )
+                        if epoch % 1000 == 0:
+                            results = torch.load(f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction/results_alignment_{epoch}_{data_split.number_of_train_samples}.pt")
+                            results["deviation_params"][active_heliostats_mask!=0] = heliostat_group.kinematics.rotation_deviation_parameters[active_heliostats_mask!=0].detach().cpu()
+                            results["training_loss"].append(loss_per_sample.detach().cpu().tolist())
+                            results["target_area_indices"].append(data_split.target_area_indices_train.detach().cpu().tolist())
+                            torch.save(results, f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction/results_alignment_{epoch}_{data_split.number_of_train_samples}.pt")     
+
+                        epoch += 1
 
                 active_indices_group = torch.nonzero(
                     active_heliostats_mask != 0, as_tuple=True
@@ -881,7 +910,7 @@ class KinematicsReconstructor:
                 heliostat_group.kinematics.rotation_deviation_parameters.detach()
             )
 
-        return final_loss_per_heliostat.detach().cpu(), [loss_history]
+        return final_loss_per_heliostat.detach().cpu(), None
 
     def _reconstruct_kinematics_flux_driven(
         self,
@@ -927,109 +956,150 @@ class KinematicsReconstructor:
         final_loss_per_heliostat, final_loss_start_indices = (
             self._initialize_reconstruction_bookkeeping(device=device)
         )
-        loss_history: list[dict[str, list[float] | dict[str, torch.Tensor]]] = []
 
-        # Iterate heliostat groups assigned to this rank.
-        for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
-            heliostat_group: HeliostatGroup = (
-                self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
-            )
-            (
-                flux_measured,
-                focal_spots_measured,
-                incident_ray_directions,
-                motor_positions,
-                active_heliostats_mask,
-                target_area_indices,
-            ) = self._parse_group_calibration_data(
-                heliostat_group=heliostat_group, device=device
-            )
+        data_mappings = self.data[
+            constants.heliostat_data_mapping
+        ]
 
-            if active_heliostats_mask.sum() > 0:
-                data_split: training.TrainTestSplit = training.train_test_split(
-                    active_heliostats_mask=active_heliostats_mask,
-                    flux_measured=flux_measured,
-                    focal_spots_measured=focal_spots_measured,
-                    incident_ray_directions=incident_ray_directions,
-                    motor_positions=motor_positions,
-                    target_area_indices=target_area_indices,
-                    device=device,
+        for i in range(0, len(data_mappings), self.batch_size_outer):
+            batch_data = {
+                constants.data_parser: self.data[constants.data_parser],
+                constants.heliostat_data_mapping: data_mappings[i : i + self.batch_size_outer],
+                constants.validation_sample_fraction: self.data[constants.validation_sample_fraction]
+            }
+            print(i)
+
+            # Process only groups assigned to this rank.
+            for heliostat_group_index in self.ddp_setup[constants.groups_to_ranks_mapping][rank]:
+                heliostat_group: HeliostatGroup = (
+                    self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+                )
+                (
+                    flux_measured,
+                    focal_spots_measured,
+                    incident_ray_directions,
+                    motor_positions,
+                    active_heliostats_mask,
+                    target_area_indices,
+                ) = self._parse_group_calibration_data(
+                    batch_data=batch_data, heliostat_group=heliostat_group, device=device
                 )
 
-                # Set up optimizer, scheduler, and early stopping.
-                optimizer, scheduler, early_stopper = (
-                    self._setup_optimizer_scheduler_early_stopping(
-                        heliostat_group=heliostat_group
+                # Skip groups with no active heliostats.
+                if active_heliostats_mask.sum() > 0:
+        
+                    if (len(data_mappings) != len(heliostat_group.names)):
+                        log.warning("Not all heliostats in this group are being reconstructed!")
+
+                    data_split: training.TrainTestSplit = training.train_test_split(
+                        active_heliostats_mask=active_heliostats_mask,
+                        flux_measured=flux_measured,
+                        focal_spots_measured=focal_spots_measured,
+                        incident_ray_directions=incident_ray_directions,
+                        motor_positions=motor_positions,
+                        target_area_indices=target_area_indices,
+                        test_fraction=self.data[constants.validation_sample_fraction],
+                        device=device,
                     )
-                )
 
-                loss_history_list = []
-
-                # Start the optimization.
-                loss = torch.inf
-                epoch = 0
-                log_step = (
-                    self.optimizer_dict[constants.max_epoch]
-                    if self.optimizer_dict[constants.log_step] == 0
-                    else self.optimizer_dict[constants.log_step]
-                )
-                while (
-                    loss > float(self.optimizer_dict[constants.tolerance])
-                    and epoch <= self.optimizer_dict[constants.max_epoch]
-                ):
-                    optimizer.zero_grad()
-
-                    loss, loss_per_heliostat, sample_indices_for_local_rank = (
-                        self._compute_raytracing_loss(
-                            heliostat_group=heliostat_group,
-                            data_split=data_split,
-                            loss_definition=loss_definition,
-                            device=device,
+                    # Set up optimizer, scheduler, and early stopping.
+                    optimizer, _, early_stopper = (
+                        self._setup_optimizer_scheduler_early_stopping(
+                            heliostat_group=heliostat_group
                         )
                     )
 
-                    loss.backward()
+                    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                        optimizer,
+                        max_lr=1.2e-3,
+                        total_steps=self.optimizer_dict[constants.max_epoch]+1,
+                        pct_start=0.20,
+                        anneal_strategy="cos",
+                        div_factor=1.0e2,
+                        final_div_factor=1.0e3,
+                    )
 
-                    self._synchronize_gradients_nested_ddp(optimizer=optimizer)
-
-                    optimizer.step()
-                    if isinstance(
-                        scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                    # Start the optimization.
+                    loss = torch.inf
+                    epoch = 0
+                    log_step = (
+                        self.optimizer_dict[constants.max_epoch]
+                        if self.optimizer_dict[constants.log_step] == 0
+                        else self.optimizer_dict[constants.log_step]
+                    )
+                    while (
+                        loss > float(self.optimizer_dict[constants.tolerance])
+                        and epoch <= self.optimizer_dict[constants.max_epoch]
                     ):
-                        scheduler.step(loss.detach())
-                    else:
-                        scheduler.step()
+                        optimizer.zero_grad()
 
-                    is_last_epoch = (
-                        epoch == self.optimizer_dict[constants.max_epoch] - 1
-                    )
-                    stop = early_stopper.step(loss.item())
-
-                    if epoch % log_step == 0 or is_last_epoch or stop:
-                        log.info(
-                            f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}",
-                        )
-
-                        with torch.no_grad():
-                            test_loss = self._validate(
+                        loss, loss_per_heliostat, sample_indices_for_local_rank, loss_per_sample = (
+                            self._compute_raytracing_loss(
                                 heliostat_group=heliostat_group,
                                 data_split=data_split,
-                                reduction=partial(torch.median, dim=1),
+                                loss_definition=loss_definition,
                                 device=device,
                             )
+                        )
 
-                    # Early stopping when loss did not improve for a predefined number of epochs.
-                    if stop:
-                        log.info(f"Early stopping at epoch {epoch}.")
-                        break
+                        loss.backward()
+                        self._synchronize_gradients_nested_ddp(optimizer=optimizer)
 
-                    loss_history_list.append(loss.detach().cpu().item())
-                    epoch += 1
+                        optimizer.step()
+                        if isinstance(
+                            scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                        ):
+                            scheduler.step(loss.detach())
+                        else:
+                            scheduler.step()
 
-                loss_history.append(
-                    {"total_loss": loss_history_list, "test_loss": test_loss}
-                )
+                        is_last_epoch = (
+                            epoch == self.optimizer_dict[constants.max_epoch] - 1
+                        )
+                        stop = early_stopper.step(loss.item())
 
+                        if epoch % log_step == 0 or is_last_epoch or stop:
+                            log.info(
+                                f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}",
+                            )
+
+                            # with torch.no_grad():
+                            #     test_loss, flux_test = self._validate(
+                            #         heliostat_group=heliostat_group,
+                            #         data_split=data_split,
+                            #         reduction=partial(torch.mean, dim=1),
+                            #         device=device,
+                            #     )
+
+                        # Early stopping when loss did not improve for a predefined number of epochs.
+                        if stop:
+                            log.info(f"Early stopping at epoch {epoch}.")
+                            break
+                        
+                        if epoch == 0:
+                            save_dir = pathlib.Path(
+                                f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction"
+                            )
+                            os.makedirs(save_dir, exist_ok=True)
+                            results = {
+                                "deviation_params": torch.zeros_like(heliostat_group.kinematics.rotation_deviation_parameters.detach().cpu()),
+                                "training_loss": [],
+                                "target_area_indices": []
+                            }
+                            for e in range(0, self.optimizer_dict[constants.max_epoch]+1, 100):
+                                file_path = save_dir / f"results_flux_{e}_{data_split.number_of_train_samples}.pt"
+                                if not file_path.exists():
+                                    torch.save(results, file_path)
+
+                        if epoch % 100 == 0:
+                            results = torch.load(f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction/results_flux_{epoch}_{data_split.number_of_train_samples}.pt")
+                            results["deviation_params"][active_heliostats_mask!=0] = heliostat_group.kinematics.rotation_deviation_parameters[active_heliostats_mask!=0].detach().cpu()
+                            results["training_loss"].append(loss_per_sample.detach().cpu().tolist())
+                            results["target_area_indices"].append(data_split.target_area_indices_train.detach().cpu().tolist())
+                            torch.save(results, f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction/results_flux_{epoch}_{data_split.number_of_train_samples}.pt")     
+
+                        epoch += 1
+                    
                 local_indices = (
                     sample_indices_for_local_rank[:: data_split.number_of_train_samples]
                     // data_split.number_of_train_samples
@@ -1050,9 +1120,8 @@ class KinematicsReconstructor:
 
                 log.info(f"Rank: {rank}, Kinematics reconstructed.")
 
-        final_loss_history_all_groups = self._synchronize_reconstruction_across_ranks(
+        self._synchronize_reconstruction_across_ranks(
             final_loss_per_heliostat=final_loss_per_heliostat,
-            loss_history=loss_history,
         )
 
         for heliostat_group in self.scenario.heliostat_field.heliostat_groups:
@@ -1060,4 +1129,4 @@ class KinematicsReconstructor:
                 heliostat_group.kinematics.rotation_deviation_parameters.detach()
             )
 
-        return final_loss_per_heliostat.detach().cpu(), final_loss_history_all_groups
+        return final_loss_per_heliostat.detach().cpu(), None

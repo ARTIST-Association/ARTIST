@@ -1,10 +1,13 @@
 import logging
 from typing import Any
 
+from matplotlib import pyplot as plt
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
+from artist.flux import bitmap
 from artist.optim import training
 from artist.optim.loss import KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
@@ -124,6 +127,13 @@ class AimPointOptimizer:
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
 
+        self.pixel_area = (4.335 / self.bitmap_resolution[1]) * (5.2292 / self.bitmap_resolution[1])
+
+    def pixel_to_meter(self, center, width, height):
+        x = (center[..., 0]) / width * 4.335 - 4.335 / 2
+        y = (height - center[..., 1]) / height * 5.2292 - 5.2292 / 2
+        return torch.stack((x, y), dim=-1)
+
     def _initialize_group_parameters(
         self, device: torch.device
     ) -> tuple[
@@ -237,8 +247,12 @@ class AimPointOptimizer:
             )
             lower_margin = initial_motor_positions - motor_positions_minimum
             upper_margin = motor_positions_maximum - initial_motor_positions
+
             scales_all_groups.append(
-                torch.minimum(lower_margin, upper_margin).clamp(min=1.0)
+                torch.minimum(
+                    torch.minimum(lower_margin, upper_margin),
+                    torch.tensor(500.0, device=device),
+                ).clamp(min=1.0)
             )
 
             optimizable_parameters_all_groups.append(
@@ -451,12 +465,6 @@ class AimPointOptimizer:
             ),
             device=device,
         )
-        intercept_factors = torch.zeros(
-            (sum(actives.sum() for actives in active_heliostats_masks_all_groups)),
-            device=device,
-        )
-        on_target_factors = torch.zeros_like(intercept_factors, device=device)
-        blocking_factors = torch.zeros_like(intercept_factors, device=device)
 
         # Trace rays and accumulate fluxes.
         for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
@@ -480,9 +488,9 @@ class AimPointOptimizer:
             # Perform heliostat-based ray tracing.
             (
                 flux_distributions,
-                intercept_factor,
-                on_target_factor,
-                blocking_factor,
+                intercept_factor, 
+                on_target_factor, 
+                blocking_factor
             ) = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions_all_groups[
                     heliostat_group_index
@@ -495,6 +503,11 @@ class AimPointOptimizer:
                 ],
                 device=device,
             )
+
+            print(intercept_factor.mean())
+            print(on_target_factor.mean())
+            print(blocking_factor.mean())
+
             sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
                 bitmaps_per_heliostat=flux_distributions,
@@ -505,12 +518,10 @@ class AimPointOptimizer:
             )[self.target_area_index]
             total_flux = total_flux + flux_distribution_on_target
 
-            global_indices = (
-                group_offsets[heliostat_group_index] + sample_indices_for_local_rank
+            flux_centers = bitmap.get_center_of_mass(
+                bitmaps=flux_distributions,
+                device=device
             )
-            intercept_factors[global_indices] = intercept_factor
-            on_target_factors[global_indices] = on_target_factor
-            blocking_factors[global_indices] = blocking_factor
 
         if self.ddp_setup["is_distributed"]:
             total_flux = torch.distributed.nn.functional.all_reduce(
@@ -518,165 +529,7 @@ class AimPointOptimizer:
                 op=torch.distributed.ReduceOp.SUM,
             )
 
-        return total_flux, intercept_factors, on_target_factors, blocking_factors
-
-    def _compute_kl_constraints(
-        self,
-        flux_loss: torch.Tensor,
-        total_flux: torch.Tensor,
-        intercept_factors: torch.Tensor,
-        epoch: int,
-        flux_integral_reference: torch.Tensor | float,
-        intercept_factors_reference: torch.Tensor | float,
-        lambda_flux_integral: torch.Tensor | float,
-        lambda_intercept: torch.Tensor | float,
-        lambda_local_flux: torch.Tensor | float,
-        rho_flux_integral: float,
-        rho_intercept: float,
-        rho_local_flux: float,
-        max_flux_density_per_pixel: torch.Tensor,
-    ) -> tuple[
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor | float,
-        torch.Tensor | float,
-        torch.Tensor | float,
-        torch.Tensor | float,
-        torch.Tensor | float,
-    ]:
-        """
-        Compute the Augmented-Lagrangian constraints and the total loss for a KL-divergence loss.
-
-        Three constraints are added: one that maximizes the flux integral, one that maximizes the
-        intercept factor, and one that constrains the local maximum intensity. The Augmented-Lagrangian
-        multipliers are updated and returned so that their state persists across epochs.
-
-        Parameters
-        ----------
-        flux_loss : torch.Tensor
-            The flux loss between predicted and target flux.
-        total_flux : torch.Tensor
-            The accumulated flux distribution on the target.
-        intercept_factors : torch.Tensor
-            The intercept factors per heliostat.
-        epoch : int
-            The current epoch. References are captured in the first epoch.
-        flux_integral_reference : torch.Tensor | float
-            The reference flux integral captured in the first epoch.
-        intercept_factors_reference : torch.Tensor | float
-            The reference intercept factors captured in the first epoch.
-        lambda_flux_integral : torch.Tensor | float
-            The current flux integral multiplier.
-        lambda_intercept : torch.Tensor | float
-            The current intercept multiplier.
-        lambda_local_flux : torch.Tensor | float
-            The current local flux multiplier.
-        rho_flux_integral : float
-            The penalty parameter of the flux integral constraint.
-        rho_intercept : float
-            The penalty parameter of the intercept constraint.
-        rho_local_flux : float
-            The penalty parameter of the local flux constraint.
-        max_flux_density_per_pixel : torch.Tensor
-            The maximum allowed flux density per pixel.
-
-        Returns
-        -------
-        torch.Tensor
-            The total loss.
-        torch.Tensor
-            The flux integral constraint.
-        torch.Tensor
-            The intercept factor constraint.
-        torch.Tensor
-            The local flux constraint.
-        torch.Tensor | float
-            The (possibly updated) reference flux integral.
-        torch.Tensor | float
-            The (possibly updated) reference intercept factors.
-        torch.Tensor | float
-            The updated flux integral multiplier.
-        torch.Tensor | float
-            The updated intercept multiplier.
-        torch.Tensor | float
-            The updated local flux multiplier.
-        """
-        # Store references at epoch 0, i.e., baseline flux integral and intercept factors.
-        if epoch == 0:
-            flux_integral_reference = total_flux.sum().detach()
-            intercept_factors_reference = intercept_factors.detach()
-        # Add Augmented-Lagrangian constraints to ensure that flux integral is maximized,
-        # i.e., intensity increases or stays the same.
-        # Violation if current integral < reference
-        flux_integral_difference = (flux_integral_reference - total_flux.sum()) / (
-            flux_integral_reference + self.epsilon
-        )
-        flux_integral_difference_clamped = torch.clamp(
-            flux_integral_difference, min=0.0
-        )
-        flux_integral_constraint = (
-            lambda_flux_integral * flux_integral_difference_clamped
-            + 0.5 * rho_flux_integral * flux_integral_difference_clamped**2
-        )
-
-        # Add Augmented-Lagrangian constraint to ensure that spillage is reduced.
-        # Violation if current intercept < reference (per heliostat, then mean)
-        intercept_factors_differences = (
-            intercept_factors_reference - intercept_factors
-        ) / (intercept_factors_reference + self.epsilon)
-        intercept_factors_differences_clamped = torch.clamp(
-            intercept_factors_differences, min=0.0
-        )
-        intercept_factor_constraint = (
-            lambda_intercept * intercept_factors_differences_clamped
-            + 0.5 * rho_intercept * intercept_factors_differences_clamped**2
-        ).mean()
-
-        # Add Augmented-Lagrangian constraint to ensure that local heat spikes are avoided.
-        # Violation where any pixel > max. allowed density.
-        local_flux_violation = (total_flux - max_flux_density_per_pixel.detach()) / (
-            max_flux_density_per_pixel.detach() + self.epsilon
-        )
-        local_flux_violation_clamped = torch.clamp(local_flux_violation, min=0.0)
-        local_flux_constraint = torch.max(
-            lambda_local_flux * local_flux_violation_clamped
-            + 0.5 * rho_local_flux * local_flux_violation_clamped**2
-        )
-
-        loss = (
-            flux_loss
-            + flux_integral_constraint
-            + intercept_factor_constraint
-            + local_flux_constraint
-        )
-        # Update lambda multipliers.
-        with torch.no_grad():
-            lambda_local_flux = torch.clamp(
-                lambda_local_flux + rho_local_flux * local_flux_violation.max(),
-                min=0.0,
-            )
-            lambda_intercept = torch.clamp(
-                lambda_intercept + rho_intercept * intercept_factors_differences.mean(),
-                min=0.0,
-            )
-            lambda_flux_integral = torch.clamp(
-                lambda_flux_integral + rho_flux_integral * flux_integral_difference,
-                min=0.0,
-            )
-
-        return (
-            loss,
-            flux_integral_constraint,
-            intercept_factor_constraint,
-            local_flux_constraint,
-            flux_integral_reference,
-            intercept_factors_reference,
-            lambda_flux_integral,
-            lambda_intercept,
-            lambda_local_flux,
-        )
+        return total_flux, flux_centers
 
     def _synchronize_distributed_gradients(
         self, optimizer: torch.optim.Optimizer
@@ -805,29 +658,7 @@ class AimPointOptimizer:
             )
         )
 
-        target_plane_dimensions = self._get_target_plane_dimensions(device=device)
-
-        # Set up constraints.
-        flux_integral_reference = 0.0
-        intercept_factors_reference = 0.0
-        lambda_local_flux = 0.0
-        lambda_flux_integral = 0.0
-        lambda_intercept = 0.0
-        rho_local_flux = self.constraint_dict[constants.rho_local_flux]
-        rho_flux_integral = self.constraint_dict[constants.rho_flux_integral]
-        rho_intercept = self.constraint_dict[constants.rho_intercept]
-        max_flux_density_per_pixel = (
-            torch.prod(target_plane_dimensions) / torch.prod(self.bitmap_resolution)
-        ) * self.constraint_dict[constants.max_flux_density]
-
-        # Initialize histories for the loss plot.
-        total_loss_history = []
-        flux_loss_history = []
-        flux_integral = []
-        local_flux_constraint_history = []
-        intercept_constraint_history = []
-        flux_integral_constraint_history = []
-
+        flux_reference = None
         # Start the optimization.
         loss = torch.tensor(torch.inf)
         epoch = 0
@@ -852,7 +683,7 @@ class AimPointOptimizer:
             )
 
             # Trace rays and accumulate fluxes.
-            total_flux, intercept_factors, on_target_factors, blocking_factors = (
+            total_flux, flux_centers = (
                 self._trace_and_accumulate_flux(
                     active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
                     target_area_indices_all_groups=target_area_indices_all_groups,
@@ -862,13 +693,25 @@ class AimPointOptimizer:
                 )
             )
 
+            if flux_reference  is None:
+                flux_reference = total_flux.sum().detach()
+            predicted_integrals = total_flux.sum()
+            relative_decrease = 1.0 - (
+                predicted_integrals / (flux_reference + self.epsilon)
+            )
+            relative_decrease = torch.clamp(
+                relative_decrease,
+                min=0.0,
+                max=0.4,
+            )
+            integral_losses = 2.0 * (
+                relative_decrease / 0.4
+            ) ** 2
+
             # Flux loss: Compare predicted total flux vs. ground truth.
             flux_loss = loss_definition(
                 prediction=total_flux.unsqueeze(indices.heliostat_dimension),
                 ground_truth=self.ground_truth.unsqueeze(indices.heliostat_dimension),
-                target_area_indices=torch.tensor(
-                    [self.target_area_index], device=device
-                ),
                 reduction_dimensions=(
                     indices.batched_bitmap_e,
                     indices.batched_bitmap_u,
@@ -876,34 +719,12 @@ class AimPointOptimizer:
                 device=device,
             )
 
-            if isinstance(loss_definition, KLDivergenceLoss):
-                (
-                    loss,
-                    flux_integral_constraint,
-                    intercept_factor_constraint,
-                    local_flux_constraint,
-                    flux_integral_reference,
-                    intercept_factors_reference,
-                    lambda_flux_integral,
-                    lambda_intercept,
-                    lambda_local_flux,
-                ) = self._compute_kl_constraints(
-                    flux_loss=flux_loss,
-                    total_flux=total_flux,
-                    intercept_factors=intercept_factors,
-                    epoch=epoch,
-                    flux_integral_reference=flux_integral_reference,
-                    intercept_factors_reference=intercept_factors_reference,
-                    lambda_flux_integral=lambda_flux_integral,
-                    lambda_intercept=lambda_intercept,
-                    lambda_local_flux=lambda_local_flux,
-                    rho_flux_integral=rho_flux_integral,
-                    rho_intercept=rho_intercept,
-                    rho_local_flux=rho_local_flux,
-                    max_flux_density_per_pixel=max_flux_density_per_pixel,
-                )
+            loss = flux_loss + integral_losses
 
             loss.backward()
+
+
+            #0 <= l1_losses <= 2
 
             self._synchronize_distributed_gradients(optimizer=optimizer)
 
@@ -914,32 +735,58 @@ class AimPointOptimizer:
                 scheduler.step()
 
             if epoch % log_step == 0 and rank == 0:
-                log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item()}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}",
+                print(
+                    f"Epoch: {epoch}, Loss: {loss.item():.5e}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}",
+                    f"flux loss={flux_loss.item():.3f} | integral loss={integral_losses.item():.3f} | "
+                    f"intensity={(total_flux.sum().item()):.4f}"
                 )
 
-            total_loss_history.append(loss.detach().cpu().item())
-            flux_loss_history.append(flux_loss.detach().cpu().item())
-            if isinstance(loss_definition, KLDivergenceLoss):
-                flux_integral.append(
-                    (
-                        100
-                        / flux_integral_reference
-                        * (total_flux.sum() - flux_integral_reference + 1e-8)
-                    )
-                    .detach()
-                    .cpu()
-                    .item()
-                )
-                local_flux_constraint_history.append(
-                    local_flux_constraint.detach().cpu().item()
-                )
-                intercept_constraint_history.append(
-                    intercept_factor_constraint.detach().cpu().item()
-                )
-                flux_integral_constraint_history.append(
-                    flux_integral_constraint.detach().cpu().item()
-                )
+            # if epoch % 1 == 0 and rank == 0:
+                
+            #     flux = total_flux / self.pixel_area
+
+            #     fig, ax = plt.subplots()
+            #     im = ax.imshow(
+            #         flux.cpu().detach(),
+            #         extent=[
+            #             -4.335 / 2, 4.335 / 2,
+            #             -5.2292 / 2, 5.2292 / 2
+            #         ],
+            #     )
+            #     flux_centers = self.pixel_to_meter(
+            #         center=flux_centers, 
+            #         width=self.bitmap_resolution[1],
+            #         height=self.bitmap_resolution[0]
+            #     )
+            #     flux_centers += torch.tensor([0.5, 0.5], device=device)
+            #     ax.scatter(
+            #         flux_centers[:, 0].cpu().detach(),
+            #         flux_centers[:, 1].cpu().detach(),
+            #         alpha=0.3,
+            #         s=2,
+            #         color="magenta",
+            #         #edgecolors="white",
+            #     )
+
+            #     ax.set_title(
+            #         #f"Aim point optimization\n{((flux * self.pixel_area).sum().item()/1000000):.1f} MW",
+            #         f"Aim point optimization\n{(total_flux.sum().item() / 1000000):.3f} MW"
+            #     )
+            #     ax.set_ylabel("Target height relative to center (m)", labelpad=2.5)
+            #     ax.set_xlabel("Target width relative to center (m)", labelpad=4)
+
+
+            #     cbar = fig.colorbar(im, ax=ax)
+            #     cbar.set_label(
+            #         r"Flux density ($10^6\,\mathrm{W}/\mathrm{m}^2$)",
+            #     )
+            #     cbar.ax.yaxis.set_major_formatter(
+            #         FuncFormatter(lambda x, pos: f"{x/1e6:g}")
+            #     )
+
+            #     fig.tight_layout()
+            #     fig.savefig(f"opt_{epoch}.png", dpi=300, bbox_inches="tight")
+            #     plt.close(fig)
 
             # Early stopping when loss did not improve for a predefined number of epochs.
             stop = early_stopper.step(loss.item())
@@ -950,23 +797,9 @@ class AimPointOptimizer:
 
             epoch += 1
 
-        loss_history = {
-            "total_loss": total_loss_history,
-            "flux_loss": flux_loss_history,
-            "local_flux_constraint": local_flux_constraint_history,
-            "intercept_constraint": intercept_constraint_history,
-            "flux_integral_constraint": flux_integral_constraint_history,
-            "flux_integral": flux_integral,
-        }
         log.info(f"Rank: {rank}, aim points optimized.")
 
         # Broadcast final motor positions for each heliostat group from source rank to others.
         self._broadcast_motor_positions()
 
-        return (
-            loss.detach().cpu(),
-            loss_history,
-            intercept_factors,
-            on_target_factors,
-            blocking_factors,
-        )
+        return loss.detach().cpu()
