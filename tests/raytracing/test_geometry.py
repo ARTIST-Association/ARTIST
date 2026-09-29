@@ -166,32 +166,6 @@ def target_area_2_planar(
     )
 
 
-@pytest.fixture(params=[torch.tensor([0]), None])
-def target_area_indices(
-    request: pytest.FixtureRequest, device: torch.device
-) -> torch.Tensor | None:
-    """
-    Create target area indices or None to use in the test.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Returns
-    -------
-    torch.Tensor | None
-        The target area mask.
-    """
-    mask = request.param
-
-    if mask is not None:
-        mask = mask.to(device)
-    return mask
-
-
 @pytest.mark.parametrize(
     (
         "rays",
@@ -222,7 +196,7 @@ def target_area_indices(
             torch.tensor([[[0.0]]]),
             torch.tensor([[[255.0]]]),
             torch.tensor([[[1.7319]]]),
-            torch.tensor([[[0.5774]]]),
+            torch.tensor([[[1.0]]]),
         ),
         (  # Single intersection with tilted plane and reduced magnitude.
             (torch.tensor([[[[0.0, -1.0, 0.0, 0.0]]]]), torch.tensor([[[0.5]]])),
@@ -231,7 +205,7 @@ def target_area_indices(
             torch.tensor([[[127.5]]]),
             torch.tensor([[[127.5]]]),
             torch.tensor([[[1.0]]]),
-            torch.tensor([[[0.3535]]]),
+            torch.tensor([[[0.5]]]),
         ),
         (  # Multiple intersections with multiple rays and some rays do not hit the plane.
             (
@@ -255,14 +229,13 @@ def target_area_indices(
             torch.tensor([[[255.0, 63.75, 0.0]]]),
             torch.tensor([[[0.0, 127.5, 127.5]]]),
             torch.tensor([[[0.0, 1.1181, 1.4142]]]),
-            torch.tensor([[[-0.0, 1.7888, 0.7071]]]),
+            torch.tensor([[[0.0, 2.0, 1.0]]]),
         ),
     ],
     indirect=["rays"],
 )
 def test_line_plane_intersection(
     request: pytest.FixtureRequest,
-    target_area_indices: torch.Tensor | None,
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
@@ -279,8 +252,6 @@ def test_line_plane_intersection(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    target_area_indices : torch.Tensor | None
-        The target area indices.
     rays : Rays
         The rays with directions and magnitudes.
     target_areas_fixture : str
@@ -312,7 +283,8 @@ def test_line_plane_intersection(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
-        target_area_indices=target_area_indices,
+        target_area_indices=torch.tensor([0], device=device),
+        active_mask=torch.tensor([True]),
         device=device,
     )
 
@@ -474,7 +446,6 @@ def target_area_2_cylindrical(device: torch.device) -> TowerTargetAreasCylindric
 )
 def test_line_cylinder_intersection(
     request: pytest.FixtureRequest,
-    target_area_indices: torch.Tensor | None,
     rays: Rays,
     target_areas_fixture: str,
     points_at_ray_origins: torch.Tensor,
@@ -491,8 +462,6 @@ def test_line_cylinder_intersection(
     ----------
     request : pytest.FixtureRequest
         The pytest fixture used to consider different test cases.
-    target_area_indices : torch.Tensor | None
-        The target area indices.
     rays : Rays
         The rays with directions and magnitudes.
     target_areas_fixture : str
@@ -524,7 +493,8 @@ def test_line_cylinder_intersection(
         rays=rays,
         points_at_ray_origins=points_at_ray_origins.to(device),
         target_areas=request.getfixturevalue(target_areas_fixture),
-        target_area_indices=target_area_indices,
+        target_area_indices=torch.tensor([0], device=device),
+        active_mask=torch.tensor([True]),
         device=device,
     )
 
