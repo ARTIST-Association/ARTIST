@@ -471,18 +471,20 @@ class HeliostatRayTracer:
                     )
 
 
-            # Cosine loss: projection of the incident ray direction onto the surface normal.
-            cosine_losses = torch.abs(
-                (
-                    incident_ray_directions[active_heliostats_mask_batch, None, :3] * self.heliostat_group.active_surface_normals[active_heliostats_mask_batch, :, :3]
-                
-                ).sum(dim=-1))[:, None, :]
+            # Cosine efficiency: projection of the incident ray direction onto the surface normal.
+            cosine_factor = -(
+                incident_ray_directions[active_heliostats_mask_batch, None, :3]
+                * self.heliostat_group.active_surface_normals[
+                    active_heliostats_mask_batch, :, :3
+                ]
+            ).sum(dim=-1)
+            cosine_factor = cosine_factor.clamp_min(0.0)[:, None, :]
 
             # Atmospheric attenuation model after Leary & Hankins (1979), MIRVAL.
             atmospheric_attenuation = torch.where(
                 intersection_distances_target <= 1000, 
-                0.99321 - 1.176 * 10e-4 * intersection_distances_target + 1.97 * 10e-8 * intersection_distances_target ** 2,
-                torch.e ** (-0.0001106 * intersection_distances_target)
+                0.99321 - 1.176e-4 * intersection_distances_target + 1.97e-8 * intersection_distances_target ** 2,
+                torch.exp(-1.106e-5 * intersection_distances_target),
             )
 
             intensities = (
@@ -491,7 +493,7 @@ class HeliostatRayTracer:
                 * (1 - ray_extinction_factor)
                 * mirror_reflectivity
                 * atmospheric_attenuation
-                * cosine_losses
+                * cosine_factor
             )
 
             bitmaps = self.bilinear_splatting(
