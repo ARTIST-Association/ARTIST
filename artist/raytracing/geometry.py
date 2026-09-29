@@ -94,6 +94,7 @@ def line_plane_intersections(
     # Extract 3D data.
     target_area_indices = target_area_indices[active_mask]
     ray_directions = rays.ray_directions[active_mask, :, :, :3]
+    ray_magnitudes = rays.ray_magnitudes[active_mask]
     ray_origins = points_at_ray_origins[active_mask, :, :3]
     plane_normals = target_areas.normals[target_area_indices, :3]
     plane_centers = target_areas.centers[target_area_indices, :3]
@@ -175,7 +176,7 @@ def line_plane_intersections(
     bitmap_intersections_e = bitmap_intersections_e * valid_mask
     bitmap_intersections_u = bitmap_intersections_u * valid_mask
     intersection_distances = intersection_distances * valid_mask
-    intensities = rays.ray_magnitudes * valid_mask
+    intensities = ray_magnitudes * valid_mask
 
     # The column indices need to be flipped because the more intuitive way to look at flux prediction
     # bitmaps is to imagine oneself to stand in the heliostat field looking at the receiver.
@@ -270,6 +271,7 @@ def line_cylinder_intersections(
     target_area_indices = target_area_indices[active_mask]
     origins = points_at_ray_origins[active_mask, :, :3]
     directions = rays.ray_directions[active_mask, :, :, :3]
+    ray_magnitudes = rays.ray_magnitudes[active_mask]
 
     # Receiver definition.
     cylinder_axes = target_areas.axes[target_area_indices, :3]
@@ -410,7 +412,7 @@ def line_cylinder_intersections(
         intersection_distances * intersections_on_target * valid_distances
     )
     intensities = (
-        rays.ray_magnitudes
+        ray_magnitudes
         * intersections_on_target
         * valid_distances
     )
