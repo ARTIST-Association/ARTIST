@@ -45,7 +45,8 @@ def line_plane_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
     target_areas: TowerTargetAreasPlanar,
-    target_area_indices: torch.Tensor | None = None,
+    target_area_indices: torch.Tensor,
+    active_mask: torch.Tensor,
     bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     device: torch.device | None = None,
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
@@ -84,26 +85,19 @@ def line_plane_intersections(
         Intersection distances.
         Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
     torch.Tensor
-        Absolute intensities of the rays hitting the target planes.
+        Intensities of the rays hitting the target planes.
         Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
     """
     device = get_device(device=device)
     bitmap_resolution = bitmap_resolution.to(device)
 
-    if target_area_indices is None:
-        target_area_indices = torch.zeros(
-            points_at_ray_origins.shape[indices.heliostat_dimension],
-            dtype=torch.int32,
-            device=device,
-        )
-
     # Extract 3D data.
-    ray_directions = rays.ray_directions[..., :3]
-    ray_origins = points_at_ray_origins[..., :3]
-    plane_normals = target_areas.normals[target_area_indices][..., :3]
-    plane_centers = target_areas.centers[target_area_indices][..., :3]
+    target_area_indices = target_area_indices[active_mask]
+    ray_directions = rays.ray_directions[active_mask, :, :, :3]
+    ray_origins = points_at_ray_origins[active_mask, :, :3]
+    plane_normals = target_areas.normals[target_area_indices, :3]
+    plane_centers = target_areas.centers[target_area_indices, :3]
 
-    # Use Lambert’s Cosine Law to calculate the relative intensities of the reflected rays on the planes.
     # Compute the alignment of the rays with the plane normals using the dot product.
     # In our raytracing process, the plane normals point away from the planes, which is usually the opposite
     # direction of the rays.
@@ -113,10 +107,8 @@ def line_plane_intersections(
     # - A zero dot product indicates the ray is parallel to the plane (invalid).
     # - A positive dot product indicates the ray hits the back face of the plane (invalid).
     # The front-facing mask selects only rays hitting the front of the plane.
-    angle_based_intensities = (ray_directions * plane_normals[:, None, None, :]).sum(
-        dim=-1
-    )
-    front_facing_mask = angle_based_intensities < 0.0
+    dot = (ray_directions * plane_normals[:, None, None, :]).sum(dim=-1)
+    front_facing_mask = dot < 0.0
 
     # Calculate the intersections on the plane of each ray.
     # First, calculate the projections of the ray origins onto the planes' normals.
@@ -127,16 +119,13 @@ def line_plane_intersections(
         (plane_centers[:, None, :] - ray_origins) * plane_normals[:, None, :]
     ).sum(dim=-1)[:, None, :]
 
-    safe_denominator = torch.where(front_facing_mask, angle_based_intensities, 1.0)
+    safe_denominator = torch.where(front_facing_mask, dot, 1.0)
     intersection_distances = (numerator / safe_denominator) * front_facing_mask
 
     intersections = (
         ray_origins[:, None, :, :]
         + ray_directions * intersection_distances[:, :, :, None]
     )
-
-    # Flip the sign of the intensities, so that valid rays have a positive intensity.
-    intensities = rays.ray_magnitudes * -angle_based_intensities
 
     # Determine the E- and U-positions of the rays' intersections with the target areas' planes, scaled to the
     # bitmap resolutions. Here, we decide that the bottom left corner of the 2D bitmap is the origin of the flux
@@ -186,7 +175,7 @@ def line_plane_intersections(
     bitmap_intersections_e = bitmap_intersections_e * valid_mask
     bitmap_intersections_u = bitmap_intersections_u * valid_mask
     intersection_distances = intersection_distances * valid_mask
-    intensities = intensities * valid_mask
+    intensities = rays.ray_magnitudes * valid_mask
 
     # The column indices need to be flipped because the more intuitive way to look at flux prediction
     # bitmaps is to imagine oneself to stand in the heliostat field looking at the receiver.
@@ -208,7 +197,8 @@ def line_cylinder_intersections(
     rays: Rays,
     points_at_ray_origins: torch.Tensor,
     target_areas: TowerTargetAreasCylindrical,
-    target_area_indices: torch.Tensor | None = None,
+    target_area_indices: torch.Tensor,
+    active_mask: torch.Tensor,
     bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
     device: torch.device | None = None,
 ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
@@ -269,7 +259,7 @@ def line_cylinder_intersections(
         Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
         Invalid rays are 0.
     torch.Tensor
-        Lambert-weighted hit intensities:
+        Intensities:
         ray_magnitudes * max(0, -dot(ray_dir_local, normal_local)).
         Shape is ``[number_of_active_heliostats, number_of_rays, number_of_combined_surface_points_all_facets]``.
         Invalid rays are 0.
@@ -277,20 +267,14 @@ def line_cylinder_intersections(
     device = get_device(device=device)
     bitmap_resolution = bitmap_resolution.to(device)
 
-    if target_area_indices is None:
-        target_area_indices = torch.zeros(
-            points_at_ray_origins.shape[indices.heliostat_dimension],
-            dtype=torch.int32,
-            device=device,
-        )
-
-    origins = points_at_ray_origins[:, :, :3]
-    directions = rays.ray_directions[:, :, :, :3]
+    target_area_indices = target_area_indices[active_mask]
+    origins = points_at_ray_origins[active_mask, :, :3]
+    directions = rays.ray_directions[active_mask, :, :, :3]
 
     # Receiver definition.
-    cylinder_axes = target_areas.axes[target_area_indices][:, :3]
-    cylinder_normals = target_areas.normals[target_area_indices][:, :3]
-    cylinder_centers = target_areas.centers[target_area_indices][:, :3]
+    cylinder_axes = target_areas.axes[target_area_indices, :3]
+    cylinder_normals = target_areas.normals[target_area_indices, :3]
+    cylinder_centers = target_areas.centers[target_area_indices, :3]
     radii = target_areas.radii[target_area_indices]
     heights = target_areas.heights[target_area_indices]
     opening_angles = target_areas.opening_angles[target_area_indices]
@@ -384,11 +368,6 @@ def line_cylinder_intersections(
     normals_local = torch.stack([x, y, torch.zeros_like(x)], dim=-1)
     normals_local = normals_local / torch.norm(normals_local, dim=-1, keepdim=True)
 
-    # Lambert cosine law for ray magnitudes.
-    angle_based_intensities = (
-        (-directions_local * normals_local).sum(dim=-1).clamp(min=0.0)
-    )
-
     # Height and angle of intersections.
     # We want all coordinates of the cylinder intersections to be positive for the bitmap calculation.
     # Initially the cylinder center is defined as the center of mass (halfway between top and bottom, on the cylinder axis.), therefore
@@ -432,7 +411,6 @@ def line_cylinder_intersections(
     )
     intensities = (
         rays.ray_magnitudes
-        * angle_based_intensities
         * intersections_on_target
         * valid_distances
     )
