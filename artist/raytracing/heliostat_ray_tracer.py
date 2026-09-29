@@ -282,12 +282,17 @@ class HeliostatRayTracer:
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
 
-        self.heliostat_group.preferred_reflection_directions = geometry.reflect(
-            incident_ray_directions=incident_ray_directions.unsqueeze(
-                indices.number_rays_per_point
+        flux_distributions = torch.empty(
+            (
+                int(active_heliostats_mask.sum()),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
             ),
-            reflection_surface_normals=self.heliostat_group.active_surface_normals,
+            device=device,
         )
+        intercept_factor = torch.empty(active_heliostats_mask.sum(), device=device)
+        on_target_factor = torch.empty(active_heliostats_mask.sum(), device=device)
+        blocking_factor = torch.empty(active_heliostats_mask.sum(), device=device)
 
         if self.blocking_active:
             # Compute the heliostat blocking primitives.
@@ -300,17 +305,10 @@ class HeliostatRayTracer:
                 device=device,
             )
 
-        flux_distributions = torch.empty(
-            (
-                int(active_heliostats_mask.sum()),
-                int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
-                int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
-            ),
-            device=device,
+        self.heliostat_group.preferred_reflection_directions = geometry.reflect(
+            incident_ray_directions=incident_ray_directions[:, None, :],
+            reflection_surface_normals=self.heliostat_group.active_surface_normals,
         )
-        intercept_factor = torch.empty(active_heliostats_mask.sum(), device=device)
-        on_target_factor = torch.empty(active_heliostats_mask.sum(), device=device)
-        blocking_factor = torch.empty(active_heliostats_mask.sum(), device=device)
 
         global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
         for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
@@ -326,8 +324,8 @@ class HeliostatRayTracer:
             active_heliostats_mask_batch[batch_mask_indices] = True
 
             rays = self.scatter_rays(
-                distortion_u=batch_u,
                 distortion_e=batch_e,
+                distortion_u=batch_u,
                 original_ray_direction=self.heliostat_group.preferred_reflection_directions[
                     active_heliostats_mask_batch
                 ],
@@ -344,15 +342,7 @@ class HeliostatRayTracer:
                     ]
                 )
             )[active_heliostats_mask_batch]
-
-            rays_planar_targets = Rays(
-                ray_directions=rays.ray_directions[planar_active_mask],
-                ray_magnitudes=rays.ray_magnitudes[planar_active_mask],
-            )
-            rays_cylindrical_targets = Rays(
-                ray_directions=rays.ray_directions[~planar_active_mask],
-                ray_magnitudes=rays.ray_magnitudes[~planar_active_mask],
-            )
+            cylindrical_active_mask = ~planar_active_mask
 
             intersection_distances_target = torch.zeros(
                 (
@@ -362,7 +352,7 @@ class HeliostatRayTracer:
                 ),
                 device=device,
             )
-            angle_reduced_intensities = torch.zeros(
+            bitmap_intensities = torch.zeros(
                 (
                     int(active_heliostats_mask_batch.sum()),
                     self.light_source.number_of_rays,
@@ -387,47 +377,48 @@ class HeliostatRayTracer:
                 device=device,
             )
 
-            if planar_active_mask.sum() > 0:
+            if planar_active_mask.any():
                 (
                     bitmap_intersections_e[planar_active_mask],
                     bitmap_intersections_u[planar_active_mask],
                     intersection_distances_target[planar_active_mask],
-                    angle_reduced_intensities[planar_active_mask],
+                    bitmap_intensities[planar_active_mask],
                 ) = geometry.line_plane_intersections(
-                    rays=rays_planar_targets,
+                    rays=rays,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
-                    ][planar_active_mask],
+                    ],
                     target_areas=self.scenario.solar_tower.target_areas[
                         indices.planar_target_areas
                     ],  # type: ignore[arg-type]
                     target_area_indices=target_area_indices[
                         active_heliostats_mask_batch
-                    ][planar_active_mask],
+                    ],
+                    active_mask = planar_active_mask,
                     bitmap_resolution=self.bitmap_resolution,
                     device=device,
                 )
 
-            if (~planar_active_mask).sum() > 0:
+            if cylindrical_active_mask.any():
                 (
-                    bitmap_intersections_e[~planar_active_mask],
-                    bitmap_intersections_u[~planar_active_mask],
-                    intersection_distances_target[~planar_active_mask],
-                    angle_reduced_intensities[~planar_active_mask],
+                    bitmap_intersections_e[cylindrical_active_mask],
+                    bitmap_intersections_u[cylindrical_active_mask],
+                    intersection_distances_target[cylindrical_active_mask],
+                    bitmap_intensities[cylindrical_active_mask],
                 ) = geometry.line_cylinder_intersections(
-                    rays=rays_cylindrical_targets,
+                    rays=rays,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
-                    ][~planar_active_mask],
+                    ],
                     target_areas=self.scenario.solar_tower.target_areas[
                         indices.cylindrical_target_areas
                     ],  # type: ignore[arg-type]
                     target_area_indices=target_area_indices[
                         active_heliostats_mask_batch
-                    ][~planar_active_mask]
-                    - self.scenario.solar_tower.number_of_target_areas_per_type[
+                    ] - self.scenario.solar_tower.number_of_target_areas_per_type[
                         indices.planar_target_areas
                     ],
+                    active_mask = cylindrical_active_mask,
                     bitmap_resolution=self.bitmap_resolution,
                     device=device,
                 )
@@ -479,11 +470,28 @@ class HeliostatRayTracer:
                         softness=1000.0,
                     )
 
+
+            # Cosine loss: projection of the incident ray direction onto the surface normal.
+            cosine_losses = torch.abs(
+                (
+                    incident_ray_directions[active_heliostats_mask_batch, None, :3] * self.heliostat_group.active_surface_normals[active_heliostats_mask_batch, :, :3]
+                
+                ).sum(dim=-1))[:, None, :]
+
+            # Atmospheric attenuation model after Leary & Hankins (1979), MIRVAL.
+            atmospheric_attenuation = torch.where(
+                intersection_distances_target <= 1000, 
+                0.99321 - 1.176 * 10e-4 * intersection_distances_target + 1.97 * 10e-8 * intersection_distances_target ** 2,
+                torch.e ** (-0.0001106 * intersection_distances_target)
+            )
+
             intensities = (
-                angle_reduced_intensities
+                bitmap_intensities
                 * (1 - blocked)
                 * (1 - ray_extinction_factor)
                 * mirror_reflectivity
+                * atmospheric_attenuation
+                * cosine_losses
             )
 
             bitmaps = self.bilinear_splatting(
@@ -496,7 +504,7 @@ class HeliostatRayTracer:
             flux_distributions[active_heliostats_mask_batch] = bitmaps
 
             on_target_factor[active_heliostats_mask_batch] = (
-                angle_reduced_intensities > 0
+                bitmap_intensities > 0
             ).sum((1, 2)) / number_of_rays_per_heliostat
             blocking_factor[active_heliostats_mask_batch] = (blocked < 1e-3).sum(
                 (1, 2)
@@ -559,7 +567,7 @@ class HeliostatRayTracer:
                 device=device,
             ),
         )
-
+    
     def get_bitmaps_per_target(
         self,
         bitmaps_per_heliostat: torch.Tensor,
