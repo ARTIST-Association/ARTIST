@@ -511,6 +511,78 @@ class CosineSimilarityLoss(Loss):
         return 1.0 - self.loss_function(prediction, ground_truth)
 
 
+class NormalizedL1(Loss):
+    """
+    A loss defined as the normalized L1 error between the prediction and ground truth.
+
+    Attributes
+    ----------
+    loss_function : torch.nn.Module
+        A torch module implementing a loss.
+
+    See Also
+    --------
+    :class:`Loss` : Reference to the parent class.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the normalized L1 loss."""
+        super().__init__(loss_function=None)
+
+    def __call__(
+        self,
+        prediction: torch.Tensor,
+        ground_truth: torch.Tensor,
+        **kwargs: Any,
+    ) -> torch.Tensor:
+        r"""
+        Compute the angular distance between prediction and ground truth.
+
+        Parameters
+        ----------
+        prediction : torch.Tensor
+            The predicted values.
+            Shape is ``[number_of_samples, 4]``.
+        ground_truth : torch.Tensor
+            The ground truth.
+            Shape is ``[number_of_samples, 4]``.
+        \*\*kwargs : Any
+            Keyword arguments.
+
+        Returns
+        -------
+        torch.Tensor
+            The summed loss reduced along the specified dimensions.
+            Shape is ``[number_of_samples]``.
+        """
+        expected_kwargs = ["reduction_dimensions"]
+        for key in expected_kwargs:
+            if key not in kwargs:
+                raise ValueError(
+                    f"The KL-divergence loss expects '{key}' as keyword argument. "
+                    f"Please add this argument."
+                )
+
+        eps = 1e-12
+        ground_truth_distributions = torch.nn.functional.normalize(
+            ground_truth,
+            p=1,
+            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u),
+            eps=eps,
+        )
+        predicted_distributions = torch.nn.functional.normalize(
+            prediction,
+            p=1,
+            dim=(indices.batched_bitmap_e, indices.batched_bitmap_u),
+            eps=eps,
+        )
+        
+        reduction_dimensions = kwargs["reduction_dimensions"]
+        l1_losses = (torch.abs((predicted_distributions - ground_truth_distributions)).sum(dim=reduction_dimensions) / ground_truth_distributions.sum(dim=reduction_dimensions))
+        
+        return l1_losses
+
+
 def reduce_loss_per_sample(
     loss_per_sample: torch.Tensor,
     number_of_samples_per_heliostat: int,
