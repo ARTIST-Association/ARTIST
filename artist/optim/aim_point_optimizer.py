@@ -468,7 +468,7 @@ class AimPointOptimizer:
             ray_tracer = HeliostatRayTracer(
                 scenario=self.scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=True,
+                occlusion_active=True,
                 world_size=self.ddp_setup["heliostat_group_world_size"],
                 rank=self.ddp_setup["heliostat_group_rank"],
                 batch_size=self.optimizer_dict["batch_size"],

@@ -133,7 +133,7 @@ with setup_distributed_environment(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
                 batch_size=heliostat_group.number_of_active_heliostats,

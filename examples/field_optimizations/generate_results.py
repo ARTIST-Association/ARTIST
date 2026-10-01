@@ -289,7 +289,7 @@ def create_deflectometry_fluxes(
                 ray_tracer = HeliostatRayTracer(
                     scenario=scenario,
                     heliostat_group=heliostat_group,
-                    blocking_active=False,
+                    occlusion_active=False,
                     world_size=ddp_setup["heliostat_group_world_size"],
                     rank=ddp_setup["heliostat_group_rank"],
                     batch_size=100,
@@ -474,7 +474,7 @@ def kinematics_evaluation(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
                 batch_size=50,
@@ -578,7 +578,7 @@ def surface_evaluation(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
                 batch_size=100,
@@ -713,7 +713,7 @@ def aim_point_plots(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=True,
+                occlusion_active=True,
                 batch_size=batch_size,
                 bitmap_resolution=bitmap_resolution,
                 dni=dni,

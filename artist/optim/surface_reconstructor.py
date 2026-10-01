@@ -238,7 +238,7 @@ class SurfaceReconstructor:
         ray_tracer = HeliostatRayTracer(
             scenario=self.scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             world_size=self.ddp_setup["heliostat_group_world_size"],
             rank=self.ddp_setup["heliostat_group_rank"],
             batch_size=self.optimizer_dict[constants.batch_size],
@@ -558,7 +558,7 @@ class SurfaceReconstructor:
         ray_tracer = HeliostatRayTracer(
             scenario=self.scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             world_size=self.ddp_setup["heliostat_group_world_size"],
             rank=self.ddp_setup["heliostat_group_rank"],
             batch_size=self.optimizer_dict[constants.batch_size],

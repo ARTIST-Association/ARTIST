@@ -136,7 +136,7 @@ def test_integration_alignment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             bitmap_resolution=bitmap_resolution,
             batch_size=10,
             device=device

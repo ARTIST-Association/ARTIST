@@ -323,8 +323,8 @@ def test_create_blocking_primitives_rectangles_by_index(
     """
     active_surface_points = request.getfixturevalue(surface)
 
-    corners, spans, normals = blocking.create_blocking_primitives_rectangles_by_index(
-        blocking_heliostats_active_surface_points=active_surface_points.to(device),
+    corners, spans, normals = blocking.create_heliostat_occlusion_primitives(
+        surface_points=active_surface_points.to(device),
         device=device,
     )
 
@@ -402,7 +402,7 @@ def test_blocking_integration(device: torch.device) -> None:
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
-        blocking_active=True,
+        occlusion_active=True,
         batch_size=10,
         device=device
     )
@@ -417,6 +417,13 @@ def test_blocking_integration(device: torch.device) -> None:
     expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
     expected = torch.load(expected_path, map_location=device, weights_only=True)
     expected_key = f"blocking_bitmaps_{device.type}"
+
+    import matplotlib.pyplot as plt
+    for i in range(bitmaps_per_heliostat.shape[0]):
+        plt.imshow(bitmaps_per_heliostat[i].cpu().detach())
+        plt.savefig(f"test_{i}")
+        plt.imshow(expected[expected_key][i].cpu().detach())
+        plt.savefig(f"test_e_{i}")  
 
     torch.testing.assert_close(
         bitmaps_per_heliostat,
@@ -485,7 +492,7 @@ def test_ray_extinction(device: torch.device) -> None:
     ray_tracer = HeliostatRayTracer(
         scenario=scenario,
         heliostat_group=heliostat_group,
-        blocking_active=True,
+        occlusion_active=True,
         batch_size=10,
         device=device
     )
