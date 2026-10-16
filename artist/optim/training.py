@@ -61,6 +61,36 @@ def cyclic(
     )
 
 
+def one_cycle(
+    optimizer: torch.optim.Optimizer,
+    parameters: dict[str, float],
+) -> LRScheduler:
+    """
+    Create a one cycle learning rate scheduler.
+
+    Parameters
+    ----------
+    optimizer : Optimizer
+        The optimizer.
+    parameters : dict[str, float]
+        The scheduler parameters.
+
+    Returns
+    -------
+    LRScheduler
+        A one cycle learning rate scheduler.
+    """
+    return torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=float(parameters[constants.lr_max]),
+        total_steps=int(parameters[constants.total_steps]),
+        pct_start=float(parameters[constants.pct_start]),
+        anneal_strategy="cos",
+        div_factor=int(parameters[constants.div_factor]),
+        final_div_factor=int(parameters[constants.final_div_factor])
+    )
+
+
 def reduce_on_plateau(
     optimizer: torch.optim.Optimizer,
     parameters: dict[str, float],
