@@ -240,16 +240,17 @@ class SurfaceReconstructor:
         ray_tracer = HeliostatRayTracer(
             scenario=self.scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             world_size=self.ddp_setup["heliostat_group_world_size"],
             rank=self.ddp_setup["heliostat_group_rank"],
             batch_size=self.optimizer_dict[constants.batch_size],
             random_seed=self.ddp_setup["heliostat_group_rank"],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
+            device=device
         )
 
-        flux_prediction, _, _, _ = ray_tracer.trace_rays(
+        flux_prediction, _ = ray_tracer.trace_rays(
             incident_ray_directions=data_split.incident_ray_directions_test,
             active_heliostats_mask=data_split.active_heliostats_mask_test,
             target_area_indices=data_split.target_area_indices_test,
@@ -556,17 +557,18 @@ class SurfaceReconstructor:
         ray_tracer = HeliostatRayTracer(
             scenario=self.scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             world_size=self.ddp_setup["heliostat_group_world_size"],
             rank=self.ddp_setup["heliostat_group_rank"],
             batch_size=self.optimizer_dict[constants.batch_size],
             random_seed=self.ddp_setup["heliostat_group_rank"],
             bitmap_resolution=self.bitmap_resolution,
             dni=self.dni,
+            device=device
         )
 
         # Perform heliostat-based ray tracing to obtain simulated flux from current reconstructed surfaces.
-        flux_prediction_train, _, _, _ = ray_tracer.trace_rays(
+        flux_prediction_train, _ = ray_tracer.trace_rays(
             incident_ray_directions=data_split.incident_ray_directions_train,
             active_heliostats_mask=data_split.active_heliostats_mask_train,
             target_area_indices=data_split.target_area_indices_train,
