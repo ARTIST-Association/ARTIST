@@ -127,12 +127,10 @@ class AimPointOptimizer:
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
 
-        self.pixel_area = (4.335 / self.bitmap_resolution[1]) * (5.2292 / self.bitmap_resolution[1])
+        self.pixel_area = (4.335 / self.bitmap_resolution[1]) * (5.2292 / self.bitmap_resolution[0])
+        self.scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
 
-    def pixel_to_meter(self, center, width, height):
-        x = (center[..., 0]) / width * 4.335 - 4.335 / 2
-        y = (height - center[..., 1]) / height * 5.2292 - 5.2292 / 2
-        return torch.stack((x, y), dim=-1)
+
 
     def _initialize_group_parameters(
         self, device: torch.device
@@ -729,7 +727,11 @@ class AimPointOptimizer:
                     f"intensity={(total_flux.sum().item()):.4f}"
                 )
 
-            # if epoch % 1 == 0 and rank == 0:
+            # if epoch % 3 == 0 and rank == 0:
+            #     def pixel_to_meter(self, center, width, height):
+            #         x = (center[..., 0]) / width * 4.335 - 4.335 / 2
+            #         y = (height - center[..., 1]) / height * 5.2292 - 5.2292 / 2
+            #         return torch.stack((x, y), dim=-1)
                 
             #     flux = total_flux / self.pixel_area
 
@@ -743,26 +745,24 @@ class AimPointOptimizer:
             #     )
             #     flux_centers = self.pixel_to_meter(
             #         center=flux_centers, 
-            #         width=self.bitmap_resolution[1],
-            #         height=self.bitmap_resolution[0]
+            #         width=self.bitmap_resolution[0],
+            #         height=self.bitmap_resolution[1]
             #     )
-            #     flux_centers += torch.tensor([0.5, 0.5], device=device)
             #     ax.scatter(
             #         flux_centers[:, 0].cpu().detach(),
             #         flux_centers[:, 1].cpu().detach(),
             #         alpha=0.3,
             #         s=2,
             #         color="magenta",
-            #         #edgecolors="white",
             #     )
 
             #     ax.set_title(
-            #         #f"Aim point optimization\n{((flux * self.pixel_area).sum().item()/1000000):.1f} MW",
             #         f"Aim point optimization\n{(total_flux.sum().item() / 1000000):.3f} MW"
             #     )
             #     ax.set_ylabel("Target height relative to center (m)", labelpad=2.5)
             #     ax.set_xlabel("Target width relative to center (m)", labelpad=4)
-
+            #     ax.set_xlim(-4.335 / 2, 4.335 / 2)
+            #     ax.set_ylim(-5.2292 / 2, 5.2292 / 2)
 
             #     cbar = fig.colorbar(im, ax=ax)
             #     cbar.set_label(
