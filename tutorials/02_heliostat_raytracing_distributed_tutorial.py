@@ -22,7 +22,7 @@ set_logger_config()
 device = get_device()
 
 # Specify the path to your scenario.h5 file.
-scenario_path = pathlib.Path("please/insert/the/path/to/the/scenario/here/scenario.h5")
+scenario_path = pathlib.Path("/workVERLEIHNIX/mb/ARTIST/dissertation/scenarios/runtime_analysis/ideal_heliostats_10.h5")
 
 # Set the number of heliostat groups, this is needed for process group assignment.
 number_of_heliostat_groups = Scenario.get_number_of_heliostat_groups_from_hdf5(
@@ -133,7 +133,7 @@ with setup_distributed_environment(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
                 batch_size=heliostat_group.number_of_active_heliostats,
@@ -142,7 +142,7 @@ with setup_distributed_environment(
             )
 
             # Perform heliostat-based ray tracing.
-            bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
+            bitmaps_per_heliostat, _= ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions,
                 active_heliostats_mask=active_heliostats_mask,
                 target_area_indices=target_area_indices,
@@ -150,6 +150,7 @@ with setup_distributed_environment(
             )
 
             sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+
             # Plot the bitmaps of each single heliostat.
             for i in range(bitmaps_per_heliostat.shape[0]):
                 expanded_names = [
@@ -163,15 +164,15 @@ with setup_distributed_environment(
                 plt.imshow(bitmaps_per_heliostat[i].cpu().detach(), cmap="gray")
                 plt.axis("off")
                 plt.title(
-                    f"Heliostat: {expanded_names[sample_indices_for_local_rank[i]]}, Group: {heliostat_group_index}, Rank: {ddp_setup['rank']}, Target: {target_names[target_area_indices[i].item()]}"
+                    f"Heliostat: {expanded_names[i]}, Group: {heliostat_group_index},\nRank: {ddp_setup['rank']}, Target: {target_names[target_area_indices[i].item()]}, Flux Integral: {bitmaps_per_heliostat[i].sum():.1f}"
                 )
                 plt.savefig(
-                    f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[sample_indices_for_local_rank[i]]}.png"
+                    f"bitmap_group_{heliostat_group_index}_on_rank_{ddp_setup['rank']}_sample_{i}_heliostat_{expanded_names[i]}.png"
                 )
 
             # Get the flux distributions per target.
             bitmaps_per_target = ray_tracer.get_bitmaps_per_target(
-                bitmaps_per_heliostat=bitmaps_per_heliostat,
+                bitmaps_per_heliostat=bitmaps_per_heliostat[sample_indices_for_local_rank],
                 target_area_indices=target_area_indices[sample_indices_for_local_rank],
                 device=device,
             )
@@ -200,13 +201,13 @@ with setup_distributed_environment(
             )
             plt.axis("off")
             plt.title(
-                f"Reduced within group, Target area: {target_names[target_area_index]}, Rank: {ddp_setup['rank']}"
+                f"Reduced within group, Target area: {target_names[target_area_index]},\nRank: {ddp_setup['rank']}, Flux Integral: {combined_bitmaps_per_target[target_area_index].sum():.1f}"
             )
             plt.savefig(
                 f"reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{target_names[target_area_index]}.png"
             )
 
-    if ddp_setup["is_distributed"]:
+    elif ddp_setup["is_distributed"]:
         torch.distributed.all_reduce(
             combined_bitmaps_per_target, op=torch.distributed.ReduceOp.SUM
         )
@@ -222,7 +223,7 @@ with setup_distributed_environment(
         )
         plt.axis("off")
         plt.title(
-            f"Final bitmap, Target area: {target_names[target_area_index]}, Rank: {ddp_setup['rank']}"
+            f"Final bitmap, Target area: {target_names[target_area_index]},\nRank: {ddp_setup['rank']}, Flux Integral: {combined_bitmaps_per_target[target_area_index].sum():.1f}"
         )
         plt.savefig(
             f"final_reduced_bitmap_on_rank_{ddp_setup['rank']}_on_{target_names[target_area_index]}.png"
