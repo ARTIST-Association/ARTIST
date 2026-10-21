@@ -227,13 +227,14 @@ class KinematicsReconstructor:
         ray_tracer = HeliostatRayTracer(
             scenario=self.scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             batch_size=self.optimizer_dict[constants.batch_size],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
+            device=device
         )
 
-        flux_prediction, _, _, _ = ray_tracer.trace_rays(
+        flux_prediction, _ = ray_tracer.trace_rays(
             incident_ray_directions=data_split.incident_ray_directions_test,
             active_heliostats_mask=data_split.active_heliostats_mask_test,
             target_area_indices=data_split.target_area_indices_test,
@@ -392,21 +393,14 @@ class KinematicsReconstructor:
         training.EarlyStopping
             The early stopping monitor.
         """
-        # optimizer_params = [
-        #     {
-        #         "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-        #         "lr": self.optimizer_dict[
-        #             constants.initial_learning_rate_rotation_deviation
-        #         ],
-        #     }
-        # ]
         optimizer_params = [
             {
                 "params": heliostat_group.kinematics.rotation_deviation_parameters.requires_grad_(),
-                "lr": 4e-5
+                "lr": self.optimizer_dict[
+                    constants.initial_learning_rate
+                ],
             }
         ]
-
         optimizer = torch.optim.Adam(optimizer_params)
 
         scheduler_fn = getattr(
@@ -588,16 +582,17 @@ class KinematicsReconstructor:
         ray_tracer = HeliostatRayTracer(
             scenario=self.scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             world_size=self.ddp_setup["heliostat_group_world_size"],
             rank=self.ddp_setup["heliostat_group_rank"],
             batch_size=self.optimizer_dict[constants.batch_size],
             random_seed=self.ddp_setup["heliostat_group_rank"],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
+            device=device
         )
 
-        flux_prediction_train, _, _, _ = ray_tracer.trace_rays(
+        flux_prediction_train, _ = ray_tracer.trace_rays(
             incident_ray_directions=data_split.incident_ray_directions_train,
             active_heliostats_mask=data_split.active_heliostats_mask_train,
             target_area_indices=data_split.target_area_indices_train,
@@ -741,14 +736,15 @@ class KinematicsReconstructor:
         data_mappings = self.data[
             constants.heliostat_data_mapping
         ]
-
+        num_batches = (len(data_mappings) + self.batch_size_outer - 1) // self.batch_size_outer
         for i in range(0, len(data_mappings), self.batch_size_outer):
+            log.info(f"Processing batch {i}/{num_batches}")
+
             batch_data = {
                 constants.data_parser: self.data[constants.data_parser],
                 constants.heliostat_data_mapping: data_mappings[i : i + self.batch_size_outer],
                 constants.validation_sample_fraction: self.data[constants.validation_sample_fraction]
             }
-            print(i)
 
             # Process only groups assigned to this rank.
             for heliostat_group_index in self.ddp_setup["groups_to_ranks_mapping"][rank]:
@@ -793,20 +789,10 @@ class KinematicsReconstructor:
                     )
 
                     # Set up optimizer, scheduler, and early stopping.
-                    optimizer, _, early_stopper = (
+                    optimizer, scheduler, early_stopper = (
                         self._setup_optimizer_scheduler_early_stopping(
                             heliostat_group=heliostat_group
                         )
-                    )
-
-                    scheduler = torch.optim.lr_scheduler.OneCycleLR(
-                        optimizer,
-                        max_lr=4e-3,
-                        total_steps=self.optimizer_dict[constants.max_epoch] + 1,
-                        pct_start=0.15,
-                        anneal_strategy="cos",
-                        div_factor=100,
-                        final_div_factor=10,
                     )
 
                     # Start the optimization.
@@ -834,20 +820,13 @@ class KinematicsReconstructor:
                         loss.backward()
 
                         optimizer.step()
-                        # if isinstance(
-                        #     scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
-                        # ):
-                        #     scheduler.step(loss.detach())
-                        # else:
-                        #     scheduler.step()
-                        if epoch < 3000:
-                            scheduler.step()
+                        if isinstance(
+                            scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                        ):
+                            scheduler.step(loss.detach())
                         else:
-                            # Freeze at whatever LR you choose
-                            for group in optimizer.param_groups:
-                                group["lr"] = 0.0018
-                        
-
+                            scheduler.step()
+ 
                         stop = early_stopper.step(loss.item())
 
                         if epoch % log_step == 0 or stop:
@@ -878,12 +857,12 @@ class KinematicsReconstructor:
                                 "training_loss": [],
                                 "target_area_indices": []
                             }
-                            for e in range(0, self.optimizer_dict[constants.max_epoch]+1, 1000):
+                            for e in range(0, self.optimizer_dict[constants.max_epoch]+1, 200):
                                 file_path = save_dir / f"results_alignment_{e}_{data_split.number_of_train_samples}.pt"
                                 if not file_path.exists():
                                     torch.save(results, file_path)
 
-                        if epoch % 1000 == 0:
+                        if epoch % 200 == 0:
                             results = torch.load(f"/workVERLEIHNIX/mb/ARTIST/dissertation/kinematics_data/{self.case}/reconstruction/results_alignment_{epoch}_{data_split.number_of_train_samples}.pt")
                             results["deviation_params"][active_heliostats_mask!=0] = heliostat_group.kinematics.rotation_deviation_parameters[active_heliostats_mask!=0].detach().cpu()
                             results["training_loss"].append(loss_per_sample.detach().cpu().tolist())
@@ -910,7 +889,7 @@ class KinematicsReconstructor:
                 heliostat_group.kinematics.rotation_deviation_parameters.detach()
             )
 
-        return final_loss_per_heliostat.detach().cpu(), None
+        return final_loss_per_heliostat.detach(), None
 
     def _reconstruct_kinematics_flux_driven(
         self,
@@ -960,14 +939,15 @@ class KinematicsReconstructor:
         data_mappings = self.data[
             constants.heliostat_data_mapping
         ]
-
+        num_batches = (len(data_mappings) + self.batch_size_outer - 1) // self.batch_size_outer
         for i in range(0, len(data_mappings), self.batch_size_outer):
+            log.info(f"Processing batch {i}/{num_batches}")
+            
             batch_data = {
                 constants.data_parser: self.data[constants.data_parser],
                 constants.heliostat_data_mapping: data_mappings[i : i + self.batch_size_outer],
                 constants.validation_sample_fraction: self.data[constants.validation_sample_fraction]
             }
-            print(i)
 
             # Process only groups assigned to this rank.
             for heliostat_group_index in self.ddp_setup[constants.groups_to_ranks_mapping][rank]:
@@ -1003,20 +983,10 @@ class KinematicsReconstructor:
                     )
 
                     # Set up optimizer, scheduler, and early stopping.
-                    optimizer, _, early_stopper = (
+                    optimizer, scheduler, early_stopper = (
                         self._setup_optimizer_scheduler_early_stopping(
                             heliostat_group=heliostat_group
                         )
-                    )
-
-                    scheduler = torch.optim.lr_scheduler.OneCycleLR(
-                        optimizer,
-                        max_lr=1.2e-3,
-                        total_steps=self.optimizer_dict[constants.max_epoch]+1,
-                        pct_start=0.20,
-                        anneal_strategy="cos",
-                        div_factor=1.0e2,
-                        final_div_factor=1.0e3,
                     )
 
                     # Start the optimization.
@@ -1053,14 +1023,11 @@ class KinematicsReconstructor:
                         else:
                             scheduler.step()
 
-                        is_last_epoch = (
-                            epoch == self.optimizer_dict[constants.max_epoch] - 1
-                        )
                         stop = early_stopper.step(loss.item())
 
-                        if epoch % log_step == 0 or is_last_epoch or stop:
+                        if epoch % log_step == 0 or stop:
                             log.info(
-                                f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}",
+                                f"Rank: {rank}, Epoch: {epoch}, Loss: {loss}, LR: {optimizer.param_groups[0]['lr']}",
                             )
 
                             # with torch.no_grad():
@@ -1129,4 +1096,4 @@ class KinematicsReconstructor:
                 heliostat_group.kinematics.rotation_deviation_parameters.detach()
             )
 
-        return final_loss_per_heliostat.detach().cpu(), None
+        return final_loss_per_heliostat.detach(), None
