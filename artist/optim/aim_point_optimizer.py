@@ -127,7 +127,11 @@ class AimPointOptimizer:
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
 
-        self.pixel_area = (4.335 / self.bitmap_resolution[1]) * (5.2292 / self.bitmap_resolution[0])
+        # dims = self._get_target_plane_dimensions(
+        #     device=device
+        # )
+
+        # self.pixel_area = (dims[0] / self.bitmap_resolution[1]) * (dims[1] / self.bitmap_resolution[0])
         self.scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
 
 
@@ -314,50 +318,50 @@ class AimPointOptimizer:
 
         return optimizer, scheduler, early_stopper
 
-    def _get_target_plane_dimensions(self, device: torch.device) -> torch.Tensor:
-        """
-        Determine the target plane dimensions for the optimization target.
+    # def _get_target_plane_dimensions(self, device: torch.device) -> torch.Tensor:
+    #     """
+    #     Determine the target plane dimensions for the optimization target.
 
-        Handles both planar and cylindrical target areas.
+    #     Handles both planar and cylindrical target areas.
 
-        Parameters
-        ----------
-        device : torch.device
-            The device on which to perform computations or load tensors and models.
+    #     Parameters
+    #     ----------
+    #     device : torch.device
+    #         The device on which to perform computations or load tensors and models.
 
-        Returns
-        -------
-        torch.Tensor
-            The width and height of the target plane.
-            Shape is ``[2]``.
-        """
-        target_plane_dimensions = torch.empty(2, device=device)
-        target_areas, index = self.scenario.solar_tower.index_to_target_area[
-            self.target_area_index
-        ]
-        if (
-            self.target_area_index
-            < self.scenario.solar_tower.number_of_target_areas_per_type[
-                indices.planar_target_areas
-            ]
-        ):
-            target_plane_dimensions = target_areas.dimensions[self.target_area_index]  # type: ignore[attr-defined]
-        else:
-            cylinder_indices = (
-                self.target_area_index
-                - self.scenario.solar_tower.number_of_target_areas_per_type[
-                    indices.planar_target_areas
-                ]
-            )
-            target_plane_dimensions[indices.target_area_width] = (  # type: ignore[attr-defined]
-                target_areas.radii[cylinder_indices]  # type: ignore[attr-defined]
-                * target_areas.opening_angles[cylinder_indices]  # type: ignore[attr-defined]
-            )
-            target_plane_dimensions[indices.target_area_height] = target_areas.heights[  # type: ignore[attr-defined]
-                cylinder_indices
-            ]
+    #     Returns
+    #     -------
+    #     torch.Tensor
+    #         The width and height of the target plane.
+    #         Shape is ``[2]``.
+    #     """
+    #     target_plane_dimensions = torch.empty(2, device=device)
+    #     target_areas, index = self.scenario.solar_tower.index_to_target_area[
+    #         self.target_area_index
+    #     ]
+    #     if (
+    #         self.target_area_index
+    #         < self.scenario.solar_tower.number_of_target_areas_per_type[
+    #             indices.planar_target_areas
+    #         ]
+    #     ):
+    #         target_plane_dimensions = target_areas.dimensions[self.target_area_index]  # type: ignore[attr-defined]
+    #     else:
+    #         cylinder_indices = (
+    #             self.target_area_index
+    #             - self.scenario.solar_tower.number_of_target_areas_per_type[
+    #                 indices.planar_target_areas
+    #             ]
+    #         )
+    #         target_plane_dimensions[indices.target_area_width] = (  # type: ignore[attr-defined]
+    #             target_areas.radii[cylinder_indices]  # type: ignore[attr-defined]
+    #             * target_areas.opening_angles[cylinder_indices]  # type: ignore[attr-defined]
+    #         )
+    #         target_plane_dimensions[indices.target_area_height] = target_areas.heights[  # type: ignore[attr-defined]
+    #             cylinder_indices
+    #         ]
 
-        return target_plane_dimensions
+    #     return target_plane_dimensions
 
     def _align_all_groups(
         self,
