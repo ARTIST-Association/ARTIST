@@ -61,6 +61,36 @@ def cyclic(
     )
 
 
+def one_cycle(
+    optimizer: torch.optim.Optimizer,
+    parameters: dict[str, float],
+) -> LRScheduler:
+    """
+    Create a one cycle learning rate scheduler.
+
+    Parameters
+    ----------
+    optimizer : Optimizer
+        The optimizer.
+    parameters : dict[str, float]
+        The scheduler parameters.
+
+    Returns
+    -------
+    LRScheduler
+        A one cycle learning rate scheduler.
+    """
+    return torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=float(parameters[constants.lr_max]),
+        total_steps=int(parameters[constants.total_steps]),
+        pct_start=float(parameters[constants.pct_start]),
+        anneal_strategy="cos",
+        div_factor=int(parameters[constants.div_factor]),
+        final_div_factor=int(parameters[constants.final_div_factor])
+    )
+
+
 def reduce_on_plateau(
     optimizer: torch.optim.Optimizer,
     parameters: dict[str, float],
@@ -321,21 +351,21 @@ def train_test_split(
     number_of_heliostats = int((active_heliostats_mask > 0).sum().item())
     number_of_samples_per_heliostat = int(total_samples / number_of_heliostats)
     number_of_test_samples = max(
-        1, int(number_of_samples_per_heliostat * test_fraction)
+        0, int(number_of_samples_per_heliostat * test_fraction)
     )
     number_of_train_samples = number_of_samples_per_heliostat - number_of_test_samples
     starts = (
-        torch.arange(number_of_heliostats, device="cpu")
+        torch.arange(number_of_heliostats, device=device)
         * number_of_samples_per_heliostat
     )
     offsets = torch.arange(
-        number_of_train_samples, number_of_samples_per_heliostat, device="cpu"
+        number_of_train_samples, number_of_samples_per_heliostat, device=device
     )
     train_indices = (
-        torch.arange(0, total_samples, number_of_samples_per_heliostat, device="cpu")[
+        torch.arange(0, total_samples, number_of_samples_per_heliostat, device=device)[
             :, None
         ]
-        + torch.arange(number_of_train_samples, device="cpu")
+        + torch.arange(number_of_train_samples, device=device)
     ).reshape(-1)
     test_indices = (starts[:, None] + offsets).reshape(-1)
 

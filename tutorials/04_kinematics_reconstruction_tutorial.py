@@ -389,7 +389,7 @@ heliostat_data_mapping = [
 
 # Configure the optimization.
 optimizer_dict: dict[str, str | float | int] = {
-    constants.initial_learning_rate_rotation_deviation: 1e-4,
+    constants.initial_learning_rate: 1e-4,
     constants.tolerance: 0.0000,
     constants.max_epoch: 200,
     constants.batch_size: 50,
@@ -461,7 +461,7 @@ with setup_distributed_environment(
     scenario.set_number_of_rays(number_of_rays=6)
 
     optimization_configuration[constants.optimization][
-        constants.initial_learning_rate_rotation_deviation
+        constants.initial_learning_rate
     ] = 3e-4
     optimization_configuration[constants.optimization][constants.max_epoch] = 100
     # Create the kinematics reconstructor.

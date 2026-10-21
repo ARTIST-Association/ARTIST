@@ -16,6 +16,7 @@ from artist.nurbs.utils import (
     create_nurbs_evaluation_grid,
     create_planar_nurbs_control_points,
 )
+from artist.raytracing import blocking
 from artist.util import constants, indices, type_registry
 from artist.util.config import SurfaceConfig
 from artist.util.env import get_device
@@ -41,6 +42,8 @@ class HeliostatField:
     number_of_heliostats_per_group : torch.Tensor
         The number of heliostats per group.
         Shape is ``[number_of_heliostat_groups]``.
+    heliostat_field_lbvh : dict[str, torch.Tensor] | None
+        Linear bounding volume hierarchies for the complete heliostat field.
 
     Methods
     -------
@@ -48,6 +51,8 @@ class HeliostatField:
         Load a heliostat field from an HDF5 file.
     update_surfaces()
         Update surface points and normals using new NURBS control points.
+    construct_heliostat_field_lbvh()
+        Construct the acceleration structure for shading and blocking.
     """
 
     def __init__(
@@ -76,6 +81,7 @@ class HeliostatField:
             ],
             device=device,
         )
+        self.heliostat_field_lbvh = None
 
     @classmethod
     def from_hdf5(
@@ -441,8 +447,8 @@ class HeliostatField:
         """
         Update surface points and normals using new NURBS control points.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -501,3 +507,53 @@ class HeliostatField:
                 -1,
                 4,
             ).detach()
+
+    def construct_heliostat_field_lbvh(
+        self,
+        device: torch.device | None = None,
+    ) -> None:
+        """
+        Construct the acceleration structure for shading and blocking. 
+        
+        Compute the corner coordinates of each heliostat and use them to construct a linear bounding volume hierarchy (LBVH).
+        The four corners of each heliostat are ordered as follows: lower east, lower west, upper west, upper east. 
+        Each heliostat is represented as a vertical rectangle centered at its position, with dimensions determined by its width and height. 
+        The heliostats are vertically aligned to achieve maximal blocking, resulting in an LBVH that conservatively bounds the heliostat 
+        field and ensures that no relevant heliostats are missed during traversal.
+        
+        Parameters
+        ----------
+        device : torch.device | None
+            The device on which to perform computations or load tensors and models (default is None).
+            If None, ``ARTIST`` will automatically select the most appropriate
+            device (CUDA or CPU) based on availability and OS.
+        """
+        device = get_device(device=device)
+
+        all_primitives = []
+
+        for group in self.heliostat_groups:
+            width = group.heliostat_dimensions[indices.heliostat_width] / 2
+            height = group.heliostat_dimensions[indices.heliostat_height] / 2
+
+            # Arrangement: lower east, lower west, upper west, upper east.
+            offsets = torch.tensor(
+                [
+                    [-width, 0, -height, 0],
+                    [width, 0, -height, 0],
+                    [width, 0, height, 0],
+                    [-width, 0, height, 0],
+                ],
+                device=device,
+            )
+
+            heliostat_primitives_corners = group.positions[:, None, :] + offsets[None, :, :]
+            all_primitives.append(heliostat_primitives_corners)
+
+        # Build the linear bounding volume hierarchy (LBVH).
+        self.heliostat_field_lbvh = (
+            blocking.build_linear_bounding_volume_hierarchies(
+                primitives_corners=torch.cat(all_primitives, dim=0),
+                device=device,
+            )
+        )

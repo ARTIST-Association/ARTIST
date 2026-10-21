@@ -54,10 +54,6 @@ class HeliostatRayTracer:
     heliostat_primitives_normals : torch.Tensor
         The heliostat primitives normals.
         Shape is ``[number_of_heliostats, 4]``.
-    lbvh : dict[str, torch.Tensor]
-        Linear bounding volume hierarchies as radix tree.
-    max_tree_depth : int
-        Maximum depth of the LBVH tree.
     tower_primitives_corners : torch.Tensor
         The tower primitive corners.
         Shape is ``[1, 4, 4]``.
@@ -204,15 +200,6 @@ class HeliostatRayTracer:
                 device=device,
             )
 
-            # Build linear bounding volume hierarchy (LBVH) for heliostat primitives.
-            self.lbvh = blocking.build_linear_bounding_volume_hierarchies(
-                primitives_corners=self.heliostat_primitives_corners, device=device
-            )
-            self.max_tree_depth = blocking.compute_lbvh_max_depth(
-                left=self.lbvh[constants.left_node], 
-                right=self.lbvh[constants.right_node]
-            )
-
             (
                 self.tower_primitives_corners,
                 self.tower_primitives_spans,
@@ -223,11 +210,9 @@ class HeliostatRayTracer:
 
         if dni is not None:
             # Calculate surface area per heliostat.
-            canting_norm = (torch.norm(self.heliostat_group.canting[0], dim=1)[0])[:2]
-            dimensions = (canting_norm * 4) + 0.02
             heliostat_surface_area = (
-                dimensions[indices.heliostat_width]
-                * dimensions[indices.heliostat_height]
+                self.heliostat_group.heliostat_dimensions[indices.heliostat_width]
+                * self.heliostat_group.heliostat_dimensions[indices.heliostat_height]
             )
             # Calculate ray magnitude.
             power_single_heliostat = dni * heliostat_surface_area
@@ -264,7 +249,7 @@ class HeliostatRayTracer:
         ray_extinction_factor: float = 0.0,
         mirror_reflectivity: float = 0.935,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Perform heliostat ray tracing.
 
@@ -306,13 +291,7 @@ class HeliostatRayTracer:
             The resulting bitmaps per heliostat.
             Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         torch.Tensor
-            The fraction of rays hitting the target, neglecting blocking effects.
-            Shape is ``[number_of_active_heliostats]``.
-        torch.Tensor
-            The fraction of rays not being blocked.
-            Shape is ``[number_of_active_heliostats]``.
-        torch.Tensor
-            The fraction of rays actually hitting the target, taking into account blocking effects.
+            Intercept factor, i.e the fraction of reflected energy that actually lands on the receiver.
             Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
@@ -321,7 +300,7 @@ class HeliostatRayTracer:
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
 
-        flux_distributions = torch.empty(
+        flux_distributions = torch.zeros(
             (
                 int(active_heliostats_mask.sum()),
                 int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
@@ -329,9 +308,7 @@ class HeliostatRayTracer:
             ),
             device=device,
         )
-        intercept_factor = torch.empty(active_heliostats_mask.sum(), device=device)
-        on_target_factor = torch.empty(active_heliostats_mask.sum(), device=device)
-        blocking_factor = torch.empty(active_heliostats_mask.sum(), device=device)
+        intercept_factor = torch.zeros(active_heliostats_mask.sum(), device=device)
 
         self.heliostat_group.preferred_reflection_directions = geometry.reflect(
             incident_ray_directions=incident_ray_directions[:, None, :],
@@ -473,8 +450,7 @@ class HeliostatRayTracer:
 
                 # Filter out the primitives that are relevant for blocking.
                 filtered_blocking_primitive_indices = blocking.lbvh_traversal(
-                    lbvh=self.lbvh,
-                    max_tree_depth=self.max_tree_depth,
+                    lbvh=self.scenario.heliostat_field.heliostat_field_lbvh,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
                     ],
@@ -510,8 +486,7 @@ class HeliostatRayTracer:
                     -1, number_of_rays, number_of_points, -1
                 )
                 filtered_shading_primitive_indices = blocking.lbvh_traversal(
-                    lbvh=self.lbvh,
-                    max_tree_depth=self.max_tree_depth,
+                    lbvh=self.scenario.heliostat_field.heliostat_field_lbvh,
                     points_at_ray_origins=self.heliostat_group.active_surface_points[
                         active_heliostats_mask_batch
                     ],
@@ -584,17 +559,12 @@ class HeliostatRayTracer:
 
             flux_distributions[active_heliostats_mask_batch] = bitmaps
 
-            on_target_factor[active_heliostats_mask_batch] = (
-                bitmap_intensities > 0
-            ).sum((1, 2)) / number_of_rays_per_heliostat
-            blocking_factor[active_heliostats_mask_batch] = (blocked < 1e-3).sum(
-                (1, 2)
-            ) / number_of_rays_per_heliostat
-            intercept_factor[active_heliostats_mask_batch] = (intensities > 0).sum(
-                (1, 2)
-            ) / number_of_rays_per_heliostat
+            intercept_factor[active_heliostats_mask_batch] = (
+                intensities.sum((1, 2))
+                / number_of_rays_per_heliostat
+            )
 
-        return flux_distributions, intercept_factor, on_target_factor, blocking_factor
+        return flux_distributions, intercept_factor
 
     def scatter_rays(
         self,

@@ -359,6 +359,7 @@ def test_blocking_integration(device: torch.device) -> None:
             scenario_file=scenario_file,
             device=device,
         )
+        scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
 
     incident_ray_direction = torch.nn.functional.normalize(
         torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), dim=-1
@@ -407,7 +408,7 @@ def test_blocking_integration(device: torch.device) -> None:
         device=device
     )
 
-    bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
+    bitmaps_per_heliostat, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
@@ -499,7 +500,7 @@ def test_ray_extinction(device: torch.device) -> None:
 
     ray_extinction_factor = 0.9
 
-    bitmaps_per_heliostat_no_extinction, _, _, _ = ray_tracer.trace_rays(
+    bitmaps_per_heliostat_no_extinction, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,
@@ -507,7 +508,7 @@ def test_ray_extinction(device: torch.device) -> None:
         device=device,
     )
 
-    bitmaps_per_heliostat_extinction, _, _, _ = ray_tracer.trace_rays(
+    bitmaps_per_heliostat_extinction, _ = ray_tracer.trace_rays(
         incident_ray_directions=incident_ray_directions,
         active_heliostats_mask=active_heliostats_mask,
         target_area_indices=target_area_indices,

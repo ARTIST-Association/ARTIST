@@ -99,7 +99,7 @@ def generate_reconstruction_results(
 
         # Configure the optimization.
         optimizer_dict = {
-            constants.initial_learning_rate_rotation_deviation: 1e-4,
+            constants.initial_learning_rate: 1e-4,
             constants.initial_learning_rate_initial_angles: 1e-3,
             constants.initial_learning_rate_initial_stroke_length: 1e-2,
             constants.tolerance: 0,

@@ -199,7 +199,7 @@ def track_runtime(
             start_time = time.perf_counter()
             result = func(*args, **kwargs)
             duration = time.perf_counter() - start_time
-            logger.info(f"{func_name} finished in {duration:.3f}s")
+            logger.info(f"{func_name} finished in {duration:.5f}s")
             return result
 
         return wrapper
