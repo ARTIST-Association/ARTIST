@@ -500,7 +500,7 @@ class AimPointOptimizer:
 
             sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
-                bitmaps_per_heliostat=flux_distributions,
+                bitmaps_per_heliostat=flux_distributions[sample_indices_for_local_rank],
                 target_area_indices=target_area_indices_all_groups[
                     heliostat_group_index
                 ][sample_indices_for_local_rank],
