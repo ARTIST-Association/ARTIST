@@ -113,7 +113,7 @@ def create_fluxes(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 batch_size=heliostat_group.number_of_active_heliostats,
                 bitmap_resolution=resolution,
             )

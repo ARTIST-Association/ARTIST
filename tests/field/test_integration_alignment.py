@@ -136,13 +136,13 @@ def test_integration_alignment(
         ray_tracer = HeliostatRayTracer(
             scenario=scenario,
             heliostat_group=heliostat_group,
-            blocking_active=False,
+            occlusion_active=False,
             bitmap_resolution=bitmap_resolution,
             batch_size=10,
         )
 
         # Perform heliostat-based ray tracing.
-        group_bitmaps_per_heliostat, _, _, _ = ray_tracer.trace_rays(
+        group_bitmaps_per_heliostat, _ = ray_tracer.trace_rays(
             incident_ray_directions=incident_ray_directions,
             active_heliostats_mask=active_heliostats_mask,
             target_area_indices=target_area_indices,

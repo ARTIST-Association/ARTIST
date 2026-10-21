@@ -289,7 +289,7 @@ def create_deflectometry_fluxes(
                 ray_tracer = HeliostatRayTracer(
                     scenario=scenario,
                     heliostat_group=heliostat_group,
-                    blocking_active=False,
+                    occlusion_active=False,
                     world_size=ddp_setup["heliostat_group_world_size"],
                     rank=ddp_setup["heliostat_group_rank"],
                     batch_size=100,
@@ -474,7 +474,7 @@ def kinematics_evaluation(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
                 batch_size=50,
@@ -578,7 +578,7 @@ def surface_evaluation(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=False,
+                occlusion_active=False,
                 world_size=ddp_setup["heliostat_group_world_size"],
                 rank=ddp_setup["heliostat_group_rank"],
                 batch_size=100,
@@ -713,7 +713,7 @@ def aim_point_plots(
             ray_tracer = HeliostatRayTracer(
                 scenario=scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=True,
+                occlusion_active=True,
                 batch_size=batch_size,
                 bitmap_resolution=bitmap_resolution,
                 dni=dni,
@@ -872,9 +872,9 @@ def full_field_optimizations(
         )
         optimization_configuration_kinematics = {
             constants.optimization: {
-                constants.initial_learning_rate_rotation_deviation: float(
+                constants.initial_learning_rate: float(
                     kinematics_config[
-                        constants.initial_learning_rate_rotation_deviation
+                        constants.initial_learning_rate
                     ]
                 ),
                 constants.tolerance: 1e-5,
@@ -913,7 +913,7 @@ def full_field_optimizations(
                 constants.max_epoch
             ] = 1500  # type: ignore[index]
             optimization_configuration_kinematics[constants.optimization][
-                constants.initial_learning_rate_rotation_deviation
+                constants.initial_learning_rate
             ] = 1e-3  # type: ignore[index]
             kinematics_reconstructor = KinematicsReconstructor(
                 ddp_setup=ddp_setup,
@@ -937,7 +937,7 @@ def full_field_optimizations(
                 constants.batch_size
             ] = 100  # type: ignore[index]
             optimization_configuration_kinematics[constants.optimization][
-                constants.initial_learning_rate_rotation_deviation
+                constants.initial_learning_rate
             ] = 5e-4  # type: ignore[index]
             scenario_kinematics_ideal_surfaces.set_number_of_rays(number_of_rays=8)
             kinematics_reconstructor = KinematicsReconstructor(
@@ -1177,7 +1177,7 @@ def full_field_optimizations(
                 constants.max_epoch
             ] = 1500  # type: ignore[index]
             optimization_configuration_kinematics[constants.optimization][
-                constants.initial_learning_rate_rotation_deviation
+                constants.initial_learning_rate
             ] = 1e-3  # type: ignore[index]
             kinematics_reconstructor = KinematicsReconstructor(
                 ddp_setup=ddp_setup,
@@ -1201,7 +1201,7 @@ def full_field_optimizations(
                 constants.batch_size
             ] = 100  # type: ignore[index]
             optimization_configuration_kinematics[constants.optimization][
-                constants.initial_learning_rate_rotation_deviation
+                constants.initial_learning_rate
             ] = 5e-4  # type: ignore[index]
             scenario_kinematics.set_number_of_rays(number_of_rays=8)
             kinematics_reconstructor = KinematicsReconstructor(
