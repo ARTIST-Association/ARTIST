@@ -210,11 +210,9 @@ class HeliostatRayTracer:
 
         if dni is not None:
             # Calculate surface area per heliostat.
-            canting_norm = (torch.norm(self.heliostat_group.canting[0], dim=1)[0])[:2]
-            dimensions = (canting_norm * 4) + 0.02
             heliostat_surface_area = (
-                dimensions[indices.heliostat_width]
-                * dimensions[indices.heliostat_height]
+                self.heliostat_group.heliostat_dimensions[indices.heliostat_width]
+                * self.heliostat_group.heliostat_dimensions[indices.heliostat_height]
             )
             # Calculate ray magnitude.
             power_single_heliostat = dni * heliostat_surface_area
