@@ -300,7 +300,7 @@ class HeliostatRayTracer:
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
 
-        flux_distributions = torch.empty(
+        flux_distributions = torch.zeros(
             (
                 int(active_heliostats_mask.sum()),
                 int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
@@ -308,7 +308,7 @@ class HeliostatRayTracer:
             ),
             device=device,
         )
-        intercept_factor = torch.empty(active_heliostats_mask.sum(), device=device)
+        intercept_factor = torch.zeros(active_heliostats_mask.sum(), device=device)
 
         self.heliostat_group.preferred_reflection_directions = geometry.reflect(
             incident_ray_directions=incident_ray_directions[:, None, :],
