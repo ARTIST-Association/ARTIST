@@ -508,11 +508,12 @@ class AimPointOptimizer:
             )[self.target_area_index]
             total_flux = total_flux + flux_distribution_on_target
 
-            flux_centers = bitmap.get_center_of_mass(
-                bitmaps=flux_distributions,
-                device=device
-            )
-
+            # flux_centers = bitmap.get_center_of_mass(
+            #     bitmaps=flux_distributions,
+            #     device=device
+            # )
+            flux_centers=None
+        
         if self.ddp_setup["is_distributed"]:
             total_flux = torch.distributed.nn.functional.all_reduce(
                 total_flux,
@@ -721,14 +722,14 @@ class AimPointOptimizer:
                 scheduler.step()
 
             if epoch % log_step == 0 and rank == 0:
-                print(
+                log.info(
                     f"Epoch: {epoch}, Loss: {loss.item():.5e}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}",
                     f"flux loss={flux_loss.item():.3f} | integral loss={integral_losses.item():.3f} | "
                     f"intensity={(total_flux.sum().item()):.4f}"
                 )
 
-            # if epoch % 3 == 0 and rank == 0:
-            #     def pixel_to_meter(self, center, width, height):
+            # if epoch % 2 == 0:
+            #     def pixel_to_meter(center, width, height):
             #         x = (center[..., 0]) / width * 4.335 - 4.335 / 2
             #         y = (height - center[..., 1]) / height * 5.2292 - 5.2292 / 2
             #         return torch.stack((x, y), dim=-1)
@@ -743,7 +744,8 @@ class AimPointOptimizer:
             #             -5.2292 / 2, 5.2292 / 2
             #         ],
             #     )
-            #     flux_centers = self.pixel_to_meter(
+            #     print(f"rank {rank}: {flux_centers[:10]}")
+            #     flux_centers = pixel_to_meter(
             #         center=flux_centers, 
             #         width=self.bitmap_resolution[0],
             #         height=self.bitmap_resolution[1]
@@ -757,7 +759,7 @@ class AimPointOptimizer:
             #     )
 
             #     ax.set_title(
-            #         f"Aim point optimization\n{(total_flux.sum().item() / 1000000):.3f} MW"
+            #         f"Aim point optimization\n{(total_flux.sum().item() / 1000000):.3f} MW\npoints: {flux_centers.shape[0]}"
             #     )
             #     ax.set_ylabel("Target height relative to center (m)", labelpad=2.5)
             #     ax.set_xlabel("Target width relative to center (m)", labelpad=4)
@@ -773,7 +775,7 @@ class AimPointOptimizer:
             #     )
 
             #     fig.tight_layout()
-            #     fig.savefig(f"opt_{epoch}.png", dpi=300, bbox_inches="tight")
+            #     fig.savefig(f"opt_{epoch}_{rank}_n2.png", dpi=300, bbox_inches="tight")
             #     plt.close(fig)
 
             # Early stopping when loss did not improve for a predefined number of epochs.
