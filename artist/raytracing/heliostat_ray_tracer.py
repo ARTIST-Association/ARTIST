@@ -251,7 +251,7 @@ class HeliostatRayTracer:
         ray_extinction_factor: float = 0.0,
         mirror_reflectivity: float = 0.935,
         device: torch.device | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Perform heliostat ray tracing.
 
@@ -293,13 +293,7 @@ class HeliostatRayTracer:
             The resulting bitmaps per heliostat.
             Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
         torch.Tensor
-            The fraction of rays hitting the target, neglecting blocking effects.
-            Shape is ``[number_of_active_heliostats]``.
-        torch.Tensor
-            The fraction of rays not being blocked.
-            Shape is ``[number_of_active_heliostats]``.
-        torch.Tensor
-            The fraction of rays actually hitting the target, taking into account blocking effects.
+            Intercept factor, i.e the fraction of reflected energy that actually lands on the receiver.
             Shape is ``[number_of_active_heliostats]``.
         """
         device = get_device(device=device)
@@ -567,17 +561,12 @@ class HeliostatRayTracer:
 
             flux_distributions[active_heliostats_mask_batch] = bitmaps
 
-            on_target_factor[active_heliostats_mask_batch] = (
-                bitmap_intensities > 0
-            ).sum((1, 2)) / number_of_rays_per_heliostat
-            blocking_factor[active_heliostats_mask_batch] = (blocked < 1e-3).sum(
-                (1, 2)
-            ) / number_of_rays_per_heliostat
-            intercept_factor[active_heliostats_mask_batch] = (intensities > 0).sum(
-                (1, 2)
-            ) / number_of_rays_per_heliostat
+            intercept_factor[active_heliostats_mask_batch] = (
+                intensities.sum((1, 2))
+                / number_of_rays_per_heliostat
+            )
 
-        return flux_distributions, intercept_factor, on_target_factor, blocking_factor
+        return flux_distributions, intercept_factor
 
     def scatter_rays(
         self,
