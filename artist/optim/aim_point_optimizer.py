@@ -476,22 +476,18 @@ class AimPointOptimizer:
             ray_tracer = HeliostatRayTracer(
                 scenario=self.scenario,
                 heliostat_group=heliostat_group,
-                blocking_active=True,
+                occlusion_active=True,
                 world_size=self.ddp_setup["heliostat_group_world_size"],
                 rank=self.ddp_setup["heliostat_group_rank"],
                 batch_size=self.optimizer_dict["batch_size"],
                 random_seed=self.ddp_setup["heliostat_group_rank"],
                 bitmap_resolution=self.bitmap_resolution,
                 dni=self.dni,
+                device=device
             )
 
             # Perform heliostat-based ray tracing.
-            (
-                flux_distributions,
-                intercept_factor, 
-                on_target_factor, 
-                blocking_factor
-            ) = ray_tracer.trace_rays(
+            flux_distributions, intercept_factor = ray_tracer.trace_rays(
                 incident_ray_directions=incident_ray_directions_all_groups[
                     heliostat_group_index
                 ],
@@ -503,10 +499,6 @@ class AimPointOptimizer:
                 ],
                 device=device,
             )
-
-            print(intercept_factor.mean())
-            print(on_target_factor.mean())
-            print(blocking_factor.mean())
 
             sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
             flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
@@ -529,7 +521,7 @@ class AimPointOptimizer:
                 op=torch.distributed.ReduceOp.SUM,
             )
 
-        return total_flux, flux_centers
+        return total_flux, flux_centers, intercept_factor
 
     def _synchronize_distributed_gradients(
         self, optimizer: torch.optim.Optimizer
@@ -683,7 +675,7 @@ class AimPointOptimizer:
             )
 
             # Trace rays and accumulate fluxes.
-            total_flux, flux_centers = (
+            total_flux, flux_centers, intercept_factor = (
                 self._trace_and_accumulate_flux(
                     active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
                     target_area_indices_all_groups=target_area_indices_all_groups,
@@ -693,7 +685,7 @@ class AimPointOptimizer:
                 )
             )
 
-            if flux_reference  is None:
+            if flux_reference is None:
                 flux_reference = total_flux.sum().detach()
             predicted_integrals = total_flux.sum()
             relative_decrease = 1.0 - (
@@ -722,10 +714,6 @@ class AimPointOptimizer:
             loss = flux_loss + integral_losses
 
             loss.backward()
-
-
-            #0 <= l1_losses <= 2
-
             self._synchronize_distributed_gradients(optimizer=optimizer)
 
             optimizer.step()
@@ -802,4 +790,4 @@ class AimPointOptimizer:
         # Broadcast final motor positions for each heliostat group from source rank to others.
         self._broadcast_motor_positions()
 
-        return loss.detach().cpu()
+        return loss.detach().cpu(), intercept_factor
