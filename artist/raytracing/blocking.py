@@ -454,6 +454,23 @@ def longest_common_prefix(
 
         lcp[valid] = torch.where(differing_bits[valid] == 0, 30, (30 - 1) - msb[valid])
 
+        # Standard LCP for differing codes.
+        nonidentical_valid = valid & nonzero_mask
+        lcp[nonidentical_valid] = (30 - 1) - msb[nonidentical_valid]
+
+        # Karras index tiebreaker for identical codes (Section 4):
+        # extend key to (code, index) so duplicates get unique LCPs.
+        identical_valid = valid & ~nonzero_mask
+        if identical_valid.any():
+            index_xor = (i[identical_valid] ^ j[identical_valid]).to(torch.int32)
+            index_clz = torch.zeros_like(index_xor)
+            ix_bits = index_xor.clone()
+            for shift in [16, 8, 4, 2, 1]:
+                shift_mask = ix_bits >> (32 - shift) == 0
+                index_clz = index_clz + shift * shift_mask.to(torch.int32)
+                ix_bits = torch.where(shift_mask, ix_bits << shift, ix_bits)
+            lcp[identical_valid] = 30 + index_clz
+
     return lcp
 
 
