@@ -12,7 +12,7 @@ from artist.optim import training
 from artist.optim.loss import KLDivergenceLoss, Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
-from artist.util import constants, indices
+from artist.util import constants, indices, runtime_log, track_runtime
 from artist.util.env import DdpSetup, get_device
 
 log = logging.getLogger(__name__)
@@ -569,6 +569,7 @@ class AimPointOptimizer:
 
             log.info(f"Rank: {rank}, synchronized after aim point optimization.")
 
+    @track_runtime(runtime_log)
     def optimize(
         self,
         loss_definition: Loss,
@@ -727,7 +728,7 @@ class AimPointOptimizer:
 
             if epoch % log_step == 0 and rank == 0:
                 log.info(
-                    f"Epoch: {epoch}, Loss: {loss.item():.5e}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}",
+                    f"Epoch: {epoch}, Loss: {loss.item():.5e}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}"
                     f"flux loss={flux_loss.item():.3f} | integral loss={integral_losses.item():.3f} | "
                     f"intensity={(total_flux.sum().item()):.4f}"
                 )

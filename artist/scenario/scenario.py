@@ -15,7 +15,7 @@ from artist.field.heliostat_group import HeliostatGroup
 from artist.field.solar_tower import SolarTower
 from artist.io import h5_scenario_parser
 from artist.scene.light_source_array import LightSourceArray
-from artist.util import constants
+from artist.util import constants, runtime_log, track_runtime
 from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
@@ -101,6 +101,7 @@ class Scenario:
         with h5py.File(scenario_path) as scenario_file:
             return scenario_file[constants.number_of_heliostat_groups][()]
 
+    @track_runtime(runtime_log)
     @classmethod
     def load_scenario_from_hdf5(
         cls,
