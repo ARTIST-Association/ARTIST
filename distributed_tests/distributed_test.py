@@ -267,6 +267,7 @@ def main() -> None:
         # Define scenario paths and viable heliostat data paths.
         scenario_path_ideal = data_dir / f"ideal_heliostats_{args.number_heliostats}.h5" 
 
+        runtime_log.info(f"Start {i} -----------------")
         start_optimize(
             scenario_path=scenario_path_ideal,
             aim_point_config=aim_point_optimization_config,
@@ -274,6 +275,8 @@ def main() -> None:
             data_dir=data_dir,
             device=device
         )
+        runtime_log.info(f"End {i} -----------------")
+
 
 if __name__ == "__main__":
     main()

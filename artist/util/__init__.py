@@ -1,5 +1,6 @@
 """Bundle all classes that implement util functionality in ``ARTIST``."""
 
+import torch
 from .config import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -195,11 +196,23 @@ def track_runtime(
         @wraps(func)
         def wrapper(*args: object, **kwargs: object) -> _T:
             func_name = func.__name__
-            logger.info(f"{func_name} started")
+            
+            rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+            if torch.cuda.is_available():
+                device = f"cuda:{torch.cuda.current_device()}"
+            else:
+                device = "cpu"
+            prefix = f"[rank={rank}, device={device}]"
+            logger.info("%s %s started", prefix, func_name)
             start_time = time.perf_counter()
             result = func(*args, **kwargs)
             duration = time.perf_counter() - start_time
-            logger.info(f"{func_name} finished in {duration:.5f}s")
+            logger.info(
+                "%s %s finished in %.5fs",
+                prefix,
+                func_name,
+                duration,
+            )
             return result
 
         return wrapper
