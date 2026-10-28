@@ -1,4 +1,6 @@
-## Unreleased
+## Version 2.1.0
+
+ARTIST 2.1.0 makes loading and saving scenarios with thousands of heliostats fast and introduces the columnar heliostat layout for scenario files.
 
 ### What's Changed
 
