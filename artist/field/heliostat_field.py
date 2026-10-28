@@ -1,15 +1,16 @@
 import logging
 import math
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
-from typing import Any, cast
+from collections.abc import Sequence
+from typing import cast
 
 import h5py
 import torch
 from typing_extensions import Self
 
 from artist.field.heliostat_group import HeliostatGroup
-from artist.io import h5_columnar_heliostats, h5_scenario_parser
+from artist.field.surface import Surface
+from artist.io import h5_scenario_parser
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.nurbs.utils import (
     create_nurbs_evaluation_grid,
@@ -21,12 +22,6 @@ from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
-
-evaluation_control_points_key = "evaluation_control_points"
-"""Key for the control points the surfaces of a group are evaluated from while loading."""
-
-non_tensor_group_data_keys = (constants.names, constants.heliostat_group_type)
-"""Keys of the per-group loading data that are not stacked into tensors."""
 
 
 class HeliostatField:
@@ -92,13 +87,9 @@ class HeliostatField:
         number_of_surface_points_per_facet: torch.Tensor,
         change_number_of_control_points_per_facet: torch.Tensor | None = None,
         device: torch.device | None = None,
-        surface_evaluation_chunk_size: int = 1024,
     ) -> Self:
         """
         Load a heliostat field from an HDF5 file.
-
-        All heliostat data is first read onto the CPU and grouped, then moved to the device once per group,
-        and the surface points and normals of each group are computed in batched NURBS evaluations.
 
         Parameters
         ----------
@@ -123,110 +114,6 @@ class HeliostatField:
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
-        surface_evaluation_chunk_size : int
-            The maximum number of heliostats whose surfaces are evaluated in one batched NURBS evaluation
-            (default is 1024). Larger values are faster but need more memory on the device.
-
-        Raises
-        ------
-        ValueError
-            If neither prototypes nor individual heliostat parameters are provided, or if
-            ``surface_evaluation_chunk_size`` is not positive.
-
-        Returns
-        -------
-        HeliostatField
-            The heliostat field loaded from the HDF5 file.
-        """
-        if surface_evaluation_chunk_size < 1:
-            raise ValueError(
-                f"The surface evaluation chunk size must be positive, but is {surface_evaluation_chunk_size}."
-            )
-        device = get_device(device=device)
-
-        rank = h5_scenario_parser.get_rank()
-        if rank == 0:
-            log.info("Loading a heliostat field from an HDF5 file.")
-
-        heliostats_config = config_file[constants.heliostat_key]
-        if h5_columnar_heliostats.is_columnar(heliostats_config):
-            heliostat_records: Iterable[h5_scenario_parser.HeliostatRecord] = (
-                h5_columnar_heliostats.columnar_heliostat_records(
-                    heliostats_config=heliostats_config
-                )
-            )
-        else:
-            if rank == 0:
-                log.warning(
-                    "This scenario stores its heliostats in the legacy layout with one HDF5 group per heliostat, "
-                    "which loads slower for large heliostat fields. Regenerate the scenario or convert it with "
-                    "artist.io.convert_scenario_to_columnar() to load it faster."
-                )
-            heliostat_records = h5_scenario_parser.legacy_heliostat_records(
-                heliostats_config=heliostats_config
-            )
-
-        grouped_field_data, loading_report = cls._read_heliostats(
-            heliostat_records=heliostat_records,
-            prototype_surface=prototype_surface,
-            prototype_kinematics=prototype_kinematics,
-            prototype_actuators=prototype_actuators,
-            change_number_of_control_points_per_facet=change_number_of_control_points_per_facet,
-        )
-        if rank == 0:
-            cls._log_loading_report(loading_report=loading_report)
-
-        heliostat_groups = []
-        for heliostat_group_key, group_data in grouped_field_data.items():
-            cls._calculate_group_surfaces(
-                group_data=group_data,
-                number_of_surface_points_per_facet=number_of_surface_points_per_facet,
-                surface_evaluation_chunk_size=surface_evaluation_chunk_size,
-                device=device,
-            )
-            heliostat_groups.append(
-                cls._create_heliostat_group(
-                    heliostat_group_key=heliostat_group_key,
-                    group_data=group_data,
-                    device=device,
-                )
-            )
-            if rank == 0:
-                kinematics_type, actuator_type = group_data[
-                    constants.heliostat_group_type
-                ]
-                log.info(
-                    f"Added a heliostat group with kinematics type: {kinematics_type}, and actuator type: {actuator_type}, to the heliostat field."
-                )
-
-        return cls(heliostat_groups=heliostat_groups, device=device)
-
-    @staticmethod
-    def _read_heliostats(
-        heliostat_records: Iterable[h5_scenario_parser.HeliostatRecord],
-        prototype_surface: "SurfaceConfig",
-        prototype_kinematics: dict[str, str | torch.Tensor],
-        prototype_actuators: dict[str, str | torch.Tensor],
-        change_number_of_control_points_per_facet: torch.Tensor | None = None,
-    ) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
-        """
-        Read the raw data of the selected heliostats onto the CPU, grouped by kinematics and actuator type.
-
-        Heliostats without individual parameters use the prototypes.
-
-        Parameters
-        ----------
-        heliostat_records : Iterable[HeliostatRecord]
-            The records of the heliostats to read, in order, independent of the file layout.
-        prototype_surface : SurfaceConfig
-            The prototype for the surface configuration to be used if a heliostat has no individual surface.
-        prototype_kinematics : dict[str, str | torch.Tensor]
-            The prototype for the kinematics, including type, initial orientation and deviations.
-        prototype_actuators : dict[str, str | torch.Tensor]
-            The prototype for the actuators, including type and parameters.
-        change_number_of_control_points_per_facet : torch.Tensor | None
-            The updated number of control points along each direction of each 2D facet (default is None).
-            Shape is ``[2]``.
 
         Raises
         ------
@@ -235,432 +122,317 @@ class HeliostatField:
 
         Returns
         -------
-        dict[str, dict[str, Any]]
-            Per heliostat group, the heliostat names, the group type and the stacked CPU tensors of all heliostats.
-        dict[str, Any]
-            The number of heliostats using each prototype and the heliostats with missing parameters.
+        HeliostatField
+            The heliostat field loaded from the HDF5 file.
         """
-        cpu = torch.device("cpu")
-        grouped_field_data: defaultdict[str, defaultdict[str, Any]] = defaultdict(
-            lambda: defaultdict(list)
+        device = get_device(device=device)
+
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_available() and torch.distributed.is_initialized()
+            else 0
         )
-        loading_report: dict[str, Any] = {
-            constants.surface_prototype_key: 0,
-            constants.kinematics_prototype_key: 0,
-            constants.actuators_prototype_key: 0,
-            constants.kinematics_deviations: defaultdict(list),
-            constants.actuator_parameters_key: defaultdict(list),
-        }
+        if rank == 0:
+            log.info("Loading a heliostat field from an HDF5 file.")
 
-        # Prototype data is only converted once it is needed, i.e., after all checks for a heliostat passed.
-        prototype_surface_data = None
-        prototype_kinematics_data = None
-        prototype_actuators_data = None
+        grouped_field_data: defaultdict[
+            str, defaultdict[str, list[str | torch.Tensor]]
+        ] = defaultdict(lambda: defaultdict(list))
 
-        for record in heliostat_records:
-            heliostat_name = record.name
-            has_surface = record.surface is not None
-            has_kinematics = record.kinematics is not None
-            has_actuators = record.actuator_parameters is not None
+        for heliostat_name in config_file[constants.heliostat_key].keys():
+            single_heliostat_config = config_file[constants.heliostat_key][
+                heliostat_name
+            ]
 
-            if not has_surface and prototype_surface is None:
-                raise ValueError(
-                    "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
-                )
-            if not has_kinematics and prototype_kinematics is None:
-                raise ValueError(
-                    "If the heliostat does not have an individual kinematics, a kinematics prototype must be provided!"
-                )
-            if not has_actuators and prototype_actuators is None:
-                raise ValueError(
-                    "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
-                )
-
-            if record.surface is not None:
-                control_points, degrees, facet_translation_vectors, canting = (
-                    record.surface()
+            if constants.heliostat_surface_key in single_heliostat_config.keys():
+                surface_config = h5_scenario_parser.surface_config(
+                    prototype=False,
+                    scenario_file=single_heliostat_config,
+                    device=device,
                 )
             else:
-                if prototype_surface_data is None:
-                    prototype_surface_data = tuple(
-                        torch.stack(
-                            [
-                                getattr(facet, attribute).to(cpu)
-                                for facet in prototype_surface.facet_list
-                            ]
-                        )
-                        for attribute in (
-                            "control_points",
-                            "degrees",
-                            "translation_vector",
-                            "canting",
-                        )
-                    )
-                control_points, degrees, facet_translation_vectors, canting = (
-                    prototype_surface_data
-                )
-                loading_report[constants.surface_prototype_key] += 1
-
-            if record.kinematics is not None:
-                (
-                    kinematics_type,
-                    initial_orientation,
-                    translation_deviations,
-                    rotation_deviations,
-                    number_of_actuators,
-                    missing_kinematics_parameters,
-                ) = record.kinematics()
-                for parameter in missing_kinematics_parameters:
-                    loading_report[constants.kinematics_deviations][parameter].append(
-                        heliostat_name
-                    )
-            else:
-                if prototype_kinematics_data is None:
-                    prototype_kinematics_data = (
-                        str(prototype_kinematics[constants.kinematics_type]),
-                        cast(
-                            torch.Tensor,
-                            prototype_kinematics[
-                                constants.kinematics_initial_orientation
-                            ],
-                        ).to(cpu),
-                        cast(
-                            torch.Tensor,
-                            prototype_kinematics[constants.translation_deviations],
-                        ).to(cpu),
-                        cast(
-                            torch.Tensor,
-                            prototype_kinematics[constants.rotation_deviations],
-                        ).to(cpu),
-                    )
-                (
-                    kinematics_type,
-                    initial_orientation,
-                    translation_deviations,
-                    rotation_deviations,
-                ) = prototype_kinematics_data
-                number_of_actuators = constants.rigid_body_number_of_actuators
-                loading_report[constants.kinematics_prototype_key] += 1
-
-            if (
-                record.actuator_types is not None
-                and record.actuator_parameters is not None
-            ):
-                actuator_type_list = record.actuator_types()
-                if (
-                    kinematics_type == constants.rigid_body_key
-                    and len(set(actuator_type_list)) > 1
-                ):
+                if prototype_surface is None:
                     raise ValueError(
-                        "When using the rigid body kinematics, all actuators for a given heliostat must have the same type."
+                        "If the heliostat does not have individual surface parameters, a surface prototype must be provided!"
                     )
-                actuator_type = actuator_type_list[indices.actuator_type]
-                (
-                    actuator_parameters_non_optimizable,
-                    actuator_parameters_optimizable,
-                    missing_actuator_parameters,
-                ) = record.actuator_parameters(
-                    actuator_type=actuator_type,
-                    number_of_actuators=number_of_actuators,
-                )
-                for actuator, parameter in missing_actuator_parameters:
-                    loading_report[constants.actuator_parameters_key][
-                        (actuator, parameter)
-                    ].append(heliostat_name)
-            else:
-                if prototype_actuators_data is None:
-                    prototype_actuators_data = (
-                        str(prototype_actuators[constants.actuator_type_key]),
-                        cast(
-                            torch.Tensor,
-                            prototype_actuators[
-                                constants.actuator_parameters_non_optimizable
-                            ],
-                        ).to(cpu),
-                        cast(
-                            torch.Tensor,
-                            prototype_actuators[
-                                constants.actuator_parameters_optimizable
-                            ],
-                        ).to(cpu),
+                if rank == 0:
+                    log.info(
+                        "Individual surface parameters not provided - loading a heliostat with the surface prototype."
                     )
-                (
-                    actuator_type,
-                    actuator_parameters_non_optimizable,
-                    actuator_parameters_optimizable,
-                ) = prototype_actuators_data
-                loading_report[constants.actuators_prototype_key] += 1
+                surface_config = prototype_surface
 
-            # As before, the surface points are evaluated from the control points in the file, the changed
-            # control points only replace the stored control points.
-            surface_control_points = control_points
+            if constants.heliostat_kinematics_key in single_heliostat_config.keys():
+                initial_orientation = torch.tensor(
+                    single_heliostat_config[constants.heliostat_kinematics_key][
+                        constants.kinematics_initial_orientation
+                    ][()],
+                    dtype=torch.float,
+                    device=device,
+                )
+                kinematics_type = single_heliostat_config[
+                    constants.heliostat_kinematics_key
+                ][constants.kinematics_type][()].decode("utf-8")
+
+                translation_deviations, rotation_deviations, number_of_actuators = (
+                    h5_scenario_parser.kinematics_deviations(
+                        prototype=False,
+                        kinematics_type=kinematics_type,
+                        scenario_file=single_heliostat_config,
+                        log=log,
+                        heliostat_name=heliostat_name,
+                        device=device,
+                    )
+                )
+            else:
+                if prototype_kinematics is None:
+                    raise ValueError(
+                        "If the heliostat does not have an individual kinematics, a kinematics prototype must be provided!"
+                    )
+                if rank == 0:
+                    log.info(
+                        "Individual kinematics configuration not provided - loading a heliostat with the kinematics prototype."
+                    )
+                kinematics_type = prototype_kinematics[constants.kinematics_type]
+
+                initial_orientation = prototype_kinematics[
+                    constants.kinematics_initial_orientation
+                ]
+                translation_deviations = prototype_kinematics[
+                    constants.translation_deviations
+                ]
+                rotation_deviations = prototype_kinematics[
+                    constants.rotation_deviations
+                ]
+
+            if constants.heliostat_actuator_key in single_heliostat_config.keys():
+                actuator_keys = list(
+                    single_heliostat_config[constants.heliostat_actuator_key].keys()
+                )
+
+                actuator_type_list = []
+                for key in actuator_keys:
+                    actuator_type_list.append(
+                        single_heliostat_config[constants.heliostat_actuator_key][key][
+                            constants.actuator_type_key
+                        ][()].decode("utf-8")
+                    )
+
+                unique_actuators = {a for a in actuator_type_list}
+
+                if kinematics_type == constants.rigid_body_key:
+                    if len(unique_actuators) > 1:
+                        raise ValueError(
+                            "When using the rigid body kinematics, all actuators for a given heliostat must have the same type."
+                        )
+                    else:
+                        actuator_type: str = actuator_type_list[indices.actuator_type]
+
+                actuator_parameters_non_optimizable, actuator_parameters_optimizable = (
+                    h5_scenario_parser.actuator_parameters(
+                        prototype=False,
+                        scenario_file=single_heliostat_config,
+                        actuator_type=actuator_type,
+                        number_of_actuators=number_of_actuators,
+                        log=log,
+                        heliostat_name=heliostat_name,
+                        device=device,
+                    )
+                )
+            else:
+                if prototype_actuators is None:
+                    raise ValueError(
+                        "If the heliostat does not have individual actuators, an actuator prototype must be provided!"
+                    )
+                if rank == 0:
+                    log.info(
+                        "Individual actuator configurations not provided - loading a heliostat with the actuator prototype."
+                    )
+                actuator_type = str(prototype_actuators[constants.actuator_type_key])
+                actuator_parameters_non_optimizable = prototype_actuators[
+                    constants.actuator_parameters_non_optimizable
+                ]
+                actuator_parameters_optimizable = prototype_actuators[
+                    constants.actuator_parameters_optimizable
+                ]
+
+            surface = Surface(surface_config, device=device)
+
+            number_of_facets = len(surface_config.facet_list)
+            degrees = torch.empty(
+                indices.nurbs_degrees,
+                dtype=torch.int32,
+                device=device,
+            )
+            # Each facet automatically has the same control points dimensions. This is required in ARTIST.
+            # control_points: Shape is
+            # [number_of_surfaces, number_of_facets_per_surface, number_of_control_points_u_direction, number_of_control_points_v_direction, 3].
+            control_points = torch.empty(
+                (
+                    number_of_facets,
+                    surface_config.facet_list[indices.first_facet].control_points.shape[
+                        indices.h5_control_points_u
+                    ],
+                    surface_config.facet_list[indices.first_facet].control_points.shape[
+                        indices.h5_control_points_v
+                    ],
+                    indices.control_point_dimension,
+                ),
+                device=device,
+            )
+            canting = torch.empty(
+                (
+                    number_of_facets,
+                    indices.canting_direction_dimension,
+                    4,
+                ),
+                device=device,
+            )
+            facet_translation_vectors = torch.empty(
+                (number_of_facets, 4), device=device
+            )
+            for facet_index in range(number_of_facets):
+                degrees = surface_config.facet_list[facet_index].degrees
+                control_points[facet_index] = surface_config.facet_list[
+                    facet_index
+                ].control_points
+                canting[facet_index] = surface_config.facet_list[facet_index].canting
+                facet_translation_vectors[facet_index] = surface_config.facet_list[
+                    facet_index
+                ].translation_vector
+
             if change_number_of_control_points_per_facet is not None:
                 control_points = create_planar_nurbs_control_points(
                     number_of_control_points=change_number_of_control_points_per_facet,
                     canting=canting,
-                    device=cpu,
+                    device=device,
                 )
 
-            group_data = grouped_field_data[f"{kinematics_type}_{actuator_type}"]
-            group_data[constants.names].append(heliostat_name)
-            group_data[constants.heliostat_group_type] = [
+            heliostat_group_key = f"{kinematics_type}_{actuator_type}"
+
+            grouped_field_data[heliostat_group_key][constants.names].append(
+                heliostat_name
+            )
+            grouped_field_data[heliostat_group_key][constants.heliostat_group_type] = [
                 kinematics_type,
                 actuator_type,
             ]
-            group_data[constants.positions].append(record.position())
-            group_data[constants.facet_degrees].append(degrees)
-            group_data[evaluation_control_points_key].append(surface_control_points)
-            group_data[constants.facets_canting].append(canting)
-            group_data[constants.facet_translations].append(facet_translation_vectors)
-            group_data[constants.facet_control_points].append(control_points)
-            group_data[constants.initial_orientations].append(initial_orientation)
-            group_data[constants.translation_deviations].append(translation_deviations)
-            group_data[constants.rotation_deviations].append(rotation_deviations)
-            group_data[constants.actuator_parameters_non_optimizable].append(
-                actuator_parameters_non_optimizable
-            )
-            group_data[constants.actuator_parameters_optimizable].append(
-                actuator_parameters_optimizable
-            )
 
-        for group_data in grouped_field_data.values():
-            for key, values in group_data.items():
-                if key not in non_tensor_group_data_keys:
-                    group_data[key] = torch.stack(values)
-
-        return dict(grouped_field_data), loading_report
-
-    @staticmethod
-    def _log_loading_report(loading_report: dict[str, Any]) -> None:
-        """
-        Log which prototypes and default parameters were used, summarized over all heliostats.
-
-        Parameters
-        ----------
-        loading_report : dict[str, Any]
-            The number of heliostats using each prototype and the heliostats with missing parameters.
-        """
-
-        def _summarize(heliostat_names: list[str]) -> str:
-            examples = ", ".join(heliostat_names[:5])
-            more = ", ..." if len(heliostat_names) > 5 else ""
-            return f"{len(heliostat_names)} heliostat(s) ({examples}{more})"
-
-        for prototype_key, configuration, prototype in (
-            (constants.surface_prototype_key, "surface parameters", "surface"),
-            (
-                constants.kinematics_prototype_key,
-                "kinematics configuration",
-                "kinematics",
-            ),
-            (
-                constants.actuators_prototype_key,
-                "actuator configurations",
-                "actuator",
-            ),
-        ):
-            if loading_report[prototype_key] > 0:
-                log.info(
-                    f"Individual {configuration} not provided for {loading_report[prototype_key]} heliostat(s) - "
-                    f"loading these heliostats with the {prototype} prototype."
+            grouped_field_data[heliostat_group_key][constants.positions].append(
+                torch.tensor(
+                    single_heliostat_config[constants.heliostat_position][()],
+                    dtype=torch.float,
+                    device=device,
                 )
-        for parameter, heliostat_names in loading_report[
-            constants.kinematics_deviations
-        ].items():
-            log.warning(
-                f"No individual kinematics {parameter} set for {_summarize(heliostat_names)}. "
-                f"Using default values!"
             )
-        for (actuator, parameter), heliostat_names in loading_report[
-            constants.actuator_parameters_key
-        ].items():
-            log.warning(
-                f"No individual {parameter} set for {actuator} on {_summarize(heliostat_names)}. "
-                f"Using default values!"
+            grouped_field_data[heliostat_group_key][constants.surface_points].append(
+                surface.get_surface_points_and_normals(
+                    number_of_points_per_facet=number_of_surface_points_per_facet,
+                    canting=canting,
+                    facet_translations=facet_translation_vectors,
+                    device=device,
+                )[indices.surface_points_from_tuple]
             )
-
-    @staticmethod
-    def _calculate_group_surfaces(
-        group_data: dict[str, Any],
-        number_of_surface_points_per_facet: torch.Tensor,
-        surface_evaluation_chunk_size: int,
-        device: torch.device,
-    ) -> None:
-        """
-        Compute the surface points and normals of all heliostats in a group and add them to the group data.
-
-        Parameters
-        ----------
-        group_data : dict[str, Any]
-            The heliostat names, the group type and the stacked CPU tensors of all heliostats in the
-            group, updated in place.
-        number_of_surface_points_per_facet : torch.Tensor
-            The number of sampling points along each direction of each 2D facet.
-            Shape is ``[2]``.
-        surface_evaluation_chunk_size : int
-            The maximum number of heliostats whose surfaces are evaluated in one batched NURBS evaluation.
-        device : torch.device
-            The device on which to perform computations or load tensors and models.
-        """
-        number_of_heliostats_in_group = len(group_data[constants.names])
-        surface_points, surface_normals = (
-            HeliostatField._calculate_surface_points_and_normals(
-                control_points=group_data.pop(evaluation_control_points_key),
-                degrees=group_data[constants.facet_degrees],
-                canting=group_data[constants.facets_canting].to(device),
-                facet_translations=group_data[constants.facet_translations].to(device),
-                number_of_surface_points_per_facet=number_of_surface_points_per_facet,
-                surface_evaluation_chunk_size=surface_evaluation_chunk_size,
-                device=device,
+            grouped_field_data[heliostat_group_key][constants.surface_normals].append(
+                surface.get_surface_points_and_normals(
+                    number_of_points_per_facet=number_of_surface_points_per_facet,
+                    canting=canting,
+                    facet_translations=facet_translation_vectors,
+                    device=device,
+                )[indices.surface_normals_from_tuple]
             )
-        )
-        group_data[constants.surface_points] = surface_points.reshape(
-            number_of_heliostats_in_group, -1, 4
-        )
-        group_data[constants.surface_normals] = surface_normals.reshape(
-            number_of_heliostats_in_group, -1, 4
-        )
-
-    @staticmethod
-    def _create_heliostat_group(
-        heliostat_group_key: str,
-        group_data: dict[str, Any],
-        device: torch.device,
-    ) -> HeliostatGroup:
-        """
-        Move the data of one heliostat group to the device and create the group.
-
-        Parameters
-        ----------
-        heliostat_group_key : str
-            The heliostat group type key, combining kinematics and actuator type.
-        group_data : dict[str, Any]
-            The heliostat names, the group type and the stacked tensors of all heliostats in the group,
-            including their surface points and normals.
-        device : torch.device
-            The device on which to perform computations or load tensors and models.
-
-        Returns
-        -------
-        HeliostatGroup
-            The heliostat group.
-        """
-        return type_registry.heliostat_group_type_mapping[heliostat_group_key](
-            names=group_data[constants.names],
-            positions=group_data[constants.positions].to(device),
-            surface_points=group_data[constants.surface_points].to(device),
-            surface_normals=group_data[constants.surface_normals].to(device),
-            canting=group_data[constants.facets_canting].to(device),
-            facet_translations=group_data[constants.facet_translations].to(device),
-            nurbs_control_points=group_data[constants.facet_control_points].to(device),
-            nurbs_degrees=group_data[constants.facet_degrees][-1, -1].to(device),
-            initial_orientations=group_data[constants.initial_orientations].to(device),
-            kinematics_translation_deviation_parameters=group_data[
+            grouped_field_data[heliostat_group_key][constants.facets_canting].append(
+                canting
+            )
+            grouped_field_data[heliostat_group_key][
+                constants.facet_translations
+            ].append(facet_translation_vectors)
+            grouped_field_data[heliostat_group_key][
+                constants.facet_control_points
+            ].append(control_points)
+            grouped_field_data[heliostat_group_key][
+                constants.initial_orientations
+            ].append(initial_orientation)
+            grouped_field_data[heliostat_group_key][
                 constants.translation_deviations
-            ].to(device),
-            kinematics_rotation_deviation_parameters=group_data[
+            ].append(translation_deviations)
+            grouped_field_data[heliostat_group_key][
                 constants.rotation_deviations
-            ].to(device),
-            actuator_parameters_non_optimizable=group_data[
+            ].append(rotation_deviations)
+            grouped_field_data[heliostat_group_key][
                 constants.actuator_parameters_non_optimizable
-            ].to(device),
-            actuator_parameters_optimizable=group_data[
+            ].append(actuator_parameters_non_optimizable)
+            grouped_field_data[heliostat_group_key][
                 constants.actuator_parameters_optimizable
-            ].to(device),
-            device=device,
-        )
+            ].append(actuator_parameters_optimizable)
 
-    @staticmethod
-    def _calculate_surface_points_and_normals(
-        control_points: torch.Tensor,
-        degrees: torch.Tensor,
-        canting: torch.Tensor,
-        facet_translations: torch.Tensor,
-        number_of_surface_points_per_facet: torch.Tensor,
-        surface_evaluation_chunk_size: int,
-        device: torch.device,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Calculate the surface points and normals of many heliostats in batched NURBS evaluations.
+        for group in grouped_field_data:
+            for key in grouped_field_data[group]:
+                if key not in [
+                    constants.names,
+                    constants.kinematics_type,
+                    constants.actuator_type_key,
+                ]:
+                    grouped_field_data[group][key] = torch.stack(
+                        grouped_field_data[group][key]
+                    )
 
-        Heliostats are evaluated together if they share the NURBS degrees of their first facet and whether their
-        control points are flat. As for a single ``Surface``, canting and facet translations are only applied to
-        heliostats with flat control points, all others already contain them.
-
-        Parameters
-        ----------
-        control_points : torch.Tensor
-            The control points of all heliostats on the CPU.
-            Shape is ``[number_of_heliostats, number_of_facets, number_of_control_points_u_direction, number_of_control_points_v_direction, 3]``.
-        degrees : torch.Tensor
-            The NURBS degrees of all facets of all heliostats on the CPU.
-            Shape is ``[number_of_heliostats, number_of_facets, 2]``.
-        canting : torch.Tensor
-            The canting vectors of all facets of all heliostats.
-            Shape is ``[number_of_heliostats, number_of_facets, 2, 4]``.
-        facet_translations : torch.Tensor
-            The translation vectors of all facets of all heliostats.
-            Shape is ``[number_of_heliostats, number_of_facets, 4]``.
-        number_of_surface_points_per_facet : torch.Tensor
-            The number of sampling points along each direction of each 2D facet.
-            Shape is ``[2]``.
-        surface_evaluation_chunk_size : int
-            The maximum number of heliostats whose surfaces are evaluated in one batched NURBS evaluation.
-        device : torch.device
-            The device on which to perform computations or load tensors and models.
-
-        Returns
-        -------
-        torch.Tensor
-            The surface points of all heliostats.
-            Shape is ``[number_of_heliostats, number_of_facets, number_of_surface_points_per_facet, 4]``.
-        torch.Tensor
-            The surface normals of all heliostats.
-            Shape is ``[number_of_heliostats, number_of_facets, number_of_surface_points_per_facet, 4]``.
-        """
-        number_of_heliostats, number_of_facets = control_points.shape[:2]
-        evaluation_points = create_nurbs_evaluation_grid(
-            number_of_evaluation_points=number_of_surface_points_per_facet,
-            device=device,
-        )
-        surface_points = torch.empty(
-            (number_of_heliostats, number_of_facets, evaluation_points.shape[0], 4),
-            device=device,
-        )
-        surface_normals = torch.empty_like(surface_points)
-
-        is_flat = (control_points[..., 2] == 0).flatten(start_dim=1).all(dim=1)
-        evaluation_keys = torch.cat(
-            (degrees[:, indices.first_facet], is_flat.unsqueeze(1).int()), dim=1
-        )
-        unique_keys, key_per_heliostat = torch.unique(
-            evaluation_keys, dim=0, return_inverse=True
-        )
-
-        for key_index, key in enumerate(unique_keys):
-            apply_canting = bool(key[-1])
-            heliostat_indices = torch.nonzero(key_per_heliostat == key_index).squeeze(1)
-            for chunk in heliostat_indices.split(surface_evaluation_chunk_size):
-                chunk_on_device = chunk.to(device)
-                nurbs_surfaces = NURBSSurfaces(
-                    degrees=key[:2].to(device),
-                    control_points=control_points[chunk].to(device),
+        heliostat_groups = []
+        for heliostat_group_name in grouped_field_data.keys():
+            number_of_heliostats_in_group = len(
+                grouped_field_data[heliostat_group_name][constants.names]
+            )
+            heliostat_groups.append(
+                type_registry.heliostat_group_type_mapping[heliostat_group_name](
+                    names=grouped_field_data[heliostat_group_name][constants.names],
+                    positions=grouped_field_data[heliostat_group_name][
+                        constants.positions
+                    ],
+                    surface_points=cast(
+                        torch.Tensor,
+                        grouped_field_data[heliostat_group_name][
+                            constants.surface_points
+                        ],
+                    ).reshape(number_of_heliostats_in_group, -1, 4),
+                    surface_normals=cast(
+                        torch.Tensor,
+                        grouped_field_data[heliostat_group_name][
+                            constants.surface_normals
+                        ],
+                    ).reshape(number_of_heliostats_in_group, -1, 4),
+                    canting=grouped_field_data[heliostat_group_name][
+                        constants.facets_canting
+                    ],
+                    facet_translations=grouped_field_data[heliostat_group_name][
+                        constants.facet_translations
+                    ],
+                    nurbs_control_points=grouped_field_data[heliostat_group_name][
+                        constants.facet_control_points
+                    ],
+                    nurbs_degrees=degrees,
+                    initial_orientations=grouped_field_data[heliostat_group_name][
+                        constants.initial_orientations
+                    ],
+                    kinematics_translation_deviation_parameters=grouped_field_data[
+                        heliostat_group_name
+                    ][constants.translation_deviations],
+                    kinematics_rotation_deviation_parameters=grouped_field_data[
+                        heliostat_group_name
+                    ][constants.rotation_deviations],
+                    actuator_parameters_non_optimizable=grouped_field_data[
+                        heliostat_group_name
+                    ][constants.actuator_parameters_non_optimizable],
+                    actuator_parameters_optimizable=grouped_field_data[
+                        heliostat_group_name
+                    ][constants.actuator_parameters_optimizable],
                     device=device,
                 )
-                points, normals = nurbs_surfaces.calculate_surface_points_and_normals(
-                    evaluation_points=evaluation_points.expand(
-                        len(chunk), number_of_facets, -1, -1
-                    ),
-                    canting=canting[chunk_on_device] if apply_canting else None,
-                    facet_translations=facet_translations[chunk_on_device]
-                    if apply_canting
-                    else None,
-                    device=device,
+            )
+            if rank == 0:
+                log.info(
+                    f"Added a heliostat group with kinematics type: {grouped_field_data[heliostat_group_name][constants.heliostat_group_type][indices.kinematics_type_index]}, and actuator type: {grouped_field_data[heliostat_group_name][constants.heliostat_group_type][indices.actuator_type_index]}, to the heliostat field."
                 )
-                surface_points[chunk_on_device] = points
-                surface_normals[chunk_on_device] = normals
 
-        return surface_points, surface_normals
+        return cls(heliostat_groups=heliostat_groups, device=device)
 
     def update_surfaces(
         self,
