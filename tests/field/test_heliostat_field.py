@@ -7,6 +7,7 @@ import torch
 
 from artist import ARTIST_ROOT
 from artist.field import HeliostatField
+from artist.io import h5_columnar_heliostats
 from artist.scenario import Scenario
 from artist.util import constants
 from artist.util.config import SurfaceConfig
@@ -47,9 +48,10 @@ def test_heliostat_field_load_from_hdf5_errors(
     prototype_actuators: dict[str, str | torch.Tensor],
     error: str,
     device: torch.device,
+    tmp_path: pathlib.Path,
 ) -> None:
     """
-    Test the heliostat field loaded from HDF5 method.
+    Test that loading heliostats without individual parameters requires the prototypes.
 
     Parameters
     ----------
@@ -63,22 +65,38 @@ def test_heliostat_field_load_from_hdf5_errors(
         The expected error message.
     device : torch.device
         The device on which to initialize tensors.
+    tmp_path : pathlib.Path
+        A temporary directory.
 
     Raises
     ------
     AssertionError
         If test does not complete as expected.
     """
-    mock_h5_file = mock.MagicMock(spec=h5py.File)
-    mock_group_heliostats = mock.MagicMock()
-    mock_group_heliostats.keys.return_value = ["heliostat_1"]
-    mock_h5_file.__getitem__.return_value = mock_group_heliostats
-    mock_group_heliostats.__len__.return_value = 1
-    mock_group_heliostats.keys.return_value = ["heliostats"]
+    with h5py.File(tmp_path / "scenario.h5", "w") as scenario_file:
+        h5_columnar_heliostats.write_columnar_heliostats(
+            scenario_file.create_group(constants.heliostat_key),
+            h5_columnar_heliostats.heliostat_columns(
+                [
+                    (
+                        "heliostat_1",
+                        {
+                            constants.heliostat_id: 1,
+                            constants.heliostat_position: torch.tensor(
+                                [0.0, 0.0, 0.0, 1.0]
+                            ),
+                        },
+                    )
+                ]
+            ),
+        )
 
-    with pytest.raises(ValueError) as exc_info:
+    with (
+        h5py.File(tmp_path / "scenario.h5", "r") as scenario_file,
+        pytest.raises(ValueError) as exc_info,
+    ):
         HeliostatField.from_hdf5(
-            config_file=mock_h5_file,
+            config_file=scenario_file,
             prototype_surface=prototype_surface,
             prototype_kinematics=prototype_kinematics,
             prototype_actuators=prototype_actuators,
