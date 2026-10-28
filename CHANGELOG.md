@@ -2,7 +2,7 @@
 
 ### What's Changed
 
-- Sped up loading HDF5 scenarios with many heliostats: all heliostat data is now read onto the CPU first, moved to the device once per heliostat group, and the surfaces of each group are computed in batched NURBS evaluations.
+- Sped up loading HDF5 scenarios with many heliostats: all heliostat data is now read onto the CPU first, moved to the device once per heliostat group, and the surfaces of each group are computed in batched NURBS evaluations. The new optional `surface_evaluation_chunk_size` argument of `Scenario.load_scenario_from_hdf5()` (default 1024) limits how many heliostats are evaluated at once, trading speed for device memory.
 - Added the columnar heliostat layout for scenario files, which stores each heliostat parameter of all heliostats in one dataset. `H5ScenarioGenerator` now writes this layout. Scenarios in the legacy layout still load, with a warning, and can be converted with `artist.io.convert_scenario_to_columnar()`. Older `ARTIST` versions cannot load scenarios in the columnar layout.
 - Warnings about missing kinematics or actuator parameters and the use of prototypes are now summarized over all heliostats instead of being logged per heliostat.
 
