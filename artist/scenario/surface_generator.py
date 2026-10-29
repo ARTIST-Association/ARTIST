@@ -366,7 +366,7 @@ class SurfaceGenerator:
                     facet_key=f"facet_{i + 1}",
                     control_points=translated_control_points.detach(),
                     degrees=nurbs.degrees,
-                    translation_vector=facet_translation_vectors[i],
+                    facet_translations=facet_translation_vectors[i],
                     canting=canting[i],
                 )
             )
@@ -424,7 +424,7 @@ class SurfaceGenerator:
                 facet_key=f"facet_{facet_index + 1}",
                 control_points=control_points[facet_index],
                 degrees=self.degrees,
-                translation_vector=facet_translation_vectors[facet_index],
+                facet_translations=facet_translation_vectors[facet_index],
                 canting=canting[facet_index],
             )
             facet_config_list.append(facet_config)
