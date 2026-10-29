@@ -129,6 +129,7 @@ class SolarTower:
     def get_centers_of_target_areas(
         self,
         target_area_indices: torch.Tensor,
+        positions: torch.Tensor | None = None,
         device: torch.device | None = None,
     ) -> torch.Tensor:
         """
@@ -144,6 +145,8 @@ class SolarTower:
             Global target area indices (planar first, cylindrical second) for which
             to retrieve the center coordinates.
             Shape is ``[number_of_active_heliostats]``.
+        positions : torch.Tensor | None = None
+            Heliostat positions, used to infer aim point for full cylinder receivers.
         device : torch.device | None
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
@@ -179,10 +182,20 @@ class SolarTower:
                 TowerTargetAreasCylindrical,
                 self.target_areas[indices.cylindrical_target_areas],
             )
-            centers[~planar_mask] = (
-                cylindrical.centers[cylinder_indices]
-                + cylindrical.radii[cylinder_indices][:, None]
-                * cylindrical.normals[cylinder_indices]
-            )
+
+            if cylindrical.opening_angles[0] == 6.283185307179586:
+                cylinder_centers = cylindrical.centers[cylinder_indices, :3]
+                cylinder_axes = cylindrical.axes[cylinder_indices, :3]
+                to_heliostat = positions[~planar_mask, :3] - cylinder_centers
+                radial = to_heliostat - (to_heliostat * cylinder_axes).sum(-1, keepdim=True) * cylinder_axes
+                radial = radial / radial.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+                centers[~planar_mask, :3] = cylinder_centers + cylindrical.radii[cylinder_indices][:, None] * radial
+            else:
+                centers[~planar_mask] = (
+                    cylindrical.centers[cylinder_indices]
+                    + cylindrical.radii[cylinder_indices][:, None]
+                    * cylindrical.normals[cylinder_indices]
+                )
+
         centers[:, 3] = 1.0
         return centers
