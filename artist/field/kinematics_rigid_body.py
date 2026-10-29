@@ -178,9 +178,9 @@ class RigidBody(Kinematics):
         self.kinematics_standard_orientation = torch.tensor(
             [0.0, -1.0, 0.0, 0.0], device=device
         )
-        sampled_surface_orientation = torch.tensor([0.0, 0.0, 1.0, 0.0], device=device)
+        sampled_surface_orientation = torch.tensor([[0.0, 0.0, 1.0, 0.0]], device=device)
         east_angles, north_angles, up_angles = rotations.decompose_rotations(
-            initial_vector=sampled_surface_orientation[None, :],
+            initial_vector=sampled_surface_orientation,
             target_vector=self.kinematics_standard_orientation,
         )
         self.initial_orientation_offsets = (
