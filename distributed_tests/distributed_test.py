@@ -147,6 +147,24 @@ def start_optimize(
         baseline_dni = aim_point_config["dni"]
         
         ground_truth = torch.load(data_dir / "optimal_flux.pt", weights_only=False, map_location=device)
+        # e_trapezoid = bitmap.trapezoid_distribution(
+        #     total_width=bitmap_resolution[indices.unbatched_bitmap_e],
+        #     slope_width=0,
+        #     plateau_width=500,
+        #     device=device,
+        # )
+        # u_trapezoid = bitmap.trapezoid_distribution(
+        #     total_width=bitmap_resolution[indices.unbatched_bitmap_u],
+        #     slope_width=10,
+        #     plateau_width=70,
+        #     device=device,
+        # )
+        # eu_trapezoid = u_trapezoid[:, None] * e_trapezoid[None]
+        # ground_truth = eu_trapezoid / eu_trapezoid.sum()
+
+        # import matplotlib.pyplot as plt
+        # plt.imshow(ground_truth.cpu().detach())
+        # plt.savefig("optimized_ground_truth")
         
         loss_definition = KLDivergenceLoss()
 
@@ -266,6 +284,7 @@ def main() -> None:
 
         # Define scenario paths and viable heliostat data paths.
         scenario_path_ideal = data_dir / f"ideal_heliostats_{args.number_heliostats}.h5" 
+        #scenario_path_ideal = "/workVERLEIHNIX/mb/ARTIST/dissertation/__circular_tests/data/ideal_crescent_dunes.h5"
 
         runtime_log.info(f"Start {i} -----------------")
         start_optimize(
