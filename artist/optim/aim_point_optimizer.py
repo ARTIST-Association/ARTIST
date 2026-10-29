@@ -225,6 +225,7 @@ class AimPointOptimizer:
             group.align_surfaces_with_incident_ray_directions(
                 aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
                     target_area_indices=target_area_indices_all_groups[group_index],
+                    positions=group.positions,
                     device=device,
                 ),
                 incident_ray_directions=incident_ray_directions_all_groups[group_index],
@@ -512,11 +513,12 @@ class AimPointOptimizer:
             )[self.target_area_index]
             total_flux = total_flux + flux_distribution_on_target
 
+            flux_centers=None
+
             # flux_centers = bitmap.get_center_of_mass(
             #     bitmaps=flux_distributions,
             #     device=device
             # )
-            flux_centers=None
         
         if self.ddp_setup["is_distributed"]:
             total_flux = torch.distributed.nn.functional.all_reduce(
@@ -749,7 +751,6 @@ class AimPointOptimizer:
             #             -5.2292 / 2, 5.2292 / 2
             #         ],
             #     )
-            #     print(f"rank {rank}: {flux_centers[:10]}")
             #     flux_centers = pixel_to_meter(
             #         center=flux_centers, 
             #         width=self.bitmap_resolution[0],
@@ -780,7 +781,7 @@ class AimPointOptimizer:
             #     )
 
             #     fig.tight_layout()
-            #     fig.savefig(f"opt_{epoch}_{rank}_n2.png", dpi=300, bbox_inches="tight")
+            #     fig.savefig(f"opt_{epoch}.png", dpi=300, bbox_inches="tight")
             #     plt.close(fig)
 
             # Early stopping when loss did not improve for a predefined number of epochs.
