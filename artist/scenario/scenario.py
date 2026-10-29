@@ -108,6 +108,7 @@ class Scenario:
         number_of_surface_points_per_facet: torch.Tensor = torch.tensor([50, 50]),
         change_number_of_control_points_per_facet: torch.Tensor | None = None,
         device: torch.device | None = None,
+        surface_evaluation_chunk_size: int = 1024,
     ) -> Self:
         """
         Class method to load the scenario from an HDF5 file.
@@ -129,6 +130,9 @@ class Scenario:
             The device on which to perform computations or load tensors and models (default is None).
             If None, ``ARTIST`` will automatically select the most appropriate
             device (CUDA or CPU) based on availability and OS.
+        surface_evaluation_chunk_size : int
+            The maximum number of heliostats whose surfaces are evaluated in one batched NURBS evaluation
+            (default is 1024). Larger values are faster but need more memory on the device.
 
         Returns
         -------
@@ -249,6 +253,7 @@ class Scenario:
             ),
             change_number_of_control_points_per_facet=change_number_of_control_points_per_facet,
             device=device,
+            surface_evaluation_chunk_size=surface_evaluation_chunk_size,
         )
 
         return cls(
