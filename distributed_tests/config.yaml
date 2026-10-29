@@ -30,5 +30,6 @@ aim_point_optimization_configuration:
   dni: 800
   bitmap_resolution: [256, 256]
   baseline_incident_ray_direction: [0.411, 0.706, -0.576, 0.0]
+  #baseline_incident_ray_direction: [0.0, 1.0, 0.0, 0.0]
   baseline_target_area: "receiver"
   log_step: 50
