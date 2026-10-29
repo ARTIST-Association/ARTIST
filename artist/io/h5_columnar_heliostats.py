@@ -10,17 +10,6 @@ import torch
 from artist.geometry import rotations
 from artist.util import constants, indices
 
-layout_attribute = "layout"
-"""Attribute of the heliostat group in a scenario file that names the layout of the heliostats."""
-
-columnar_layout = "columnar"
-"""Layout storing each heliostat parameter of all heliostats in one dataset, see ``heliostat_columns()``."""
-
-heliostat_indices_key = "heliostat_indices"
-"""Key for the indices of the heliostats that have individual parameters for a component."""
-
-actuator_names_key = "names"
-"""Key for the actuator names of all heliostats with individual actuators."""
 
 required_fields = {
     "": (constants.heliostat_id, constants.heliostat_position),
@@ -107,7 +96,7 @@ def is_columnar(heliostats_config: h5py.Group) -> bool:
     bool
         Whether the heliostats are stored in the columnar layout.
     """
-    return heliostats_config.attrs.get(layout_attribute) == columnar_layout
+    return heliostats_config.attrs.get(constants.layout_attribute) == constants.columnar_layout
 
 
 def heliostat_columns(
@@ -217,7 +206,7 @@ def _component_columns(
     )
     columns = {}
     if component:
-        columns[f"{prefix}{heliostat_indices_key}"] = np.array(
+        columns[f"{prefix}{constants.heliostat_indices_key}"] = np.array(
             [heliostat_index for heliostat_index, _, _ in rows], dtype=np.int64
         )
     if component == constants.heliostat_actuator_key:
@@ -225,7 +214,7 @@ def _component_columns(
             raise ColumnarLayoutError(
                 "Heliostats have different numbers of actuators, so the columnar layout cannot store them."
             )
-        columns[f"{prefix}{actuator_names_key}"] = np.array(
+        columns[f"{prefix}{constants.actuator_names_key}"] = np.array(
             [list(items) for _, _, items in rows], dtype=h5py.string_dtype()
         )
 
@@ -335,7 +324,7 @@ def write_columnar_heliostats(
     """
     for path, data in columns.items():
         heliostats_config.create_dataset(path, data=data)
-    heliostats_config.attrs[layout_attribute] = columnar_layout
+    heliostats_config.attrs[constants.layout_attribute] = constants.columnar_layout
 
 
 def read_legacy_heliostats(
@@ -446,7 +435,7 @@ def read_kinematics_deviations(
     """
     prefix = f"{constants.heliostat_kinematics_key}/{constants.kinematics_deviations}/"
     number_of_rows = len(
-        columns[f"{constants.heliostat_kinematics_key}/{heliostat_indices_key}"]
+        columns[f"{constants.heliostat_kinematics_key}/{constants.heliostat_indices_key}"]
     )
     deviations, missing = [], {}
     for parameters in rigid_body_deviations:

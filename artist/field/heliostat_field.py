@@ -23,9 +23,6 @@ from artist.util.env import get_device
 log = logging.getLogger(__name__)
 """A logger for the heliostat field."""
 
-evaluation_control_points_key = "evaluation_control_points"
-"""Key for the control points the surfaces of a group are evaluated from while loading."""
-
 
 class HeliostatField:
     """
@@ -185,7 +182,7 @@ class HeliostatField:
         for group_key, group in groups.items():
             number_of_heliostats = len(group[constants.names])
             surface_points, surface_normals = cls._calculate_surface_points_and_normals(
-                control_points=group[evaluation_control_points_key],
+                control_points=group[constants.evaluation_control_points],
                 degrees=group[constants.facet_degrees],
                 canting=group[constants.facets_canting].to(device),
                 facet_translations=group[constants.facet_translations].to(device),
@@ -298,7 +295,7 @@ class HeliostatField:
         ):
             rows[component] = torch.full((len(names),), -1)
             heliostat_indices = columns.get(
-                f"{component}/{h5_columnar_heliostats.heliostat_indices_key}"
+                f"{component}/{constants.heliostat_indices_key}"
             )
             if heliostat_indices is not None:
                 rows[component][torch.as_tensor(heliostat_indices)] = torch.arange(
@@ -357,10 +354,10 @@ class HeliostatField:
             )[..., [indices.nurbs_u, indices.nurbs_v]].to(torch.int32)
         if (rows[constants.heliostat_surface_key] < 0).any():
             for key, attribute in (
-                (constants.facet_control_points, "control_points"),
-                (constants.facet_degrees, "degrees"),
-                (constants.facet_translations, "translation_vector"),
-                (constants.facets_canting, "canting"),
+                (constants.facet_control_points, constants.facet_control_points),
+                (constants.facet_degrees, constants.facet_degrees),
+                (constants.facet_translations, constants.facet_translations),
+                (constants.facets_canting, constants.facets_canting),
             ):
                 prototypes[key] = torch.stack(
                     [
@@ -479,7 +476,7 @@ class HeliostatField:
 
             # As before, the surface points are evaluated from the control points in the file, the changed
             # control points only replace the stored control points.
-            group[evaluation_control_points_key] = group[constants.facet_control_points]
+            group[constants.evaluation_control_points] = group[constants.facet_control_points]
             if change_number_of_control_points_per_facet is not None:
                 group[constants.facet_control_points] = torch.stack(
                     [
@@ -514,7 +511,7 @@ class HeliostatField:
             for parameter, missing in missing_deviations.items():
                 if missing.any():
                     heliostat_indices = columns[
-                        f"{kinematics}{h5_columnar_heliostats.heliostat_indices_key}"
+                        f"{kinematics}{constants.heliostat_indices_key}"
                     ][missing.numpy()]
                     log.warning(
                         f"No individual kinematics {parameter} set for "
@@ -523,10 +520,10 @@ class HeliostatField:
 
             if actuator_types is not None:
                 heliostat_indices = columns[
-                    f"{actuator}{h5_columnar_heliostats.heliostat_indices_key}"
+                    f"{actuator}{constants.heliostat_indices_key}"
                 ]
                 actuator_names = columns[
-                    f"{actuator}{h5_columnar_heliostats.actuator_names_key}"
+                    f"{actuator}{constants.actuator_names_key}"
                 ]
                 is_linear = torch.as_tensor(
                     actuator_types[:, indices.actuator_type]
