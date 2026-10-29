@@ -525,13 +525,9 @@ class HeliostatRayTracer:
                 )
 
             # Cosine efficiency: projection of the incident ray direction onto the surface normal.
-            cosine_factor = -(
-                incident_ray_directions[active_heliostats_mask_batch, None, :3]
-                * self.heliostat_group.active_surface_normals[
-                    active_heliostats_mask_batch, :, :3
-                ]
-            ).sum(dim=-1)
-            cosine_factor = cosine_factor.clamp_min(0.0)[:, None, :]
+            cosine_factor = (
+                incident_ray_directions[active_heliostats_mask_batch, None, :3] * self.heliostat_group.active_surface_normals[active_heliostats_mask_batch, :, :3]
+            ).sum(dim=-1).abs().clamp(0.0, 1.0)[:, None, :]
 
             # Atmospheric attenuation model after Leary & Hankins (1979), MIRVAL.
             atmospheric_attenuation = torch.where(
@@ -563,6 +559,50 @@ class HeliostatRayTracer:
                 intensities.sum((1, 2))
                 / number_of_rays_per_heliostat
             )
+
+
+        # import numpy as np
+        # import matplotlib.pyplot as plt
+
+        # origins = self.heliostat_group.active_surface_points[active_heliostats_mask_batch][:, 0].cpu().detach()
+        # normals = rays.ray_directions[active_heliostats_mask_batch][:, 0, 0].cpu().detach()
+        # normals = normals * 100
+
+        # fig, ax = plt.subplots(figsize=(50, 50))
+
+        # ax.scatter(origins[:, 0], origins[:, 1], color='red', s=50, label='Origins', zorder=3)
+        # center = self.scenario.solar_tower.target_areas[0].centers.cpu().detach()
+        # ax.scatter(center[:, 0], center[:, 1], color='green', s=50, label='tower', zorder=3)
+        # ax.quiver(
+        #     origins[:, 0], origins[:, 1],
+        #     normals[:, 0], normals[:, 1],
+        #     angles='xy',
+        #     scale_units='xy',
+        #     scale=1,
+        #     color='blue',
+        #     label='Normals',
+        #     width=0.001
+        # )
+
+        # # for i in range(origins.shape[0]):
+        # #     ax.annotate(f'O{i+1}', (origins[i, 0], origins[i, 1]), xytext=(5, 5), textcoords='offset points')
+
+        # ax.axhline(0, color='gray', linewidth=0.8)
+        # ax.axvline(0, color='gray', linewidth=0.8)
+        # ax.set_xlabel('X')
+        # ax.set_ylabel('Y')
+        # ax.set_title('2D Origins and Normal Vectors')
+        # ax.set_aspect('equal', adjustable='box')
+        # ax.grid(True, linestyle='--', alpha=0.5)
+        # ax.legend()
+
+        # plt.savefig("positions_1")
+
+        # sums = flux_distributions.sum(dim=(1, 2))
+        # zero_indices = torch.where(sums == 0)[0]
+        # print(zero_indices)
+
+        # print(intercept_factor.sum(dim=-1))
 
         return flux_distributions, intercept_factor
 
