@@ -10,7 +10,6 @@ import torch
 from artist.geometry import rotations
 from artist.util import constants, indices
 
-
 required_fields = {
     "": (constants.heliostat_id, constants.heliostat_position),
     constants.heliostat_surface_key: (
@@ -96,7 +95,10 @@ def is_columnar(heliostats_config: h5py.Group) -> bool:
     bool
         Whether the heliostats are stored in the columnar layout.
     """
-    return heliostats_config.attrs.get(constants.layout_attribute) == constants.columnar_layout
+    return (
+        heliostats_config.attrs.get(constants.layout_attribute)
+        == constants.columnar_layout
+    )
 
 
 def heliostat_columns(
@@ -435,7 +437,9 @@ def read_kinematics_deviations(
     """
     prefix = f"{constants.heliostat_kinematics_key}/{constants.kinematics_deviations}/"
     number_of_rows = len(
-        columns[f"{constants.heliostat_kinematics_key}/{constants.heliostat_indices_key}"]
+        columns[
+            f"{constants.heliostat_kinematics_key}/{constants.heliostat_indices_key}"
+        ]
     )
     deviations, missing = [], {}
     for parameters in rigid_body_deviations:

@@ -476,7 +476,9 @@ class HeliostatField:
 
             # As before, the surface points are evaluated from the control points in the file, the changed
             # control points only replace the stored control points.
-            group[constants.evaluation_control_points] = group[constants.facet_control_points]
+            group[constants.evaluation_control_points] = group[
+                constants.facet_control_points
+            ]
             if change_number_of_control_points_per_facet is not None:
                 group[constants.facet_control_points] = torch.stack(
                     [
@@ -522,9 +524,7 @@ class HeliostatField:
                 heliostat_indices = columns[
                     f"{actuator}{constants.heliostat_indices_key}"
                 ]
-                actuator_names = columns[
-                    f"{actuator}{constants.actuator_names_key}"
-                ]
+                actuator_names = columns[f"{actuator}{constants.actuator_names_key}"]
                 is_linear = torch.as_tensor(
                     actuator_types[:, indices.actuator_type]
                     == constants.linear_actuator_key
