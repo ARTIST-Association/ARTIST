@@ -42,24 +42,24 @@ def decompose_rotations(
     """
     # Normalize the input vectors.
     initial_vector = torch.nn.functional.normalize(
-        initial_vector[:, :indices.slice_fourth_dimension], dim=-1
+        initial_vector[:, : indices.slice_fourth_dimension]
     )
     target_vector = torch.nn.functional.normalize(
-        target_vector[:, :indices.slice_fourth_dimension], dim=-1,
-    )
+        target_vector[: indices.slice_fourth_dimension],
+        dim=indices.unbatched_tensor_values,
+    ).unsqueeze(indices.unbatched_tensor_values)
 
     # Compute the cross product (rotation axis).
-    r = torch.linalg.cross(initial_vector, target_vector, dim=-1)
+    r = torch.linalg.cross(initial_vector, target_vector)
 
     # Normalize the rotation axis.
-    r_normalized = torch.nn.functional.normalize(r, dim=-1)
+    r_normalized = torch.nn.functional.normalize(r)
 
     # Compute the angle between the vectors.
-    dot = (initial_vector * target_vector).sum(dim=-1)
-    theta = torch.arccos(torch.clamp(dot, -1.0, 1.0))
+    theta = torch.arccos(torch.clamp(initial_vector @ target_vector.T, -1.0, 1.0))
 
     # Decompose the angle along each axis.
-    theta_components = theta.unsqueeze(-1) * r_normalized
+    theta_components = theta * r_normalized
 
     return theta_components[:, 0], theta_components[:, 1], theta_components[:, 2]
 
