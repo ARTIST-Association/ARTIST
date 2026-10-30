@@ -1,9 +1,13 @@
+import logging
 import pathlib
+import types
 
 import h5py
 import pytest
+import torch
 from pytest_mock import MockerFixture
 
+from artist.io import h5_columnar_heliostats
 from artist.scenario import H5ScenarioGenerator
 from artist.util import constants
 from artist.util.config import (
@@ -42,7 +46,10 @@ def scenario_generator(mocker: MockerFixture) -> H5ScenarioGenerator:
     }
     mock_prototype_config.create_prototype_dict.return_value = {"param5": "abc"}
     mock_heliostat_list_config.create_heliostat_list_dict.return_value = {
-        "param6": "xyz"
+        "heliostat_1": {
+            constants.heliostat_id: 1,
+            constants.heliostat_position: torch.tensor([0.0, 1.0, 0.0, 1.0]),
+        }
     }
 
     mocker.patch.object(
@@ -107,11 +114,50 @@ def test_generate_scenario(
             constants.target_area_cylindrical_key: ["param3"],
             constants.light_source_key: ["param4"],
             constants.prototype_key: ["param5"],
-            constants.heliostat_key: ["param6"],
         }
         for prefix, keys in expected_datasets.items():
             for key in keys:
                 assert f"{prefix}/{key}" in f
+
+        heliostats = f[constants.heliostat_key]
+        assert h5_columnar_heliostats.is_columnar(heliostats)
+        assert heliostats[constants.names].asstr()[()].tolist() == ["heliostat_1"]
+        assert heliostats[constants.heliostat_position][()].tolist() == [
+            [0.0, 1.0, 0.0, 1.0]
+        ]
+
+
+def test_generate_scenario_falls_back_to_legacy_layout(
+    scenario_generator: H5ScenarioGenerator,
+    tmp_path: pathlib.Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that heliostats the columnar layout cannot store are saved in the legacy layout with a warning."""
+    scenario_generator.file_path = tmp_path / "scenario.h5"
+    # Positions of different shapes cannot be stacked into one dataset.
+    scenario_generator.heliostat_list_config.create_heliostat_list_dict.return_value = {  # type: ignore[attr-defined]
+        "heliostat_1": {
+            constants.heliostat_id: 1,
+            constants.heliostat_position: torch.tensor([0.0, 1.0, 0.0, 1.0]),
+        },
+        "heliostat_2": {
+            constants.heliostat_id: 2,
+            constants.heliostat_position: torch.tensor([0.0, 1.0, 0.0]),
+        },
+    }
+    scenario_generator._flatten_dict = types.MethodType(  # type: ignore[method-assign]
+        H5ScenarioGenerator._flatten_dict, scenario_generator
+    )
+    scenario_generator._include_parameters = H5ScenarioGenerator._include_parameters  # type: ignore[method-assign]
+
+    with caplog.at_level(logging.WARNING):
+        scenario_generator.generate_scenario()
+
+    assert "Storing the heliostats in the legacy layout" in caplog.text
+    with h5py.File(scenario_generator.file_path, "r") as f:
+        heliostats = f[constants.heliostat_key]
+        assert not h5_columnar_heliostats.is_columnar(heliostats)
+        assert heliostats[f"heliostat_2/{constants.heliostat_position}"].shape == (3,)
 
 
 def test_generate_scenario_invalid_parent_path_raises(mocker: MockerFixture) -> None:

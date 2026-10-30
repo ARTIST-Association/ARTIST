@@ -108,43 +108,36 @@ These five elements result in an ``ARTIST`` scenario HDF5 file with the followin
     │   ├── lightsource2
     │   │   └── ...
     │   └── ...
-    ├── heliostats [1,*]
-    │   ├── heliostat1
-    │   │   ├── id [1,1]
-    │   │   ├── position [1,1]
-    │   │   ├── surface [0,1]
-    │   │   │   └── facets [1,*]
-    │   │   │       ├── facet_1
-    │   │   │       │   ├── control_points [1,1]
-    │   │   │       │   ├── degrees [1,1]
-    │   │   │       │   ├── position [1,1]
-    │   │   │       │   └── canting [1,1]
-    │   │   │       ├── facet_2
-    │   │   │       │   └── ...
-    │   │   │       └── ...
-    │   │   ├── kinematics [0,1]
-    │   │   │   ├── type [1,1]
-    │   │   │   ├── initial_orientation [1,1]
-    │   │   │   └── deviations [0,1]
-    │   │   │       ├── first_joint_translation_e [0,1]
-    │   │   │       ├── first_joint_tilt_n [0,1]
-    │   │   │       └── ...
-    │   │   └── actuator [0,*]
-    │   │       ├── actuator_1
-    │   │       │   ├── type [1,1]
-    │   │       │   ├── clockwise_axis_movement [1,1]
-    │   │       │   ├── min_max_motor_positions [1,1]
-    │   │       │   └── parameters [0,*]
-    │   │       │       ├── increment [0,1]
-    │   │       │       ├── initial_stroke_length [0,1]
-    │   │       │       ├── offset [0,1]
-    │   │       │       ├── pivot_radius [0,1]
-    │   │       │       └── initial_angle [0,1]
-    │   │       └── actuator_2
-    │   │           └── ...
-    ├── heliostat2
-    │   └── ...
-    └── ...
+    ├── heliostats [1,1]                         (attribute: layout = "columnar")
+    │   ├── names [N]
+    │   ├── id [N]
+    │   ├── position [N,4]
+    │   ├── surface [0,1]
+    │   │   ├── heliostat_indices [N_s]
+    │   │   ├── control_points [N_s,F,U,V,3]
+    │   │   ├── degrees [N_s,F,2]
+    │   │   ├── position [N_s,F,4]
+    │   │   └── canting [N_s,F,2,4]
+    │   ├── kinematics [0,1]
+    │   │   ├── heliostat_indices [N_k]
+    │   │   ├── type [N_k]
+    │   │   ├── initial_orientation [N_k,4]
+    │   │   └── deviations [0,1]
+    │   │       ├── first_joint_translation_e [N_k]
+    │   │       ├── first_joint_tilt_n [N_k]
+    │   │       └── ...
+    │   └── actuator [0,1]
+    │       ├── heliostat_indices [N_a]
+    │       ├── names [N_a,A]
+    │       ├── type [N_a,A]
+    │       ├── clockwise_axis_movement [N_a,A]
+    │       ├── min_max_motor_positions [N_a,A,2]
+    │       └── parameters [0,1]
+    │           ├── increment [N_a,A]
+    │           ├── initial_stroke_length [N_a,A]
+    │           ├── offset [N_a,A]
+    │           ├── pivot_radius [N_a,A]
+    │           └── initial_angle [N_a,A]
     └── prototypes [1,1]
         ├── surface [1,1]
         │   └── facets [1,*]
@@ -176,3 +169,67 @@ These five elements result in an ``ARTIST`` scenario HDF5 file with the followin
             │       └── initial_angle [0,1]
             └── actuator_2
                 └── ...
+
+The heliostats are stored *column by column*: each heliostat parameter is a single dataset holding the values of all
+heliostats, with the heliostats along the first dimension. This keeps the number of HDF5 objects independent of the
+number of heliostats, so that even fields with thousands of heliostats are saved and loaded within seconds. Here,
+``N`` is the number of heliostats, ``N_s``, ``N_k``, and ``N_a`` are the numbers of heliostats with an individual
+surface, kinematics, and actuators, ``F`` is the number of facets, ``U`` and ``V`` are the numbers of control points
+per facet, and ``A`` is the number of actuators per heliostat.
+
+- Heliostats are sorted by name, and all ``[N]`` datasets follow this order.
+- Individual surfaces, kinematics, and actuators are only stored for the heliostats that have them.
+  ``heliostat_indices`` lists the rows of these heliostats in ``names``; all other heliostats use the prototypes.
+- Missing kinematics deviations and actuator parameters are stored as ``NaN`` and default to zero when loading.
+- All individual surfaces must have the same shape, and all heliostats with individual actuators must have the same
+  number of actuators. If this is not the case, the ``H5ScenarioGenerator`` warns and stores the heliostats in the
+  legacy layout described below.
+
+.. note::
+
+    **Legacy heliostat layout (ARTIST 2.0.0 and earlier).** Scenarios created with ``ARTIST`` 2.0.0 or earlier store
+    one HDF5 group per heliostat instead, with every parameter as a separate dataset. All other parts of the scenario
+    are identical:
+
+    .. code-block:: console
+
+        heliostats [1,*]
+        ├── heliostat1
+        │   ├── id [1,1]
+        │   ├── position [1,1]
+        │   ├── surface [0,1]
+        │   │   └── facets [1,*]
+        │   │       ├── facet_1
+        │   │       │   ├── control_points [1,1]
+        │   │       │   ├── degrees [1,1]
+        │   │       │   ├── position [1,1]
+        │   │       │   └── canting [1,1]
+        │   │       └── ...
+        │   ├── kinematics [0,1]
+        │   │   ├── type [1,1]
+        │   │   ├── initial_orientation [1,1]
+        │   │   └── deviations [0,1]
+        │   │       └── ...
+        │   └── actuator [0,*]
+        │       ├── actuator_1
+        │       │   ├── type [1,1]
+        │       │   ├── clockwise_axis_movement [1,1]
+        │       │   ├── min_max_motor_positions [1,1]
+        │       │   └── parameters [0,*]
+        │       │       └── ...
+        │       └── ...
+        ├── heliostat2
+        │   └── ...
+        └── ...
+
+    ``ARTIST`` still loads these scenarios and yields exactly the same scenario as from the columnar layout, but logs
+    a warning, as loading is much slower for large heliostat fields. Existing scenarios can be converted without
+    regenerating them:
+
+    .. code-block:: python
+
+        from artist.io import convert_scenario_to_columnar
+
+        convert_scenario_to_columnar("scenario.h5", "scenario_columnar.h5")
+
+    ``ARTIST`` 2.0.0 and earlier cannot load scenarios in the columnar layout.

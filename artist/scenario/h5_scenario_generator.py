@@ -6,6 +6,7 @@ from typing import Any
 import h5py
 import torch
 
+from artist.io import h5_columnar_heliostats
 from artist.util import constants
 from artist.util.config import (
     ActuatorConfig,
@@ -218,7 +219,14 @@ class H5ScenarioGenerator:
             file[f"{prefix}/{key}"] = value
 
     def generate_scenario(self) -> None:
-        """Generate the scenario and save it as an HDF5 file."""
+        """
+        Generate the scenario and save it as an HDF5 file.
+
+        The heliostats are stored in the columnar layout, which stores each heliostat parameter of all heliostats
+        in one dataset and loads fast even for large heliostat fields. If the heliostats cannot be stored in this
+        layout, e.g., because their surfaces have different numbers of control points, they are stored in the
+        legacy layout with one HDF5 group per heliostat instead.
+        """
         log.info(f"Generating a scenario saved to: {self.file_path}.")
         if self.file_path.suffix == ".h5":
             save_name = self.file_path
@@ -292,10 +300,27 @@ class H5ScenarioGenerator:
 
             # Include heliostat parameters.
             log.info("Including parameters for the heliostats.")
-            self._include_parameters(
-                file=f,
-                prefix=constants.heliostat_key,
-                parameters=self._flatten_dict(
-                    self.heliostat_list_config.create_heliostat_list_dict()
-                ),
+            heliostat_parameters = (
+                self.heliostat_list_config.create_heliostat_list_dict()
             )
+            try:
+                columns = h5_columnar_heliostats.heliostat_columns(
+                    [
+                        (name, self._flatten_dict(parameters))
+                        for name, parameters in heliostat_parameters.items()
+                    ]
+                )
+            except h5_columnar_heliostats.ColumnarLayoutError as error:
+                log.warning(
+                    f"Storing the heliostats in the legacy layout, which loads slower for large heliostat fields: {error}"
+                )
+                self._include_parameters(
+                    file=f,
+                    prefix=constants.heliostat_key,
+                    parameters=self._flatten_dict(heliostat_parameters),
+                )
+            else:
+                h5_columnar_heliostats.write_columnar_heliostats(
+                    heliostats_config=f.create_group(constants.heliostat_key),
+                    columns=columns,
+                )
