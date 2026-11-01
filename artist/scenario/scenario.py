@@ -101,8 +101,8 @@ class Scenario:
         with h5py.File(scenario_path) as scenario_file:
             return scenario_file[constants.number_of_heliostat_groups][()]
 
-    @track_runtime(runtime_log)
     @classmethod
+    @track_runtime(runtime_log)
     def load_scenario_from_hdf5(
         cls,
         scenario_file: h5py.File,

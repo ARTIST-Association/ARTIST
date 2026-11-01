@@ -377,25 +377,19 @@ def line_cylinder_intersections(
     # to all z-values.
     z = z + heights.view(-1, 1, 1) / 2
     # Initially angles are defined 0° towards positive east axis, we want to define 0° as where the normal vector points towards.
-    # For full cylinders, wrap into [0, 2*pi).
-    angles = torch.remainder(
-        torch.atan2(y, x) - torch.atan2(
+    angles = torch.atan2(y, x) - (
+        torch.atan2(
             cylinder_normals[:, indices.cylinder_local_y].view(-1, 1, 1),
             cylinder_normals[:, indices.cylinder_local_x].view(-1, 1, 1),
-        ) - opening_angles.view(-1, 1, 1) / 2,
-        2 * torch.pi
-    )
-    is_full_cylinder = opening_angles.view(-1, 1, 1) >= (2 * torch.pi - 1e-5)
-    angle_valid = torch.where(
-        is_full_cylinder,
-        torch.ones_like(angles, dtype=torch.bool),
-        angles <= opening_angles.view(-1, 1, 1),
+        )
+        - (opening_angles.view(-1, 1, 1) / 2)
     )
 
     intersections_on_target = (
         (z >= 0)
         & (z <= heights.view(-1, 1, 1))
-        & angle_valid
+        & (angles >= 0)
+        & (angles <= opening_angles.view(-1, 1, 1))
     )
 
     bitmap_intersections_u = (

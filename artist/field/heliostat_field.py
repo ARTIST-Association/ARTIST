@@ -719,36 +719,6 @@ class HeliostatField:
             ).detach()
 
 
-def _select(
-    rows: torch.Tensor, individual: torch.Tensor | None, prototype: torch.Tensor | None
-) -> torch.Tensor:
-    """
-    Select the individual parameters of heliostats by their rows, and the prototype for heliostats without.
-
-    Parameters
-    ----------
-    rows : torch.Tensor
-        The row of each heliostat in the individual parameters, or -1 if the heliostat uses the prototype.
-        Shape is ``[number_of_heliostats]``.
-    individual : torch.Tensor | None
-        The individual parameters, or None if no heliostat has them.
-    prototype : torch.Tensor | None
-        The prototype parameters, or None if every heliostat has individual parameters.
-
-    Returns
-    -------
-    torch.Tensor
-        The parameters of each heliostat.
-    """
-    has_individual = rows >= 0
-    if has_individual.all():
-        return cast(torch.Tensor, individual)[rows]
-    prototype = cast(torch.Tensor, prototype)
-    selected = prototype.expand(len(rows), *prototype.shape).clone()
-    if has_individual.any():
-        selected[has_individual] = cast(torch.Tensor, individual)[rows[has_individual]]
-    return selected
-
     def construct_heliostat_field_lbvh(
         self,
         device: torch.device | None = None,
@@ -798,3 +768,34 @@ def _select(
                 device=device,
             )
         )
+
+
+def _select(
+    rows: torch.Tensor, individual: torch.Tensor | None, prototype: torch.Tensor | None
+) -> torch.Tensor:
+    """
+    Select the individual parameters of heliostats by their rows, and the prototype for heliostats without.
+
+    Parameters
+    ----------
+    rows : torch.Tensor
+        The row of each heliostat in the individual parameters, or -1 if the heliostat uses the prototype.
+        Shape is ``[number_of_heliostats]``.
+    individual : torch.Tensor | None
+        The individual parameters, or None if no heliostat has them.
+    prototype : torch.Tensor | None
+        The prototype parameters, or None if every heliostat has individual parameters.
+
+    Returns
+    -------
+    torch.Tensor
+        The parameters of each heliostat.
+    """
+    has_individual = rows >= 0
+    if has_individual.all():
+        return cast(torch.Tensor, individual)[rows]
+    prototype = cast(torch.Tensor, prototype)
+    selected = prototype.expand(len(rows), *prototype.shape).clone()
+    if has_individual.any():
+        selected[has_individual] = cast(torch.Tensor, individual)[rows[has_individual]]
+    return selected
