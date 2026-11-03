@@ -433,9 +433,9 @@ class FacetConfig:
         The NURBS control points.
     degrees : torch.Tensor
         The NURBS degree in the east and north direction.
-    translation_vector : torch.Tensor
-        The translation_vector of the facet.
-    canting: torch.Tensor
+    facet_translations : torch.Tensor
+        The translation vector of the facet.
+    canting : torch.Tensor
         The canting vectors in the east and north direction.
 
     Methods
@@ -449,7 +449,7 @@ class FacetConfig:
         facet_key: str,
         control_points: torch.Tensor,
         degrees: torch.Tensor,
-        translation_vector: torch.Tensor,
+        facet_translations: torch.Tensor,
         canting: torch.Tensor,
     ) -> None:
         """
@@ -463,15 +463,15 @@ class FacetConfig:
             The NURBS control points.
         degrees : torch.Tensor
             The NURBS degree in the east and north direction.
-        translation_vector : torch.Tensor
-            The translation_vector of the facet.
-        canting: torch.Tensor
+        facet_translations : torch.Tensor
+            The translation vector of the facet.
+        canting : torch.Tensor
             The canting vectors in the east and north direction.
         """
         self.facet_key = facet_key
         self.control_points = control_points
         self.degrees = degrees
-        self.translation_vector = translation_vector
+        self.facet_translations = facet_translations
         self.canting = canting
 
     def create_facet_dict(self) -> dict[str, Any]:
@@ -486,7 +486,7 @@ class FacetConfig:
         return {
             constants.facet_control_points: self.control_points,
             constants.facet_degrees: self.degrees,
-            constants.facets_translation_vector: self.translation_vector,
+            constants.facets_translation_vector: self.facet_translations,
             constants.facets_canting: self.canting,
         }
 

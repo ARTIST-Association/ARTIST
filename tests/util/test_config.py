@@ -186,7 +186,7 @@ def facet() -> FacetConfig:
         facet_key="facet_1",
         control_points=torch.zeros((3, 3)),
         degrees=torch.tensor([2, 2]),
-        translation_vector=torch.zeros(3),
+        facet_translations=torch.zeros(3),
         canting=torch.zeros(2),
     )
 

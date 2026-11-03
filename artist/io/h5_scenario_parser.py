@@ -60,7 +60,7 @@ def surface_config(
                 dtype=torch.int32,
                 device=device,
             ),
-            translation_vector=torch.tensor(
+            facet_translations=torch.tensor(
                 facet_config[facet][constants.facets_translation_vector][()],
                 dtype=torch.float,
                 device=device,
