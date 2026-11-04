@@ -622,7 +622,7 @@ class KinematicsReconstructor:
 
         loss = torch.mean(loss_per_heliostat)
 
-        return loss, loss_per_heliostat, sample_indices_for_local_rank, loss_per_sample
+        return loss, loss_per_heliostat, indices_for_local_rank, loss_per_sample
 
     def _synchronize_gradients_nested_ddp(
         self, optimizer: torch.optim.Optimizer
