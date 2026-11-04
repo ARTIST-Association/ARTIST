@@ -121,7 +121,7 @@ def start_optimize(
         device = ddp_setup["device"]
 
         number_of_surface_points_per_facet = torch.tensor([20, 20], device=device)
-        number_of_control_points_per_facet = torch.tensor([4, 4], device=device)
+        number_of_control_points_per_facet = torch.tensor([3, 3], device=device)
 
         with h5py.File(scenario_path) as scenario_file:
             scenario = Scenario.load_scenario_from_hdf5(
@@ -162,10 +162,16 @@ def start_optimize(
         # eu_trapezoid = u_trapezoid[:, None] * e_trapezoid[None]
         # ground_truth = eu_trapezoid / eu_trapezoid.sum()
 
+        # Set all edge values to zero
+        # ground_truth[0, :] = 0.0   # Top
+        # ground_truth[-1, :] = 0.0  # Bottom
+        # ground_truth[:, 0] = 0.0   # Left
+        # ground_truth[:, -1] = 0.0  # Right
+        
         # import matplotlib.pyplot as plt
         # plt.imshow(ground_truth.cpu().detach())
         # plt.savefig("optimized_ground_truth")
-        
+
         loss_definition = KLDivergenceLoss()
 
         aim_point_optimizer = AimPointOptimizer(
@@ -179,6 +185,7 @@ def start_optimize(
             ground_truth=ground_truth,
             dni=baseline_dni,
             bitmap_resolution=bitmap_resolution,
+            data_dir=data_dir,
             device=device,
         )
         aimpoint_optimization_final_loss, intercept_factor_recon = (
@@ -280,11 +287,10 @@ def main() -> None:
     data_dir = _make_abs(args.data_dir)
     aim_point_optimization_config = args.aim_point_optimization_configuration
 
-    for i in range(10):
+    for i in range(5):
 
         # Define scenario paths and viable heliostat data paths.
         scenario_path_ideal = data_dir / f"ideal_heliostats_{args.number_heliostats}.h5" 
-        #scenario_path_ideal = "/workVERLEIHNIX/mb/ARTIST/dissertation/__circular_tests/data/ideal_crescent_dunes.h5"
 
         runtime_log.info(f"Start {i} -----------------")
         start_optimize(
