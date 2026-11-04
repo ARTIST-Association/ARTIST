@@ -790,189 +790,13 @@ def compute_lbvh_max_depth(
     return max_depth
 
 
-# ----------------------------------
-# old Version 
-# ----------------------------------
-#@track_runtime(runtime_log)
 @torch.no_grad()
 def lbvh_traversal(
     lbvh: dict[str, torch.Tensor],
     points_at_ray_origins: torch.Tensor,
     ray_directions: torch.Tensor,
     primitives_corners: torch.Tensor,
-    ray_to_heliostat_mapping: torch.Tensor,
-    max_intersection_distances: torch.Tensor,
-    device: torch.device | None = None,
-) -> torch.Tensor:
-    """
-    Apply the LBVH filter to filter out primitives that are not hit.
-
-    Parameters
-    ----------
-    lbvh : dict[str, torch.Tensor]
-        Linear bounding volume hierarchies as radix tree.
-    max_tree_depth : int
-        Maximum depth of the LBVH tree.
-    points_at_ray_origins : torch.Tensor
-        Origin points of the rays, i.e., the surface points, expanded in the ray dimension.
-        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
-    ray_directions : torch.Tensor
-        Ray directions.
-        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets, 4]``.
-    primitives_corners : torch.Tensor
-        Primitives corner points.
-        Shape is ``[number_of_primitives, 4, 4]``.
-    ray_to_heliostat_mapping : torch.Tensor
-        Mapping indicating which ray is reflected by which heliostat.
-        Shape is ``[total_number_of_rays]``.
-    intersection_distances_target : torch.Tensor
-        Distances from ray origins to the target.
-        Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
-    device : torch.device | None
-        The device on which to perform computations or load tensors and models (default is None).
-        If None, ``ARTIST`` will automatically select the most appropriate
-        device (CUDA or CPU) based on availability and OS.
-
-    Returns
-    -------
-    torch.Tensor
-        Indices of the primitives that are hit.
-        Shape is ``[number_of_primitives]``.
-    """
-    device = get_device(device=device)
-
-    left = lbvh[constants.left_node]
-    right = lbvh[constants.right_node]
-    aabb_min = lbvh[constants.aabb_min]
-    aabb_max = lbvh[constants.aabb_max]
-    is_leaf = lbvh[constants.is_leaf]
-    primitive_index = lbvh[constants.primitive_index]
-    max_tree_depth = lbvh[constants.max_lbvh_depth]
-
-    ray_origins = (
-        points_at_ray_origins[:, None, :, :3]
-        .expand(-1, ray_directions.shape[1], -1, -1)
-        .reshape(-1, 3)
-    )
-    ray_directions = ray_directions[..., :3].reshape(-1, 3)
-    max_intersection_distances = max_intersection_distances.reshape(-1)
-    primitives_corners = primitives_corners[..., :3]
-
-    total_number_of_rays = ray_origins.shape[0]
-    number_of_primitives = primitives_corners.shape[0]
-
-    node_traversal_stack = torch.full(
-        (total_number_of_rays, max_tree_depth),
-        -1,
-        dtype=torch.int32,
-        device=device,
-    )
-
-    node_traversal_stack[:, 0] = 0
-    stack_pointer = torch.ones(total_number_of_rays, dtype=torch.int32, device=device)
-
-    hit_primitives_flag = torch.zeros(
-        number_of_primitives, dtype=torch.bool, device=device
-    )
-
-    inverse_directions = 1.0 / (ray_directions + 1e-12)
-    active_rays = torch.arange(total_number_of_rays, device=device)
-
-    # LBVH Traversal (Depth-first, per-ray stack-based traversal of the LBVH).
-    while active_rays.numel() > 0:
-        top_index = stack_pointer[active_rays] - 1
-        nodes = node_traversal_stack[active_rays, top_index]
-        stack_pointer[active_rays] -= 1
-
-        # Filter out rays that miss the AABBs.
-        entry_distance_to_aabb, exit_distance_to_aabb = ray_aabb_intersect(
-            ray_origins[active_rays],
-            inverse_directions[active_rays],
-            aabb_min[nodes],
-            aabb_max[nodes],
-        )
-        mask_hit = (
-            (exit_distance_to_aabb >= entry_distance_to_aabb)
-            & (exit_distance_to_aabb > 1e-6)
-            & (entry_distance_to_aabb <= max_intersection_distances[active_rays])
-        )
-
-        if mask_hit.any():
-            hit_rays = active_rays[mask_hit]
-            hit_nodes = nodes[mask_hit]
-            leaf_mask = is_leaf[hit_nodes]
-
-            if leaf_mask.any():
-                leaf_rays = hit_rays[leaf_mask]
-                leaf_nodes = hit_nodes[leaf_mask]
-                leaf_primitives = primitive_index[leaf_nodes]
-
-                # Remove self-intersections.
-                ray_owner_hit = ray_to_heliostat_mapping[leaf_rays]
-                non_self_mask = ray_owner_hit != leaf_primitives
-                valid_primitives = leaf_primitives[non_self_mask]
-
-                # Mark hit primitives.
-                hit_primitives_flag[valid_primitives] = True
-
-            if (~leaf_mask).any():
-                internal_rays = hit_rays[~leaf_mask]
-                internal_nodes = hit_nodes[~leaf_mask]
-
-                left_child_nodes = left[internal_nodes]
-                right_child_nodes = right[internal_nodes]
-
-                has_left = left_child_nodes >= 0
-                has_right = right_child_nodes >= 0
-
-                index_for_children = stack_pointer[internal_rays].clone()
-                index_for_left_children = index_for_children.clone()
-                index_for_left_children[~has_left] = -1
-                index_for_right_children = index_for_children + has_left.to(torch.int32)
-                index_for_right_children[~has_right] = -1
-
-                if (
-                    (index_for_left_children >= max_tree_depth)
-                    & (index_for_left_children != -1)
-                ).any() or (
-                    (index_for_right_children >= max_tree_depth)
-                    & (index_for_right_children != -1)
-                ).any():
-                    raise RuntimeError(
-                        "Stack overflow in LBVH traversal, max_stack too small."
-                    )
-
-                if has_left.any():
-                    rows = internal_rays[has_left]
-                    cols = index_for_left_children[has_left]
-                    values = left_child_nodes[has_left]
-                    node_traversal_stack[rows, cols] = values
-                    stack_pointer[rows] = cols + 1
-
-                if has_right.any():
-                    rows = internal_rays[has_right]
-                    cols = index_for_right_children[has_right]
-                    values = right_child_nodes[has_right]
-                    node_traversal_stack[rows, cols] = values
-                    stack_pointer[rows] = cols + 1
-
-        active_rays = torch.nonzero(stack_pointer > 0, as_tuple=True)[0]
-
-    return torch.nonzero(hit_primitives_flag, as_tuple=True)[0]
-
-
-
-# ----------------------------------
-# new Version 
-# ----------------------------------
-#@track_runtime(runtime_log)
-@torch.no_grad()
-def lbvh_traversal(
-    lbvh: dict[str, torch.Tensor],
-    points_at_ray_origins: torch.Tensor,
-    ray_directions: torch.Tensor,
-    primitives_corners: torch.Tensor,
-    ray_to_heliostat_mapping: torch.Tensor,
+    heliostat_owners: torch.Tensor,
     max_intersection_distances: torch.Tensor,
     device: torch.device | None = None,
     chunk_size: int = 2**20,
@@ -993,9 +817,9 @@ def lbvh_traversal(
     primitives_corners : torch.Tensor
         Primitives corner points.
         Shape is ``[number_of_primitives, 4, 4]``.
-    ray_to_heliostat_mapping : torch.Tensor
-        Mapping indicating which ray is reflected by which heliostat.
-        Shape is ``[total_number_of_rays]``.
+    heliostat_owners : torch.Tensor
+        Global primitive index of each traced heliostat (used to skip self-hits).
+        Shape is ``[number_of_heliostats]``.
     max_intersection_distances : torch.Tensor
         Maximum distances of expected intersections.
         Shape is ``[number_of_heliostats, number_of_rays, number_of_combined_surface_normals_all_facets]``.
@@ -1031,12 +855,9 @@ def lbvh_traversal(
     directions = ray_directions[..., :3].reshape(-1, 3)
     inverse_directions = 1.0 / (directions + 1e-12)
     max_distances = max_intersection_distances.reshape(-1)
-    ray_owner = ray_to_heliostat_mapping.reshape(-1)
  
-    hit_primitives_flag = torch.zeros(
-        number_of_primitives, dtype=torch.bool, device=device
-    )
- 
+    hit_primitives_flag = torch.zeros(number_of_primitives + 1, dtype=torch.bool, device=device)
+
     for start in range(0, total_number_of_rays, chunk_size):
         end = min(start + chunk_size, total_number_of_rays)
  
@@ -1047,46 +868,42 @@ def lbvh_traversal(
         chunk_origins = origins[heliostat_ids * number_of_points + point_ids]
         chunk_inverse_directions = inverse_directions[start:end]
         chunk_max_distances = max_distances[start:end]
-        chunk_owner = ray_owner[start:end]
+        chunk_owner = heliostat_owners[heliostat_ids]
  
         # Frontier of (ray, node) pairs; every ray starts at the root.
         rays = torch.arange(end - start, device=device)
         nodes = torch.zeros_like(rays)
  
-        while rays.numel() > 0:
+        while True:
+            valid = nodes >= 0
+            nodes_safe = nodes.clamp(min=0)
             entry_distance, exit_distance = ray_aabb_intersect(
                 chunk_origins[rays],
                 chunk_inverse_directions[rays],
-                aabb_min[nodes],
-                aabb_max[nodes],
+                aabb_min[nodes_safe],
+                aabb_max[nodes_safe],
             )
             mask_hit = (
-                (exit_distance >= entry_distance)
+                valid
+                & (exit_distance >= entry_distance)
                 & (exit_distance > 1e-6)
                 & (entry_distance <= chunk_max_distances[rays])
             )
-            rays = rays[mask_hit]
-            nodes = nodes[mask_hit]
- 
-            # Leaves: flag the primitive (skip the ray's own heliostat).
-            leaf_mask = is_leaf[nodes]
-            leaf_rays = rays[leaf_mask]
-            leaf_primitives = primitive_index[nodes[leaf_mask]]
-            not_self = chunk_owner[leaf_rays] != leaf_primitives
-            hit_primitives_flag[leaf_primitives[not_self]] = True
- 
-            # Internal nodes: next frontier = both children of every surviving pair.
-            internal_mask = ~leaf_mask
-            rays = rays[internal_mask]
-            nodes = nodes[internal_mask]
- 
-            left_children = left[nodes]
-            right_children = right[nodes]
-            rays = torch.cat([rays, rays])
-            nodes = torch.cat([left_children, right_children])
- 
-            valid_child = nodes >= 0
-            rays = rays[valid_child]
-            nodes = nodes[valid_child]
- 
-    return torch.nonzero(hit_primitives_flag, as_tuple=True)[0]
+            leaf = is_leaf[nodes_safe]
+            primitives = primitive_index[nodes_safe]
+
+            # Leaves: flag without compaction (no sync).
+            flag = mask_hit & leaf & (chunk_owner[rays] != primitives)
+            hit_primitives_flag[torch.where(flag, primitives, number_of_primitives)] = True
+
+            # Internal nodes: the only compaction (= the only sync) of this level.
+            survivors = torch.nonzero(mask_hit & ~leaf, as_tuple=True)[0]
+            if survivors.numel() == 0:
+                break
+            surviving_rays = rays[survivors]
+            surviving_nodes = nodes_safe[survivors]
+            # Invalid (-1) children are carried one level and masked out by `valid`.
+            rays = torch.cat([surviving_rays, surviving_rays])
+            nodes = torch.cat([left[surviving_nodes], right[surviving_nodes]])
+
+    return torch.nonzero(hit_primitives_flag[:-1], as_tuple=True)[0]
