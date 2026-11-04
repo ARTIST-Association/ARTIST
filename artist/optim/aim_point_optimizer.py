@@ -72,6 +72,7 @@ class AimPointOptimizer:
         target_area_index: int,
         ground_truth: torch.Tensor,
         dni: float,
+        data_dir,
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         epsilon: float = 1e-12,
         device: torch.device | None = None,
@@ -126,12 +127,13 @@ class AimPointOptimizer:
         self.dni = dni
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
+        self.data_dir = data_dir
 
-        # dims = self._get_target_plane_dimensions(
+        # self.dims = self._get_target_plane_dimensions(
         #     device=device
-        # )
+        # ).cpu()
 
-        # self.pixel_area = (dims[0] / self.bitmap_resolution[1]) * (dims[1] / self.bitmap_resolution[0])
+        # self.pixel_area = (self.dims[0] / self.bitmap_resolution[1]) * (self.dims[1] / self.bitmap_resolution[0])
         self.scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
 
 
@@ -222,12 +224,11 @@ class AimPointOptimizer:
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
                 device=device,
             )
+
+            initial_aim_points = torch.load(self.data_dir / f"initial_aim_points_{group.number_of_heliostats}.pt", weights_only=False, map_location=device)
+            
             group.align_surfaces_with_incident_ray_directions(
-                aim_points=self.scenario.solar_tower.get_centers_of_target_areas(
-                    target_area_indices=target_area_indices_all_groups[group_index],
-                    positions=group.positions,
-                    device=device,
-                ),
+                aim_points=initial_aim_points,
                 incident_ray_directions=incident_ray_directions_all_groups[group_index],
                 active_heliostats_mask=active_heliostats_masks_all_groups[group_index],
                 device=device,
@@ -486,47 +487,55 @@ class AimPointOptimizer:
                 random_seed=self.ddp_setup["heliostat_group_rank"],
                 bitmap_resolution=self.bitmap_resolution,
                 dni=self.dni,
-                device=device
-            )
-
-            # Perform heliostat-based ray tracing.
-            flux_distributions, intercept_factor = ray_tracer.trace_rays(
-                incident_ray_directions=incident_ray_directions_all_groups[
-                    heliostat_group_index
-                ],
-                active_heliostats_mask=active_heliostats_masks_all_groups[
-                    heliostat_group_index
-                ],
-                target_area_indices=target_area_indices_all_groups[
-                    heliostat_group_index
-                ],
+                use_checkpointing=self.optimizer_dict.get("gradient_checkpointing", True),
                 device=device,
             )
 
-            sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
-            flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
-                bitmaps_per_heliostat=flux_distributions[sample_indices_for_local_rank],
-                target_area_indices=target_area_indices_all_groups[
-                    heliostat_group_index
-                ][sample_indices_for_local_rank],
-                device=device,
-            )[self.target_area_index]
-            total_flux = total_flux + flux_distribution_on_target
-
-            flux_centers=None
-
-            # flux_centers = bitmap.get_center_of_mass(
-            #     bitmaps=flux_distributions,
+            # # Perform heliostat-based ray tracing.
+            # flux_distributions, intercept_factor = ray_tracer.trace_rays(
+            #     incident_ray_directions=incident_ray_directions_all_groups[
+            #         heliostat_group_index
+            #     ],
+            #     active_heliostats_mask=active_heliostats_masks_all_groups[
+            #         heliostat_group_index
+            #     ],
+            #     target_area_indices=target_area_indices_all_groups[
+            #         heliostat_group_index
+            #     ],
             #     device=device
             # )
-        
+            # sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+            # flux_distribution_on_target = ray_tracer.get_bitmaps_per_target(
+            #     bitmaps_per_heliostat=flux_distributions[sample_indices_for_local_rank],
+            #     target_area_indices=target_area_indices_all_groups[
+            #         heliostat_group_index
+            #     ][sample_indices_for_local_rank],
+            #     device=device,
+            # )[self.target_area_index]
+            # total_flux = total_flux + flux_distribution_on_target
+
+            shading_cache = self._shading_caches.setdefault(
+                (tuple(self.incident_ray_direction.tolist()), heliostat_group_index), {}
+            )
+            flux_per_target, intercept_factor = ray_tracer.trace_rays_per_target(
+                incident_ray_directions=incident_ray_directions_all_groups[heliostat_group_index],
+                active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
+                target_area_indices=target_area_indices_all_groups[heliostat_group_index],
+                shading_cache=shading_cache,
+                device=device,
+            )
+            total_flux = total_flux + flux_per_target[self.target_area_index]
+
+        # Keep the graph connected when one rank has 0 heliostats.
+        if not total_flux.requires_grad:
+            total_flux = total_flux + 0.0 * sum(p.sum() for p in self._current_params)
         if self.ddp_setup["is_distributed"]:
             total_flux = torch.distributed.nn.functional.all_reduce(
                 total_flux,
                 op=torch.distributed.ReduceOp.SUM,
             )
 
-        return total_flux, flux_centers, intercept_factor
+        return total_flux, intercept_factor
 
     def _synchronize_distributed_gradients(
         self, optimizer: torch.optim.Optimizer
@@ -656,6 +665,8 @@ class AimPointOptimizer:
             )
         )
 
+        self._shading_caches: dict[tuple, dict[int, tuple[torch.Tensor, torch.Tensor]]] = {}
+
         flux_reference = None
         # Start the optimization.
         loss = torch.tensor(torch.inf)
@@ -681,7 +692,7 @@ class AimPointOptimizer:
             )
 
             # Trace rays and accumulate fluxes.
-            total_flux, flux_centers, intercept_factor = (
+            total_flux, intercept_factor = (
                 self._trace_and_accumulate_flux(
                     active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
                     target_area_indices_all_groups=target_area_indices_all_groups,
@@ -694,9 +705,9 @@ class AimPointOptimizer:
             if flux_reference is None:
                 flux_reference = total_flux.sum().detach()
             predicted_integrals = total_flux.sum()
-            relative_decrease = 1.0 - (
-                predicted_integrals / (flux_reference + self.epsilon)
-            )
+            relative_decrease = (
+                flux_reference - predicted_integrals
+            ) / (flux_reference + self.epsilon)
             relative_decrease = torch.clamp(
                 relative_decrease,
                 min=0.0,
@@ -731,14 +742,14 @@ class AimPointOptimizer:
             if epoch % log_step == 0 and rank == 0:
                 log.info(
                     f"Epoch: {epoch}, Loss: {loss.item():.5e}, LR: {optimizer.param_groups[indices.optimizer_param_group_0]['lr']}"
-                    f"flux loss={flux_loss.item():.3f} | integral loss={integral_losses.item():.3f} | "
-                    f"intensity={(total_flux.sum().item()):.4f}"
+                    # f"flux loss={flux_loss.item():.3f} | integral loss={integral_losses.item():.3f} | "
+                    # f"intensity={(total_flux.sum().item()):.4f}"
                 )
 
-            # if epoch % 2 == 0:
+            # if epoch % 1 == 0:
             #     def pixel_to_meter(center, width, height):
-            #         x = (center[..., 0]) / width * 4.335 - 4.335 / 2
-            #         y = (height - center[..., 1]) / height * 5.2292 - 5.2292 / 2
+            #         x = (center[..., 0]) / width * self.dims[0] - self.dims[0] / 2
+            #         y = (height - center[..., 1]) / height * self.dims[1] - self.dims[1] / 2
             #         return torch.stack((x, y), dim=-1)
                 
             #     flux = total_flux / self.pixel_area
@@ -747,30 +758,18 @@ class AimPointOptimizer:
             #     im = ax.imshow(
             #         flux.cpu().detach(),
             #         extent=[
-            #             -4.335 / 2, 4.335 / 2,
-            #             -5.2292 / 2, 5.2292 / 2
+            #             -self.dims[0] / 2, self.dims[0] / 2,
+            #             -self.dims[1] / 2, self.dims[1] / 2
             #         ],
-            #     )
-            #     flux_centers = pixel_to_meter(
-            #         center=flux_centers, 
-            #         width=self.bitmap_resolution[0],
-            #         height=self.bitmap_resolution[1]
-            #     )
-            #     ax.scatter(
-            #         flux_centers[:, 0].cpu().detach(),
-            #         flux_centers[:, 1].cpu().detach(),
-            #         alpha=0.3,
-            #         s=2,
-            #         color="magenta",
             #     )
 
             #     ax.set_title(
-            #         f"Aim point optimization\n{(total_flux.sum().item() / 1000000):.3f} MW\npoints: {flux_centers.shape[0]}"
+            #         f"Aim point optimization\n{(total_flux.sum().item() / 1000000):.3f} MW"
             #     )
             #     ax.set_ylabel("Target height relative to center (m)", labelpad=2.5)
             #     ax.set_xlabel("Target width relative to center (m)", labelpad=4)
-            #     ax.set_xlim(-4.335 / 2, 4.335 / 2)
-            #     ax.set_ylim(-5.2292 / 2, 5.2292 / 2)
+            #     ax.set_xlim(-self.dims[0] / 2, self.dims[0] / 2)
+            #     ax.set_ylim(-self.dims[1] / 2, self.dims[1] / 2)
 
             #     cbar = fig.colorbar(im, ax=ax)
             #     cbar.set_label(
@@ -781,7 +780,7 @@ class AimPointOptimizer:
             #     )
 
             #     fig.tight_layout()
-            #     fig.savefig(f"opt_{epoch}.png", dpi=300, bbox_inches="tight")
+            #     fig.savefig(f"opt_.png", dpi=100, bbox_inches="tight")
             #     plt.close(fig)
 
             # Early stopping when loss did not improve for a predefined number of epochs.
