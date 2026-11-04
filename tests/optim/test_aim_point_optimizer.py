@@ -158,7 +158,7 @@ def test_aim_point_optimizer(
     )
 
     # Optimize the aim points.
-    _, _, _, _, _ = aim_point_optimizer.optimize(loss_definition=loss, device=device)
+    _, _ = aim_point_optimizer.optimize(loss_definition=loss, device=device)
 
     for index, heliostat_group in enumerate(scenario.heliostat_field.heliostat_groups):
         expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"

@@ -7,24 +7,33 @@ from artist.field import SolarTower, TowerTargetAreasCylindrical, TowerTargetAre
 
 
 @pytest.mark.parametrize(
-    "target_area_indices, expected",
+    "target_area_indices, opening_angles, expected",
     [
         (
             torch.tensor([0, 1]),  # planar-only case
+            [torch.pi, torch.pi],
             torch.tensor([[1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 1.0]]),
         ),
         (
             torch.tensor([0, 3]),
+            [torch.pi, torch.pi],
             torch.tensor([[1.0, 1.0, 1.0, 1.0], [20.0, 2.0, 0.0, 1.0]]),
         ),
         (
             torch.tensor([2, 3]),
+            [torch.pi, torch.pi],
             torch.tensor([[11.0, 0.0, 0.0, 1.0], [20.0, 2.0, 0.0, 1.0]]),
+        ),
+        (
+            torch.tensor([3, 3]),
+            [2 * torch.pi, 2 * torch.pi],
+            torch.tensor([[18.0, 0.0, 0.0, 1.0], [22.0, 0.0, 0.0, 1.0]]),
         ),
     ],
 )
 def test_get_centers_of_target_areas(
     target_area_indices: torch.Tensor,
+    opening_angles: list[float],
     expected: torch.Tensor,
     device: torch.device,
 ) -> None:
@@ -73,10 +82,28 @@ def test_get_centers_of_target_areas(
         device=device,
     )
     mock_target_areas_cylindrical.radii = torch.tensor([1.0, 2.0], device=device)
+    mock_target_areas_cylindrical.opening_angles = torch.tensor(
+        opening_angles, device=device
+    )
     mock_target_areas_cylindrical.normals = torch.tensor(
         [
             [1.0, 0.0, 0.0, 0.0],
             [0.0, 1.0, 0.0, 0.0],
+        ],
+        device=device,
+    )
+    mock_target_areas_cylindrical.axes = torch.tensor(
+        [
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+        ],
+        device=device,
+    )
+
+    heliostat_positions = torch.tensor(
+        [
+            [0.0, 0.0, 0.0, 0.0],
+            [40.0, 0.0, 0.0, 0.0],
         ],
         device=device,
     )
@@ -88,6 +115,7 @@ def test_get_centers_of_target_areas(
 
     centers = solar_tower.get_centers_of_target_areas(
         target_area_indices=target_area_indices.to(device),
+        positions=heliostat_positions,
         device=device,
     )
 

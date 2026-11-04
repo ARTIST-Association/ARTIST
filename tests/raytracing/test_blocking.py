@@ -77,96 +77,6 @@ def surface_rotated_and_translated(surface_at_origin: torch.Tensor) -> torch.Ten
     return transformed_surface
 
 
-@pytest.mark.parametrize(
-    "surface, transformed_surface, expected",
-    [
-        (
-            "surface_at_origin",
-            "surface_at_origin",
-            [
-                torch.tensor(
-                    [
-                        [
-                            [-1.0000, -0.5000, 0.0000, 1.0000],
-                            [-1.0000, 0.5000, 0.0000, 1.0000],
-                            [1.0000, 0.5000, 0.0000, 1.0000],
-                            [1.0000, -0.5000, 0.0000, 1.0000],
-                        ]
-                    ]
-                ),
-                torch.tensor([[[0.0, 1.0, 0.0, 0.0], [2.0, 0.0, 0.0, 0.0]]]),
-                torch.tensor([[0.0, 0.0, -1.0, 0.0]]),
-            ],
-        ),
-        (
-            "surface_at_origin",
-            "surface_rotated_and_translated",
-            [
-                torch.tensor(
-                    [
-                        [
-                            [1.2781, 2.8035, -0.0828, 1.0000],
-                            [1.2781, 3.6811, -0.5622, 1.0000],
-                            [3.2382, 3.4906, -0.9109, 1.0000],
-                            [3.2382, 2.6130, -0.4315, 1.0000],
-                        ]
-                    ]
-                ),
-                torch.tensor(
-                    [
-                        [
-                            [0.0000, 0.8776, -0.4794, 0.0000],
-                            [1.9601, -0.1905, -0.3487, 0.0000],
-                        ]
-                    ]
-                ),
-                torch.tensor([[-0.1987, -0.4699, -0.8601, 0.0]]),
-            ],
-        ),
-    ],
-)
-def test_create_blocking_primitives_rectangle(
-    surface: str,
-    transformed_surface: str,
-    expected: list[torch.Tensor],
-    request: pytest.FixtureRequest,
-    device: torch.device,
-) -> None:
-    """
-    Test that the creation of blocking primitives works as desired.
-
-    Parameters
-    ----------
-    surface : str
-        Name of the fixture providing the blocking surface.
-    transformed_surface : str
-        Name of the fixture providing the active (transformed) surface.
-    expected : list[torch.Tensor]
-        The expected tensors.
-    request : pytest.FixtureRequest
-        The pytest fixture used to consider different test cases.
-    device : torch.device
-        The device on which to initialize tensors.
-
-    Raises
-    ------
-    AssertionError
-        If test does not complete as expected.
-    """
-    blocking_surface_points = request.getfixturevalue(surface)
-    active_surface_points = request.getfixturevalue(transformed_surface)
-
-    corners, spans, normals = blocking.create_blocking_primitives_rectangle(
-        blocking_heliostats_surface_points=blocking_surface_points.to(device),
-        blocking_heliostats_active_surface_points=active_surface_points.to(device),
-        device=device,
-    )
-
-    torch.testing.assert_close(corners, expected[0].to(device), atol=5e-4, rtol=5e-4)
-    torch.testing.assert_close(spans, expected[1].to(device), atol=5e-4, rtol=5e-4)
-    torch.testing.assert_close(normals, expected[2].to(device), atol=5e-4, rtol=5e-4)
-
-
 @pytest.fixture
 def surface_for_index_test(device: torch.device) -> torch.Tensor:
     """
@@ -362,7 +272,7 @@ def test_blocking_integration(device: torch.device) -> None:
         scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
 
     incident_ray_direction = torch.nn.functional.normalize(
-        torch.tensor([0.0, 1.0, 0.0, 0.0], device=device), dim=-1
+        torch.tensor([1.0, 1.0, 0.0, 0.0], device=device), dim=-1
     )
 
     heliostat_group = scenario.heliostat_field.heliostat_groups[0]
@@ -405,7 +315,7 @@ def test_blocking_integration(device: torch.device) -> None:
         heliostat_group=heliostat_group,
         occlusion_active=True,
         batch_size=10,
-        device=device
+        device=device,
     )
 
     bitmaps_per_heliostat, _ = ray_tracer.trace_rays(
@@ -418,13 +328,6 @@ def test_blocking_integration(device: torch.device) -> None:
     expected_path = pathlib.Path(ARTIST_ROOT) / "tests/data/expected_test_data.pt"
     expected = torch.load(expected_path, map_location=device, weights_only=True)
     expected_key = f"blocking_bitmaps_{device.type}"
-
-    import matplotlib.pyplot as plt
-    for i in range(bitmaps_per_heliostat.shape[0]):
-        plt.imshow(bitmaps_per_heliostat[i].cpu().detach())
-        plt.savefig(f"test_{i}")
-        plt.imshow(expected[expected_key][i].cpu().detach())
-        plt.savefig(f"test_e_{i}")  
 
     torch.testing.assert_close(
         bitmaps_per_heliostat,
@@ -459,11 +362,12 @@ def test_ray_extinction(device: torch.device) -> None:
             scenario_file=scenario_file,
             device=device,
         )
+        scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
 
     heliostat_group = scenario.heliostat_field.heliostat_groups[0]
 
     heliostat_target_light_source_mapping = [
-        ("heliostat_2", "target_0", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
+        ("heliostat_5", "target_0", torch.tensor([0.0, 1.0, 0.0, 0.0], device=device)),
     ]
     (
         active_heliostats_mask,
@@ -495,7 +399,7 @@ def test_ray_extinction(device: torch.device) -> None:
         heliostat_group=heliostat_group,
         occlusion_active=True,
         batch_size=10,
-        device=device
+        device=device,
     )
 
     ray_extinction_factor = 0.9

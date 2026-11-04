@@ -77,6 +77,7 @@ def test_trace_rays_unaligned_heliostats_error(
     mock_ray_tracer.heliostat_group = mock_scenario.heliostat_field.heliostat_groups[0]
     mock_ray_tracer.bitmap_resolution_e = 50
     mock_ray_tracer.bitmap_resolution_u = 50
+    mock_ray_tracer._blocking_index_cache = {}
 
     with patch(
         "artist.raytracing.heliostat_ray_tracer.HeliostatRayTracer.trace_rays",

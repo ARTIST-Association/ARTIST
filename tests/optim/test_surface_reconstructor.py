@@ -65,6 +65,7 @@ def test_surface_reconstructor(
         constants.tolerance: 5e-4,
         constants.max_epoch: 50,
         constants.batch_size: 30,
+        constants.batch_size_outer: 30,
         constants.log_step: 0,
         constants.early_stopping_delta: 1.0,
         constants.early_stopping_patience: 2,
@@ -126,6 +127,7 @@ def test_surface_reconstructor(
     ] = {
         constants.data_parser: data_parser,
         constants.heliostat_data_mapping: heliostat_data_mapping,
+        constants.validation_sample_fraction: 0.0,
     }
 
     with h5py.File(scenario_path, "r") as scenario_file:
@@ -145,8 +147,6 @@ def test_surface_reconstructor(
         scenario=scenario,
         data=data,
         optimization_configuration=optimization_configuration,
-        device=device,
-        plot_results=True,
     )
 
     if not isinstance(data_parser, PaintCalibrationDataParser):

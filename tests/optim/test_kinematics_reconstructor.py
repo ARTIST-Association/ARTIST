@@ -107,11 +107,10 @@ def test_kinematics_reconstructor(
     }
     optimizer_dict = {
         constants.initial_learning_rate: 1e-4,
-        constants.initial_learning_rate_initial_angles: 1e-3,
-        constants.initial_learning_rate_initial_stroke_length: 1e-2,
         constants.tolerance: 0.0005,
         constants.max_epoch: 60,
-        constants.batch_size: 50,
+        constants.batch_size: 100,
+        constants.batch_size_outer: 50,
         constants.log_step: 1,
         constants.early_stopping_delta: 1.0,
         constants.early_stopping_patience: 2,
@@ -167,6 +166,7 @@ def test_kinematics_reconstructor(
         ] = {
             constants.data_parser: data_parser,
             constants.heliostat_data_mapping: heliostat_data_mapping,
+            constants.validation_sample_fraction: 0.0,
         }
 
         with h5py.File(scenario_path, "r") as scenario_file:
