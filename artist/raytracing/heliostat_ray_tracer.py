@@ -2,8 +2,8 @@ import logging
 from collections.abc import Iterator
 
 import torch
-from torch.utils.data import DataLoader
 from torch.utils.checkpoint import checkpoint
+from torch.utils.data import DataLoader
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.geometry import transforms
@@ -11,7 +11,7 @@ from artist.raytracing import blocking, geometry
 from artist.raytracing.sampling import DistortionsDataset, RestrictedDistributedSampler
 from artist.scenario.scenario import Scenario
 from artist.scene.rays import Rays
-from artist.util import constants, indices
+from artist.util import indices
 from artist.util.env import get_device
 
 log = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ class HeliostatRayTracer:
             device (CUDA or CPU) based on availability and OS.
         """
         device = get_device(device=device)
-        
+
         self.scenario = scenario
         self.heliostat_group = heliostat_group
         self.occlusion_active = occlusion_active
@@ -148,7 +148,12 @@ class HeliostatRayTracer:
         self.use_checkpointing = use_checkpointing
         self._blocking_index_cache: dict[int, torch.Tensor] = {}
         self._will_recompute = False
-        
+        groups = self.scenario.heliostat_field.heliostat_groups
+        group_index = next(i for i, g in enumerate(groups) if g is heliostat_group)
+        self._group_offset = int(
+            sum(g.number_of_heliostats for g in groups[:group_index])
+        )
+
         self.light_source = scenario.light_sources.light_source_list[
             indices.first_light_source
         ]
@@ -186,9 +191,14 @@ class HeliostatRayTracer:
             all_heliostat_surfaces = []
             for group in self.scenario.heliostat_field.heliostat_groups:
                 surfaces = group.surface_points + group.positions.unsqueeze(1)
-                mask = group.active_heliostats_mask.bool()
-                if mask.any():
-                    surfaces[mask] = group.active_surface_points
+                mask = group.active_heliostats_mask.long()
+                is_active = mask > 0
+                if is_active.any():
+                    # Position of the first copy of each heliostat in the active arrays.
+                    first_copy = torch.cumsum(mask, dim=0) - mask
+                    surfaces[is_active] = group.active_surface_points[
+                        first_copy[is_active]
+                    ]
                 else:
                     log.warning(
                         "Not all heliostat groups have been aligned yet. "
@@ -210,9 +220,7 @@ class HeliostatRayTracer:
                 self.tower_primitives_corners,
                 self.tower_primitives_spans,
                 self.tower_primitives_normals,
-            ) = blocking.create_tower_occlusion_primitives(
-                device=device
-            )
+            ) = blocking.create_tower_occlusion_primitives(device=device)
 
         if dni is not None:
             # Calculate surface area per heliostat.
@@ -246,13 +254,13 @@ class HeliostatRayTracer:
         for start in range(0, rank_indices.numel(), self.batch_size):
             yield rank_indices[start : start + self.batch_size].sort().values
 
-
     def _run_batch(self, batch_number: int, *args):
         self._will_recompute = self.use_checkpointing and torch.is_grad_enabled()
         if self._will_recompute:
-            return checkpoint(self._trace_batch, batch_number, *args, use_reentrant=False)
+            return checkpoint(
+                self._trace_batch, batch_number, *args, use_reentrant=False
+            )
         return self._trace_batch(batch_number, *args)
-
 
     @torch.no_grad()
     def _get_shading_candidates(
@@ -288,7 +296,6 @@ class HeliostatRayTracer:
         if cache is not None:
             cache[batch_number] = (batch_indices.clone(), candidates)
         return candidates
-
 
     def _trace_batch(
         self,
@@ -327,8 +334,12 @@ class HeliostatRayTracer:
 
         # Index distortions directly (no DataLoader collation copies kept alive).
         rays = self.scatter_rays(
-            distortion_u=self.distortions_dataset.distortions_u[batch_indices].to(device),
-            distortion_e=self.distortions_dataset.distortions_e[batch_indices].to(device),
+            distortion_u=self.distortions_dataset.distortions_u[batch_indices].to(
+                device
+            ),
+            distortion_e=self.distortions_dataset.distortions_e[batch_indices].to(
+                device
+            ),
             original_ray_direction=preferred_reflection_directions,
             device=device,
         )
@@ -410,9 +421,11 @@ class HeliostatRayTracer:
                         device=device,
                     )
                 if self._will_recompute:
-                    self._blocking_index_cache[batch_number] = filtered_blocking_primitive_indices
-            
-            with torch.no_grad():                   
+                    self._blocking_index_cache[batch_number] = (
+                        filtered_blocking_primitive_indices
+                    )
+
+            with torch.no_grad():
                 filtered_shading_primitive_indices = self._get_shading_candidates(
                     batch_number=batch_number,
                     batch_indices=batch_indices,
@@ -444,19 +457,25 @@ class HeliostatRayTracer:
                 ray_directions=ray_direction_sun,
                 primitives_corners=torch.cat(
                     [
-                        self.heliostat_primitives_corners[filtered_shading_primitive_indices],
+                        self.heliostat_primitives_corners[
+                            filtered_shading_primitive_indices
+                        ],
                         self.tower_primitives_corners,
                     ]
                 ),
                 primitives_spans=torch.cat(
                     [
-                        self.heliostat_primitives_spans[filtered_shading_primitive_indices],
+                        self.heliostat_primitives_spans[
+                            filtered_shading_primitive_indices
+                        ],
                         self.tower_primitives_spans,
                     ]
                 ),
                 primitives_normals=torch.cat(
                     [
-                        self.heliostat_primitives_normals[filtered_shading_primitive_indices],
+                        self.heliostat_primitives_normals[
+                            filtered_shading_primitive_indices
+                        ],
                         self.tower_primitives_normals,
                     ]
                 ),
@@ -480,9 +499,7 @@ class HeliostatRayTracer:
         )
 
         optical_loss_factor = (
-            mirror_reflectivity
-            * atmospheric_attenuation
-            * cosine_factor
+            mirror_reflectivity * atmospheric_attenuation * cosine_factor
         )
 
         intensities = (
@@ -501,7 +518,9 @@ class HeliostatRayTracer:
         )
 
         with torch.no_grad():
-            intercept_factors = bitmaps.sum(dim=(1, 2)) / (rays.ray_magnitudes * optical_loss_factor).sum(dim=(1, 2)).clamp_min(1e-12)
+            intercept_factors = bitmaps.sum(dim=(1, 2)) / (
+                rays.ray_magnitudes * optical_loss_factor
+            ).sum(dim=(1, 2)).clamp_min(1e-12)
 
         return bitmaps, intercept_factors
 
@@ -534,10 +553,15 @@ class HeliostatRayTracer:
             device=device,
         )
         intercept_factor = torch.zeros(number_of_active, device=device)
-        global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
-        
+        global_active_indices = (
+            torch.arange(
+                active_heliostats_mask.numel(), device=device
+            ).repeat_interleave(active_heliostats_mask.long())
+            + self._group_offset
+        )
+
         self._shading_cache = shading_cache
-        
+
         for batch_number, batch_indices in enumerate(self._iterate_batches(device)):
             bitmaps, intercept = self._run_batch(
                 batch_number,
@@ -602,9 +626,9 @@ class HeliostatRayTracer:
         intercept_factor = torch.zeros(int(active_heliostats_mask.sum()), device=device)
         global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
         target_area_indices_long = target_area_indices.long()
-        
+
         self._shading_cache = shading_cache
-        
+
         for batch_number, batch_indices in enumerate(self._iterate_batches(device)):
             bitmaps, intercept = self._run_batch(
                 batch_number,
@@ -616,11 +640,12 @@ class HeliostatRayTracer:
                 mirror_reflectivity,
                 device,
             )
-            flux_per_target.index_add_(0, target_area_indices_long[batch_indices], bitmaps)
+            flux_per_target.index_add_(
+                0, target_area_indices_long[batch_indices], bitmaps
+            )
             intercept_factor.index_copy_(0, batch_indices, intercept)
 
         return flux_per_target, intercept_factor
-
 
     def scatter_rays(
         self,
@@ -674,7 +699,7 @@ class HeliostatRayTracer:
                 device=device,
             ),
         )
-    
+
     def get_bitmaps_per_target(
         self,
         bitmaps_per_heliostat: torch.Tensor,

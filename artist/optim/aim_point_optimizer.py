@@ -1,15 +1,13 @@
 import logging
+import pathlib
 from typing import Any
 
-from matplotlib import pyplot as plt
-from matplotlib.ticker import FuncFormatter, MultipleLocator
 import torch
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
-from artist.flux import bitmap
 from artist.optim import training
-from artist.optim.loss import KLDivergenceLoss, Loss
+from artist.optim.loss import Loss
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
 from artist.util import constants, indices, runtime_log, track_runtime
@@ -72,7 +70,7 @@ class AimPointOptimizer:
         target_area_index: int,
         ground_truth: torch.Tensor,
         dni: float,
-        data_dir,
+        data_dir: str = "None",
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
         epsilon: float = 1e-12,
         device: torch.device | None = None,
@@ -135,8 +133,6 @@ class AimPointOptimizer:
 
         # self.pixel_area = (self.dims[0] / self.bitmap_resolution[1]) * (self.dims[1] / self.bitmap_resolution[0])
         self.scenario.heliostat_field.construct_heliostat_field_lbvh(device=device)
-
-
 
     def _initialize_group_parameters(
         self, device: torch.device
@@ -207,14 +203,13 @@ class AimPointOptimizer:
                     device=device,
                 )
             )
-            target_area_indices_all_groups.append(
-                torch.full(
-                    (group.number_of_heliostats,),
-                    self.target_area_index,
-                    dtype=torch.int32,
-                    device=device,
-                )
+            target_area_indices = torch.full(
+                (group.number_of_heliostats,),
+                self.target_area_index,
+                dtype=torch.int32,
+                device=device,
             )
+            target_area_indices_all_groups.append(target_area_indices)
             incident_ray_directions_all_groups.append(
                 self.incident_ray_direction.repeat(group.number_of_heliostats, 1)
             )
@@ -225,8 +220,26 @@ class AimPointOptimizer:
                 device=device,
             )
 
-            initial_aim_points = torch.load(self.data_dir / f"initial_aim_points_{group.number_of_heliostats}.pt", weights_only=False, map_location=device)
-            
+            n = group.number_of_heliostats
+            initial_aim_points_path = (
+                pathlib.Path(self.data_dir) / f"initial_aim_points_{n}.pt"
+            )
+            initial_aim_points = None
+            if initial_aim_points_path.exists():
+                initial_aim_points = torch.load(
+                    initial_aim_points_path,
+                    weights_only=False,
+                    map_location=device,
+                )
+            if initial_aim_points is None or initial_aim_points.shape[0] != n:
+                initial_aim_points = (
+                    self.scenario.solar_tower.get_centers_of_target_areas(
+                        target_area_indices=target_area_indices,
+                        positions=group.positions,
+                        device=device,
+                    )
+                )
+
             group.align_surfaces_with_incident_ray_directions(
                 aim_points=initial_aim_points,
                 incident_ray_directions=incident_ray_directions_all_groups[group_index],
@@ -487,7 +500,9 @@ class AimPointOptimizer:
                 random_seed=self.ddp_setup["heliostat_group_rank"],
                 bitmap_resolution=self.bitmap_resolution,
                 dni=self.dni,
-                use_checkpointing=self.optimizer_dict.get("gradient_checkpointing", True),
+                use_checkpointing=self.optimizer_dict.get(
+                    "gradient_checkpointing", True
+                ),
                 device=device,
             )
 
@@ -518,9 +533,15 @@ class AimPointOptimizer:
                 (tuple(self.incident_ray_direction.tolist()), heliostat_group_index), {}
             )
             flux_per_target, intercept_factor = ray_tracer.trace_rays_per_target(
-                incident_ray_directions=incident_ray_directions_all_groups[heliostat_group_index],
-                active_heliostats_mask=active_heliostats_masks_all_groups[heliostat_group_index],
-                target_area_indices=target_area_indices_all_groups[heliostat_group_index],
+                incident_ray_directions=incident_ray_directions_all_groups[
+                    heliostat_group_index
+                ],
+                active_heliostats_mask=active_heliostats_masks_all_groups[
+                    heliostat_group_index
+                ],
+                target_area_indices=target_area_indices_all_groups[
+                    heliostat_group_index
+                ],
                 shading_cache=shading_cache,
                 device=device,
             )
@@ -665,7 +686,9 @@ class AimPointOptimizer:
             )
         )
 
-        self._shading_caches: dict[tuple, dict[int, tuple[torch.Tensor, torch.Tensor]]] = {}
+        self._shading_caches: dict[
+            tuple, dict[int, tuple[torch.Tensor, torch.Tensor]]
+        ] = {}
 
         flux_reference = None
         # Start the optimization.
@@ -692,30 +715,26 @@ class AimPointOptimizer:
             )
 
             # Trace rays and accumulate fluxes.
-            total_flux, intercept_factor = (
-                self._trace_and_accumulate_flux(
-                    active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
-                    target_area_indices_all_groups=target_area_indices_all_groups,
-                    incident_ray_directions_all_groups=incident_ray_directions_all_groups,
-                    group_offsets=group_offsets,
-                    device=device,
-                )
+            total_flux, intercept_factor = self._trace_and_accumulate_flux(
+                active_heliostats_masks_all_groups=active_heliostats_masks_all_groups,
+                target_area_indices_all_groups=target_area_indices_all_groups,
+                incident_ray_directions_all_groups=incident_ray_directions_all_groups,
+                group_offsets=group_offsets,
+                device=device,
             )
 
             if flux_reference is None:
                 flux_reference = total_flux.sum().detach()
             predicted_integrals = total_flux.sum()
-            relative_decrease = (
-                flux_reference - predicted_integrals
-            ) / (flux_reference + self.epsilon)
+            relative_decrease = (flux_reference - predicted_integrals) / (
+                flux_reference + self.epsilon
+            )
             relative_decrease = torch.clamp(
                 relative_decrease,
                 min=0.0,
                 max=0.4,
             )
-            integral_losses = 2.0 * (
-                relative_decrease / 0.4
-            ) ** 2
+            integral_losses = 2.0 * (relative_decrease / 0.4) ** 2
 
             # Flux loss: Compare predicted total flux vs. ground truth.
             flux_loss = loss_definition(
@@ -751,7 +770,7 @@ class AimPointOptimizer:
             #         x = (center[..., 0]) / width * self.dims[0] - self.dims[0] / 2
             #         y = (height - center[..., 1]) / height * self.dims[1] - self.dims[1] / 2
             #         return torch.stack((x, y), dim=-1)
-                
+
             #     flux = total_flux / self.pixel_area
 
             #     fig, ax = plt.subplots()
