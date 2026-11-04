@@ -1,7 +1,9 @@
 import logging
+from collections.abc import Iterator
 
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.checkpoint import checkpoint
 
 from artist.field.heliostat_group import HeliostatGroup
 from artist.geometry import transforms
@@ -96,6 +98,7 @@ class HeliostatRayTracer:
             ]
         ),
         dni: float | None = None,
+        use_checkpointing: bool = False,
         device: torch.device | None = None,
     ) -> None:
         """
@@ -142,7 +145,10 @@ class HeliostatRayTracer:
         self.world_size = world_size
         self.rank = rank
         self.batch_size = batch_size
-
+        self.use_checkpointing = use_checkpointing
+        self._blocking_index_cache: dict[int, torch.Tensor] = {}
+        self._will_recompute = False
+        
         self.light_source = scenario.light_sources.light_source_list[
             indices.first_light_source
         ]
@@ -189,7 +195,7 @@ class HeliostatRayTracer:
                         "Using horizontal heliostats as blocking planes."
                     )
                 all_heliostat_surfaces.append(surfaces)
-            heliostat_surfaces = torch.cat(all_heliostat_surfaces)
+            heliostat_surfaces = torch.cat(all_heliostat_surfaces).detach()
 
             (
                 self.heliostat_primitives_corners,
@@ -226,21 +232,282 @@ class HeliostatRayTracer:
         else:
             self.ray_magnitude = 1.0
 
-    def get_sampler_indices(self) -> torch.Tensor:
+    def _iterate_batches(self, device: torch.device) -> Iterator[torch.Tensor]:
         """
-        Get the indices assigned to the current rank by the distributed sampler.
+        Yield sorted local active-heliostat indices for each batch on this rank.
+
+        Sorting keeps distortions, surface points, normals and the ray-to-heliostat
+        mapping in the same order (the old boolean-mask indexing implied sorted order
+        for the geometry but sampler order for the distortions/mapping).
+        """
+        rank_indices = torch.as_tensor(
+            self.distortions_sampler.rank_indices, dtype=torch.long, device=device
+        )
+        for start in range(0, rank_indices.numel(), self.batch_size):
+            yield rank_indices[start : start + self.batch_size].sort().values
+
+
+    def _run_batch(self, batch_number: int, *args):
+        self._will_recompute = self.use_checkpointing and torch.is_grad_enabled()
+        if self._will_recompute:
+            return checkpoint(self._trace_batch, batch_number, *args, use_reentrant=False)
+        return self._trace_batch(batch_number, *args)
+
+
+    @torch.no_grad()
+    def _get_shading_candidates(
+        self,
+        batch_number: int,
+        batch_indices: torch.Tensor,
+        surface_points: torch.Tensor,
+        sun_directions: torch.Tensor,
+        batch_global_indices: torch.Tensor,
+        device: torch.device,
+    ) -> torch.Tensor:
+        """Shading primitive candidates for one batch, from the cache if available."""
+        cache = getattr(self, "_shading_cache", None)
+        if cache is not None and batch_number in cache:
+            cached_batch_indices, candidates = cache[batch_number]
+            assert torch.equal(cached_batch_indices, batch_indices), (
+                "Shading cache does not match the current batching "
+                "(batch size, rank or world size changed?)."
+            )
+            return candidates
+
+        candidates = blocking.lbvh_traversal(
+            lbvh=self.scenario.heliostat_field.heliostat_field_lbvh,
+            points_at_ray_origins=surface_points,
+            ray_directions=sun_directions,
+            primitives_corners=self.heliostat_primitives_corners,
+            heliostat_owners=batch_global_indices,
+            max_intersection_distances=torch.full(
+                sun_directions.shape[:3], float("inf"), device=device
+            ),
+            device=device,
+        )
+        if cache is not None:
+            cache[batch_number] = (batch_indices.clone(), candidates)
+        return candidates
+
+
+    def _trace_batch(
+        self,
+        batch_number: int,
+        batch_indices: torch.Tensor,
+        batch_global_indices: torch.Tensor,
+        incident_ray_directions: torch.Tensor,
+        target_area_indices: torch.Tensor,
+        ray_extinction_factor: float,
+        mirror_reflectivity: float,
+        device: torch.device,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Trace one batch of heliostats.
+
+        Pure function of its inputs (plus read-only attributes), so it can be
+        recomputed by ``torch.utils.checkpoint`` in the backward pass.
 
         Returns
         -------
         torch.Tensor
-            Indices of the distortions dataset that are assigned to this rank.
-            Shape is ``[number_of_samples_assigned_to_current_rank]``.
+            Bitmaps for the batch. Shape is ``[batch, bitmap_u, bitmap_e]``.
+        torch.Tensor
+            Intercept factor for the batch. Shape is ``[batch]``.
         """
-        return torch.tensor(
-            self.distortions_sampler.rank_indices,
-            device=self.distortions_dataset.distortions_u.device,
+        surface_points = self.heliostat_group.active_surface_points[batch_indices]
+        surface_normals = self.heliostat_group.active_surface_normals[batch_indices]
+        incident = incident_ray_directions[batch_indices]
+        batch_target_area_indices = target_area_indices[batch_indices]
+
+        # Reflection per batch instead of for the whole group up front.
+        preferred_reflection_directions = geometry.reflect(
+            incident_ray_directions=incident[:, None, :],
+            reflection_surface_normals=surface_normals,
         )
 
+        # Index distortions directly (no DataLoader collation copies kept alive).
+        rays = self.scatter_rays(
+            distortion_u=self.distortions_dataset.distortions_u[batch_indices].to(device),
+            distortion_e=self.distortions_dataset.distortions_e[batch_indices].to(device),
+            original_ray_direction=preferred_reflection_directions,
+            device=device,
+        )
+
+        number_of_planar = self.scenario.solar_tower.number_of_target_areas_per_type[
+            indices.planar_target_areas
+        ]
+        planar_active_mask = batch_target_area_indices < number_of_planar
+        cylindrical_active_mask = ~planar_active_mask
+
+        number_of_heliostats = batch_indices.numel()
+        number_of_rays = self.light_source.number_of_rays
+        number_of_points = self.heliostat_group.surface_points.shape[1]
+        number_of_rays_per_heliostat = number_of_rays * number_of_points
+        shape = (number_of_heliostats, number_of_rays, number_of_points)
+
+        intersection_distances_target = torch.zeros(shape, device=device)
+        bitmap_intensities = torch.zeros(shape, device=device)
+        bitmap_intersections_e = torch.zeros(shape, device=device)
+        bitmap_intersections_u = torch.zeros(shape, device=device)
+
+        if planar_active_mask.any():
+            (
+                bitmap_intersections_e[planar_active_mask],
+                bitmap_intersections_u[planar_active_mask],
+                intersection_distances_target[planar_active_mask],
+                bitmap_intensities[planar_active_mask],
+            ) = geometry.line_plane_intersections(
+                rays=rays,
+                points_at_ray_origins=surface_points,
+                target_areas=self.scenario.solar_tower.target_areas[
+                    indices.planar_target_areas
+                ],  # type: ignore[arg-type]
+                target_area_indices=batch_target_area_indices,
+                active_mask=planar_active_mask,
+                bitmap_resolution=self.bitmap_resolution,
+                device=device,
+            )
+
+        if cylindrical_active_mask.any():
+            (
+                bitmap_intersections_e[cylindrical_active_mask],
+                bitmap_intersections_u[cylindrical_active_mask],
+                intersection_distances_target[cylindrical_active_mask],
+                bitmap_intensities[cylindrical_active_mask],
+            ) = geometry.line_cylinder_intersections(
+                rays=rays,
+                points_at_ray_origins=surface_points,
+                target_areas=self.scenario.solar_tower.target_areas[
+                    indices.cylindrical_target_areas
+                ],  # type: ignore[arg-type]
+                target_area_indices=batch_target_area_indices - number_of_planar,
+                active_mask=cylindrical_active_mask,
+                bitmap_resolution=self.bitmap_resolution,
+                device=device,
+            )
+
+        blocked = torch.zeros(shape, device=device)
+        shaded = torch.zeros(shape, device=device)
+
+        if self.occlusion_active:
+            ray_direction_sun = (-incident)[:, None, None, :].expand(
+                -1, number_of_rays, number_of_points, -1
+            )
+
+            cached = self._blocking_index_cache.pop(batch_number, None)
+            if cached is not None:
+                # Backward recompute: reuse the forward result (same alignment -> identical).
+                filtered_blocking_primitive_indices = cached
+            else:
+                with torch.no_grad():
+                    filtered_blocking_primitive_indices = blocking.lbvh_traversal(
+                        lbvh=self.scenario.heliostat_field.heliostat_field_lbvh,
+                        points_at_ray_origins=surface_points,
+                        ray_directions=rays.ray_directions,
+                        primitives_corners=self.heliostat_primitives_corners,
+                        heliostat_owners=batch_global_indices,
+                        max_intersection_distances=intersection_distances_target,
+                        device=device,
+                    )
+                if self._will_recompute:
+                    self._blocking_index_cache[batch_number] = filtered_blocking_primitive_indices
+            
+            with torch.no_grad():                   
+                filtered_shading_primitive_indices = self._get_shading_candidates(
+                    batch_number=batch_number,
+                    batch_indices=batch_indices,
+                    surface_points=surface_points,
+                    sun_directions=ray_direction_sun,
+                    batch_global_indices=batch_global_indices,
+                    device=device,
+                )
+
+            if filtered_blocking_primitive_indices.numel() > 0:
+                blocked = blocking.soft_ray_occlusion_mask(
+                    ray_origins=surface_points,
+                    ray_directions=rays.ray_directions,
+                    primitives_corners=self.heliostat_primitives_corners[
+                        filtered_blocking_primitive_indices
+                    ],
+                    primitives_spans=self.heliostat_primitives_spans[
+                        filtered_blocking_primitive_indices
+                    ],
+                    primitives_normals=self.heliostat_primitives_normals[
+                        filtered_blocking_primitive_indices
+                    ],
+                    epsilon=1e-12,
+                    softness=1000.0,
+                )
+
+            shaded = blocking.soft_ray_occlusion_mask(
+                ray_origins=surface_points,
+                ray_directions=ray_direction_sun,
+                primitives_corners=torch.cat(
+                    [
+                        self.heliostat_primitives_corners[filtered_shading_primitive_indices],
+                        self.tower_primitives_corners,
+                    ]
+                ),
+                primitives_spans=torch.cat(
+                    [
+                        self.heliostat_primitives_spans[filtered_shading_primitive_indices],
+                        self.tower_primitives_spans,
+                    ]
+                ),
+                primitives_normals=torch.cat(
+                    [
+                        self.heliostat_primitives_normals[filtered_shading_primitive_indices],
+                        self.tower_primitives_normals,
+                    ]
+                ),
+                epsilon=1e-12,
+                softness=1000.0,
+            )
+
+        cosine_factor = (
+            (incident[:, None, :3] * surface_normals[..., :3])
+            .sum(dim=-1)
+            .abs()
+            .clamp(0.0, 1.0)[:, None, :]
+        )
+
+        # Atmospheric attenuation after Leary & Hankins (1979), MIRVAL.
+        d = intersection_distances_target
+        atmospheric_attenuation = torch.where(
+            d <= 1000,
+            0.99321 - 1.176e-4 * d + 1.97e-8 * d**2,
+            torch.exp(-1.106e-5 * d),
+        )
+
+        optical_loss_factor = (
+            mirror_reflectivity
+            * atmospheric_attenuation
+            * cosine_factor
+        )
+
+        intensities = (
+            bitmap_intensities
+            * (1 - blocked)
+            * (1 - shaded)
+            * (1 - ray_extinction_factor)
+            * optical_loss_factor
+        )
+
+        bitmaps = self.bilinear_splatting(
+            bitmap_intersections_e=bitmap_intersections_e,
+            bitmap_intersections_u=bitmap_intersections_u,
+            absolute_intensities=intensities,
+            device=device,
+        )
+
+        with torch.no_grad():
+            intercept_factors = bitmaps.sum(dim=(1, 2)) / (rays.ray_magnitudes * optical_loss_factor).sum(dim=(1, 2)).clamp_min(1e-12)
+
+        return bitmaps, intercept_factors
+
+    # ------------------------------------------------------------------ #
+    # Public tracing APIs
+    # ------------------------------------------------------------------ #
     def trace_rays(
         self,
         incident_ray_directions: torch.Tensor,
@@ -248,363 +515,112 @@ class HeliostatRayTracer:
         target_area_indices: torch.Tensor,
         ray_extinction_factor: float = 0.0,
         mirror_reflectivity: float = 0.935,
+        shading_cache: dict[int, tuple[torch.Tensor, torch.Tensor]] | None = None,
         device: torch.device | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Perform heliostat ray tracing.
-
-        Scatter the rays according to the distortions, calculate the intersections with the target planes,
-        and sample the resulting bitmaps on the target areas. The bitmaps are generated separately for each
-        active heliostat and are accessed individually.
-        If blocking is activated in the ``HeliostatRayTracer``, rays that are blocked by other heliostats are
-        filtered out.
-
-        Parameters
-        ----------
-        incident_ray_directions : torch.Tensor
-            The direction of the incident rays as seen from the heliostats.
-            Shape is ``[number_of_active_heliostats, 4]``.
-        active_heliostats_mask : torch.Tensor
-            A mask where 0 indicates a deactivated heliostat and 1 an activated one.
-            An integer greater than 1 indicates that this heliostat is regarded multiple times.
-            Shape is ``[number_of_heliostats]``.
-        target_area_indices : torch.Tensor
-            The indices of the target areas for each active heliostat.
-            Shape is ``[number_of_active_heliostats]``.
-        ray_extinction_factor : float
-            Amount of global ray extinction, responsible for shading (default is 0.0 -> no extinction).
-        mirror_reflectivity : float
-            Fraction of incident ray intensity reflected by the mirror surface (default is 0.935).
-        device : torch.device | None
-            The device on which to perform computations or load tensors and models (default is None).
-            If None, ``ARTIST`` will automatically select the most appropriate
-            device (CUDA or CPU) based on availability and OS.
-
-        Raises
-        ------
-        ValueError
-            If not all heliostats used for ray tracing have been aligned.
-
-        Returns
-        -------
-        torch.Tensor
-            The resulting bitmaps per heliostat.
-            Shape is ``[number_of_active_heliostats, bitmap_resolution_e, bitmap_resolution_u]``.
-        torch.Tensor
-            Intercept factor, i.e the fraction of reflected energy that actually lands on the receiver.
-            Shape is ``[number_of_active_heliostats]``.
-        """
+        """Per-heliostat bitmaps (unchanged API). Memory scales with N_active * H * W."""
+        self._blocking_index_cache.clear()
         device = get_device(device=device)
-
         assert torch.equal(
             self.heliostat_group.active_heliostats_mask, active_heliostats_mask
         ), "Some heliostats were not aligned and cannot be raytraced."
-
+        number_of_active = int(active_heliostats_mask.sum())
         flux_distributions = torch.zeros(
             (
-                int(active_heliostats_mask.sum()),
+                number_of_active,
                 int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
                 int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
             ),
             device=device,
         )
-        intercept_factor = torch.zeros(active_heliostats_mask.sum(), device=device)
-
-        self.heliostat_group.preferred_reflection_directions = geometry.reflect(
-            incident_ray_directions=incident_ray_directions[:, None, :],
-            reflection_surface_normals=self.heliostat_group.active_surface_normals,
-        )
-
+        intercept_factor = torch.zeros(number_of_active, device=device)
         global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
-        for batch_index, (batch_u, batch_e) in enumerate(self.distortions_loader):
-            sampler_indices = list(self.distortions_sampler)
-            batch_mask_indices = sampler_indices[
-                batch_index * self.batch_size : (batch_index + 1) * self.batch_size
-            ]
-            active_heliostats_mask_batch = torch.zeros(
-                self.heliostat_group.number_of_active_heliostats,
-                dtype=torch.bool,
-                device=device,
+        
+        self._shading_cache = shading_cache
+        
+        for batch_number, batch_indices in enumerate(self._iterate_batches(device)):
+            bitmaps, intercept = self._run_batch(
+                batch_number,
+                batch_indices,
+                global_active_indices[batch_indices],
+                incident_ray_directions,
+                target_area_indices,
+                ray_extinction_factor,
+                mirror_reflectivity,
+                device,
             )
-            active_heliostats_mask_batch[batch_mask_indices] = True
-
-            rays = self.scatter_rays(
-                distortion_e=batch_e,
-                distortion_u=batch_u,
-                original_ray_direction=self.heliostat_group.preferred_reflection_directions[
-                    active_heliostats_mask_batch
-                ],
-                device=device,
-            )
-
-            # Choose the heliostat indices that are in the active batch and have a planar target area.
-            planar_active_mask = (
-                active_heliostats_mask_batch
-                & (
-                    target_area_indices
-                    < self.scenario.solar_tower.number_of_target_areas_per_type[
-                        indices.planar_target_areas
-                    ]
-                )
-            )[active_heliostats_mask_batch]
-            cylindrical_active_mask = ~planar_active_mask
-
-            intersection_distances_target = torch.zeros(
-                (
-                    int(active_heliostats_mask_batch.sum()),
-                    self.light_source.number_of_rays,
-                    self.heliostat_group.surface_points.shape[1],
-                ),
-                device=device,
-            )
-            bitmap_intensities = torch.zeros(
-                (
-                    int(active_heliostats_mask_batch.sum()),
-                    self.light_source.number_of_rays,
-                    self.heliostat_group.surface_points.shape[1],
-                ),
-                device=device,
-            )
-            bitmap_intersections_e = torch.zeros(
-                (
-                    int(active_heliostats_mask_batch.sum()),
-                    self.light_source.number_of_rays,
-                    self.heliostat_group.surface_points.shape[1],
-                ),
-                device=device,
-            )
-            bitmap_intersections_u = torch.zeros(
-                (
-                    int(active_heliostats_mask_batch.sum()),
-                    self.light_source.number_of_rays,
-                    self.heliostat_group.surface_points.shape[1],
-                ),
-                device=device,
-            )
-
-            if planar_active_mask.any():
-                (
-                    bitmap_intersections_e[planar_active_mask],
-                    bitmap_intersections_u[planar_active_mask],
-                    intersection_distances_target[planar_active_mask],
-                    bitmap_intensities[planar_active_mask],
-                ) = geometry.line_plane_intersections(
-                    rays=rays,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ],
-                    target_areas=self.scenario.solar_tower.target_areas[
-                        indices.planar_target_areas
-                    ],  # type: ignore[arg-type]
-                    target_area_indices=target_area_indices[
-                        active_heliostats_mask_batch
-                    ],
-                    active_mask = planar_active_mask,
-                    bitmap_resolution=self.bitmap_resolution,
-                    device=device,
-                )
-
-            if cylindrical_active_mask.any():
-                (
-                    bitmap_intersections_e[cylindrical_active_mask],
-                    bitmap_intersections_u[cylindrical_active_mask],
-                    intersection_distances_target[cylindrical_active_mask],
-                    bitmap_intensities[cylindrical_active_mask],
-                ) = geometry.line_cylinder_intersections(
-                    rays=rays,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ],
-                    target_areas=self.scenario.solar_tower.target_areas[
-                        indices.cylindrical_target_areas
-                    ],  # type: ignore[arg-type]
-                    target_area_indices=target_area_indices[
-                        active_heliostats_mask_batch
-                    ] - self.scenario.solar_tower.number_of_target_areas_per_type[
-                        indices.planar_target_areas
-                    ],
-                    active_mask = cylindrical_active_mask,
-                    bitmap_resolution=self.bitmap_resolution,
-                    device=device,
-                )
-
-            # The variables blocked and shaded are all zeros if there is no blocking or shading at all in the scene.
-            # If occlusion was activated in the HeliostatRayTracer, blocking and shading masks will be computed.
-            number_of_heliostats, number_of_rays, number_of_points = (
-                intersection_distances_target.shape
-            )
-            number_of_rays_per_heliostat = number_of_rays * number_of_points
-            blocked = torch.zeros(
-                (number_of_heliostats, number_of_rays, number_of_points),
-                device=device,
-            )
-            shaded = torch.zeros(
-                (number_of_heliostats, number_of_rays, number_of_points),
-                device=device,
-            )
-            if self.occlusion_active:
-                batch_global_indices = global_active_indices[batch_mask_indices]
-                ray_to_heliostat_mapping = batch_global_indices.repeat_interleave(
-                    number_of_rays_per_heliostat
-                )
-
-                # Filter out the primitives that are relevant for blocking.
-                filtered_blocking_primitive_indices = blocking.lbvh_traversal(
-                    lbvh=self.scenario.heliostat_field.heliostat_field_lbvh,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ],
-                    ray_directions=rays.ray_directions,
-                    primitives_corners=self.heliostat_primitives_corners,
-                    ray_to_heliostat_mapping=ray_to_heliostat_mapping,
-                    max_intersection_distances=intersection_distances_target,
-                    device=device,
-                )
-                # Create the ray mask based on the relevant blocking primitive indices.
-                if filtered_blocking_primitive_indices.numel() > 0:
-                    blocked = blocking.soft_ray_occlusion_mask(
-                        ray_origins=self.heliostat_group.active_surface_points[
-                            active_heliostats_mask_batch
-                        ],
-                        ray_directions=rays.ray_directions,
-                        primitives_corners=self.heliostat_primitives_corners[
-                            filtered_blocking_primitive_indices
-                        ],
-                        primitives_spans=self.heliostat_primitives_spans[
-                            filtered_blocking_primitive_indices
-                        ],
-                        primitives_normals=self.heliostat_primitives_normals[
-                            filtered_blocking_primitive_indices
-                        ],
-                        epsilon=1e-12,
-                        softness=1000.0,
-                    )
-
-                # Filter out the primitives that are relevant for shading.
-                ray_direction_sun = -incident_ray_directions[active_heliostats_mask_batch]
-                ray_direction_sun = ray_direction_sun[:, None, None, :].expand(
-                    -1, number_of_rays, number_of_points, -1
-                )
-                filtered_shading_primitive_indices = blocking.lbvh_traversal(
-                    lbvh=self.scenario.heliostat_field.heliostat_field_lbvh,
-                    points_at_ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ],
-                    ray_directions=ray_direction_sun,
-                    primitives_corners=self.heliostat_primitives_corners,
-                    ray_to_heliostat_mapping=ray_to_heliostat_mapping,
-                    max_intersection_distances=torch.full(
-                        (number_of_heliostats, number_of_rays, number_of_points),
-                        float("inf"),
-                        device=device,
-                    ),
-                    device=device,
-                )
-
-                shading_primitives_corners = torch.cat(
-                    [self.heliostat_primitives_corners[filtered_shading_primitive_indices], self.tower_primitives_corners], dim=0
-                )
-                shading_primitives_spans = torch.cat(
-                    [self.heliostat_primitives_spans[filtered_shading_primitive_indices], self.tower_primitives_spans], dim=0
-                )
-                shading_primitives_normals = torch.cat(
-                    [self.heliostat_primitives_normals[filtered_shading_primitive_indices], self.tower_primitives_normals], dim=0
-                )
-
-                # Create the shaded ray mask based on the relevant shading primitive indices.
-                shaded = blocking.soft_ray_occlusion_mask(
-                    ray_origins=self.heliostat_group.active_surface_points[
-                        active_heliostats_mask_batch
-                    ],
-                    ray_directions=ray_direction_sun,
-                    primitives_corners=shading_primitives_corners,
-                    primitives_spans=shading_primitives_spans,
-                    primitives_normals=shading_primitives_normals,
-                    epsilon=1e-12,
-                    softness=1000.0,
-                )
-
-            # Cosine efficiency: projection of the incident ray direction onto the surface normal.
-            cosine_factor = (
-                incident_ray_directions[active_heliostats_mask_batch, None, :3] * self.heliostat_group.active_surface_normals[active_heliostats_mask_batch, :, :3]
-            ).sum(dim=-1).abs().clamp(0.0, 1.0)[:, None, :]
-
-            # Atmospheric attenuation model after Leary & Hankins (1979), MIRVAL.
-            atmospheric_attenuation = torch.where(
-                intersection_distances_target <= 1000, 
-                0.99321 - 1.176e-4 * intersection_distances_target + 1.97e-8 * intersection_distances_target ** 2,
-                torch.exp(-1.106e-5 * intersection_distances_target),
-            )
-
-            intensities = (
-                bitmap_intensities
-                * (1 - blocked)
-                * (1 - shaded)
-                * (1 - ray_extinction_factor)
-                * mirror_reflectivity
-                * atmospheric_attenuation
-                * cosine_factor
-            )
-
-            bitmaps = self.bilinear_splatting(
-                bitmap_intersections_e=bitmap_intersections_e,
-                bitmap_intersections_u=bitmap_intersections_u,
-                absolute_intensities=intensities,
-                device=device,
-            )
-
-            flux_distributions[active_heliostats_mask_batch] = bitmaps
-
-            intercept_factor[active_heliostats_mask_batch] = (
-                intensities.sum((1, 2))
-                / number_of_rays_per_heliostat
-            )
-
-
-        # import numpy as np
-        # import matplotlib.pyplot as plt
-
-        # origins = self.heliostat_group.active_surface_points[active_heliostats_mask_batch][:, 0].cpu().detach()
-        # normals = rays.ray_directions[active_heliostats_mask_batch][:, 0, 0].cpu().detach()
-        # normals = normals * 100
-
-        # fig, ax = plt.subplots(figsize=(50, 50))
-
-        # ax.scatter(origins[:, 0], origins[:, 1], color='red', s=50, label='Origins', zorder=3)
-        # center = self.scenario.solar_tower.target_areas[0].centers.cpu().detach()
-        # ax.scatter(center[:, 0], center[:, 1], color='green', s=50, label='tower', zorder=3)
-        # ax.quiver(
-        #     origins[:, 0], origins[:, 1],
-        #     normals[:, 0], normals[:, 1],
-        #     angles='xy',
-        #     scale_units='xy',
-        #     scale=1,
-        #     color='blue',
-        #     label='Normals',
-        #     width=0.001
-        # )
-
-        # # for i in range(origins.shape[0]):
-        # #     ax.annotate(f'O{i+1}', (origins[i, 0], origins[i, 1]), xytext=(5, 5), textcoords='offset points')
-
-        # ax.axhline(0, color='gray', linewidth=0.8)
-        # ax.axvline(0, color='gray', linewidth=0.8)
-        # ax.set_xlabel('X')
-        # ax.set_ylabel('Y')
-        # ax.set_title('2D Origins and Normal Vectors')
-        # ax.set_aspect('equal', adjustable='box')
-        # ax.grid(True, linestyle='--', alpha=0.5)
-        # ax.legend()
-
-        # plt.savefig("positions_1")
-
-        # sums = flux_distributions.sum(dim=(1, 2))
-        # zero_indices = torch.where(sums == 0)[0]
-        # print(zero_indices)
-
-        # print(intercept_factor.sum(dim=-1))
+            # In-place index_copy_ only saves the index for backward.
+            flux_distributions.index_copy_(0, batch_indices, bitmaps)
+            intercept_factor.index_copy_(0, batch_indices, intercept)
 
         return flux_distributions, intercept_factor
+
+    def trace_rays_per_target(
+        self,
+        incident_ray_directions: torch.Tensor,
+        active_heliostats_mask: torch.Tensor,
+        target_area_indices: torch.Tensor,
+        ray_extinction_factor: float = 0.0,
+        mirror_reflectivity: float = 0.935,
+        shading_cache: dict[int, tuple[torch.Tensor, torch.Tensor]] | None = None,
+        device: torch.device | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Trace rays and accumulate flux directly per target area.
+
+        Never materializes the ``[N_active, H, W]`` per-heliostat tensor; memory is
+        ``O(number_of_target_areas * H * W)`` plus one (checkpointed) batch.
+        Only heliostats sampled on this rank contribute, i.e. the result equals
+        ``get_bitmaps_per_target(trace_rays(...)[sampler_indices], ...)``.
+
+        shading_cache : dict[int, tuple[torch.Tensor, torch.Tensor]] | None
+            Cache of shading primitive candidates per batch, valid for ONE incident ray
+            direction. Filled on first use, reused afterwards. None -> traverse every call.
+
+        Returns
+        -------
+        torch.Tensor
+            Flux per target area. Shape is ``[number_of_target_areas, bitmap_u, bitmap_e]``.
+        torch.Tensor
+            Intercept factor per active heliostat (zero for heliostats of other ranks).
+            Shape is ``[number_of_active_heliostats]``.
+        """
+        self._blocking_index_cache.clear()
+        device = get_device(device=device)
+        assert torch.equal(
+            self.heliostat_group.active_heliostats_mask, active_heliostats_mask
+        ), "Some heliostats were not aligned and cannot be raytraced."
+
+        flux_per_target = torch.zeros(
+            (
+                int(self.scenario.solar_tower.number_of_target_areas_per_type.sum()),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_u]),
+                int(self.bitmap_resolution[indices.unbatched_bitmap_e]),
+            ),
+            device=device,
+        )
+        intercept_factor = torch.zeros(int(active_heliostats_mask.sum()), device=device)
+        global_active_indices = torch.nonzero(active_heliostats_mask, as_tuple=True)[0]
+        target_area_indices_long = target_area_indices.long()
+        
+        self._shading_cache = shading_cache
+        
+        for batch_number, batch_indices in enumerate(self._iterate_batches(device)):
+            bitmaps, intercept = self._run_batch(
+                batch_number,
+                batch_indices,
+                global_active_indices[batch_indices],
+                incident_ray_directions,
+                target_area_indices,
+                ray_extinction_factor,
+                mirror_reflectivity,
+                device,
+            )
+            flux_per_target.index_add_(0, target_area_indices_long[batch_indices], bitmaps)
+            intercept_factor.index_copy_(0, batch_indices, intercept)
+
+        return flux_per_target, intercept_factor
+
 
     def scatter_rays(
         self,
