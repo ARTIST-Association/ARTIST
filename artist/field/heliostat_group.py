@@ -160,12 +160,11 @@ class HeliostatGroup:
         self.preferred_reflection_directions = torch.empty(
             (self.number_of_heliostats, 4), device=device
         )
-        
-        # Use canting of first heliostat in each group to determine the heliostat 
+
+        # Use canting of first heliostat in each group to determine the heliostat
         # dimension under the assumption that all heliostats have the same shape.
         canting_norm = (torch.norm(self.canting[0], dim=1)[0])[:2]
         self.heliostat_dimensions = (canting_norm * 4) + 0.02
-
 
     def align_surfaces_with_incident_ray_directions(
         self,

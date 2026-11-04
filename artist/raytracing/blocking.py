@@ -59,27 +59,19 @@ def create_heliostat_occlusion_primitives(
     """
     device = get_device(device=device)
 
-    number_of_surfaces, number_of_surface_points, _ = (
-        surface_points.shape
-    )
+    number_of_surfaces, number_of_surface_points, _ = surface_points.shape
     corners = torch.zeros((number_of_surfaces, 4, 4), device=device)
 
     # Lower east.
-    corners[:, 0] = surface_points[
-        :, int(number_of_surface_points / 2)
-    ]
+    corners[:, 0] = surface_points[:, int(number_of_surface_points / 2)]
     # Lower west.
     corners[:, 3] = surface_points[
         :, int(number_of_surface_points - math.sqrt(number_of_surface_points / 4))
     ]
     # Upper west.
-    corners[:, 2] = surface_points[
-        :, int((number_of_surface_points / 2) - 1)
-    ]
+    corners[:, 2] = surface_points[:, int((number_of_surface_points / 2) - 1)]
     # Upper east.
-    corners[:, 1] = surface_points[
-        :, int(math.sqrt(number_of_surface_points / 4) - 1)
-    ]
+    corners[:, 1] = surface_points[:, int(math.sqrt(number_of_surface_points / 4) - 1)]
 
     spans = torch.zeros((number_of_surfaces, 2, 4), device=device)
     spans[:, 0] = corners[:, 1] - corners[:, 0]
@@ -119,7 +111,7 @@ def create_tower_occlusion_primitives(
         [corner_1, corner_2, corner_3, corner_4],
         dim=0,
     )[None, :]
-    
+
     spans = torch.zeros((1, 2, 4), device=device)
     spans[:, 0] = corners[:, 1] - corners[:, 0]
     spans[:, 1] = corners[:, 3] - corners[:, 0]
@@ -225,18 +217,10 @@ def soft_ray_occlusion_mask(
 
     for start in range(0, num_primitives, primitive_batch_size):
         end = min(start + primitive_batch_size, num_primitives)
-        corners = primitives_corners[start:end, 0, :3][
-            None, None, None, :, :
-        ]
-        span_u = primitives_spans[start:end, 0, :3][
-            None, None, None, :, :
-        ]
-        span_v = primitives_spans[start:end, 1, :3][
-            None, None, None, :, :
-        ]
-        normals = primitives_normals[start:end, :3][
-            None, None, None, :, :
-        ]
+        corners = primitives_corners[start:end, 0, :3][None, None, None, :, :]
+        span_u = primitives_spans[start:end, 0, :3][None, None, None, :, :]
+        span_v = primitives_spans[start:end, 1, :3][None, None, None, :, :]
+        normals = primitives_normals[start:end, :3][None, None, None, :, :]
 
         # Ray-plane intersections. Solve the plane equation.
         denominator = (directions * normals).sum(dim=-1)
@@ -251,7 +235,7 @@ def soft_ray_occlusion_mask(
             softness * (distances_to_primitives - ray_origin_offset)
         )
         offset = origins + distances_to_primitives[..., None] * directions - corners
-        
+
         # Compute point of intersection in local plane coordinates.
         # Project onto the primitive span basis.
         uu = (span_u * span_u).sum(dim=-1)
@@ -276,14 +260,8 @@ def soft_ray_occlusion_mask(
         # Each primitive contributes a non-negative soft density along the ray rather than a hard binary mask.
         # These contributions are summed to form an optical depth, representing total accumulated occlusion.
         # The final visibility is computed as an exponential decay of this optical depth, ensuring stable, differentiable aggregation.
-        inside_u = (
-            torch.sigmoid(softness * u)
-            * torch.sigmoid(softness * (1.0 - u))
-        )
-        inside_v = (
-            torch.sigmoid(softness * v)
-            * torch.sigmoid(softness * (1.0 - v))
-        )
+        inside_u = torch.sigmoid(softness * u) * torch.sigmoid(softness * (1.0 - u))
+        inside_v = torch.sigmoid(softness * v) * torch.sigmoid(softness * (1.0 - v))
 
         sigma = (inside_u * inside_v * in_front).clamp(0.0, 1.0)
 
@@ -509,9 +487,7 @@ def build_linear_bounding_volume_hierarchies(
     device = get_device(device=device)
 
     number_of_primitives = primitives_corners.shape[0]
-    blocker_ids = torch.arange(
-        number_of_primitives, dtype=torch.int32, device=device
-    )
+    blocker_ids = torch.arange(number_of_primitives, dtype=torch.int32, device=device)
 
     if number_of_primitives == 0:
         log.warning(
@@ -599,7 +575,7 @@ def build_linear_bounding_volume_hierarchies(
     # Compute splits to build LBVH tree, each internal node is assigned two children.
     min_index = torch.minimum(blocker_ids, farthest_index)
     max_index = torch.maximum(blocker_ids, farthest_index)
-    
+
     delta_node = longest_common_prefix(
         codes=sorted_codes, i=blocker_ids, j=farthest_index, device=device
     )
@@ -707,7 +683,7 @@ def build_linear_bounding_volume_hierarchies(
         constants.aabb_max: aabb_max,
         constants.is_leaf: is_leaf,
         constants.primitive_index: primitive_index,
-        constants.max_lbvh_depth: max_lbvh_depth
+        constants.max_lbvh_depth: max_lbvh_depth,
     }
 
 
@@ -803,7 +779,7 @@ def lbvh_traversal(
 ) -> torch.Tensor:
     """
     Apply the LBVH filter to find the primitives that are hit by at least one ray.
- 
+
     Parameters
     ----------
     lbvh : dict[str, torch.Tensor]
@@ -828,7 +804,7 @@ def lbvh_traversal(
     chunk_size : int
         Number of rays processed at once. Lower this if you run out of memory,
         raise it if the GPU is underutilized.
- 
+
     Returns
     -------
     torch.Tensor
@@ -836,7 +812,7 @@ def lbvh_traversal(
         Shape is ``[number_of_hit_primitives]``.
     """
     device = get_device(device=device)
- 
+
     # Tree arrays (int64 indices avoid implicit conversions in advanced indexing).
     left = lbvh[constants.left_node].long()
     right = lbvh[constants.right_node].long()
@@ -844,23 +820,25 @@ def lbvh_traversal(
     aabb_max = lbvh[constants.aabb_max]
     is_leaf = lbvh[constants.is_leaf].bool()
     primitive_index = lbvh[constants.primitive_index].long()
- 
+
     number_of_heliostats, rays_per_point, number_of_points = ray_directions.shape[:3]
     rays_per_heliostat = rays_per_point * number_of_points
     total_number_of_rays = number_of_heliostats * rays_per_heliostat
     number_of_primitives = primitives_corners.shape[0]
- 
+
     # Origins stay un-expanded: flat ray id = h * R * S + r * S + s -> origin h * S + s.
     origins = points_at_ray_origins[..., :3].reshape(-1, 3)
     directions = ray_directions[..., :3].reshape(-1, 3)
     inverse_directions = 1.0 / (directions + 1e-12)
     max_distances = max_intersection_distances.reshape(-1)
- 
-    hit_primitives_flag = torch.zeros(number_of_primitives + 1, dtype=torch.bool, device=device)
+
+    hit_primitives_flag = torch.zeros(
+        number_of_primitives + 1, dtype=torch.bool, device=device
+    )
 
     for start in range(0, total_number_of_rays, chunk_size):
         end = min(start + chunk_size, total_number_of_rays)
- 
+
         # Per-ray data for this chunk, gathered once and reused every level.
         global_ids = torch.arange(start, end, device=device)
         heliostat_ids = global_ids // rays_per_heliostat
@@ -869,11 +847,11 @@ def lbvh_traversal(
         chunk_inverse_directions = inverse_directions[start:end]
         chunk_max_distances = max_distances[start:end]
         chunk_owner = heliostat_owners[heliostat_ids]
- 
+
         # Frontier of (ray, node) pairs; every ray starts at the root.
         rays = torch.arange(end - start, device=device)
         nodes = torch.zeros_like(rays)
- 
+
         while True:
             valid = nodes >= 0
             nodes_safe = nodes.clamp(min=0)
@@ -894,7 +872,9 @@ def lbvh_traversal(
 
             # Leaves: flag without compaction (no sync).
             flag = mask_hit & leaf & (chunk_owner[rays] != primitives)
-            hit_primitives_flag[torch.where(flag, primitives, number_of_primitives)] = True
+            hit_primitives_flag[torch.where(flag, primitives, number_of_primitives)] = (
+                True
+            )
 
             # Internal nodes: the only compaction (= the only sync) of this level.
             survivors = torch.nonzero(mask_hit & ~leaf, as_tuple=True)[0]

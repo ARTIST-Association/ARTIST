@@ -20,7 +20,7 @@ def get_center_of_mass(
     Tensor memory layout follows PyTorch convention: [H, W] # height, width
 
     First determine the pixel indices of the bitmap center of mass.
-    Pixel indices are converted from the pixel-index coordinate system 
+    Pixel indices are converted from the pixel-index coordinate system
     to pixel-center coordinates by adding ``0.5``.
     Next determine the position (coordinates) of the center of mass on the target.
 

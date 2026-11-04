@@ -87,7 +87,7 @@ def one_cycle(
         pct_start=float(parameters[constants.pct_start]),
         anneal_strategy="cos",
         div_factor=int(parameters[constants.div_factor]),
-        final_div_factor=int(parameters[constants.final_div_factor])
+        final_div_factor=int(parameters[constants.final_div_factor]),
     )
 
 

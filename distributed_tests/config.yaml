@@ -7,7 +7,7 @@ results_dir: "/workVERLEIHNIX/mb/ARTIST/distributed_tests/results"
 random_seed: 7
 device: "cuda"
 
-number_heliostats: 30000
+number_heliostats: 50000
 
 aim_point_optimization_configuration:
   max_epoch: 75

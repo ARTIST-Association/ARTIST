@@ -187,9 +187,16 @@ class SolarTower:
                 cylinder_centers = cylindrical.centers[cylinder_indices, :3]
                 cylinder_axes = cylindrical.axes[cylinder_indices, :3]
                 to_heliostat = positions[~planar_mask, :3] - cylinder_centers
-                radial = to_heliostat - (to_heliostat * cylinder_axes).sum(-1, keepdim=True) * cylinder_axes
+                radial = (
+                    to_heliostat
+                    - (to_heliostat * cylinder_axes).sum(-1, keepdim=True)
+                    * cylinder_axes
+                )
                 radial = radial / radial.norm(dim=-1, keepdim=True).clamp_min(1e-12)
-                centers[~planar_mask, :3] = cylinder_centers + cylindrical.radii[cylinder_indices][:, None] * radial
+                centers[~planar_mask, :3] = (
+                    cylinder_centers
+                    + cylindrical.radii[cylinder_indices][:, None] * radial
+                )
             else:
                 centers[~planar_mask] = (
                     cylindrical.centers[cylinder_indices]

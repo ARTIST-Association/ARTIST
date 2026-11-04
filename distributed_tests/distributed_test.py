@@ -1,25 +1,20 @@
 import argparse
-import csv
 import logging
 import os
 import pathlib
 import time
-from typing import Any
 import warnings
+from typing import Any
+
 import h5py
-from matplotlib import pyplot as plt
 import torch
 import yaml
 
-from artist.flux import bitmap
 from artist.optim.aim_point_optimizer import AimPointOptimizer
-from artist.optim.loss import KLDivergenceLoss, NormalizedL1
-from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
+from artist.optim.loss import KLDivergenceLoss
 from artist.scenario.scenario import Scenario
-
 from artist.util import (
     constants,
-    indices,
     runtime_log,
     set_logger_config,
     track_runtime,
@@ -36,6 +31,7 @@ if torch.cuda.is_available():
 
 log = logging.getLogger(__name__)
 """A logger for the aim point optimizer."""
+
 
 @track_runtime(runtime_log)
 def start_optimize(
@@ -74,7 +70,9 @@ def start_optimize(
 
     optimization_configuration_aim_points = {
         constants.optimization: {
-            constants.initial_learning_rate: float(aim_point_config[constants.initial_learning_rate]),
+            constants.initial_learning_rate: float(
+                aim_point_config[constants.initial_learning_rate]
+            ),
             constants.tolerance: 1e-5,
             constants.max_epoch: int(aim_point_config[constants.max_epoch]),
             constants.batch_size: int(aim_point_config[constants.batch_size]),
@@ -84,16 +82,12 @@ def start_optimize(
             constants.early_stopping_window: 10000,
         },
         constants.scheduler: {
-            constants.scheduler_type: str(
-                aim_point_config[constants.scheduler_type]
-            ),
+            constants.scheduler_type: str(aim_point_config[constants.scheduler_type]),
             constants.gamma: float(aim_point_config[constants.gamma]),
             constants.lr_min: float(aim_point_config[constants.lr_min]),
             constants.lr_max: float(aim_point_config[constants.lr_max]),
             constants.step_size_up: int(aim_point_config[constants.step_size_up]),
-            constants.reduce_factor: float(
-                aim_point_config[constants.reduce_factor]
-            ),
+            constants.reduce_factor: float(aim_point_config[constants.reduce_factor]),
             constants.patience: int(aim_point_config[constants.patience]),
             constants.threshold: float(aim_point_config[constants.threshold]),
             constants.cooldown: int(aim_point_config[constants.cooldown]),
@@ -105,9 +99,7 @@ def start_optimize(
             constants.rho_flux_integral: float(
                 aim_point_config[constants.rho_flux_integral]
             ),
-            constants.rho_local_flux: float(
-                aim_point_config[constants.rho_local_flux]
-            ),
+            constants.rho_local_flux: float(aim_point_config[constants.rho_local_flux]),
             constants.max_flux_density: float(
                 aim_point_config[constants.max_flux_density]
             ),
@@ -145,8 +137,10 @@ def start_optimize(
         )
         baseline_target_area = aim_point_config["baseline_target_area"]
         baseline_dni = aim_point_config["dni"]
-        
-        ground_truth = torch.load(data_dir / "optimal_flux.pt", weights_only=False, map_location=device)
+
+        ground_truth = torch.load(
+            data_dir / "optimal_flux.pt", weights_only=False, map_location=device
+        )
         # e_trapezoid = bitmap.trapezoid_distribution(
         #     total_width=bitmap_resolution[indices.unbatched_bitmap_e],
         #     slope_width=0,
@@ -167,7 +161,7 @@ def start_optimize(
         # ground_truth[-1, :] = 0.0  # Bottom
         # ground_truth[:, 0] = 0.0   # Left
         # ground_truth[:, -1] = 0.0  # Right
-        
+
         # import matplotlib.pyplot as plt
         # plt.imshow(ground_truth.cpu().detach())
         # plt.savefig("optimized_ground_truth")
@@ -192,7 +186,9 @@ def start_optimize(
             aim_point_optimizer.optimize(loss_definition=loss_definition, device=device)
         )
 
-        motor_positions_optimized = heliostat_group.kinematics.active_motor_positions.detach()
+        motor_positions_optimized = (
+            heliostat_group.kinematics.active_motor_positions.detach()
+        )
 
         results = {
             "optimal_flux": ground_truth.detach(),
@@ -203,7 +199,7 @@ def start_optimize(
             ],
             "dni": baseline_dni,
             "incident_ray_direction": baseline_incident_ray_direction,
-            "bitmap_resolution": bitmap_resolution
+            "bitmap_resolution": bitmap_resolution,
         }
 
         save_dir = pathlib.Path(data_dir)
@@ -288,9 +284,8 @@ def main() -> None:
     aim_point_optimization_config = args.aim_point_optimization_configuration
 
     for i in range(5):
-
         # Define scenario paths and viable heliostat data paths.
-        scenario_path_ideal = data_dir / f"ideal_heliostats_{args.number_heliostats}.h5" 
+        scenario_path_ideal = data_dir / f"ideal_heliostats_{args.number_heliostats}.h5"
 
         runtime_log.info(f"Start {i} -----------------")
         start_optimize(
@@ -298,7 +293,7 @@ def main() -> None:
             aim_point_config=aim_point_optimization_config,
             case=i,
             data_dir=data_dir,
-            device=device
+            device=device,
         )
         runtime_log.info(f"End {i} -----------------")
 

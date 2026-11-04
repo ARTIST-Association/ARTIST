@@ -718,20 +718,19 @@ class HeliostatField:
                 4,
             ).detach()
 
-
     def construct_heliostat_field_lbvh(
         self,
         device: torch.device | None = None,
     ) -> None:
         """
-        Construct the acceleration structure for shading and blocking. 
-        
+        Construct the acceleration structure for shading and blocking.
+
         Compute the corner coordinates of each heliostat and use them to construct a linear bounding volume hierarchy (LBVH).
-        The four corners of each heliostat are ordered as follows: lower east, lower west, upper west, upper east. 
-        Each heliostat is represented as a vertical rectangle centered at its position, with dimensions determined by its width and height. 
-        The heliostats are vertically aligned to achieve maximal blocking, resulting in an LBVH that conservatively bounds the heliostat 
+        The four corners of each heliostat are ordered as follows: lower east, lower west, upper west, upper east.
+        Each heliostat is represented as a vertical rectangle centered at its position, with dimensions determined by its width and height.
+        The heliostats are vertically aligned to achieve maximal blocking, resulting in an LBVH that conservatively bounds the heliostat
         field and ensures that no relevant heliostats are missed during traversal.
-        
+
         Parameters
         ----------
         device : torch.device | None
@@ -758,15 +757,15 @@ class HeliostatField:
                 device=device,
             )
 
-            heliostat_primitives_corners = group.positions[:, None, :] + offsets[None, :, :]
+            heliostat_primitives_corners = (
+                group.positions[:, None, :] + offsets[None, :, :]
+            )
             all_primitives.append(heliostat_primitives_corners)
 
         # Build the linear bounding volume hierarchy (LBVH).
-        self.heliostat_field_lbvh = (
-            blocking.build_linear_bounding_volume_hierarchies(
-                primitives_corners=torch.cat(all_primitives, dim=0),
-                device=device,
-            )
+        self.heliostat_field_lbvh = blocking.build_linear_bounding_volume_hierarchies(
+            primitives_corners=torch.cat(all_primitives, dim=0),
+            device=device,
         )
 
 

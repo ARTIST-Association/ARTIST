@@ -456,13 +456,15 @@ class AngleLoss(Loss):
         """
         prediction = torch.nn.functional.normalize(prediction[:, :3])
         ground_truth = torch.nn.functional.normalize(ground_truth[:, :3])
-    
+
         cross = torch.linalg.vector_norm(
-            torch.linalg.cross(prediction, ground_truth), dim=-1,
+            torch.linalg.cross(prediction, ground_truth),
+            dim=-1,
         )
         dot = (prediction * ground_truth).sum(dim=-1)
 
         return torch.atan2(cross, dot)
+
 
 class CosineSimilarityLoss(Loss):
     """
@@ -576,10 +578,14 @@ class NormalizedL1(Loss):
             dim=(indices.batched_bitmap_e, indices.batched_bitmap_u),
             eps=eps,
         )
-        
+
         reduction_dimensions = kwargs["reduction_dimensions"]
-        l1_losses = (torch.abs((predicted_distributions - ground_truth_distributions)).sum(dim=reduction_dimensions) / ground_truth_distributions.sum(dim=reduction_dimensions))
-        
+        l1_losses = torch.abs(
+            (predicted_distributions - ground_truth_distributions)
+        ).sum(dim=reduction_dimensions) / ground_truth_distributions.sum(
+            dim=reduction_dimensions
+        )
+
         return l1_losses
 
 

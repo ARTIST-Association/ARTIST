@@ -1,6 +1,7 @@
 """Bundle all classes that implement util functionality in ``ARTIST``."""
 
 import torch
+
 from .config import (
     ActuatorConfig,
     ActuatorListConfig,
@@ -196,8 +197,12 @@ def track_runtime(
         @wraps(func)
         def wrapper(*args: object, **kwargs: object) -> _T:
             func_name = func.__name__
-            
-            rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+
+            rank = (
+                torch.distributed.get_rank()
+                if torch.distributed.is_initialized()
+                else 0
+            )
             if torch.cuda.is_available():
                 device = f"cuda:{torch.cuda.current_device()}"
             else:

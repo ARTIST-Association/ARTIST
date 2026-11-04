@@ -1,14 +1,10 @@
-from datetime import datetime
 import logging
-import math
-import os
 import pathlib
-import time
 from functools import partial
 from typing import Any, cast
 
-from matplotlib import pyplot as plt
 import torch
+from matplotlib import pyplot as plt
 from torch.optim.lr_scheduler import LRScheduler
 
 from artist.field.heliostat_group import HeliostatGroup
@@ -17,7 +13,7 @@ from artist.io.calibration_parser import CalibrationDataParser
 from artist.nurbs.surfaces import NURBSSurfaces
 from artist.nurbs.utils import create_nurbs_evaluation_grid
 from artist.optim import training
-from artist.optim.loss import KLDivergenceLoss, Loss, PixelLoss, reduce_loss_per_sample
+from artist.optim.loss import Loss, reduce_loss_per_sample
 from artist.optim.regularizers import IdealSurfaceRegularizer, SmoothnessRegularizer
 from artist.raytracing.heliostat_ray_tracer import HeliostatRayTracer
 from artist.scenario.scenario import Scenario
@@ -98,7 +94,7 @@ class SurfaceReconstructor:
             | list[tuple[str, list[pathlib.Path], list[pathlib.Path]]],
         ],
         optimization_configuration: dict[str, Any],
-        case,
+        case: str = None,
         dni: float | None = None,
         number_of_surface_points: torch.Tensor = torch.tensor([50, 50]),
         bitmap_resolution: torch.Tensor = torch.tensor([256, 256]),
@@ -152,9 +148,8 @@ class SurfaceReconstructor:
         self.bitmap_resolution = bitmap_resolution.to(device)
         self.epsilon = epsilon
 
-        self.case=case
+        self.case = case
         self.batch_size_outer = self.optimizer_dict[constants.batch_size_outer]
-
 
     def _validate(
         self,
@@ -247,7 +242,7 @@ class SurfaceReconstructor:
             random_seed=self.ddp_setup["heliostat_group_rank"],
             dni=self.dni,
             bitmap_resolution=self.bitmap_resolution,
-            device=device
+            device=device,
         )
 
         flux_prediction, _ = ray_tracer.trace_rays(
@@ -264,7 +259,9 @@ class SurfaceReconstructor:
             device=device,
         )
 
-        indices_for_local_rank = torch.tensor(ray_tracer.distortions_sampler.rank_indices, device=device)
+        indices_for_local_rank = torch.tensor(
+            ray_tracer.distortions_sampler.rank_indices, device=device
+        )
 
         loss_pixel_per_sample = self.validation_loss_pixel(
             prediction=cropped_flux_distributions,
@@ -564,7 +561,7 @@ class SurfaceReconstructor:
             random_seed=self.ddp_setup["heliostat_group_rank"],
             bitmap_resolution=self.bitmap_resolution,
             dni=self.dni,
-            device=device
+            device=device,
         )
 
         # Perform heliostat-based ray tracing to obtain simulated flux from current reconstructed surfaces.
@@ -583,7 +580,9 @@ class SurfaceReconstructor:
             device=device,
         )
 
-        indices_for_local_rank = torch.tensor(ray_tracer.distortions_sampler.rank_indices, device=device)
+        indices_for_local_rank = torch.tensor(
+            ray_tracer.distortions_sampler.rank_indices, device=device
+        )
 
         local_indices = (
             indices_for_local_rank[:: data_split.number_of_train_samples]
@@ -881,16 +880,26 @@ class SurfaceReconstructor:
         for i in range(0, len(data_mappings), self.batch_size_outer):
             batch_data = {
                 constants.data_parser: self.data[constants.data_parser],
-                constants.heliostat_data_mapping: data_mappings[i : i + self.batch_size_outer],
-                constants.validation_sample_fraction: self.data[constants.validation_sample_fraction]
+                constants.heliostat_data_mapping: data_mappings[
+                    i : i + self.batch_size_outer
+                ],
+                constants.validation_sample_fraction: self.data[
+                    constants.validation_sample_fraction
+                ],
             }
 
-            print(f"samples: {self.data[constants.data_parser].sample_limit}, batch: {i}")
+            print(
+                f"samples: {self.data[constants.data_parser].sample_limit}, batch: {i}"
+            )
 
             # Process only groups assigned to this rank.
-            for heliostat_group_index in self.ddp_setup[constants.groups_to_ranks_mapping][rank]:
+            for heliostat_group_index in self.ddp_setup[
+                constants.groups_to_ranks_mapping
+            ][rank]:
                 heliostat_group: HeliostatGroup = (
-                    self.scenario.heliostat_field.heliostat_groups[heliostat_group_index]
+                    self.scenario.heliostat_field.heliostat_groups[
+                        heliostat_group_index
+                    ]
                 )
 
                 (
@@ -901,14 +910,17 @@ class SurfaceReconstructor:
                     active_heliostats_mask,
                     target_area_indices,
                 ) = self._parse_group_calibration_data(
-                    batch_data=batch_data, heliostat_group=heliostat_group, device=device
+                    batch_data=batch_data,
+                    heliostat_group=heliostat_group,
+                    device=device,
                 )
 
                 # Skip groups with no active heliostats.
                 if active_heliostats_mask.sum() > 0:
-                    
-                    if (len(data_mappings) != len(heliostat_group.names)):
-                        log.warning("Not all heliostats in this group are being reconstructed!")
+                    if len(data_mappings) != len(heliostat_group.names):
+                        log.warning(
+                            "Not all heliostats in this group are being reconstructed!"
+                        )
 
                     data_split: training.TrainTestSplit = training.train_test_split(
                         active_heliostats_mask=active_heliostats_mask,
@@ -937,7 +949,9 @@ class SurfaceReconstructor:
                     # Set up Augmented-Lagrangian constraint for energy conservation.
                     flux_integrals_reference = torch.zeros_like(active_heliostats_mask)
                     lambda_flux_integral = 0.0
-                    rho_flux_integral = self.constraint_dict[constants.rho_flux_integral]
+                    rho_flux_integral = self.constraint_dict[
+                        constants.rho_flux_integral
+                    ]
                     energy_tolerance = self.constraint_dict[constants.energy_tolerance]
                     # Set up regularizers: Keep reconstructed surface smooth and close to ideal/original.
                     ideal_surface_regularizer = IdealSurfaceRegularizer(
@@ -946,7 +960,9 @@ class SurfaceReconstructor:
                     smoothness_regularizer = SmoothnessRegularizer(
                         reduction_dimensions=(1,)
                     )
-                    weight_smoothness = self.constraint_dict[constants.weight_smoothness]
+                    weight_smoothness = self.constraint_dict[
+                        constants.weight_smoothness
+                    ]
                     weight_ideal_surface = self.constraint_dict[
                         constants.weight_ideal_surface
                     ]
@@ -1067,17 +1083,16 @@ class SurfaceReconstructor:
                             scheduler.step(total_loss.detach())
                         else:
                             scheduler.step()
-                        
+
                         stop = early_stopper.step(total_loss.item())
 
                         if epoch % log_step == 0 or stop:
                             log.info(
                                 f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[0]['lr']}",
-                            )                            
+                            )
                             # print(
                             #     f"Rank: {rank}, Epoch: {epoch}, Loss: {total_loss}, LR: {optimizer.param_groups[0]['lr']}",
                             # )
-
 
                         #     with torch.no_grad():
                         #         test_fluxes, test_loss = self._validate(
@@ -1086,87 +1101,74 @@ class SurfaceReconstructor:
                         #             evaluation_points=evaluation_points,
                         #             device=device,
                         #         )
-                        
+
                         # Early stopping when loss did not improve for a predefined number of epochs.
                         if stop:
                             log.info(f"Early stopping at epoch {epoch}.")
                             break
 
-                        if epoch == 0:
-                            save_dir = pathlib.Path(
-                                f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction"
-                            )
-                            os.makedirs(save_dir, exist_ok=True)
-                            results = {
-                                "control_points": torch.zeros_like(heliostat_group.nurbs_control_points.detach().cpu()),
-                                "training_loss": [],
-                                "target_area_indices": []
-                            }
-                            for e in range(0, self.optimizer_dict[constants.max_epoch]+1, 50):
-                                file_path = save_dir / f"results_{e}_{data_split.number_of_train_samples}.pt"
-                                if not file_path.exists():
-                                    torch.save(results, file_path)
+                        # if epoch == 0:
+                        #     save_dir = pathlib.Path(
+                        #         f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction"
+                        #     )
+                        #     os.makedirs(save_dir, exist_ok=True)
+                        #     results = {
+                        #         "control_points": torch.zeros_like(
+                        #             heliostat_group.nurbs_control_points.detach().cpu()
+                        #         ),
+                        #         "training_loss": [],
+                        #         "target_area_indices": [],
+                        #     }
+                        #     for e in range(
+                        #         0, self.optimizer_dict[constants.max_epoch] + 1, 50
+                        #     ):
+                        #         file_path = (
+                        #             save_dir
+                        #             / f"results_{e}_{data_split.number_of_train_samples}.pt"
+                        #         )
+                        #         if not file_path.exists():
+                        #             torch.save(results, file_path)
 
-                        if epoch % 50 == 0:
-                            results = torch.load(f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction/results_{epoch}_{data_split.number_of_train_samples}.pt")
-                            results["control_points"][active_heliostats_mask!=0] = heliostat_group.nurbs_control_points[active_heliostats_mask!=0].detach().cpu()
-                            results["training_loss"].append(flux_loss_per_sample.detach().cpu().tolist())
-                            results["target_area_indices"].append(data_split.target_area_indices_train.detach().cpu().tolist())
-                            torch.save(results, f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction/results_{epoch}_{data_split.number_of_train_samples}.pt")
-
-                            # tensor1 = cropped_flux_predictions
-                            # tensor2 = data_split.flux_measured_train
-
-                            # batch_size = 4
-
-                            # for batch_start in range(0, 15*4, batch_size):
-                            #     batch_end = batch_start + batch_size
-
-                            #     fig, axes = plt.subplots(
-                            #         batch_size, 2,
-                            #         figsize=(4, 15)
-                            #     )
-
-                            #     for row, idx in enumerate(range(batch_start, batch_end)):
-                            #         # Move to CPU and convert to numpy
-                            #         img1 = tensor1[idx].detach().cpu().numpy()
-                            #         img2 = tensor2[idx].detach().cpu().numpy()
-
-                            #         # Tensor 1 - left
-                            #         axes[row, 0].imshow(img1, cmap="gray")
-                            #         axes[row, 0].set_title(f"Tensor 1 — Index {idx}")
-                            #         axes[row, 0].axis("off")
-
-                            #         # Tensor 2 - right
-                            #         axes[row, 1].imshow(img2, cmap="gray")
-                            #         axes[row, 1].set_title(f"Tensor 2 — Index {idx}")
-                            #         axes[row, 1].axis("off")
-
-                            #     fig.suptitle(
-                            #         f"Batch {batch_start // batch_size + 1} "
-                            #         f"(indices {batch_start}–{batch_end - 1})",
-                            #         fontsize=16
-                            #     )
-
-                            #     plt.tight_layout()
-                            #     plt.savefig(f"heliostat_{batch_start}_{epoch}_{i}")
+                        # if epoch % 50 == 0:
+                        #     results = torch.load(
+                        #         f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction/results_{epoch}_{data_split.number_of_train_samples}.pt"
+                        #     )
+                        #     results["control_points"][active_heliostats_mask != 0] = (
+                        #         heliostat_group.nurbs_control_points[
+                        #             active_heliostats_mask != 0
+                        #         ]
+                        #         .detach()
+                        #         .cpu()
+                        #     )
+                        #     results["training_loss"].append(
+                        #         flux_loss_per_sample.detach().cpu().tolist()
+                        #     )
+                        #     results["target_area_indices"].append(
+                        #         data_split.target_area_indices_train.detach()
+                        #         .cpu()
+                        #         .tolist()
+                        #     )
+                        #     torch.save(
+                        #         results,
+                        #         f"/workVERLEIHNIX/mb/ARTIST/dissertation/surface_data/{self.case}/reconstruction/results_{epoch}_{data_split.number_of_train_samples}.pt",
+                        #     )
 
                         epoch += 1
 
-                global_active_indices = torch.nonzero(
-                    active_heliostats_mask != 0, as_tuple=True
-                )[0]
+                    global_active_indices = torch.nonzero(
+                        active_heliostats_mask != 0, as_tuple=True
+                    )[0]
 
-                rank_active_indices_global = global_active_indices[local_indices]
+                    rank_active_indices_global = global_active_indices[local_indices]
 
-                final_indices = (
-                    rank_active_indices_global
-                    + final_loss_start_indices[heliostat_group_index]
-                )
+                    final_indices = (
+                        rank_active_indices_global
+                        + final_loss_start_indices[heliostat_group_index]
+                    )
 
-                final_loss_per_heliostat[final_indices] = total_loss_per_heliostat
+                    final_loss_per_heliostat[final_indices] = total_loss_per_heliostat
 
-                log.info(f"Rank: {rank}, Surfaces reconstructed.")
+                    log.info(f"Rank: {rank}, Surfaces reconstructed.")
 
         self._synchronize_reconstruction_across_ranks(
             final_loss_per_heliostat=final_loss_per_heliostat,
@@ -1240,9 +1242,6 @@ class SurfaceReconstructor:
 
             return fixed_gradients
 
-
-
-
     def _plot_fluxes(
         self,
         flux_measured: torch.Tensor,
@@ -1302,12 +1301,16 @@ class SurfaceReconstructor:
                     border_color = "red"
                     split_name = "TEST"
 
-                axes[sample_offset, 0].imshow(flux_predicted[sample_index].cpu().detach())
+                axes[sample_offset, 0].imshow(
+                    flux_predicted[sample_index].cpu().detach()
+                )
                 axes[sample_offset, 0].set_title(
                     f"Predicted Flux - Heliostat {heliostat_index} ({split_name})"
                 )
 
-                axes[sample_offset, 1].imshow(flux_measured[sample_index].cpu().detach())
+                axes[sample_offset, 1].imshow(
+                    flux_measured[sample_index].cpu().detach()
+                )
                 axes[sample_offset, 1].set_title(
                     f"Measured Flux - Heliostat {heliostat_index} ({split_name})"
                 )
