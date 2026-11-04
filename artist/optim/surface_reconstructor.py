@@ -264,7 +264,7 @@ class SurfaceReconstructor:
             device=device,
         )
 
-        indices_for_local_rank = ray_tracer.get_sampler_indices()
+        indices_for_local_rank = torch.tensor(ray_tracer.distortions_sampler.rank_indices, device=device)
 
         loss_pixel_per_sample = self.validation_loss_pixel(
             prediction=cropped_flux_distributions,
@@ -583,13 +583,14 @@ class SurfaceReconstructor:
             device=device,
         )
 
-        sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+        indices_for_local_rank = torch.tensor(ray_tracer.distortions_sampler.rank_indices, device=device)
+
         local_indices = (
-            sample_indices_for_local_rank[:: data_split.number_of_train_samples]
+            indices_for_local_rank[:: data_split.number_of_train_samples]
             // data_split.number_of_train_samples
         )
 
-        return cropped_flux_predictions, sample_indices_for_local_rank, local_indices
+        return cropped_flux_predictions, indices_for_local_rank, local_indices
 
     def _compute_flux_integral_constraint(
         self,

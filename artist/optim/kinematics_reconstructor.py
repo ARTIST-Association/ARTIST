@@ -241,7 +241,7 @@ class KinematicsReconstructor:
             device=device,
         )
 
-        indices_for_local_rank = ray_tracer.get_sampler_indices()
+        indices_for_local_rank = torch.tensor(ray_tracer.distortions_sampler.rank_indices, device=device)
 
         loss_focal_spot_per_sample = self.validation_loss_focal_spot(
             prediction=flux_prediction,
@@ -599,13 +599,13 @@ class KinematicsReconstructor:
             device=device,
         )
 
-        sample_indices_for_local_rank = ray_tracer.get_sampler_indices()
+        indices_for_local_rank = torch.tensor(ray_tracer.distortions_sampler.rank_indices, device=device)
 
         loss_per_sample = loss_definition(
             prediction=flux_prediction_train,
-            ground_truth=data_split.flux_measured_train[sample_indices_for_local_rank],
+            ground_truth=data_split.flux_measured_train[indices_for_local_rank],
             target_area_indices=data_split.target_area_indices_train[
-                sample_indices_for_local_rank
+                indices_for_local_rank
             ],
             reduction_dimensions=(
                 indices.batched_bitmap_e,
